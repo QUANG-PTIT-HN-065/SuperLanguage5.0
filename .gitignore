@@ -1,0 +1,48 @@
+# === Environment & Secrets (TUYỆT ĐỐI KHÔNG PUSH LÊN GIT) ===
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+service-account.json
+
+# === Python / FastAPI Backend & Virtual Environment ===
+.venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+
+# === OS & System Files ===
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# === Frontend / Node.js (nếu có dùng gói npm) ===
+node_modules/
+.npm
+.eslintcache
+
+# === IDE & Editors (VS Code / WebStorm) ===
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+
+# === Firebase Hosting Logs ===
+.firebase/
+firebase-debug.log
+
+####
+.vscode
