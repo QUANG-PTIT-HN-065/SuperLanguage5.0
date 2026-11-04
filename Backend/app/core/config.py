@@ -1,34 +1,38 @@
-from typing import List
+"""Đọc cấu hình từ file .env (hoặc biến môi trường).
+
+Muốn thêm cấu hình mới: thêm 1 dòng vào class Settings + thêm vào .env.example.
+"""
+from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    # App
-    PROJECT_NAME: str = "SuperLanguage 5.0 API"
-    VERSION: str = "1.0.0"
-    API_V1_STR: str = "/api/v1"
+    APP_NAME: str = "KS25 Base API"
 
-    BACKEND_CORS_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://super-language5-0.vercel.app"
-    ]
+    DB_HOST: str = "127.0.0.1"
+    DB_PORT: int = 3306
+    DB_USER: str = "root"
+    DB_PASSWORD: str = ""
+    DB_NAME: str = "app_db"
 
-    # Supabase (thiếu biến nào, app sẽ báo lỗi rõ ngay khi khởi động)
-    SUPABASE_URL: str
-    SUPABASE_PUBLISHABLE_KEY: str
-    SUPABASE_SECRET_KEY: str
-    SUPABASE_JWKS_URL: str = ""
-    RESEND_API_KEY: str = ""  
+    # Chuỗi các origin cách nhau bằng dấu phẩy, hoặc "*"
+    CORS_ORIGINS: str = "*"
+
+    @property
+    def database_url(self) -> str:
+        # mysql+pymysql://user:password@host:port/database
+        # quote_plus: để mật khẩu có ký tự đặc biệt (@, #, /...) không làm hỏng URL
+        return (
+            f"mysql+pymysql://{self.DB_USER}:{quote_plus(self.DB_PASSWORD)}"
+            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}?charset=utf8mb4"
+        )
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.CORS_ORIGINS.split(",") if origin.strip()]
 
 
-settings = Settings()  # type: ignore[call-arg]
+settings = Settings()

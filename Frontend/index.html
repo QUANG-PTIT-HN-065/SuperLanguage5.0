@@ -1,16 +1,43 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperLanguage</title>
-  </head>
-  <body>
-    <main>
-      <h1>SuperLanguage</h1>
-      <p><a href="./src/pages/LoginAdmin/index.html">Mở trang quản trị LingoAdmin</a></p>
-      <p><a href="./src/pages/login/index.html">Mở trang đăng nhập học viên</a></p>
-      <p><a href="./src/pages/forgot-password/index.html">Khôi phục mật khẩu</a></p>
-    </main>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trang chủ | KS25 Base</title>
+  <link rel="icon" href="assets/images/logo.svg">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-root="./">
+  <header id="app-header"></header>
+
+  <main class="container">
+    <section class="card">
+      <h1>Base code Frontend (HTML · CSS · JS)</h1>
+      <p>Khung dự án cho các nhóm thực tập. Trang này kiểm tra kết nối <strong>Frontend → Backend → MySQL</strong>.</p>
+
+      <p>API đang dùng: <code id="api-url"></code> <span class="muted">(sửa trong <code>js/config.js</code>)</span></p>
+      <div id="health-status" class="status"></div>
+      <button id="btn-recheck" class="btn">Kiểm tra lại</button>
+    </section>
+
+    <section class="card">
+      <h2>Bắt đầu từ đâu?</h2>
+      <ol>
+        <li>Xem trang <a href="pages/items.html">Items</a>: ví dụ thêm / sửa / xoá / tìm kiếm gọi API thật.</li>
+        <li>Đọc <code>js/api.js</code> để biết cách gọi API bằng axios.</li>
+        <li>Tạo trang mới: copy <code>pages/items.html</code> + <code>js/pages/items.js</code>, thêm link vào <code>js/layout.js</code>.</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer id="app-footer"></footer>
+
+  <!-- Thứ tự quan trọng: axios -> config -> api -> utils -> layout -> script riêng của trang -->
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/layout.js"></script>
+  <script src="js/pages/home.js"></script>
+</body>
 </html>

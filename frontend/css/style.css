@@ -1,0 +1,119 @@
+/* ==========================================================
+   Style chung cho mọi trang.
+   Đổi màu chủ đạo cả web: sửa các biến trong :root bên dưới.
+   ========================================================== */
+:root {
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-danger: #dc2626;
+  --color-success: #16a34a;
+  --color-text: #1f2937;
+  --color-muted: #6b7280;
+  --color-border: #e5e7eb;
+  --color-bg: #f3f4f6;
+  --color-card: #ffffff;
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+a { color: var(--color-primary); }
+code { background: #eef2ff; padding: 1px 6px; border-radius: 4px; }
+h1, h2 { margin-top: 0; }
+
+.container { width: 100%; max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+main.container { flex: 1; padding-top: 24px; padding-bottom: 24px; }
+
+/* ---------- Header / Footer ---------- */
+#app-header { background: var(--color-card); border-bottom: 1px solid var(--color-border); }
+.header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--color-text); text-decoration: none; }
+.nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.nav a { padding: 6px 12px; border-radius: var(--radius); color: var(--color-muted); text-decoration: none; }
+.nav a:hover { background: var(--color-bg); }
+.nav a.active { background: #eef2ff; color: var(--color-primary); font-weight: 600; }
+#app-footer { padding: 16px 0; text-align: center; color: var(--color-muted); font-size: 14px; }
+
+/* ---------- Card ---------- */
+.card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* Trang 2 cột: form bên trái, danh sách bên phải (màn hình nhỏ thì xếp dọc) */
+.layout-2col { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+@media (max-width: 800px) { .layout-2col { grid-template-columns: 1fr; } }
+
+/* ---------- Form ---------- */
+label { display: block; margin: 12px 0 4px; font-weight: 600; font-size: 14px; }
+input, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font: inherit;
+}
+input:focus, textarea:focus { outline: 2px solid var(--color-primary); border-color: transparent; }
+.form-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+/* ---------- Button ---------- */
+.btn {
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-card);
+  font: inherit;
+  cursor: pointer;
+}
+.btn:hover { background: var(--color-bg); }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
+.btn-primary { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.btn-primary:hover { background: var(--color-primary-dark); }
+.btn-danger { color: var(--color-danger); }
+.btn-small { padding: 4px 10px; font-size: 13px; }
+
+/* ---------- Table ---------- */
+.list-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.list-header input { max-width: 240px; }
+.table-wrap { overflow-x: auto; margin-top: 12px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px; border-bottom: 1px solid var(--color-border); text-align: left; vertical-align: top; }
+th { font-size: 13px; color: var(--color-muted); text-transform: uppercase; }
+.actions { white-space: nowrap; text-align: right; }
+
+/* ---------- Trạng thái / tiện ích ---------- */
+.muted { color: var(--color-muted); font-size: 14px; }
+.text-right { text-align: right; }
+.text-error { color: var(--color-danger); }
+
+.status { padding: 12px; border-radius: var(--radius); margin: 12px 0; }
+.status-loading { background: var(--color-bg); }
+.status-ok { background: #dcfce7; color: #166534; }
+.status-error { background: #fee2e2; color: #991b1b; }
+
+.toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .15);
+  z-index: 100;
+}
+.toast-success { background: var(--color-success); }
+.toast-error { background: var(--color-danger); }
