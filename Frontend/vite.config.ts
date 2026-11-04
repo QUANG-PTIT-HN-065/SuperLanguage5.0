@@ -6,7 +6,14 @@ export default defineConfig({
   base: "./",
   build: {
     rollupOptions: {
-      input: ["index.html", "src/pages/LoginAdmin/index.html", "src/pages/dasboardAdmin/index.html"],
+      input: [
+        "index.html",
+        "src/pages/login/index.html",
+        "src/pages/register/index.html",
+        "src/pages/forgot-password/index.html",
+        "src/pages/LoginAdmin/index.html",
+        "src/pages/dasboardAdmin/index.html",
+      ],
     },
   },
 });

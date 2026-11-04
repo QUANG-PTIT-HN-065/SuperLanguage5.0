@@ -260,7 +260,7 @@ class SlanguageLogin {
       }
 
       // Show video loading screen for 1.5s
-      this.triggerLoadingAndRedirect('../home/index.html', 1500);
+      this.triggerLoadingAndRedirect('../../../index.html', 1500);
     }, 400);
   }
 
@@ -320,7 +320,7 @@ class SlanguageLogin {
       localStorage.setItem('slanguage_user_xp', '100');
       localStorage.setItem('slanguage_is_logged_in', 'true');
 
-      this.triggerLoadingAndRedirect('../home/index.html', 1500);
+      this.triggerLoadingAndRedirect('../../../index.html', 1500);
     }, 400);
   }
 
