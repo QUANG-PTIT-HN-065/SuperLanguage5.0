@@ -48,5 +48,3 @@
 * `ai_feedback` (TEXT, NULLABLE): Đánh giá lỗi ngữ pháp, phát âm và gợi ý hiệu chỉnh từ AI.
 * `score` (FLOAT, NULLABLE): Thang điểm đánh giá (0 - 100).
 * `created_at` (TIMESTAMP, Default: `CURRENT_TIMESTAMP`): Thời điểm gửi.
-
-![1793841459056](image/README/1793841459056.png)
