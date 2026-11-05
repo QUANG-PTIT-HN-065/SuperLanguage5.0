@@ -6,6 +6,7 @@ from app.services.ai_service import AIService
 
 router = APIRouter(prefix="/api/ai-chat", tags=["AI Chat Speaking"])
 
+
 # Khởi tạo Supabase client từ cấu hình chung trong config.py
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SECRET_KEY)
 
