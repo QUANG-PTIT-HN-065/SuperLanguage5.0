@@ -4,7 +4,7 @@ from uuid import UUID
 
 class ConversationCreate(BaseModel):
     title: str
-    language: str # 'English' hoặc 'Japanese'
+    language_code: str # 'English' hoặc 'Japanese'
 
 class MessageSend(BaseModel):
     conversation_id: UUID

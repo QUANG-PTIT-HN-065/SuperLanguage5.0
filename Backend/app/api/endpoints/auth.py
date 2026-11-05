@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.core.deps import get_bearer_token
 from app.db.supabase import new_auth_client, supabase_admin
+from app.schemas.reponse import BaseResponse
 from app.schemas.auth import (
     EmailRequest,
     LoginRequest,
@@ -106,7 +107,7 @@ def _session_response(session: Any, user_id: str, require_admin: bool = False) -
 # ---------------------------------------------------------------------
 # Đăng ký
 # ---------------------------------------------------------------------
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model= BaseResponse[dict[Any, str]], status_code=status.HTTP_201_CREATED)
 def register(data: RegisterRequest):
     """
     Đăng ký tài khoản:
@@ -159,10 +160,12 @@ def register(data: RegisterRequest):
             if response.session is None
             else "Đăng ký thành công!"
         ),
-        "user_id": user.id,
-        "email": user.email,
-        "email_confirmation_required": response.session is None,
-        "needs_onboarding": True,
+        "data": {
+            "user_id": user.id,
+            "email": user.email,
+            "email_confirmation_required": response.session is None,
+            "needs_onboarding": True,
+        }
     }
     if response.session is not None:
         result.update(_tokens(response.session))
@@ -172,7 +175,7 @@ def register(data: RegisterRequest):
 # ---------------------------------------------------------------------
 # Đăng nhập / làm mới token / đăng xuất
 # ---------------------------------------------------------------------
-@router.post("/login")
+@router.post("/login", response_model=BaseResponse[dict[str, dict[Any, str] | str]], status_code=status.HTTP_201_CREATED)
 def login(data: LoginRequest):
     client = new_auth_client()
     try:

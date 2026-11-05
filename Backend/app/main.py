@@ -1,4 +1,6 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
@@ -6,6 +8,8 @@ from app.db.supabase import supabase_admin
 
 from app.api.endpoints import auth, users, chat_ai
 
+
+from app.core.exception import AppException
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -25,7 +29,7 @@ if settings.BACKEND_CORS_ORIGINS:
 # Tích hợp Auth Router vào hệ thống API 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/me", tags=["me"])
-app.include_router(chat_ai.router, prefix=f"{settings.API_V1_STR}/chat_AI", tags=["me"])
+app.include_router(chat_ai.router, prefix=f"{settings.API_V1_STR}/chat_AI", tags=["Chat_AI"])
 
 @app.get("/")
 def read_root():
@@ -49,3 +53,18 @@ def test_supabase_connection():
         raise HTTPException(
             status_code=500, detail=f"Lỗi kết nối Supabase: {str(e)}"
         )
+        
+@app.exception_handler(AppException)
+async def app_exception_handler(request: Request, exc: AppException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "message": exc.message,
+            "data": None,
+            "error": {
+                "code": exc.error_code,
+                "detail": str(exc)
+            }
+        }
+    )

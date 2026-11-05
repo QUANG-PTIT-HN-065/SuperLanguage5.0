@@ -16,7 +16,7 @@ def create_conversation(data: ConversationCreate, user_id: str):
     res = supabase.table("conversations").insert({
         "user_id": user_id,
         "title": data.title,
-        "language": data.language
+        "language_code": data.language_code 
     }).execute()
     return res.data
 
@@ -31,8 +31,8 @@ async def send_message(data: MessageSend):
     }).execute()
 
     # 2. Lấy ngôn ngữ của cuộc hội thoại từ Supabase
-    conv = supabase.table("conversations").select("language").eq("id", str(data.conversation_id)).single().execute()
-    lang = conv.data.get("language", "English")
+    conv = supabase.table("conversations").select("language_code").eq("id", str(data.conversation_id)).single().execute()
+    lang = conv.data.get("language_code", "English")
 
     # 3. Gọi service AI xử lý logic bên trong
     try:
