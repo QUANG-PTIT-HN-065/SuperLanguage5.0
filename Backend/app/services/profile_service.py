@@ -9,6 +9,41 @@ from app.db.supabase import supabase_admin
 
 logger = logging.getLogger(__name__)
 
+# Chỉ các trường hồ sơ/cài đặt thông thường mới được phép sửa qua PATCH /me.
+PROFILE_UPDATE_FIELDS = frozenset(
+    {
+        "username",
+        "display_name",
+        "avatar_url",
+        "birth_year",
+        "country_code",
+        "timezone",
+        "native_language",
+        "target_language",
+        "current_level",
+        "target_level",
+        "learning_goal",
+        "daily_goal_xp",
+        "reminder_time",
+        "marketing_opt_in",
+        "show_on_leaderboard",
+    }
+)
+
+ONBOARDING_FIELDS = frozenset(
+    {
+        "native_language",
+        "target_language",
+        "current_level",
+        "target_level",
+        "learning_goal",
+        "daily_goal_xp",
+        "timezone",
+        "country_code",
+        "reminder_time",
+    }
+)
+
 # Các cột NOT NULL: nếu client gửi null thì bỏ qua thay vì để DB báo lỗi
 NOT_NULLABLE_FIELDS = {
     "username",
@@ -117,7 +152,7 @@ def with_effective_streak(stats: Dict[str, Any], tz_name: str) -> Dict[str, Any]
     return result
 
 
-def update_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+def _update_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
     clean = {k: v for k, v in data.items() if not (v is None and k in NOT_NULLABLE_FIELDS)}
     if not clean:
         profile = get_profile(user_id)
@@ -133,6 +168,29 @@ def update_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
     if not res.data:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy hồ sơ.")
     return res.data[0]  # type: ignore[return-value]
+
+
+def _ensure_allowed_fields(data: Dict[str, Any], allowed_fields: frozenset[str]) -> None:
+    forbidden_fields = data.keys() - allowed_fields
+    if forbidden_fields:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Có trường hồ sơ không được phép cập nhật.",
+        )
+
+
+def update_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """Cập nhật hồ sơ của user hiện tại với allowlist trường dành cho PATCH /me."""
+    _ensure_allowed_fields(data, PROFILE_UPDATE_FIELDS)
+    validate_languages(data.get("native_language"), data.get("target_language"))
+    return _update_profile(user_id, data)
+
+
+def complete_onboarding(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """Ghi dữ liệu onboarding và thời điểm hoàn tất do backend tự tạo."""
+    _ensure_allowed_fields(data, ONBOARDING_FIELDS)
+    validate_languages(data.get("native_language"), data.get("target_language"))
+    return _update_profile(user_id, {**data, "onboarding_completed_at": now_iso()})
 
 
 def touch_last_sign_in(user_id: str) -> None:
