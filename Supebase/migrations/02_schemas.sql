@@ -1,109 +1,87 @@
--- Kích hoạt extension hỗ trợ UUID nếu chưa có
-create extension if not exists "uuid-ossp";
-
--- 1. Bảng Profiles (Mở rộng thông tin người dùng liên kết với Supabase Auth)
-create table public.profiles (
-  id uuid references auth.users on delete cascade primary key,
-  email text unique not null,
-  full_name text,
-  avatar_url text,
-  role text default 'user' check (role in ('user', 'admin')),
-  learning_goal text,
-  level text default 'Beginner',
-  xp_points int default 0,
-  streak_count int default 0,
-  last_active_date date,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- ---------------------------------------------------------------------
+-- 1. Bảng Conversations (Phòng chat / Chủ đề hội thoại)
+-- ---------------------------------------------------------------------
+create table if not exists public.conversations (
+  id            uuid default gen_random_uuid() primary key,
+  user_id       uuid not null references public.profiles(id) on delete cascade,
+  title         text not null,                                           -- Ví dụ: "Order đồ ăn tại nhà hàng", "Phỏng vấn xin việc"
+  language_code text not null references public.languages(code) on delete cascade, -- Ngôn ngữ đang luyện tập (en, ja, ko, zh...)
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
 );
 
--- 2. Bảng Courses (Quản lý khóa học)
-create table public.courses (
-  id uuid default gen_random_uuid() primary key,
-  title text not null,
-  description text,
-  level_category text not null, -- Sơ cấp, Trung cấp, Cao cấp
-  is_active boolean default true,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+-- Index hỗ trợ lấy danh sách cuộc hội thoại của User nhanh hơn
+create index if not exists conversations_user_idx on public.conversations (user_id, updated_at desc);
+
+-- ---------------------------------------------------------------------
+-- 2. Bảng Messages (Chi tiết tin nhắn & Phản hồi từ AI)
+-- ---------------------------------------------------------------------
+create table if not exists public.messages (
+  id              uuid default gen_random_uuid() primary key,
+  conversation_id uuid not null references public.conversations(id) on delete cascade,
+  sender_type     text not null check (sender_type in ('user', 'ai')),      -- Kẻ gửi: 'user' hoặc 'ai'
+  content         text not null,                                           -- Nội dung văn bản / Transcript giọng nói
+  audio_url       text,                                                    -- Link file ghi âm (dùng cho Speech-to-Text / Text-to-Speech)
+  ai_feedback     text,                                                    -- Phân tích sửa lỗi ngữ pháp, phát âm, từ vựng từ AI
+  created_at      timestamptz not null default now()
 );
 
--- 3. Bảng Lessons (Quản lý bài học)
-create table public.lessons (
-  id uuid default gen_random_uuid() primary key,
-  course_id uuid references public.courses(id) on delete cascade not null,
-  title text not null,
-  type text not null, -- vocab, grammar, speaking
-  order_index int default 0,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
+-- Index lấy lịch sử tin nhắn theo cuộc hội thoại
+create index if not exists messages_conversation_idx on public.messages (conversation_id, created_at asc);
 
--- 4. Bảng Questions (Ngân hàng câu hỏi bài tập)
-create table public.questions (
-  id uuid default gen_random_uuid() primary key,
-  lesson_id uuid references public.lessons(id) on delete cascade not null,
-  question_type text not null, -- multiple_choice, fill_in, drag_drop
-  content text not null,
-  options_json jsonb, -- Các lựa chọn trắc nghiệm dạng JSON
-  correct_answer text not null,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- 5. Bảng Lesson Attempts (Lịch sử làm bài & Tiến độ học viên)
-create table public.lesson_attempts (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references public.profiles(id) on delete cascade not null,
-  lesson_id uuid references public.lessons(id) on delete cascade not null,
-  score float default 0,
-  completion_percentage float default 0,
-  completed_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- 6. Bảng XP Logs (Nhật ký tích lũy điểm kinh nghiệm)
-create table public.xp_logs (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references public.profiles(id) on delete cascade not null,
-  xp_amount int not null,
-  source text not null, -- complete_lesson, ai_speaking, etc.
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- 7. Bảng Streaks (Theo dõi chuỗi ngày học liên tục)
-create table public.streaks (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references public.profiles(id) on delete cascade unique not null,
-  current_streak int default 0,
-  last_active_date date
-);
-
--- 8. Bảng Conversations (Phòng luyện nói / Chatbot AI - Chủ đề, ngôn ngữ)
-create table public.conversations (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references public.profiles(id) on delete cascade not null,
-  title text not null, -- Chủ đề phòng chat
-  language text not null check (language in ('English', 'Japanese')), -- Ngôn ngữ học tập
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null
-);
-
--- 9. Bảng Messages (Chi tiết hội thoại - Vai trò user/ai, nội dung, thời điểm)
-create table public.messages (
-  id uuid default gen_random_uuid() primary key,
-  conversation_id uuid references public.conversations(id) on delete cascade not null,
-  sender_type text not null check (sender_type in ('user', 'ai')), -- Vai trò người gửi
-  content text not null, -- Nội dung tin nhắn / Transcript
-  audio_url text, -- Đường dẫn file ghi âm (nếu có)
-  ai_feedback text, -- Phân tích ngữ pháp, phát âm từ AI
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null -- Thời điểm gửi
-);
-
--- 10. Trigger tự động tạo bản ghi trong bảng profiles khi có User đăng ký mới
-create or replace function public.handle_new_user()
-returns trigger as $$
+-- ---------------------------------------------------------------------
+-- 3. Trigger tự động cập nhật updated_at cho conversation khi có tin nhắn mới
+-- ---------------------------------------------------------------------
+create or replace function public.update_conversation_timestamp()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
 begin
-  insert into public.profiles (id, email, full_name)
-  values (new.id, new.email, new.raw_user_meta_data->>'full_name');
+  update public.conversations
+  set updated_at = now()
+  where id = new.conversation_id;
   return new;
 end;
-$$ language plpgsql security definer;
+$$;
 
-create or replace trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+drop trigger if exists trg_update_conversation_timestamp on public.messages;
+create trigger trg_update_conversation_timestamp
+  after insert on public.messages
+  for each row execute function public.update_conversation_timestamp();
+
+-- ---------------------------------------------------------------------
+-- 4. Bật bảo mật Row Level Security (RLS) & Phân quyền
+-- ---------------------------------------------------------------------
+alter table public.conversations enable row level security;
+alter table public.messages      enable row level security;
+
+-- Policy cho Conversations: User chỉ xem/sửa/xóa cuộc hội thoại của chính mình
+drop policy if exists "conversations_own" on public.conversations;
+create policy "conversations_own" on public.conversations
+  for all to authenticated 
+  using (user_id = (select auth.uid())) 
+  with check (user_id = (select auth.uid()));
+
+-- Policy cho Messages: User chỉ xem/thêm tin nhắn thuộc cuộc hội thoại của mình
+drop policy if exists "messages_own" on public.messages;
+create policy "messages_own" on public.messages
+  for all to authenticated 
+  using (
+    exists (
+      select 1 from public.conversations c 
+      where c.id = messages.conversation_id 
+        and c.user_id = (select auth.uid())
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.conversations c 
+      where c.id = messages.conversation_id 
+        and c.user_id = (select auth.uid())
+    )
+  );
+
+-- Cấp quyền truy cập cho người dùng đã đăng nhập (authenticated)
+grant select, insert, update, delete on public.conversations, public.messages to authenticated;
