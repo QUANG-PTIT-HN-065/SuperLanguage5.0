@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f5f7fb">
+    <title>AI Conversation | SuperLanguage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/chat/style.css">
+    <script type="module" src="../../types/chat/chat.ts"></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="../../../index.html" aria-label="SuperLanguage trang chủ">
+          <span class="brand-mark">S</span>
+          <span>super<span>language</span></span>
+        </a>
+
+        <div class="sidebar-label">WORKSPACE</div>
+        <a class="nav-link active" href="./index.html">
+          <span class="nav-icon" aria-hidden="true">✦</span>
+          <span>AI Conversation</span>
+        </a>
+        <a class="nav-link" href="../../../index.html">
+          <span class="nav-icon" aria-hidden="true">⌂</span>
+          <span>Trang chủ</span>
+        </a>
+
+        <div class="sidebar-bottom">
+          <div class="profile-avatar" id="profileAvatar">S</div>
+          <div class="profile-copy">
+            <strong id="profileName">Học viên</strong>
+            <span id="profileEmail">Tài khoản của bạn</span>
+          </div>
+          <a class="login-link" href="../login/index.html">Đăng nhập</a>
+          <button class="icon-button" id="logoutButton" type="button" aria-label="Đăng xuất" title="Đăng xuất">↗</button>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">LUYỆN GIAO TIẾP CÙNG AI</div>
+            <h1>AI Conversation</h1>
+          </div>
+          <div class="connection-status"><span></span> Dùng thử không cần đăng nhập</div>
+        </header>
+
+        <div class="chat-layout">
+          <section class="chat-card" aria-label="Cuộc trò chuyện với AI">
+            <div class="conversation-heading">
+              <div class="tutor-avatar" aria-hidden="true">✦</div>
+              <div class="conversation-title">
+                <strong id="conversationTitle">Phòng luyện tập mới</strong>
+                <span id="conversationLanguage">Chọn ngôn ngữ để bắt đầu</span>
+              </div>
+              <span class="live-pill"><i></i> LIVE</span>
+            </div>
+
+            <div class="messages" id="messages" aria-live="polite" aria-relevant="additions text">
+              <div class="welcome-card" id="welcomeCard">
+                <div class="welcome-sparkle">✦</div>
+                <h2>Sẵn sàng luyện nói chưa?</h2>
+                <p>Không cần tài khoản. Chọn ngôn ngữ và chủ đề để bắt đầu trò chuyện ngay.</p>
+              </div>
+            </div>
+
+            <div class="chat-footer">
+              <form class="composer" id="messageForm">
+                <label class="sr-only" for="messageInput">Tin nhắn của bạn</label>
+                <textarea id="messageInput" rows="1" maxlength="4000" placeholder="Viết tin nhắn bằng ngôn ngữ bạn đang học..." disabled required></textarea>
+                <button class="send-button" id="sendButton" type="submit" disabled aria-label="Gửi tin nhắn">
+                  <span aria-hidden="true">↑</span>
+                </button>
+              </form>
+              <div class="composer-hint">Enter để gửi <span>·</span> Shift + Enter để xuống dòng</div>
+            </div>
+          </section>
+
+          <aside class="setup-card">
+            <div class="setup-icon" aria-hidden="true">✧</div>
+            <div class="eyebrow">PERSONALIZE YOUR SESSION</div>
+            <h2>Thiết lập buổi học</h2>
+            <p>Tùy chỉnh phòng luyện tập để AI đồng hành đúng mục tiêu của bạn.</p>
+            <div class="guest-note"><span aria-hidden="true">✓</span> Bạn có thể bắt đầu ngay với tư cách khách</div>
+
+            <form id="conversationForm">
+              <label for="languageSelect">Ngôn ngữ luyện tập</label>
+              <div class="select-wrap">
+                <select id="languageSelect">
+                  <option value="English">🇬🇧 &nbsp; Tiếng Anh</option>
+                  <option value="Japanese">🇯🇵 &nbsp; Tiếng Nhật</option>
+                </select>
+                <span aria-hidden="true">⌄</span>
+              </div>
+
+              <label for="topicInput">Chủ đề hôm nay</label>
+              <input id="topicInput" type="text" maxlength="100" value="Luyện giao tiếp tự do" placeholder="Ví dụ: Gọi món ở nhà hàng">
+
+              <button class="new-session-button" type="submit">
+                <span aria-hidden="true">＋</span> Bắt đầu cuộc trò chuyện
+              </button>
+            </form>
+
+            <div class="session-tip">
+              <span aria-hidden="true">✦</span>
+              <div><strong>Mẹo nhỏ</strong><p>Đừng ngại mắc lỗi — AI sẽ góp ý nhẹ nhàng sau mỗi lượt trò chuyện.</p></div>
+            </div>
+          </aside>
+        </div>
+
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      </section>
+    </main>
+  </body>
+</html>

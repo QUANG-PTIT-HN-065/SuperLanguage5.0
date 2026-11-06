@@ -14,6 +14,13 @@ interface RefreshResponse {
   refresh_token: string;
 }
 
+interface ApiResponse<T> {
+  status: string;
+  message: string;
+  data: T;
+  error: unknown;
+}
+
 export interface AdminProfile {
   email: string;
   displayName: string | null;
@@ -76,7 +83,11 @@ function goToLogin(): void {
 }
 
 export async function loginAdmin(email: string, password: string): Promise<void> {
-  const result = await postJson<AuthResponse>("/api/v1/auth/admin/login", { email, password });
+  const response = await postJson<ApiResponse<AuthResponse>>(
+    "/api/v1/auth/admin/login",
+    { email, password },
+  );
+  const result = response.data;
 
   if (!result.access_token || !result.refresh_token || result.user?.role !== "admin") {
     throw new Error("Backend không xác nhận được quyền quản trị viên.");
@@ -106,9 +117,10 @@ export async function requireAdminSession(): Promise<AdminProfile | null> {
   if (response.status === 401) {
     let refreshed: RefreshResponse;
     try {
-      refreshed = await postJson<RefreshResponse>("/api/v1/auth/refresh", {
+      const refreshResponse = await postJson<ApiResponse<RefreshResponse>>("/api/v1/auth/refresh", {
         refresh_token: refreshToken,
       });
+      refreshed = refreshResponse.data;
     } catch (error) {
       if (!(error instanceof ApiError) || (error.status !== 401 && error.status !== 403)) {
         throw error;
@@ -165,7 +177,7 @@ export async function logoutAdmin(): Promise<void> {
   const accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
   try {
     if (accessToken) {
-      await postJson<{ status: string }>("/api/v1/auth/logout", {}, accessToken);
+      await postJson<ApiResponse<null>>("/api/v1/auth/logout", {}, accessToken);
     }
   } finally {
     clearTokens();

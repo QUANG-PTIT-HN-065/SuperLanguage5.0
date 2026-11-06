@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     SUPABASE_SECRET_KEY: str
     SUPABASE_JWKS_URL: str = ""
     RESEND_API_KEY: str = ""  
+    GEMINI_API_KEYS: str = ""
+    DEEPSEEK_API_KEYS: str = ""
 
 
 settings = Settings()  # type: ignore[call-arg]
