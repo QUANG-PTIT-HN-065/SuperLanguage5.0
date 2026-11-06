@@ -13,6 +13,7 @@ export default defineConfig({
         "src/pages/forgot-password/index.html",
         "src/pages/LoginAdmin/index.html",
         "src/pages/dasboardAdmin/index.html",
+        "src/pages/chat/index.html",
       ],
     },
   },

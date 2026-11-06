@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -35,6 +35,29 @@ def get_current_user(token: str = Depends(get_bearer_token)) -> Dict[str, Any]:
 
 def get_current_profile(payload: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
     """Lấy profile của user hiện tại và chặn tài khoản bị khóa/đã xóa."""
+    profile = get_profile(payload["sub"])
+    if profile is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Tài khoản không tồn tại.")
+    if profile["status"] != "active" or profile.get("deleted_at"):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Tài khoản đã bị khóa hoặc vô hiệu hóa.")
+    return profile
+
+
+def get_optional_current_profile(
+    creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> Optional[Dict[str, Any]]:
+    """Cho phép endpoint hỗ trợ khách, nhưng vẫn xác thực token nếu client gửi lên."""
+    if creds is None or not creds.credentials:
+        return None
+
+    payload = decode_access_token(creds.credentials)
+    if not payload or not payload.get("sub"):
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "Token không hợp lệ hoặc đã hết hạn.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     profile = get_profile(payload["sub"])
     if profile is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Tài khoản không tồn tại.")

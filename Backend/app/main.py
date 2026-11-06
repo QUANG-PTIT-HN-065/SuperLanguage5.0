@@ -29,7 +29,7 @@ if settings.BACKEND_CORS_ORIGINS:
 # Tích hợp Auth Router vào hệ thống API 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/me", tags=["me"])
-app.include_router(chat_ai.router, prefix=f"{settings.API_V1_STR}/chat_AI", tags=["Chat_AI"])
+app.include_router(chat_ai.router, prefix=f"{settings.API_V1_STR}/chat-ai", tags=["Chat_AI"])
 
 @app.get("/")
 def read_root():
