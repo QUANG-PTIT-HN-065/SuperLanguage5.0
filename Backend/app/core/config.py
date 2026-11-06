@@ -20,7 +20,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://superlanguage.me"
+        "https://superlanguage.me",
+        "https://www.superlanguage.me"
     ]
 
     # Supabase (thiếu biến nào, app sẽ báo lỗi rõ ngay khi khởi động)
