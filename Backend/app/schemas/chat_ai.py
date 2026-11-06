@@ -41,3 +41,11 @@ class MessageResponse(BaseModel):
     user_message: str
     ai_response: str
     ai_feedback: Optional[str] = None
+
+
+class AudioUploadResponse(BaseModel):
+    conversation_id: UUID
+    file_name: str
+    content_type: str
+    size_bytes: int
+    storage_path: str

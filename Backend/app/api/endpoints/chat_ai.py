@@ -1,14 +1,15 @@
 import logging
-import time
-from typing import Any, Dict, Optional, Tuple
+from pathlib import PurePath
+from typing import Any, Dict
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from supabase import create_client, Client
 
-from app.core.deps import get_optional_current_profile
+from app.core.deps import get_current_profile
 from app.core.config import settings
 from app.schemas.chat_ai import (
+    AudioUploadResponse,
     ConversationCreate,
     ConversationResponse,
     MessageSend,
@@ -23,76 +24,72 @@ logger = logging.getLogger(__name__)
 
 # Khởi tạo Supabase client từ cấu hình chung trong config.py
 supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SECRET_KEY)
-_guest_conversations: Dict[str, Tuple[str, float]] = {}
-_guest_message_requests: Dict[str, list[float]] = {}
-_GUEST_SESSION_TTL_SECONDS = 30 * 60
-_MAX_GUEST_CONVERSATIONS = 500
-_GUEST_MESSAGE_LIMIT = 15
-_GUEST_MESSAGE_WINDOW_SECONDS = 60
+_MAX_AUDIO_BYTES = 10 * 1024 * 1024
+_AUDIO_BUCKET = "chat-audio"
+_AUDIO_EXTENSIONS = {
+    "audio/webm": ".webm",
+    "audio/ogg": ".ogg",
+    "audio/mp4": ".m4a",
+    "audio/mpeg": ".mp3",
+    "audio/wav": ".wav",
+    "audio/x-wav": ".wav",
+    "audio/aac": ".aac",
+}
 
 
-def _create_guest_conversation(language_code: str) -> UUID:
-    now = time.monotonic()
-    expired = [
-        conversation_id
-        for conversation_id, (_, created_at) in _guest_conversations.items()
-        if now - created_at >= _GUEST_SESSION_TTL_SECONDS
-    ]
-    for conversation_id in expired:
-        _guest_conversations.pop(conversation_id, None)
-
-    if len(_guest_conversations) >= _MAX_GUEST_CONVERSATIONS:
-        oldest = min(_guest_conversations, key=lambda key: _guest_conversations[key][1])
-        _guest_conversations.pop(oldest)
-
-    conversation_id = uuid4()
-    _guest_conversations[str(conversation_id)] = (language_code, now)
-    return conversation_id
-
-
-def _check_guest_message_limit(client_host: Optional[str]) -> None:
-    now = time.monotonic()
-    host = client_host or "unknown"
-    recent_requests = [
-        requested_at
-        for requested_at in _guest_message_requests.get(host, [])
-        if now - requested_at < _GUEST_MESSAGE_WINDOW_SECONDS
-    ]
-    if len(recent_requests) >= _GUEST_MESSAGE_LIMIT:
-        _guest_message_requests[host] = recent_requests
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            "Bạn đã gửi nhiều tin nhắn trong thời gian ngắn. Vui lòng đợi một phút rồi thử lại.",
+def _verify_audio_conversation(
+    conversation_id: UUID,
+    profile: Dict[str, Any],
+) -> None:
+    try:
+        conversation = (
+            supabase.table("conversations")
+            .select("language_code")
+            .eq("id", str(conversation_id))
+            .eq("user_id", profile["id"])
+            .limit(1)
+            .execute()
         )
-    recent_requests.append(now)
-    _guest_message_requests[host] = recent_requests
+    except Exception as exc:
+        logger.exception("Could not verify the audio conversation.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải phòng trò chuyện lúc này. Vui lòng thử lại.",
+        ) from exc
+
+    if not conversation.data:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy phòng trò chuyện.")
 
 
 @router.post("/conversations")
 def create_conversation(
     data: ConversationCreate,
-    profile: Optional[Dict[str, Any]] = Depends(get_optional_current_profile),
+    profile: Dict[str, Any] = Depends(get_current_profile),
 ) -> BaseResponse[ConversationResponse]:
-    """Tạo phòng luyện nói cho học viên hoặc một phiên khách."""
-    if profile is None:
-        conversation_id = _create_guest_conversation(data.language_code)
-        return BaseResponse(
-            status="success",
-            message="Đã tạo phòng trò chuyện dùng thử.",
-            data=ConversationResponse(
-                id=conversation_id,
-                title=data.title,
-                language_code=data.language_code,
-            ),
-        )
+    """Tạo phòng luyện nói cho học viên đã xác thực."""
+    # Bộ ánh xạ chuyển đổi tên ngôn ngữ từ Frontend sang mã code chuẩn trong Database
+    lang_mapping = {
+        "Tiếng Anh": "en",
+        "English": "en",
+        "Tiếng Nhật": "ja",
+        "Japanese": "ja",
+        "Tiếng Việt": "vi",
+        "Vietnamese": "vi",
+        "Tiếng Hàn": "ko",
+        "Korean": "ko",
+        "Tiếng Trung": "zh",
+        "Chinese": "zh"
+    }
 
+    # Lấy mã code chuẩn, nếu đã là mã code (ví dụ 'en') thì giữ nguyên
+    target_lang_code = lang_mapping.get(data.language_code, data.language_code)
     try:
         res = (
             supabase.table("conversations")
             .insert({
-                "user_id": profile["id"] if profile else None,
+                "user_id": profile["id"],
                 "title": data.title,
-                "language_code": data.language_code,
+                "language_code": target_lang_code,
             })
             .select("id,title,language_code,created_at")
             .single()
@@ -124,46 +121,104 @@ def create_conversation(
     )
 
 
+@router.post("/upload-audio", response_model=BaseResponse[AudioUploadResponse])
+async def upload_audio(
+    conversation_id: UUID = Form(...),
+    audio: UploadFile = File(...),
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[AudioUploadResponse]:
+    """Nhận file ghi âm, lưu vào kho riêng tư và gắn với hội thoại."""
+    _verify_audio_conversation(conversation_id, profile)
+
+    content_type = (audio.content_type or "").split(";", maxsplit=1)[0].strip().lower()
+    extension = _AUDIO_EXTENSIONS.get(content_type)
+    if extension is None:
+        await audio.close()
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Định dạng âm thanh không được hỗ trợ.",
+        )
+
+    audio_bytes = await audio.read(_MAX_AUDIO_BYTES + 1)
+    if not audio_bytes:
+        await audio.close()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "File ghi âm đang trống.")
+    if len(audio_bytes) > _MAX_AUDIO_BYTES:
+        await audio.close()
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            "File ghi âm vượt quá giới hạn 10 MB.",
+        )
+
+    original_name = PurePath(audio.filename or "voice-recording").name
+    object_path = f"{conversation_id}/{uuid4()}{extension}"
+    storage_uploaded = False
+    try:
+        supabase.storage.from_(_AUDIO_BUCKET).upload(
+            object_path,
+            audio_bytes,
+            {"content-type": content_type, "upsert": "false"},
+        )
+        storage_uploaded = True
+        supabase.table("messages").insert({
+            "conversation_id": str(conversation_id),
+            "sender_type": "user",
+            "content": "Bản ghi âm",
+            "audio_url": object_path,
+        }).execute()
+    except Exception as exc:
+        if storage_uploaded:
+            try:
+                supabase.storage.from_(_AUDIO_BUCKET).remove([object_path])
+            except Exception:
+                logger.exception("Could not clean up an unlinked chat audio file.")
+        logger.exception("Could not store uploaded chat audio.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể lưu file ghi âm. Hãy kiểm tra cấu hình kho chat-audio rồi thử lại.",
+        ) from exc
+    finally:
+        await audio.close()
+
+    response = BaseResponse(
+        status="success",
+        message="Đã tải bản ghi âm lên máy chủ.",
+        data=AudioUploadResponse(
+            conversation_id=conversation_id,
+            file_name=original_name,
+            content_type=content_type,
+            size_bytes=len(audio_bytes),
+            storage_path=object_path,
+        ),
+    )
+    return response
+
+
 @router.post("/send-message", response_model=BaseResponse[MessageResponse])
 async def send_message(
     data: MessageSend,
-    request: Request,
-    profile: Optional[Dict[str, Any]] = Depends(get_optional_current_profile),
+    profile: Dict[str, Any] = Depends(get_current_profile),
 ) -> BaseResponse[MessageResponse]:
     """Gửi tin nhắn, gọi AIService và lưu trữ lịch sử qua Supabase"""
-    if profile is None:
-        _check_guest_message_limit(request.client.host if request.client else None)
-        guest_conversation = _guest_conversations.get(str(data.conversation_id))
-        if (
-            guest_conversation is None
-            or time.monotonic() - guest_conversation[1] >= _GUEST_SESSION_TTL_SECONDS
-        ):
-            _guest_conversations.pop(str(data.conversation_id), None)
-            raise HTTPException(
-                status.HTTP_404_NOT_FOUND,
-                "Phiên dùng thử đã hết hạn. Hãy tạo một cuộc trò chuyện mới.",
-            )
-        lang = guest_conversation[0]
-    else:
-        try:
-            conv = (
-                supabase.table("conversations")
-                .select("language_code")
-                .eq("id", str(data.conversation_id))
-                .eq("user_id", profile["id"])
-                .limit(1)
-                .execute()
-            )
-        except Exception as exc:
-            logger.exception("Could not load AI chat conversation.")
-            raise HTTPException(
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-                "Không thể tải phòng trò chuyện lúc này. Vui lòng thử lại.",
-            ) from exc
+    try:
+        conv = (
+            supabase.table("conversations")
+            .select("language_code")
+            .eq("id", str(data.conversation_id))
+            .eq("user_id", profile["id"])
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        logger.exception("Could not load AI chat conversation.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải phòng trò chuyện lúc này. Vui lòng thử lại.",
+        ) from exc
 
-        if not conv.data:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy phòng trò chuyện.")
-        lang = conv.data[0]["language_code"]
+    if not conv.data:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy phòng trò chuyện.")
+    lang = conv.data[0]["language_code"]
 
     try:
         ai_reply, ai_feedback = await AIService.generate_chat_response(data.user_message, lang)
@@ -174,27 +229,26 @@ async def send_message(
             "AI chưa thể phản hồi lúc này. Tin nhắn của bạn chưa được lưu, vui lòng thử lại.",
         ) from exc
 
-    if profile is not None:
-        try:
-            supabase.table("messages").insert([
-                {
-                    "conversation_id": str(data.conversation_id),
-                    "sender_type": "user",
-                    "content": data.user_message,
-                },
-                {
-                    "conversation_id": str(data.conversation_id),
-                    "sender_type": "ai",
-                    "content": ai_reply,
-                    "ai_feedback": ai_feedback,
-                },
-            ]).execute()
-        except Exception as exc:
-            logger.exception("Could not persist AI chat messages.")
-            raise HTTPException(
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-                "Không thể lưu tin nhắn lúc này. Vui lòng thử lại.",
-            ) from exc
+    try:
+        supabase.table("messages").insert([
+            {
+                "conversation_id": str(data.conversation_id),
+                "sender_type": "user",
+                "content": data.user_message,
+            },
+            {
+                "conversation_id": str(data.conversation_id),
+                "sender_type": "ai",
+                "content": ai_reply,
+                "ai_feedback": ai_feedback,
+            },
+        ]).execute()
+    except Exception as exc:
+        logger.exception("Could not persist AI chat messages.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể lưu tin nhắn lúc này. Vui lòng thử lại.",
+        ) from exc
 
     return BaseResponse(
         status="success",
