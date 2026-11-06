@@ -61,6 +61,80 @@ async function postJson<T>(path: string, body: unknown, accessToken?: string): P
   return payload as T;
 }
 
+export async function adminApi<T>(
+  path: string,
+  options: { method?: "GET" | "POST" | "PUT" | "DELETE"; body?: unknown } = {},
+): Promise<T> {
+  let accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!accessToken) {
+    clearTokens();
+    goToLogin();
+    throw new ApiError("Phiên quản trị đã hết hạn.", 401);
+  }
+
+  const send = (token: string): Promise<Response> => {
+    const headers = new Headers({ Authorization: `Bearer ${token}` });
+    if (options.body !== undefined) headers.set("Content-Type", "application/json");
+    return fetch(`${API_BASE_URL}${path}`, {
+      method: options.method ?? "GET",
+      headers,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+  };
+
+  let response = await send(accessToken);
+  if (response.status === 401) {
+    const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!refreshToken) {
+      clearTokens();
+      goToLogin();
+      throw new ApiError("Phiên quản trị đã hết hạn.", 401);
+    }
+
+    try {
+      const refreshed = await postJson<RefreshResponse>("/api/v1/auth/refresh", {
+        refresh_token: refreshToken,
+      });
+      if (!refreshed.access_token || !refreshed.refresh_token) {
+        throw new Error("Backend không trả về token mới.");
+      }
+      saveTokens(refreshed);
+      accessToken = refreshed.access_token;
+      response = await send(accessToken);
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        clearTokens();
+        goToLogin();
+      }
+      if (error instanceof Error) throw error;
+      throw new ApiError("Không thể làm mới phiên quản trị.", 401);
+    }
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    clearTokens();
+    goToLogin();
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = undefined;
+  }
+  if (!response.ok) {
+    const detail =
+      typeof payload === "object" &&
+      payload !== null &&
+      "detail" in payload &&
+      typeof payload.detail === "string"
+        ? payload.detail
+        : undefined;
+    throw new ApiError(detail || `Backend trả về lỗi HTTP ${response.status}.`, response.status);
+  }
+  return payload as T;
+}
+
 function saveTokens(tokens: RefreshResponse): void {
   sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
   sessionStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);

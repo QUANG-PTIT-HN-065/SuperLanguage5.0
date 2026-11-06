@@ -5,11 +5,10 @@ from fastapi import APIRouter, Depends
 from app.core.deps import get_current_profile
 from app.schemas.profile import OnboardingRequest, ProfileUpdate
 from app.services.profile_service import (
+    complete_onboarding as complete_onboarding_profile,
     get_plan,
     get_stats,
-    now_iso,
     update_profile,
-    validate_languages,
     with_effective_streak,
 )
 
@@ -37,7 +36,6 @@ def get_me(profile: Dict[str, Any] = Depends(get_current_profile)):
 def update_me(body: ProfileUpdate, profile: Dict[str, Any] = Depends(get_current_profile)):
     """Cập nhật hồ sơ; chỉ các trường được gửi lên mới bị thay đổi."""
     data = body.model_dump(mode="json", exclude_unset=True)
-    validate_languages(data.get("native_language"), data.get("target_language"))
     updated = update_profile(profile["id"], data)
     return _me_payload(updated)
 
@@ -47,8 +45,5 @@ def complete_onboarding(
     body: OnboardingRequest, profile: Dict[str, Any] = Depends(get_current_profile)
 ):
     """Hoàn tất bước chọn ngôn ngữ, trình độ, mục tiêu sau khi đăng ký."""
-    data = body.model_dump(mode="json")
-    validate_languages(data["native_language"], data["target_language"])
-    data["onboarding_completed_at"] = now_iso()
-    updated = update_profile(profile["id"], data)
+    updated = complete_onboarding_profile(profile["id"], body.model_dump(mode="json"))
     return _me_payload(updated)

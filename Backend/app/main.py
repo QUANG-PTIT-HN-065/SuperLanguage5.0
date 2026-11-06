@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.supabase import supabase_admin
 
-from app.api.endpoints import auth, users
+from app.api.endpoints import admin, auth, users, vocabulary
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -25,6 +25,12 @@ if settings.BACKEND_CORS_ORIGINS:
 # Tích hợp Auth Router vào hệ thống API 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/me", tags=["me"])
+app.include_router(
+    vocabulary.router,
+    prefix=f"{settings.API_V1_STR}/vocabulary",
+    tags=["vocabulary"],
+)
+app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
 
 @app.get("/")
 def read_root():
