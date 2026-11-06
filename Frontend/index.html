@@ -3,14 +3,50 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperLanguage</title>
+    <title>SuperLanguage 5.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body>
-    <main>
-      <h1>SuperLanguage</h1>
-      <p><a href="./src/pages/LoginAdmin/index.html">Mở trang quản trị LingoAdmin</a></p>
-      <p><a href="./src/pages/login/index.html">Mở trang đăng nhập học viên</a></p>
-      <p><a href="./src/pages/forgot-password/index.html">Khôi phục mật khẩu</a></p>
+  <body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen flex items-center justify-center p-6">
+    <main class="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center space-y-6">
+      <div class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto shadow-lg shadow-indigo-600/30">
+        <span class="material-symbols-outlined text-3xl">language</span>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">SuperLanguage 5.0</h1>
+        <p class="text-xs text-slate-500 mt-1">Hệ thống học ngoại ngữ & Quản trị trung tâm</p>
+      </div>
+      <div class="space-y-3 text-left">
+        <a href="./src/pages/LoginAdmin/code.html" class="flex items-center justify-between p-3.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold text-sm transition-colors">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-indigo-600">admin_panel_settings</span>
+            <span>Đăng nhập Quản trị (LingoAdmin)</span>
+          </div>
+          <span class="material-symbols-outlined text-sm">arrow_forward</span>
+        </a>
+        <a href="./src/pages/dasboardAdmin/code.html" class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-colors">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-slate-600">dashboard</span>
+            <span>Dashboard Quản trị (code.html)</span>
+          </div>
+          <span class="material-symbols-outlined text-sm">arrow_forward</span>
+        </a>
+        <a href="./src/pages/vocabularyAdmin/code.html" class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-colors">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-slate-600">translate</span>
+            <span>Quản lý Từ vựng riêng (code.html)</span>
+          </div>
+          <span class="material-symbols-outlined text-sm">arrow_forward</span>
+        </a>
+        <a href="./src/pages/login/index.html" class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-colors">
+          <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-slate-600">person</span>
+            <span>Cổng đăng nhập Học viên</span>
+          </div>
+          <span class="material-symbols-outlined text-sm">arrow_forward</span>
+        </a>
+      </div>
     </main>
   </body>
 </html>

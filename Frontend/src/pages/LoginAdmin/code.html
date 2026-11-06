@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>LingoAdmin - Đăng nhập Quản trị viên</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  <link rel="stylesheet" href="../../css/Admin/styles.css">
+  <link rel="stylesheet" href="../../css/Admin/admin-ui.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#3525cd",
+            "primary-container": "#4f46e5",
+            "primary-fixed": "#e2dfff",
+            secondary: "#712ae2",
+            "on-surface": "#131b2e",
+            "on-surface-variant": "#464555",
+            outline: "#777587",
+            background: "#faf8ff",
+            "surface-container-low": "#f2f3ff",
+            "surface-container": "#eaedff",
+            "surface-container-high": "#e2e7ff",
+            "surface-container-lowest": "#ffffff",
+            error: "#ba1a1a",
+            "error-container": "#ffdad6",
+            "on-error-container": "#93000a",
+          },
+          fontFamily: {
+            title: ["Manrope", "sans-serif"],
+            body: ["Hanken Grotesk", "sans-serif"],
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-slate-100 font-body text-slate-900 antialiased min-h-screen flex items-center justify-center p-4 sm:p-8">
+
+<!-- Main Card Container -->
+<div class="relative w-full max-w-6xl lg:min-h-176 bg-white rounded-3xl shadow-xl flex flex-col lg:flex-row overflow-hidden border border-slate-200">
+  
+  <!-- Left Column: Branding -->
+  <div class="lg:w-5/12 bg-indigo-950 p-8 lg:p-12 flex flex-col justify-between text-white relative overflow-hidden">
+    
+    <div class="relative z-10">
+      <div class="flex items-center gap-3 mb-8">
+        <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md">
+          <span class="material-symbols-outlined text-white text-2xl">translate</span>
+        </div>
+        <div>
+          <span class="font-title text-xl font-bold tracking-tight block">LingoAdmin</span>
+          <span class="text-sm text-slate-300 block">Nền tảng quản trị v5.0</span>
+        </div>
+      </div>
+
+      <h2 class="font-title text-3xl xl:text-4xl font-bold leading-tight text-white">
+        Quản trị đào tạo<br/>ngôn ngữ chuẩn xác.
+      </h2>
+      <p class="text-base text-slate-200 mt-4 leading-relaxed">
+        Quản lý chủ đề học tập, kho từ vựng chuẩn CEFR đa ngôn ngữ và giám sát tiến trình học viên thời gian thực.
+      </p>
+    </div>
+
+    <!-- Feature highlights -->
+    <div class="relative z-10 my-8 space-y-3">
+      <div class="p-4 rounded-xl bg-indigo-900 border border-indigo-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined text-white text-[20px]">category</span>
+        </div>
+        <div class="min-w-0">
+          <p class="text-base font-semibold text-white">Quản lý Chủ đề Học tập</p>
+          <p class="text-sm text-slate-300">Hệ thống phân cấp theo chuẩn CSDL topics</p>
+        </div>
+      </div>
+      <div class="p-4 rounded-xl bg-indigo-900 border border-indigo-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined text-white text-[20px]">menu_book</span>
+        </div>
+        <div class="min-w-0">
+          <p class="text-base font-semibold text-white">Kho Từ Vựng Tách Biệt</p>
+          <p class="text-sm text-slate-300">Trang quản lý từ vựng riêng biệt và chuyên sâu</p>
+        </div>
+      </div>
+      <div class="p-4 rounded-xl bg-indigo-900 border border-indigo-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0">
+          <span class="material-symbols-outlined text-white text-[20px]">shield_person</span>
+        </div>
+        <div class="min-w-0">
+          <p class="text-base font-semibold text-white">Bảo mật RBAC & Supabase</p>
+          <p class="text-sm text-slate-300">Phân quyền quản trị viên an toàn tối đa</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- System status badge -->
+    <div class="relative z-10 flex items-center justify-between pt-4 border-t border-indigo-800 text-sm">
+      <div class="flex items-center gap-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-white font-semibold">Hệ thống sẵn sàng</span>
+      </div>
+      <span class="text-slate-300">Phản hồi: 18ms</span>
+    </div>
+  </div>
+
+  <!-- Right Column: Login Form -->
+  <div class="lg:w-7/12 p-8 lg:p-12 flex flex-col justify-between bg-white">
+    <!-- Top toolbar -->
+    <div class="flex items-center justify-between pb-6 border-b border-slate-100">
+      <div class="flex items-center gap-1.5 text-sm text-slate-600 font-medium">
+        <span class="material-symbols-outlined text-base">lock</span>
+        <span>Cổng bảo mật cấp quản trị viên</span>
+      </div>
+      <div class="text-sm font-semibold px-3 py-1 rounded-full bg-indigo-50 text-indigo-800">
+        Role: admin
+      </div>
+    </div>
+
+    <!-- Form container -->
+    <div class="my-auto py-8 max-w-lg w-full mx-auto">
+      <div class="mb-8">
+        <h1 class="font-title text-3xl font-bold text-slate-900 tracking-tight">Đăng Nhập LingoAdmin</h1>
+        <p class="text-base text-slate-600 mt-2">Vui lòng đăng nhập với tài khoản có quyền Quản trị viên (Admin).</p>
+      </div>
+
+      <!-- Error alert -->
+      <div id="errorAlert" class="hidden mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 items-start gap-2.5">
+        <span class="material-symbols-outlined text-rose-600 text-lg shrink-0 mt-0.5">error</span>
+        <span id="errorMessage" class="text-sm leading-relaxed"></span>
+      </div>
+
+      <form id="adminLoginForm" class="space-y-5">
+        <!-- Email -->
+        <div>
+          <label class="block text-sm font-semibold text-slate-800 mb-2" for="loginEmail">
+            Email quản trị viên
+          </label>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute inset-y-0 left-0 w-12 flex items-center justify-center text-slate-500 text-xl pointer-events-none">alternate_email</span>
+            <input
+              id="loginEmail"
+              type="email"
+              required
+              autocomplete="username"
+              placeholder="admin@lingo.com"
+              class="w-full h-12 pl-12 pr-4 bg-white border border-slate-300 rounded-xl text-base focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/25 transition-all text-slate-900"
+            />
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-700" for="loginPassword">
+              Mật khẩu
+            </label>
+            <a href="../forgot-password/index.html" class="text-sm text-indigo-700 hover:text-indigo-900 font-semibold">Quên mật khẩu?</a>
+          </div>
+          <div class="relative">
+            <span class="material-symbols-outlined absolute inset-y-0 left-0 w-12 flex items-center justify-center text-slate-500 text-xl pointer-events-none">lock</span>
+            <input
+              id="loginPassword"
+              type="password"
+              required
+              autocomplete="current-password"
+              placeholder="••••••••••••"
+              class="w-full h-12 pl-12 pr-12 bg-white border border-slate-300 rounded-xl text-base focus:outline-none focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/25 transition-all text-slate-900"
+            />
+            <button
+              id="togglePasswordBtn"
+              type="button"
+              class="absolute inset-y-0 right-0 w-12 flex items-center justify-center text-slate-500 hover:text-slate-800"
+              title="Hiện/Ẩn mật khẩu"
+            >
+              <span id="eyeIcon" class="material-symbols-outlined text-xl">visibility</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Remember me -->
+        <div class="flex items-center justify-between pt-1 text-sm">
+          <label class="flex items-center gap-2 cursor-pointer select-none text-slate-600">
+            <input id="rememberMe" type="checkbox" checked class="w-5 h-5 rounded text-indigo-600 focus:ring-0 accent-indigo-600 cursor-pointer"/>
+            <span>Ghi nhớ đăng nhập phiên này</span>
+          </label>
+          <span class="text-slate-500">Phiên được mã hóa</span>
+        </div>
+
+        <!-- Submit Button -->
+        <button
+          id="submitBtn"
+          type="submit"
+          class="w-full h-14 mt-2 rounded-xl bg-indigo-700 hover:bg-indigo-800 text-white font-title font-semibold text-base flex items-center justify-center gap-2 shadow-md active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <span id="submitText">Đăng Nhập Dashboard</span>
+          <span id="submitIcon" class="material-symbols-outlined text-xl">arrow_forward</span>
+        </button>
+      </form>
+
+      <!-- Hint box -->
+      <div class="mt-8 p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+        <span class="material-symbols-outlined text-indigo-700 text-xl shrink-0">info</span>
+        <div class="text-sm text-slate-700 leading-relaxed">
+          <span class="font-semibold text-slate-900">Lưu ý:</span> Sử dụng email quản trị đã đăng ký trong hệ thống (vai trò <code class="bg-slate-200 px-1 py-0.5 rounded text-[11px]">admin</code> theo bảng <code class="bg-slate-200 px-1 py-0.5 rounded text-[11px]">profiles</code>).
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-sm text-slate-600 gap-2">
+      <p>© 2025-2026 SuperLanguage 5.0 LingoAdmin Hub.</p>
+      <div class="flex items-center gap-4">
+        <a href="../../../index.html" class="hover:text-indigo-600 transition-colors">Trang chủ</a>
+        <a href="../login/index.html" class="hover:text-indigo-600 transition-colors">Cổng học viên</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="fixed top-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+<script type="module">
+  import { loginAdmin } from "../../types/admin/auth";
+
+  // Toggle Password Visibility
+  const passwordInput = document.getElementById("loginPassword");
+  const toggleBtn = document.getElementById("togglePasswordBtn");
+  const eyeIcon = document.getElementById("eyeIcon");
+
+  if (toggleBtn && passwordInput && eyeIcon) {
+    toggleBtn.addEventListener("click", () => {
+      const isPassword = passwordInput.type === "password";
+      passwordInput.type = isPassword ? "text" : "password";
+      eyeIcon.textContent = isPassword ? "visibility_off" : "visibility";
+    });
+  }
+
+  // Toast Helper
+  function showToast(message, type = "info") {
+    const container = document.getElementById("toastContainer");
+    if (!container) return;
+    const toast = document.createElement("div");
+    toast.className = `pointer-events-auto rounded-xl px-4 py-3 text-sm text-white shadow-xl flex items-center gap-2 transition-all ${
+      type === "success" ? "bg-emerald-600" : type === "error" ? "bg-rose-600" : "bg-slate-800"
+    }`;
+    const icon = document.createElement("span");
+    icon.className = "material-symbols-outlined text-base";
+    icon.textContent = type === "success" ? "check_circle" : type === "error" ? "error" : "info";
+    toast.appendChild(icon);
+    toast.appendChild(document.createTextNode(message));
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = "0";
+      setTimeout(() => toast.remove(), 300);
+    }, 3500);
+  }
+
+  // Form Submission
+  const form = document.getElementById("adminLoginForm");
+  const errorAlert = document.getElementById("errorAlert");
+  const errorMessage = document.getElementById("errorMessage");
+  const submitBtn = document.getElementById("submitBtn");
+  const submitText = document.getElementById("submitText");
+  const submitIcon = document.getElementById("submitIcon");
+
+  function showError(msg) {
+    if (errorAlert && errorMessage) {
+      errorMessage.textContent = msg;
+      errorAlert.classList.remove("hidden");
+    }
+  }
+
+  function hideError() {
+    errorAlert?.classList.add("hidden");
+  }
+
+  document.getElementById("loginEmail")?.addEventListener("input", hideError);
+  document.getElementById("loginPassword")?.addEventListener("input", hideError);
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      hideError();
+
+      const email = document.getElementById("loginEmail")?.value.trim() || "";
+      const password = document.getElementById("loginPassword")?.value || "";
+
+      if (!email || !password) {
+        showError("Vui lòng nhập đầy đủ email và mật khẩu.");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitText.textContent = "Đang xác thực...";
+      submitIcon.textContent = "sync";
+      submitIcon.classList.add("animate-spin");
+
+      try {
+        await loginAdmin(email, password);
+        submitText.textContent = "Thành công!";
+        submitIcon.textContent = "check";
+        submitIcon.classList.remove("animate-spin");
+        showToast("Đăng nhập thành công! Đang chuyển hướng...", "success");
+
+        setTimeout(() => {
+          window.location.assign(new URL("../dasboardAdmin/code.html", window.location.href).toString());
+        }, 800);
+      } catch (err) {
+        submitBtn.disabled = false;
+        submitText.textContent = "Đăng Nhập Dashboard";
+        submitIcon.textContent = "arrow_forward";
+        submitIcon.classList.remove("animate-spin");
+
+        const msg = err instanceof Error ? err.message : "Đăng nhập thất bại. Vui lòng kiểm tra lại.";
+        showError(msg);
+        showToast(msg, "error");
+      }
+    });
+  }
+</script>
+</body>
+</html>
