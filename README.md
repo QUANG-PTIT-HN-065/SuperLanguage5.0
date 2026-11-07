@@ -171,7 +171,7 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 npm run dev
 ```
 
-Mở URL được Vite hiển thị trong terminal. `Frontend/.env` chỉ cần `VITE_API_BASE_URL=http://127.0.0.1:8000`. Đăng nhập qua `/api/v1/auth/admin/login`; backend xác thực bằng Supabase Auth và chỉ cấp session cho tài khoản có `role=admin`. Không mở HTML trực tiếp hoặc dùng Live Server: TypeScript cần được Vite phục vụ.
+Mở URL được Vite hiển thị trong terminal. `Frontend/.env` chỉ cần `VITE_API_BASE_URL=http://127.0.0.1:8000`. Đăng nhập qua `/api/v1/auth/admin/login`; backend xác thực bằng Supabase Auth và chỉ cấp session cho tài khoản có `role=admin`. Dashboard quản trị hỗ trợ xem danh sách, xem chi tiết, thêm, sửa và xóa từ vựng. Đăng nhập bị giới hạn tối đa 5 lượt mỗi email/IP và 20 lượt mỗi IP trong 15 phút; bộ đếm được lưu nguyên tử trong Supabase, dùng chung giữa các tiến trình. Sau khi cập nhật schema, chạy lại migration `Supebase/migrations/01_schema.sql`. Không mở HTML trực tiếp hoặc dùng Live Server: TypeScript cần được Vite phục vụ.
 
 ---
 
