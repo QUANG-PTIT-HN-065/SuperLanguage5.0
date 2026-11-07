@@ -15,6 +15,7 @@ export default defineConfig({
         "src/pages/LoginAdmin/index.html",
         "src/pages/dasboardAdmin/code.html",
         "src/pages/dasboardAdmin/index.html",
+        "src/pages/chat/index.html",
         "src/pages/vocabularyAdmin/code.html",
         "src/pages/vocabularyAdmin/index.html",
       ],

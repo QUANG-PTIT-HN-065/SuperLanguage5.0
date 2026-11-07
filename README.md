@@ -96,6 +96,17 @@ superlanguage-5.0/
     *   Xem lịch sử bài học đã hoàn thành.
     *   Bảng tổng kết điểm số và tỷ lệ phần trăm hoàn thành khóa học.
 
+### AI Conversation
+
+Trang luyện hội thoại nằm tại `frontend/src/pages/chat/index.html`. Học viên đăng nhập qua API xác thực để nhận access token; giao diện dùng token này để tạo phòng và gửi tin nhắn:
+
+* `POST /api/v1/chat-ai/conversations` — tạo phòng với `title` và `language_code` (`English` hoặc `Japanese`).
+* `POST /api/v1/chat-ai/send-message` — gửi `conversation_id` và `user_message`.
+
+Các response thành công dùng chung envelope `status`, `message`, `data` và `error`. Cần đăng nhập để tạo phòng, gửi tin nhắn hoặc tải bản ghi âm; backend xác thực tài khoản và chỉ cho phép chủ phòng truy cập. Phòng chat và tin nhắn được lưu vào tài khoản. Cấu hình địa chỉ backend bằng `VITE_API_BASE_URL` trong `frontend/.env`.
+
+Chat hỗ trợ ghi âm bằng MediaRecorder: xin quyền micro sau thao tác của người dùng, giới hạn mỗi bản ghi 60 giây/10 MB, nghe lại trước khi gửi qua `POST /api/v1/chat-ai/upload-audio`. Chạy migration `Supebase/migrations/03_chat_audio.sql` để tạo private Storage bucket `chat-audio`; backend nhận multipart `conversation_id` và `audio`, rồi lưu đường dẫn file vào `messages.audio_url` của hội thoại đã đăng nhập.
+
 ### 2. Phân quyền Quản lý (Admin / Content Manager)
 *   **Quản lý Bài học & Nội dung (CRUD):**
     *   *Quản lý Chủ đề/Khóa học:* Thêm, sửa, xóa, ẩn/hiện danh mục bài học.
