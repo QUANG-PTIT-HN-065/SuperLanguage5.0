@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diễn văn | SuperLanguage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+    <link rel="stylesheet" href="../../../css/shared/design-system.css">
+    <link rel="stylesheet" href="../../../css/shared/dungeon-ui.css">
+    <script type="module" src="../../../types/shared/api-client.ts"></script>
+    <script type="module" src="../../../types/shared/toast.ts"></script>
+    <script type="module" src="../../../types/shared/header.ts"></script>
+    <script type="module" src="../../../types/shared/gsap-animations.ts"></script>
+    <script type="module" src="./speech.ts"></script>
+  </head>
+  <body class="sl-app-shell slg-app">
+    <div id="sl-header"></div>
+
+    <main class="sl-main">
+      <div id="sl-auth-guard" class="sl-card sl-card-lg sl-text-center" style="padding:3rem 1rem; display:none;">
+        <div style="font-size:3rem; margin-bottom:1rem; opacity:0.5">🔒</div>
+        <h2 class="font-title text-lg font-bold text-slate-900 mb-1">Bạn cần đăng nhập</h2>
+        <p class="text-slate-muted text-sm mb-4">Vui lòng đăng nhập để sử dụng chức năng diễn văn.</p>
+        <a href="../../login/index.html" class="sl-btn sl-btn-primary">Đăng nhập ngay</a>
+      </div>
+
+      <div id="sl-speech-content" class="sl-hidden">
+        <div class="sl-page-header sl-page-reveal">
+          <h1>Diễn văn</h1>
+          <p>Ghi âm và luyện phát âm ngôn ngữ bạn đang học.</p>
+        </div>
+
+        <!-- Câu mẫu để đọc -->
+        <div class="sl-card mb-6 sl-page-reveal" style="--stagger-index:0;">
+          <div class="sl-card-body sl-text-center">
+            <div class="w-12 h-12 rounded-xl bg-cyan-50 text-cyan-600 mx-auto flex items-center justify-center mb-3">
+              <svg class="sl-icon sl-icon-lg" viewBox="0 0 24 24"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+            </div>
+            <h3 class="font-title font-bold text-slate-900 mb-2">Câu mẫu để đọc</h3>
+            <p id="sl-speech-sample" class="text-xl font-medium mb-4">Chào mừng bạn đến với SuperLanguage.</p>
+            <button id="sl-speech-play-sample" class="sl-btn sl-btn-secondary sl-btn-sm inline-flex items-center gap-2">
+              <svg class="sl-icon sl-icon-sm" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              <span>Nghe câu mẫu</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Trình ghi âm -->
+        <div class="sl-card mb-6 sl-page-reveal" style="--stagger-index:1;">
+          <div class="sl-card-body">
+            <div class="sl-text-center mb-6">
+              <div id="sl-speech-status" class="text-slate-500 text-sm mb-2 font-medium">Nhấn nút ghi âm để bắt đầu</div>
+              <div class="text-4xl sm:text-5xl font-extrabold text-slate-900 font-mono tracking-wider" id="sl-speech-timer">00:00</div>
+            </div>
+            
+            <div class="flex justify-center gap-3">
+              <button id="sl-speech-record" class="sl-btn sl-btn-danger sl-btn-lg flex items-center gap-2" style="min-width:140px;">
+                <svg class="sl-icon sl-icon-sm" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12.01" y2="22"/></svg>
+                <span id="sl-record-text">Ghi âm</span>
+              </button>
+              <button id="sl-speech-stop" class="sl-btn sl-btn-secondary sl-btn-lg flex items-center gap-2" disabled style="min-width:140px;">
+                <svg class="sl-icon sl-icon-sm" viewBox="0 0 24 24"><rect width="14" height="14" x="5" y="5" rx="2"/></svg>
+                <span>Dừng</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Xem lại bản ghi -->
+        <div id="sl-speech-preview" class="sl-card sl-hidden sl-page-reveal" style="--stagger-index:2;">
+          <div class="sl-card-body">
+            <h3 class="font-title font-bold text-slate-900 mb-3">Xem lại bản ghi</h3>
+            <audio id="sl-speech-audio" controls class="w-full" style="height:44px;"></audio>
+            <div class="sl-text-center mt-4">
+              <button id="sl-speech-upload" class="sl-btn sl-btn-primary sl-btn-sm inline-flex items-center gap-2">
+                <svg class="sl-icon sl-icon-sm" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>Gửi bài luyện nói</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </body>
+</html>

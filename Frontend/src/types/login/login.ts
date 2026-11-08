@@ -292,7 +292,7 @@ class SlanguageLogin {
       if (auth.user?.display_name) {
         localStorage.setItem('slanguage_user_name', auth.user.display_name);
       }
-      this.triggerLoadingAndRedirect('../../../index.html', 1500);
+      this.triggerLoadingAndRedirect('../learner/dashboard/index.html', 1200);
     } catch (error) {
       this.showToast(
         error instanceof Error ? error.message : 'Đăng nhập thất bại. Vui lòng thử lại.',
@@ -372,7 +372,17 @@ class SlanguageLogin {
         localStorage.setItem('slanguage_is_logged_in', 'true');
         localStorage.setItem('slanguage_user_email', email);
         localStorage.setItem('slanguage_user_name', fullName);
-        this.triggerLoadingAndRedirect('../../../index.html', 1500);
+        if (result.data.user?.id) localStorage.setItem('slanguage_user_id', result.data.user.id);
+        if (!localStorage.getItem('slanguage_active_language')) {
+          localStorage.setItem('slanguage_active_language', 'ja');
+        }
+        if (!localStorage.getItem('slanguage_daily_goal')) {
+          localStorage.setItem('slanguage_daily_goal', '30');
+        }
+        if (!localStorage.getItem('slanguage_user_xp')) {
+          localStorage.setItem('slanguage_user_xp', '100');
+        }
+        this.triggerLoadingAndRedirect('../learner/dashboard/index.html', 1200);
         return;
       }
 

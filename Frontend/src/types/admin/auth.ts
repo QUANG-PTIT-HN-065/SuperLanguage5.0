@@ -310,12 +310,12 @@ export async function requireAdminSession(): Promise<AdminProfile | null> {
   }
 
   if (response.status === 401) {
-    let refreshed: RefreshResponse;
     try {
       const refreshResponse = await postJson<ApiResponse<RefreshResponse>>("/api/v1/auth/refresh", {
         refresh_token: refreshToken,
       });
-      if (!refreshed.access_token || !refreshed.refresh_token) {
+      const refreshed = refreshResponse.data;
+      if (!refreshed || !refreshed.access_token || !refreshed.refresh_token) {
         throw new Error("Không thể cấp mới token.");
       }
       saveTokens(refreshed);

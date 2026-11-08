@@ -41,8 +41,6 @@ def get_current_profile(payload: Dict[str, Any] = Depends(get_current_user)) -> 
     if profile["status"] != "active" or profile.get("deleted_at"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Tài khoản đã bị khóa hoặc vô hiệu hóa.")
     return profile
-<<<<<<< HEAD
-=======
 
 
 def get_current_admin_profile(
@@ -52,4 +50,3 @@ def get_current_admin_profile(
     if profile.get("role") != "admin":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Bạn không có quyền quản trị.")
     return profile
->>>>>>> master
