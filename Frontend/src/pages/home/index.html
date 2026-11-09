@@ -1,3 +1,4 @@
+<<<<<<< HEAD:Frontend/src/pages/home/index.html
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -991,3 +992,1018 @@
   <script type="module" src="../../types/home/home.ts"></script>
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Bảng Điều Khiển Học Viên</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <!-- ================= TOP NAVBAR ================= -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="nav-left">
+        <a href="./index.html" class="brand-logo">
+          <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </a>
+
+        <nav>
+          <ul class="nav-links">
+            <li><a href="./index.html" class="active">Trang chủ</a></li>
+            <li><a href="../roadmap/index.html">Học tập</a></li>
+            <li><a href="../vocabulary/index.html">Luyện từ vựng</a></li>
+            <li><a href="../profile/index.html">Tiến độ học</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="nav-right">
+        <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
+          <img src="../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <span>14 Ngày</span>
+        </div>
+        <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
+          <i class="fa-solid fa-star"></i>
+          <span id="headerXPVal">2,450 XP</span>
+        </div>
+        <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
+          <i class="fa-solid fa-heart"></i>
+          <span>5/5</span>
+        </div>
+
+        <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
+        <div class="lang-dropdown" id="langDropdown">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
+            <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
+            <i class="fa-solid fa-chevron-down lang-chevron"></i>
+          </button>
+          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
+            <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
+              <img src="../assets/flags/flag-jp.png" alt="JP" class="flag-icon">
+              <span class="lang-name">Tiếng Nhật (日本語)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
+              <img src="../assets/flags/flag-en.png" alt="EN" class="flag-icon">
+              <span class="lang-name">English (Tiếng Anh)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
+              <img src="../assets/flags/flag-vn.png" alt="VN" class="flag-icon">
+              <span class="lang-name">Tiếng Việt (Vietnamese)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- User Account Dropdown (Shown when logged in) -->
+        <div class="user-dropdown auth-only" id="userDropdown">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini">
+            <div class="user-info-text">
+              <div class="name">Vua Xứ Thanh</div>
+              <div class="role">Học viên</div>
+            </div>
+            <i class="fa-solid fa-chevron-down user-chevron"></i>
+          </button>
+          <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Thông tin cá nhân</span>
+                <span class="sub">Hồ sơ & cài đặt tài khoản</span>
+              </div>
+            </a>
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Tiến độ học tập</span>
+                <span class="sub">Thống kê XP & chuỗi ngày</span>
+              </div>
+            </a>
+            <div class="user-dropdown-divider"></div>
+            <a href="../login/index.html" class="user-dropdown-item logout-item" id="navLogoutItem" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Đăng xuất</span>
+                <span class="sub">Thoát khỏi phiên học</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Guest Auth Buttons (Shown when NOT logged in) -->
+        <div class="guest-nav-auth guest-only" id="guestNavAuth">
+          <a href="../login/index.html" class="nav-auth-login">Đăng nhập</a>
+          <a href="../register/index.html" class="nav-auth-register">Đăng ký</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN WRAPPER ================= -->
+  <main class="main-wrapper">
+    <!-- LEFT MAIN COLUMN -->
+    <div class="content-left">
+      
+      <!-- HERO WELCOME BANNER -->
+      <section class="hero-card">
+        <h1 class="hero-title">Chào mừng bạn đến với S Language!</h1>
+        <p class="hero-description" id="heroWelcomeDesc">
+          Chào mừng bạn đến với S Language – nền tảng học tập kết nối ba nền văn hóa Việt, Anh và Nhật Bản. Tại đây, chúng tôi mang đến cho bạn lộ trình bài bản, dễ tiếp cận và giàu tính thực tế để tự tin làm chủ ngôn ngữ từ những bước đầu tiên. Dù bạn học để giao tiếp hàng ngày, phục vụ công việc hay khám phá thế giới, S Language luôn sẵn sàng đồng hành cùng bạn.
+        </p>
+      </section>
+
+      <!-- 3 LANGUAGES SHOWCASE BANNER CAROUSEL -->
+      <section class="language-showcase-section">
+        <div class="section-title-wrap">
+          <h2 class="section-title">
+            <i class="fa-solid fa-earth-asia"></i> 3 Ngôn ngữ trong chương trình học
+          </h2>
+        </div>
+
+        <div class="language-banner-carousel" id="languageBannerCarousel">
+          <!-- Slide 1: Japanese -->
+          <div class="lang-banner-slide active" data-lang="ja" data-index="0">
+            <div class="lang-banner-top">
+              <div class="lang-banner-brand">
+                <div class="lang-banner-flag">
+                  <img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="lang-flag-img">
+                </div>
+                <div class="lang-banner-title-wrap">
+                  <div class="lang-banner-title-row">
+                    <h3 class="lang-banner-title">Tiếng Nhật (日本語)</h3>
+                    <span class="lang-banner-badge is-learning"><i class="fa-solid fa-circle-check"></i> Đang học</span>
+                  </div>
+                  <span class="lang-banner-subtitle">JLPT N5 - N1 • Đàm thoại thực chiến</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="lang-banner-desc">
+              Hệ chữ Hiragana, Katakana, Kanji và cấu trúc ngữ cảnh chuẩn Tokyo. Lộ trình bài bản giúp học viên tự tin giao tiếp, chuẩn bị du học và làm việc tại các doanh nghiệp Nhật Bản.
+            </p>
+
+            <div class="lang-banner-bottom">
+              <div class="lang-banner-stats">
+                <div class="banner-stat-chip">
+                  <span class="stat-label">Tiến độ</span>
+                  <span class="stat-val">72%</span>
+                </div>
+                <div class="banner-stat-chip">
+                  <span class="stat-label">Từ vựng</span>
+                  <span class="stat-val">380 từ</span>
+                </div>
+                <div class="banner-stat-chip">
+                  <span class="stat-label">Trình độ</span>
+                  <span class="stat-val">N5 Sơ Cấp</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Slide 2: English -->
+          <div class="lang-banner-slide" data-lang="en" data-index="1">
+            <div class="lang-banner-top">
+              <div class="lang-banner-brand">
+                <div class="lang-banner-flag">
+                  <img src="../assets/flags/flag-en.png" alt="English" class="lang-flag-img">
+                </div>
+                <div class="lang-banner-title-wrap">
+                  <div class="lang-banner-title-row">
+                    <h3 class="lang-banner-title">Tiếng Anh (English)</h3>
+                    <span class="lang-banner-badge"><i class="fa-solid fa-graduation-cap"></i> Khóa học tiêu chuẩn</span>
+                  </div>
+                  <span class="lang-banner-subtitle">IELTS • Giao tiếp quốc tế</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="lang-banner-desc">
+              Phản xạ ngữ âm chuẩn Oxford, thành ngữ & văn phong môi trường toàn cầu. Giúp làm chủ ngữ pháp, tự tin đàm thoại trong công sở và mở rộng cơ hội thăng tiến quốc tế.
+            </p>
+
+            <div class="lang-banner-bottom">
+              <div class="lang-banner-stats">
+                <div class="banner-stat-chip">
+                  <span class="stat-label">Tiến độ</span>
+                  <span class="stat-val">85%</span>
+                </div>
+                <div class="banner-stat-chip">
+                  <span class="stat-label">Từ vựng</span>
+                  <span class="stat-val">1,450 từ</span>
+                </div>
+                <div class="banner-stat-chip">
+                  <span class="stat-label">Trình độ</span>
+                  <span class="stat-val">B2 Trung Cấp</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Slide 3: Vietnamese -->
+          <div class="lang-banner-slide" data-lang="vi" data-index="2">
+            <div class="lang-banner-top">
+              <div class="lang-banner-brand">
+                <div class="lang-banner-flag">
+                  <img src="../assets/flags/flag-vn.png" alt="Tiếng Việt" class="lang-flag-img">
+                </div>
+                <div class="lang-banner-title-wrap">
+                  <div class="lang-banner-title-row">
+                    <h3 class="lang-banner-title">Tiếng Việt (Vietnamese)</h3>
+                    <span class="lang-banner-badge"><i class="fa-solid fa-graduation-cap"></i> Khóa học tiêu chuẩn</span>
+                  </div>
+                  <span class="lang-banner-subtitle">Thành ngữ • Văn hóa ứng xử</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="lang-banner-desc">
+              Làm chủ hệ thống 6 thanh điệu, ca dao tục ngữ và đàm thoại tinh tế. Thấu hiểu nét đẹp ngôn từ dân tộc, văn hóa giao tiếp và nghệ thuật ứng xử truyền thống Việt Nam.
+            </p>
+
+            <div class="lang-banner-bottom">
+              <div class="lang-banner-stats">
+                <div class="banner-stat-chip">
+                  <span class="stat-label">Tiến độ</span>
+                  <span class="stat-val">94%</span>
+                </div>
+                <div class="banner-stat-chip">
+                  <span class="stat-label">Từ vựng</span>
+                  <span class="stat-val">2,100 từ</span>
+                </div>
+                <div class="banner-stat-chip">
+                  <span class="stat-label">Trình độ</span>
+                  <span class="stat-val">Bản Xứ</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Auto-advance timer progress line (1.5s) -->
+          <div class="carousel-timer-bar">
+            <div class="carousel-timer-fill" id="carouselTimerProgress"></div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ================= ROADMAP TREE SHOWCASE & TEASER ================= -->
+      <section class="roadmap-teaser-card" id="roadmapTeaserSection">
+        <div class="teaser-content">
+          <h2 class="teaser-title">Lộ trình học tập phân nhánh</h2>
+          <p class="teaser-desc">
+            Không còn danh sách bài học phẳng nhàm chán! Slanguage xây dựng lộ trình theo mô hình Cây Kỹ Năng (Skill Tree) đa tầng. 
+            Mỗi nhánh cây mở ra các chân trời từ vựng, ngữ pháp và đàm thoại thực chiến. Học viên chủ động rẽ nhánh, thu thập XP và chạm tay vào các cột mốc chứng chỉ quốc tế.
+          </p>
+
+          <!-- Tree Visual Pillars Preview -->
+          <div class="tree-preview-pillars">
+            <div class="tree-pillar-item">
+              <div class="pillar-icon"><i class="fa-solid fa-seedling"></i></div>
+              <div class="pillar-text">
+                <strong>Gốc rễ vững chắc</strong>
+                <span>Ngữ âm chuẩn Oxford & Kana nền tảng</span>
+              </div>
+            </div>
+            <div class="tree-pillar-item">
+              <div class="pillar-icon"><i class="fa-solid fa-code-branch"></i></div>
+              <div class="pillar-text">
+                <strong>Nhánh kỹ năng linh hoạt</strong>
+                <span>Tùy chọn học Giao tiếp hoặc Ngữ pháp chuyên sâu</span>
+              </div>
+            </div>
+            <div class="tree-pillar-item">
+              <div class="pillar-icon"><i class="fa-solid fa-crown"></i></div>
+              <div class="pillar-text">
+                <strong>Cột mốc vinh danh</strong>
+                <span>Chinh phục JLPT N5-N1 & IELTS 7.5+</span>
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+      </section>
+
+      <!-- ================= CORE METHODOLOGY & HIGHLIGHTS ================= -->
+      <section class="methodology-section" id="methodologySection">
+        <div class="section-title-wrap">
+          <h2 class="section-title">
+            <i class="fa-solid fa-graduation-cap"></i> Phương pháp đào tạo vượt trội tại Slanguage
+          </h2>
+        </div>
+
+        <div class="methodology-grid">
+          <div class="method-card">
+            <div class="method-icon-box" style="background: rgba(0, 180, 216, 0.15); color: var(--color-ocean-light);">
+              <i class="fa-solid fa-diagram-project"></i>
+            </div>
+            <h3>Cây Kỹ Năng Trực Quan</h3>
+            <p>Học phân nhánh theo năng khiếu và mục tiêu nghề nghiệp, theo dõi tiến độ nở hoa từng nút bài học.</p>
+          </div>
+
+          <div class="method-card">
+            <div class="method-icon-box" style="background: rgba(255, 183, 3, 0.15); color: var(--color-topaz);">
+              <i class="fa-solid fa-brain"></i>
+            </div>
+            <h3>Lặp lại ngắt quãng (SRS)</h3>
+            <p>Thuật toán nhắc lại từ vựng vào đúng thời điểm chuẩn bị quên, giúp ghi nhớ vĩnh viễn vào phản xạ vô thức.</p>
+          </div>
+
+          <div class="method-card">
+            <div class="method-icon-box" style="background: rgba(220, 20, 60, 0.15); color: var(--color-crimson);">
+              <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h3>Gamification Hứng Khởi</h3>
+            <p>Tích lũy XP, duy trì chuỗi Streak rực lửa mỗi ngày và đua top Bảng Vàng vinh danh cùng cộng đồng học viên.</p>
+          </div>
+
+          <div class="method-card">
+            <div class="method-icon-box" style="background: rgba(122, 226, 207, 0.15); color: #7AE2CF;">
+              <i class="fa-solid fa-microphone-lines"></i>
+            </div>
+            <h3>Phản xạ âm điệu tự nhiên</h3>
+            <p>Hệ thống mẫu câu thực tế đời thường giúp học viên nói tự nhiên như người bản xứ ngay từ tuần học đầu tiên.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PLATFORM IMPACT STATS ================= -->
+      <section class="impact-stats-card">
+        <div class="stats-grid">
+          <div class="stat-cell">
+            <div class="stat-number">50,000+</div>
+            <div class="stat-label">Học viên đang tích cực học tập</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-number">98.4%</div>
+            <div class="stat-label">Tỷ lệ đạt chứng chỉ mục tiêu</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-number">3,500+</div>
+            <div class="stat-label">Bài học cây kỹ năng đa tầng</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-number">4.9 / 5.0</div>
+            <div class="stat-label">Đánh giá hài lòng toàn diện</div>
+          </div>
+        </div>
+      </section>
+
+            <!-- ================= STUDENT REVIEWS ================= -->
+      <section class="reviews-section" id="reviewsSection">
+        <div class="section-title-wrap">
+          <h2 class="section-title">
+            <i class="fa-solid fa-comments"></i> Học viên nói gì về Slanguage?
+          </h2>
+        </div>
+
+        <div class="reviews-conveyor-wrapper" id="reviewsConveyorWrapper">
+          <div class="reviews-conveyor-track" id="reviewsConveyorTrack">
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Lộ trình cây kỹ năng thực sự làm mình bất ngờ! Mình không bị ép học thuộc lòng máy móc mà được tự chọn rẽ nhánh đàm thoại du lịch Nhật Bản trước. Rất trực quan!"</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Nguyễn Thu Hà" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Nguyễn Thu Hà</strong>
+                  <span>JLPT N3 Tokyo • Đã học 6 tháng</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Phương pháp Spaced Repetition kết hợp cây bài học giúp mình tích lũy hơn 1,500 từ vựng tiếng Anh chuyên ngành mà không thấy mệt mỏi chút nào."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" alt="Trần Quốc Bảo" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Trần Quốc Bảo</strong>
+                  <span>IELTS 7.5 • Chuyên viên tài chính</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Tính năng giữ chuỗi Streak ngọn lửa tạo động lực cực lớn. Mình đã duy trì chuỗi học 65 ngày liên tục và tự tin phỏng vấn việc làm với sếp người Nhật!"</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" alt="Lê Minh Trí" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Lê Minh Trí</strong>
+                  <span>JLPT N2 • Kỹ sư phần mềm Osaka</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Phần luyện phát âm chuẩn Oxford của Slanguage quá xuất sắc. AI phân tích ngữ điệu chi tiết giúp mình sửa được các âm đuôi khó nhằn chỉ sau 3 tuần."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" alt="Phạm Quỳnh Anh" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Phạm Quỳnh Anh</strong>
+                  <span>Du học sinh Sydney • IELTS 8.0</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Tiếng Việt 6 thanh điệu rất phức tạp, nhưng hệ thống flashcard thông minh và lộ trình giao tiếp của Slanguage giúp tôi đàm phán hợp đồng trôi chảy tại Hà Nội."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&auto=format&fit=crop&q=80" alt="Kenji Sato (佐藤 健次)" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Kenji Sato (佐藤 健次)</strong>
+                  <span>Tiếng Việt Thương Mại • Quản lý dự án</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Cây Lộ Trình học phân tầng như chơi game nhập vai vậy! Cứ mở khóa một nhánh mới là nhận thêm huy hiệu và XP, học không biết chán."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=80" alt="Vũ Hoàng Nam" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Vũ Hoàng Nam</strong>
+                  <span>Tiếng Nhật N4 • ĐH Ngoại Thương</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Thời gian trực bận rộn nên bài học vi mô 15 phút mỗi ngày là cứu cánh cho mình. Đấu trường Quiz từ vựng giúp nhớ ngay các thuật ngữ chuyên môn."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80" alt="Đỗ Mai Linh" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Đỗ Mai Linh</strong>
+                  <span>Tiếng Anh Y Khoa • Bác sĩ nội trú</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Giao diện siêu đẹp với màu sắc đại dương tươi mới. Tôi thích nhất cách Slanguage kết hợp văn hóa ca dao tục ngữ vào bài học tiếng Việt đời thường."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&auto=format&fit=crop&q=80" alt="Alexandre Dubois" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Alexandre Dubois</strong>
+                  <span>Tiếng Việt Giao Tiếp • Bếp trưởng Pháp</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Bảng xếp hạng vinh danh kim cương tuần tạo tinh thần thi đua rất đã! Mình và nhóm bạn thân ngày nào cũng rủ nhau leo top điểm XP."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80" alt="Hoàng Yến Nhi" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Hoàng Yến Nhi</strong>
+                  <span>Thủ khoa Tiếng Anh • Chuyên Sư Phạm</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Kho Kanji trực quan hóa qua hình ảnh và bộ thủ giúp mình ghi nhớ hơn 600 chữ Hán chỉ trong 2 tháng mà không bị lẫn lộn mặt chữ."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80" alt="Bùi Thanh Tùng" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Bùi Thanh Tùng</strong>
+                  <span>JLPT N3 • Tu nghiệp sinh Kanagawa</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Thuật toán ngắt quãng Spaced Repetition của Slanguage được tinh chỉnh rất khoa học. Tỷ lệ nhớ từ vựng của học viên đạt trên 92% sau 30 ngày."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80" alt="Sarah Jenkins" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Sarah Jenkins</strong>
+                  <span>Giảng viên Ngôn ngữ học Quốc tế</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Hệ thống hỗ trợ 3 thứ tiếng Anh - Nhật - Việt chuyển đổi tức thì cực mượt. Đây là nền tảng ngoại ngữ toàn diện và đáng học nhất hiện nay."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&auto=format&fit=crop&q=80" alt="Đặng Tuấn Kiệt" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Đặng Tuấn Kiệt</strong>
+                  <span>Khởi nghiệp Công nghệ • Thành viên VIP</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Lộ trình cây kỹ năng thực sự làm mình bất ngờ! Mình không bị ép học thuộc lòng máy móc mà được tự chọn rẽ nhánh đàm thoại du lịch Nhật Bản trước. Rất trực quan!"</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="Nguyễn Thu Hà" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Nguyễn Thu Hà</strong>
+                  <span>JLPT N3 Tokyo • Đã học 6 tháng</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Phương pháp Spaced Repetition kết hợp cây bài học giúp mình tích lũy hơn 1,500 từ vựng tiếng Anh chuyên ngành mà không thấy mệt mỏi chút nào."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" alt="Trần Quốc Bảo" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Trần Quốc Bảo</strong>
+                  <span>IELTS 7.5 • Chuyên viên tài chính</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Tính năng giữ chuỗi Streak ngọn lửa tạo động lực cực lớn. Mình đã duy trì chuỗi học 65 ngày liên tục và tự tin phỏng vấn việc làm với sếp người Nhật!"</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80" alt="Lê Minh Trí" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Lê Minh Trí</strong>
+                  <span>JLPT N2 • Kỹ sư phần mềm Osaka</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Phần luyện phát âm chuẩn Oxford của Slanguage quá xuất sắc. AI phân tích ngữ điệu chi tiết giúp mình sửa được các âm đuôi khó nhằn chỉ sau 3 tuần."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" alt="Phạm Quỳnh Anh" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Phạm Quỳnh Anh</strong>
+                  <span>Du học sinh Sydney • IELTS 8.0</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Tiếng Việt 6 thanh điệu rất phức tạp, nhưng hệ thống flashcard thông minh và lộ trình giao tiếp của Slanguage giúp tôi đàm phán hợp đồng trôi chảy tại Hà Nội."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&auto=format&fit=crop&q=80" alt="Kenji Sato (佐藤 健次)" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Kenji Sato (佐藤 健次)</strong>
+                  <span>Tiếng Việt Thương Mại • Quản lý dự án</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Cây Lộ Trình học phân tầng như chơi game nhập vai vậy! Cứ mở khóa một nhánh mới là nhận thêm huy hiệu và XP, học không biết chán."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&auto=format&fit=crop&q=80" alt="Vũ Hoàng Nam" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Vũ Hoàng Nam</strong>
+                  <span>Tiếng Nhật N4 • ĐH Ngoại Thương</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Thời gian trực bận rộn nên bài học vi mô 15 phút mỗi ngày là cứu cánh cho mình. Đấu trường Quiz từ vựng giúp nhớ ngay các thuật ngữ chuyên môn."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80" alt="Đỗ Mai Linh" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Đỗ Mai Linh</strong>
+                  <span>Tiếng Anh Y Khoa • Bác sĩ nội trú</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Giao diện siêu đẹp với màu sắc đại dương tươi mới. Tôi thích nhất cách Slanguage kết hợp văn hóa ca dao tục ngữ vào bài học tiếng Việt đời thường."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=100&auto=format&fit=crop&q=80" alt="Alexandre Dubois" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Alexandre Dubois</strong>
+                  <span>Tiếng Việt Giao Tiếp • Bếp trưởng Pháp</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Bảng xếp hạng vinh danh kim cương tuần tạo tinh thần thi đua rất đã! Mình và nhóm bạn thân ngày nào cũng rủ nhau leo top điểm XP."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80" alt="Hoàng Yến Nhi" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Hoàng Yến Nhi</strong>
+                  <span>Thủ khoa Tiếng Anh • Chuyên Sư Phạm</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Kho Kanji trực quan hóa qua hình ảnh và bộ thủ giúp mình ghi nhớ hơn 600 chữ Hán chỉ trong 2 tháng mà không bị lẫn lộn mặt chữ."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=100&auto=format&fit=crop&q=80" alt="Bùi Thanh Tùng" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Bùi Thanh Tùng</strong>
+                  <span>JLPT N3 • Tu nghiệp sinh Kanagawa</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Thuật toán ngắt quãng Spaced Repetition của Slanguage được tinh chỉnh rất khoa học. Tỷ lệ nhớ từ vựng của học viên đạt trên 92% sau 30 ngày."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=100&auto=format&fit=crop&q=80" alt="Sarah Jenkins" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Sarah Jenkins</strong>
+                  <span>Giảng viên Ngôn ngữ học Quốc tế</span>
+                </div>
+              </div>
+            </div>
+            <div class="review-card" aria-hidden="true">
+              <div class="review-stars">
+                <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
+              </div>
+              <p class="review-quote">"Hệ thống hỗ trợ 3 thứ tiếng Anh - Nhật - Việt chuyển đổi tức thì cực mượt. Đây là nền tảng ngoại ngữ toàn diện và đáng học nhất hiện nay."</p>
+              <div class="review-author">
+                <img src="https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&auto=format&fit=crop&q=80" alt="Đặng Tuấn Kiệt" class="review-avatar" loading="lazy">
+                <div>
+                  <strong>Đặng Tuấn Kiệt</strong>
+                  <span>Khởi nghiệp Công nghệ • Thành viên VIP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="sidebar-right">
+      
+      <!-- STREAK BOX (Hidden when not logged in) -->
+      <div class="streak-box auth-only" id="sidebarStreakBox">
+        <div class="streak-header">
+          <div>
+            <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #a4bcc8;">Chuỗi học tập</div>
+            <div class="streak-count">
+              <img src="../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-main">
+              <span>14 Ngày</span>
+            </div>
+          </div>
+          <div style="text-align: right; font-size: 0.82rem; color: #7AE2CF;">
+            Mục tiêu: 21 ngày
+          </div>
+        </div>
+        <p style="font-size: 0.85rem; color: #b7ccd6; line-height: 1.4;">
+          Bạn đang giữ phong độ cực tốt! Học ít nhất 1 bài hôm nay để không mất chuỗi nhé.
+        </p>
+
+        <!-- 7 Days tracker -->
+        <div class="streak-days">
+          <div class="day-circle">
+            <span class="day-name">T2</span>
+            <div class="day-bubble checked"><i class="fa-solid fa-check"></i></div>
+          </div>
+          <div class="day-circle">
+            <span class="day-name">T3</span>
+            <div class="day-bubble checked"><i class="fa-solid fa-check"></i></div>
+          </div>
+          <div class="day-circle">
+            <span class="day-name">T4</span>
+            <div class="day-bubble checked"><i class="fa-solid fa-check"></i></div>
+          </div>
+          <div class="day-circle">
+            <span class="day-name">T5</span>
+            <div class="day-bubble checked"><i class="fa-solid fa-check"></i></div>
+          </div>
+          <div class="day-circle">
+            <span class="day-name">T6</span>
+            <div class="day-bubble checked"><i class="fa-solid fa-check"></i></div>
+          </div>
+          <div class="day-circle">
+            <span class="day-name">T7</span>
+            <div class="day-bubble active-today">
+              <img src="../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak hôm nay" class="streak-flame-img streak-flame-day">
+            </div>
+          </div>
+          <div class="day-circle">
+            <span class="day-name">CN</span>
+            <div class="day-bubble">CN</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DAILY QUESTS (Hidden when not logged in) -->
+      <div class="sidebar-card auth-only" id="sidebarQuestsCard">
+        <div class="sidebar-card-title">
+          <span><i class="fa-solid fa-bullseye"></i> Nhiệm vụ hôm nay</span>
+          <span style="font-size: 0.78rem; color: var(--color-teal);">Làm mới sau 8h</span>
+        </div>
+
+        <div class="quest-list">
+          <div class="quest-item done">
+            <div class="quest-check"><i class="fa-solid fa-check"></i></div>
+            <div class="quest-details">
+              <div class="quest-title">Luyện 1 bài phát âm chuẩn</div>
+              <div class="quest-reward">+20 XP • Hoàn thành</div>
+            </div>
+          </div>
+
+          <div class="quest-item pending">
+            <div class="quest-check"></div>
+            <div class="quest-details">
+              <div class="quest-title">Ghi nhớ 10 từ vựng mới</div>
+              <div class="quest-reward">+25 XP • Tiến độ (7/10)</div>
+            </div>
+          </div>
+
+          <div class="quest-item pending">
+            <div class="quest-check"></div>
+            <div class="quest-details">
+              <div class="quest-title">Đạt 95% trong bài kiểm tra nhanh</div>
+              <div class="quest-reward">+30 XP • Chưa bắt đầu</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEADERBOARD RANKING (Hidden when not logged in) -->
+      <div class="sidebar-card auth-only" id="sidebarLeaderboardCard">
+        <div class="sidebar-card-title">
+          <span><i class="fa-solid fa-trophy"></i> Bảng xếp hạng</span>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">Tuần 44</span>
+        </div>
+
+        <div class="ranking-list">
+          <div class="rank-item">
+            <span class="rank-num gold">1</span>
+            <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" alt="User 1" class="rank-avatar">
+            <span class="rank-name">Minh Hoàng</span>
+            <span class="rank-xp">3,120 XP</span>
+          </div>
+
+          <div class="rank-item">
+            <span class="rank-num silver">2</span>
+            <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80" alt="User 2" class="rank-avatar">
+            <span class="rank-name">Lan Phương</span>
+            <span class="rank-xp">2,890 XP</span>
+          </div>
+
+          <div class="rank-item is-user" id="currentUserRankItem">
+            <span class="rank-num bronze" id="currentUserRankNum">3</span>
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80" alt="You" class="rank-avatar" id="currentUserRankAvatar">
+            <span class="rank-name" id="currentUserRankName">Bạn (Vua Xứ Thanh)</span>
+            <span class="rank-xp" id="currentUserRankXP">2,450 XP</span>
+          </div>
+
+          <div class="rank-item">
+            <span class="rank-num">4</span>
+            <img src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80" alt="User 4" class="rank-avatar">
+            <span class="rank-name">Kenji Sato</span>
+            <span class="rank-xp">2,110 XP</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- GUEST PROMPT CARD (Shown when NOT logged in) -->
+      <div class="sidebar-card guest-sidebar-card guest-only" id="guestSidebarPrompt">
+        <div class="guest-card-header">
+          <div class="guest-card-badge-icon"><img src="../assets/streak-flame.gif?v=4" alt="Chuỗi học tập" class="streak-flame-img streak-flame-chip" style="height: 26px;"></div>
+          <div>
+            <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--color-dark); margin-bottom: 2px;">Chuỗi học tập & BXH</h4>
+            <span style="font-size: 0.8rem; color: var(--color-teal); font-weight: 600;">Dành cho học viên</span>
+          </div>
+        </div>
+        <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin: 14px 0 16px;">
+          Đăng nhập ngay để kích hoạt chuỗi học tập hàng ngày, tích lũy XP mở khóa huy hiệu và tranh tài trên Bảng Vàng vinh danh cùng 50,000+ học viên!
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <a href="../login/index.html" class="btn-primary" style="text-align: center; justify-content: center; text-decoration: none; padding: 11px 18px; border-radius: 12px; font-weight: 700; font-size: 0.95rem;">
+            <i class="fa-solid fa-right-to-bracket"></i> Đăng nhập ngay
+          </a>
+          <a href="../register/index.html" class="btn-secondary" style="text-align: center; justify-content: center; text-decoration: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.92rem;">
+            Tạo tài khoản mới
+          </a>
+        </div>
+      </div>
+
+
+
+    </aside>
+  </main>
+
+  <!-- ================= LESSON QUIZ MODAL ================= -->
+  <div class="modal-overlay" id="lessonModalOverlay">
+    <div class="lesson-modal">
+      <button class="modal-close-btn" id="modalCloseBtn"><i class="fa-solid fa-xmark"></i></button>
+      
+      <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+        <span style="background: var(--color-mint-light); color: var(--color-teal); font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 20px;">
+          Tương tác trực tiếp
+        </span>
+        <span style="font-size: 0.85rem; color: #ffaa5a; font-weight: 700;">+20 XP thưởng</span>
+      </div>
+
+      <h3 id="quizModalTitle" style="font-family: 'K2D', sans-serif; font-size: 1.5rem; color: var(--color-dark); margin-bottom: 12px;">
+        Bài Luyện Nhanh
+      </h3>
+
+      <p id="quizQuestionText" style="font-size: 1.05rem; font-weight: 600; color: #375362; line-height: 1.5; margin-bottom: 20px;">
+        Đang tải câu hỏi...
+      </p>
+
+      <div class="modal-quiz-options" id="quizOptionsContainer">
+        <!-- Buttons injected dynamically by TypeScript -->
+      </div>
+
+      <div id="quizFeedback"></div>
+    </div>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="footer">
+    <div class="footer-container">
+      <!-- Cột 1: Giới thiệu thương hiệu -->
+      <div class="footer-col">
+        <div class="brand-logo" style="margin-bottom: 14px;">
+          <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </div>
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
+        </p>
+      </div>
+
+      <!-- Cột 2: Chương trình học -->
+      <div class="footer-col">
+        <h4>Chương trình học</h4>
+        <ul>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
+        </ul>
+      </div>
+
+      <!-- Cột 3: Thông tin liên hệ -->
+      <div class="footer-col">
+        <h4>Thông tin liên hệ</h4>
+        <ul class="footer-contact-list">
+          <li>
+            <i class="fa-solid fa-phone"></i>
+            <div>
+              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <a href="tel:19006868" class="contact-val">1900 6868</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-envelope"></i>
+            <div>
+              <span class="contact-label">Email học vụ:</span>
+              <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-location-dot"></i>
+            <div>
+              <span class="contact-label">Trụ sở học thuật:</span>
+              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-clock"></i>
+            <div>
+              <span class="contact-label">Thời gian làm việc:</span>
+              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Cột 4: Cam kết chất lượng -->
+      <div class="footer-col">
+        <h4>Cam kết chất lượng</h4>
+        <ul class="footer-commit-list">
+          <li>
+            <i class="fa-solid fa-shield-halved"></i>
+            <div>
+              <strong>Chuẩn đầu ra quốc tế</strong>
+              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-rotate-left"></i>
+            <div>
+              <strong>Cam kết hoàn học phí</strong>
+              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-user-graduate"></i>
+            <div>
+              <strong>Đồng hành 1-1 chuyên sâu</strong>
+              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-infinity"></i>
+            <div>
+              <strong>Quyền lợi học trọn đời</strong>
+              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.</div>
+      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
+    </div>
+  </footer>
+
+  <!-- GLOBAL TRANSITION LOADING SCREEN -->
+  <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
+    <div class="loading-content-box">
+      <div class="video-frame">
+        <video id="loadingVideoPlayer" src="../assets/loading.mp4" autoplay loop playsinline></video>
+      </div>
+      <div class="loading-text-wrap">
+        <span class="loading-title">Đang tải, hãy đợi...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- TypeScript compiled script execution -->
+    <!-- Logic TypeScript cho trang -->
+  <script type="module" src="./home.ts"></script>
+  <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
+  <script>
+    if (!window.homeApp) {
+      fetch('./home.ts')
+        .then(function(r) { return r.text(); })
+        .then(function(code) {
+          var js = Babel.transform(code, { filename: 'home.ts', presets: ['typescript'] }).code;
+          var s = document.createElement('script');
+          s.textContent = js;
+          document.body.appendChild(s);
+        })
+        .catch(function(err) { console.error('Error loading home.ts:', err); });
+    }
+  </script>
+</body>
+</html>
+>>>>>>> c1eb96a0a06323cea1147338a4ea563effa27b17:Frontend/home/index.html
