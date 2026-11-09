@@ -20,7 +20,8 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://super-language5-0.vercel.app"
+        "https://superlanguage.me",
+        "https://www.superlanguage.me"
     ]
 
     # Supabase (thiếu biến nào, app sẽ báo lỗi rõ ngay khi khởi động)
@@ -31,6 +32,9 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""  
     GEMINI_API_KEYS: str = ""
     DEEPSEEK_API_KEYS: str = ""
-
+    RAG_EMBEDDING_API_KEYS: str = ""
+    RAG_SIMILARITY_THRESHOLD:  float = 0.45
+    RAG_TOP_K: int = 4
+    RAG_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
 settings = Settings()  # type: ignore[call-arg]

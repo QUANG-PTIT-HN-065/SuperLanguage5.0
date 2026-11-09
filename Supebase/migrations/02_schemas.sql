@@ -79,7 +79,7 @@ create table public.conversations (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references public.profiles(id) on delete cascade not null,
   title text not null, -- Chủ đề phòng chat
-  language_code text not null check (language_code in ('English', 'Japanese')), -- Ngôn ngữ học tập
+  language text not null check (language in ('English', 'Japanese')), -- Ngôn ngữ học tập
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

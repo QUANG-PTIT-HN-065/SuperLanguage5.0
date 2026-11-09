@@ -57,7 +57,7 @@ async function handleLogin(event: SubmitEvent): Promise<void> {
 
     try {
         await loginAdmin(email, password);
-        window.location.assign(new URL("../dasboardAdmin/", window.location.href).toString());
+        window.location.assign(new URL("../dasboardAdmin/code.html", window.location.href).toString());
     } catch (error) {
         if (error instanceof ApiError) {
             showToast(error.message, "error");
@@ -72,10 +72,6 @@ async function handleLogin(event: SubmitEvent): Promise<void> {
     }
 }
 
-function handleRegister(event: SubmitEvent): void {
-    event.preventDefault();
-    showToast("Giao diện đăng ký đã được gửi (chế độ demo).", "success");
-}
 
 function handleSocialLogin(provider: string): void {
     showToast(`Đăng nhập bằng ${provider} cần được tích hợp OAuth.`, "info");
@@ -83,7 +79,6 @@ function handleSocialLogin(provider: string): void {
 
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("loginForm")?.addEventListener("submit", handleLogin);
-    document.getElementById("registerForm")?.addEventListener("submit", handleRegister);
 
     document.querySelectorAll<HTMLButtonElement>("[data-auth-mode]").forEach((button) => {
         button.addEventListener("click", () => {

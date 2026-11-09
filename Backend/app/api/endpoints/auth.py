@@ -1,9 +1,10 @@
 import logging
 from typing import Any, Dict, NoReturn
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.core.deps import get_bearer_token
+from app.core.login_rate_limit import check_login_rate_limit
 from app.db.supabase import new_auth_client, supabase_admin
 from app.schemas.reponse import BaseResponse
 from app.schemas.auth import (
@@ -100,7 +101,8 @@ def _session_response(session: Any, user_id: str, require_admin: bool = False) -
                 "display_name": profile["display_name"],
                 "avatar_url": profile["avatar_url"],
                 "role": profile["role"],
-                "plan_id": profile["plan_id"],
+                "plan_id": profile.get("plan_id") or "free",
+                "status": profile.get("status", "active"),
             },
             "needs_onboarding": profile["onboarding_completed_at"] is None,
         },
@@ -181,7 +183,7 @@ def register(data: RegisterRequest):
 # Đăng nhập / làm mới token / đăng xuất
 # ---------------------------------------------------------------------
 @router.post("/login", response_model=BaseResponse[Dict[str, Any]])
-def login(data: LoginRequest):
+def login(data: LoginRequest, request: Request):
     client = new_auth_client()
     try:
         response = client.auth.sign_in_with_password(
@@ -197,8 +199,9 @@ def login(data: LoginRequest):
 
 
 @router.post("/admin/login", response_model=BaseResponse[Dict[str, Any]])
-def admin_login(data: LoginRequest):
+def admin_login(data: LoginRequest, request: Request):
     """Đăng nhập riêng cho trang quản trị; chỉ trả token cho tài khoản admin."""
+    check_login_rate_limit(request, str(data.email))
     client = new_auth_client()
     try:
         response = client.auth.sign_in_with_password(

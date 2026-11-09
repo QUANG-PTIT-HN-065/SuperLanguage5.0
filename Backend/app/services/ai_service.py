@@ -19,18 +19,15 @@ Hỏi kiểu gì đấy đồng chí? Mở mồm ra là thăm hỏi phụ huynh 
 ---
 [Feedback in Vietnamese]
 Miệng thì chửi thề đấy nhưng tay vẫn phải nhờ AI cứu code với dịch câu cơ mà. Thôi bớt nghiệp đi rồi tập trung học tiếp đi bạn tôi ơi!"""
-        # 1. Đọc danh sách nhiều Gemini API Keys từ .env
+        # 1. Đọc danh sách nhiều API Keys từ .env
         GEMINI_KEYS = [k.strip() for k in settings.GEMINI_API_KEYS.split(",") if k.strip()]
-
-        # 2. Cấu hình DeepSeek client
-
         DEEPSEEK_KEYS = [k.strip() for k in settings.DEEPSEEK_API_KEYS.split(",") if k.strip()]
 
         full_text = ""
         last_gemini_error = "Không có Gemini API Key"
         last_deepseek_error = "Không có DeepSeek API Key"
 
-        # --- CHIẾN LƯỢC 1: Xoay vòng lần lượt qua TẤT CẢ các Gemini API Keys có sẵn ---
+        # --- CHIẾN LƯỢC 2: Xoay vòng lần lượt qua TẤT CẢ các Gemini API Keys có sẵn ---
         if GEMINI_KEYS:
             for index, key in enumerate(GEMINI_KEYS):
                 try:
