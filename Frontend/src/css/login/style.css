@@ -34,7 +34,7 @@
 }
 
 body {
-  background-color: #0077B6;
+  background-color: #00B4D8;
   color: #fff;
   min-height: 100vh;
   display: flex;
@@ -42,9 +42,9 @@ body {
   align-items: center;
   justify-content: center;
   background-image: 
-    radial-gradient(circle at 85% 15%, rgba(255, 183, 3, 0.85) 0%, rgba(255, 183, 3, 0.25) 40%, transparent 65%),
-    radial-gradient(circle at 15% 85%, rgba(0, 180, 216, 0.85) 0%, rgba(0, 119, 182, 0.3) 45%, transparent 65%),
-    linear-gradient(135deg, #0077B6 0%, #0096C7 30%, #00B4D8 55%, #FFC300 85%, #FFB703 100%);
+    radial-gradient(circle at 10% 15%, rgba(0, 180, 216, 0.45) 0%, transparent 45%),
+    radial-gradient(circle at 90% 85%, rgba(248, 246, 253, 0.6) 0%, transparent 45%),
+    linear-gradient(135deg, #00B4D8 0%, #48CAE4 22%, #FDEB9E 62%, #F8F6FD 100%);
   background-attachment: fixed;
   background-size: cover;
   padding: clamp(12px, 3vw, 30px);
@@ -563,9 +563,9 @@ form h1 {
 .mobile-switch-note {
   display: none;
   text-align: center;
+  margin-top: 10px;
+  font-size: 0.84rem;
   color: var(--text-muted);
-  margin-top: 14px;
-  font-size: 0.88rem;
 }
 
 .mobile-switch-note label {

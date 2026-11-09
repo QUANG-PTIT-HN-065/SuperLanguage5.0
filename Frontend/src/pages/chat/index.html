@@ -7,12 +7,13 @@
     <title>AI Conversation | SuperLanguage</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../css/chat/style.css">
     <link rel="stylesheet" href="../../css/shared/dungeon-ui.css">
+    <link rel="stylesheet" href="../../css/shared/user-experience.css">
     <script type="module" src="../../types/chat/chat.ts"></script>
   </head>
-  <body class="slg-dungeon-chat">
+  <body class="slg-dungeon-chat slg-user-chat">
     <main class="app-shell">
       <section class="room-frame" aria-label="Phòng luyện nói cùng AI">
         <header class="room-topbar">
@@ -27,7 +28,7 @@
           </div>
           <div class="account-controls">
             <span class="connection-status"><i></i><span id="roomStatus">Chờ bắt đầu</span></span>
-            <a class="login-link" href="../learner/dashboard/index.html" style="margin-right:4px;">Dashboard</a>
+            <a class="login-link" href="../home/index.html">Trang chủ</a>
             <button class="account-avatar" id="profileAvatar" type="button" aria-label="Tài khoản">S</button>
             <a class="login-link" href="../login/index.html">Đăng nhập</a>
             <button class="icon-button" id="logoutButton" type="button" aria-label="Đăng xuất" title="Đăng xuất">↗</button>

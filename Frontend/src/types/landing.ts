@@ -20,7 +20,7 @@ import { escapeHtml } from "./shared/learner-progress";
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 
 const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-const CHAPTER_LABELS = ["Chương I", "Chương II", "Chương III", "Chương IV", "Chương V"];
+const CHAPTER_LABELS = ["Chương I"];
 
 interface LandingElements {
   actions: HTMLElement | null;
@@ -69,8 +69,8 @@ function updateAuthUI(): void {
   if (isLoggedIn) {
     if (actions) {
       actions.innerHTML = `
-        <a href="src/pages/learner/dashboard/index.html" class="slg-btn slg-btn--primary slg-btn--sm">
-          Vào tổng quan
+        <a href="src/pages/chat/index.html" class="slg-btn slg-btn--primary slg-btn--sm">
+          Vào phòng Chat AI
         </a>
         <button type="button" class="slg-btn slg-btn--ghost slg-btn--sm" id="sl-landing-logout">
           Đăng xuất
@@ -83,21 +83,21 @@ function updateAuthUI(): void {
           <span class="slg-avatar">${initial}</span>
           <div><strong>${safeName}</strong><small>Đang trong hành trình</small></div>
         </div>
-        <a href="src/pages/learner/dashboard/index.html" class="slg-btn slg-btn--primary slg-btn--block">Vào tổng quan</a>
+        <a href="src/pages/chat/index.html" class="slg-btn slg-btn--primary slg-btn--block">Vào phòng Chat AI</a>
         <button type="button" class="slg-btn slg-btn--ghost slg-btn--block" id="sl-landing-drawer-logout">Đăng xuất</button>
       `;
     }
     if (heroCta) {
-      heroCta.textContent = "Tiếp tục hành trình";
-      heroCta.href = "src/pages/learner/dashboard/index.html";
+      heroCta.textContent = "Vào phòng Chat AI";
+      heroCta.href = "src/pages/chat/index.html";
     }
     if (finalCta) {
-      finalCta.textContent = "Vào tổng quan học tập";
-      finalCta.href = "src/pages/learner/dashboard/index.html";
+      finalCta.textContent = "Vào phòng Chat AI";
+      finalCta.href = "src/pages/chat/index.html";
     }
     if (secondaryCta) {
-      secondaryCta.textContent = "Xem tiến độ";
-      secondaryCta.href = "src/pages/learner/stats/index.html";
+      secondaryCta.textContent = "Mở phòng Chat AI";
+      secondaryCta.href = "src/pages/chat/index.html";
     }
   } else {
     if (actions) {
