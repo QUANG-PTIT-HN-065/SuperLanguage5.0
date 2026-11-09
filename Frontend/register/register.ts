@@ -366,6 +366,13 @@ class SlanguageRegister {
 }
 
 // Start on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  new SlanguageRegister();
-});
+
+function initSlanguageRegister(): void {
+  (window as unknown as { registerApp?: SlanguageRegister }).registerApp = new SlanguageRegister();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSlanguageRegister);
+} else {
+  initSlanguageRegister();
+}

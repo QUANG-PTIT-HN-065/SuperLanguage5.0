@@ -992,6 +992,22 @@
   </div>
 
   <!-- TypeScript compiled script execution -->
-  <script src="./home.js"></script>
+    <!-- Logic TypeScript cho trang -->
+  <script type="module" src="./home.ts"></script>
+  <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
+  <script>
+    if (!window.homeApp) {
+      fetch('./home.ts')
+        .then(function(r) { return r.text(); })
+        .then(function(code) {
+          var js = Babel.transform(code, { filename: 'home.ts', presets: ['typescript'] }).code;
+          var s = document.createElement('script');
+          s.textContent = js;
+          document.body.appendChild(s);
+        })
+        .catch(function(err) { console.error('Error loading home.ts:', err); });
+    }
+  </script>
 </body>
 </html>

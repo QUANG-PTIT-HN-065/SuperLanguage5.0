@@ -475,6 +475,13 @@ class SlanguageForgotPassword {
 }
 
 // Start on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-  new SlanguageForgotPassword();
-});
+
+function initSlanguageForgotPassword(): void {
+  (window as unknown as { forgotPasswordApp?: SlanguageForgotPassword }).forgotPasswordApp = new SlanguageForgotPassword();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSlanguageForgotPassword);
+} else {
+  initSlanguageForgotPassword();
+}

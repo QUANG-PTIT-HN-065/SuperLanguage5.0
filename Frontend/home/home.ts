@@ -710,6 +710,13 @@ class SlanguageDashboard {
 }
 
 // Instantiate on DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-  new SlanguageDashboard();
-});
+
+function initSlanguageDashboard(): void {
+  (window as unknown as { homeApp?: SlanguageDashboard }).homeApp = new SlanguageDashboard();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSlanguageDashboard);
+} else {
+  initSlanguageDashboard();
+}

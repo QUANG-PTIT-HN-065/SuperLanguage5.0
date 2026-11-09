@@ -356,6 +356,13 @@ class SlanguageLogin {
 }
 
 // Initialize on DOM load
-document.addEventListener('DOMContentLoaded', () => {
-  new SlanguageLogin();
-});
+
+function initSlanguageLogin(): void {
+  (window as unknown as { loginApp?: SlanguageLogin }).loginApp = new SlanguageLogin();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSlanguageLogin);
+} else {
+  initSlanguageLogin();
+}

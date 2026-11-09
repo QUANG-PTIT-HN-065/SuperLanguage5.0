@@ -47,6 +47,22 @@
 
   </main>
 
-  <script src="./terms.js"></script>
+    <!-- Logic TypeScript cho trang -->
+  <script type="module" src="./terms.ts"></script>
+  <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
+  <script>
+    if (!window.termsApp) {
+      fetch('./terms.ts')
+        .then(function(r) { return r.text(); })
+        .then(function(code) {
+          var js = Babel.transform(code, { filename: 'terms.ts', presets: ['typescript'] }).code;
+          var s = document.createElement('script');
+          s.textContent = js;
+          document.body.appendChild(s);
+        })
+        .catch(function(err) { console.error('Error loading terms.ts:', err); });
+    }
+  </script>
 </body>
 </html>
