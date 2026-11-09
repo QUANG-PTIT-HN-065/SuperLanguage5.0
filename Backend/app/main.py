@@ -30,16 +30,13 @@ if settings.BACKEND_CORS_ORIGINS:
 # Tích hợp Auth Router vào hệ thống API 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/me", tags=["me"])
-<<<<<<< HEAD
 app.include_router(chat_ai.router, prefix=f"{settings.API_V1_STR}/chat-ai", tags=["Chat_AI"])
-=======
 app.include_router(
     vocabulary.router,
     prefix=f"{settings.API_V1_STR}/vocabulary",
     tags=["vocabulary"],
 )
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
->>>>>>> master
 
 @app.get("/")
 def read_root():
