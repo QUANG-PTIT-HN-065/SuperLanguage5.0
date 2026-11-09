@@ -306,3 +306,4 @@ function initialize(): void {
 }
 
 document.addEventListener("DOMContentLoaded", initialize);
+
