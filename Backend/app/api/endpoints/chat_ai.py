@@ -3,13 +3,14 @@ import time
 from typing import Any, Dict, Optional, Tuple
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from supabase import create_client, Client
 
 from app.core.deps import get_optional_current_profile
 from app.core.config import settings
 from app.schemas.chat_ai import (
     ConversationCreate,
+    ConversationMessageResponse,
     ConversationResponse,
     MessageSend,
     MessageResponse,
@@ -94,7 +95,7 @@ def create_conversation(
                 "title": data.title,
                 "language_code": data.language_code,
             })
-            .select("id,title,language_code,created_at")
+            .select("id,title,language_code,created_at,updated_at")
             .single()
             .execute()
         )
@@ -120,6 +121,7 @@ def create_conversation(
             title=conversation["title"],
             language_code=conversation["language_code"],
             created_at=conversation.get("created_at"),
+            updated_at=conversation.get("updated_at"),
         ),
     )
 

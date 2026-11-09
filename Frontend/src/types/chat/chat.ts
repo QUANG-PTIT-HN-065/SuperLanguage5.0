@@ -8,7 +8,17 @@ interface ApiResponse<T> {
 interface Conversation {
   id: string;
   title: string;
-  language_code: "English" | "Japanese";
+  language_code: "English" | "Japanese" | "en" | "ja";
+  created_at: string | null;
+  updated_at?: string | null;
+}
+
+interface ConversationMessage {
+  id: string;
+  conversation_id: string;
+  sender_type: "user" | "ai";
+  content: string;
+  ai_feedback: string | null;
   created_at: string | null;
 }
 
@@ -31,10 +41,17 @@ const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 const conversationForm = document.getElementById("conversationForm");
 const languageSelect = document.getElementById("languageSelect");
+const topicPreset = document.getElementById("topicPreset");
 const topicInput = document.getElementById("topicInput");
 const toastElement = document.getElementById("toast");
+const authOverlay = document.getElementById("authOverlay");
+const historyList = document.getElementById("conversationHistory");
+const historyStatus = document.getElementById("historyStatus");
+const assistantStatus = document.getElementById("assistantStatus");
 
 let activeConversation: Conversation | null = null;
+let conversationHistory: Conversation[] = [];
+let isSendingMessage = false;
 let toastTimer = 0;
 
 class ChatApiError extends Error {
@@ -128,7 +145,26 @@ async function apiRequest<T>(
   return parseResponse<T>(response);
 }
 
-function addMessage(role: "user" | "assistant", content: string, feedback?: string | null): HTMLElement {
+async function apiGet<T>(path: string, allowRefresh = true): Promise<ApiResponse<T>> {
+  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!accessToken) throw new ChatApiError("Vui lòng đăng nhập để sử dụng AI Conversation.", 401);
+
+  const send = (token: string) => fetch(`${API_BASE_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  let response = await send(accessToken);
+  if (response.status === 401 && allowRefresh) {
+    response = await send(await refreshAccessToken());
+  }
+  return parseResponse<T>(response);
+}
+
+function addMessage(
+  role: "user" | "assistant",
+  content: string,
+  feedback?: string | null,
+  createdAt?: string | null,
+): HTMLElement {
   if (!(messagesElement instanceof HTMLElement)) throw new Error("Không tìm thấy vùng hiển thị tin nhắn.");
   document.getElementById("welcomeCard")?.remove();
 
@@ -156,7 +192,14 @@ function addMessage(role: "user" | "assistant", content: string, feedback?: stri
     time.textContent = new Intl.DateTimeFormat("vi-VN", {
       hour: "2-digit",
       minute: "2-digit",
-    }).format(new Date());
+    }).format(createdAt ? new Date(createdAt) : new Date());
+    const speakButton = document.createElement("button");
+    speakButton.className = "speak-message-button";
+    speakButton.type = "button";
+    speakButton.textContent = "Nghe phản hồi";
+    speakButton.setAttribute("aria-label", "Nghe phản hồi của AI");
+    speakButton.addEventListener("click", () => speakText(content));
+    time.append(" · ", speakButton);
     contentWrap.append(time);
   }
 
@@ -184,13 +227,24 @@ function setComposerEnabled(enabled: boolean): void {
 
 async function startConversation(event?: SubmitEvent): Promise<void> {
   event?.preventDefault();
+  if (isSendingMessage || isVoiceRecording) {
+    showToast("Hãy đợi đến khi lượt luyện tập hiện tại kết thúc.");
+    return;
+  }
   if (!(languageSelect instanceof HTMLSelectElement) || !(topicInput instanceof HTMLInputElement)) return;
+  const topic = topicInput.value.trim() ||
+    (topicPreset instanceof HTMLSelectElement ? topicPreset.value : "");
+  if (!topic) {
+    showToast("Hãy chọn hoặc nhập chủ đề trước khi bắt đầu.");
+    topicPreset instanceof HTMLSelectElement && topicPreset.focus();
+    return;
+  }
 
   const button = conversationForm?.querySelector<HTMLButtonElement>("button[type=submit]");
   if (button) button.disabled = true;
   try {
     const result = await apiRequest<Conversation>("/api/v1/chat-ai/conversations", {
-      title: topicInput.value.trim(),
+      title: topic,
       language_code: languageSelect.value,
     });
     activeConversation = result.data;
@@ -220,6 +274,8 @@ async function startConversation(event?: SubmitEvent): Promise<void> {
       messagesElement.append(welcome);
     }
     setComposerEnabled(true);
+    await loadConversationHistory();
+    renderConversationHistory();
     if (messageInput instanceof HTMLTextAreaElement) messageInput.focus();
   } catch (error) {
     showToast(error instanceof Error ? error.message : "Không thể tạo phòng trò chuyện.");
@@ -228,17 +284,24 @@ async function startConversation(event?: SubmitEvent): Promise<void> {
   }
 }
 
-async function sendMessage(event: SubmitEvent): Promise<void> {
-  event.preventDefault();
-  if (!(messageInput instanceof HTMLTextAreaElement) || !(sendButton instanceof HTMLButtonElement)) return;
+async function sendMessage(event?: SubmitEvent, speakResponse = false): Promise<void> {
+  event?.preventDefault();
+  if (
+    isSendingMessage ||
+    !(messageInput instanceof HTMLTextAreaElement) ||
+    !(sendButton instanceof HTMLButtonElement)
+  ) return;
   const userMessage = messageInput.value.trim();
   if (!userMessage || !activeConversation) return;
 
+  isSendingMessage = true;
   addMessage("user", userMessage);
   messageInput.value = "";
   messageInput.style.height = "auto";
   sendButton.disabled = true;
   const pendingReply = addMessage("assistant", "Đang soạn phản hồi...");
+  pendingReply.classList.add("is-typing");
+  if (assistantStatus) assistantStatus.hidden = false;
 
   try {
     const result = await apiRequest<ChatMessage>("/api/v1/chat-ai/send-message", {
@@ -247,11 +310,15 @@ async function sendMessage(event: SubmitEvent): Promise<void> {
     });
     pendingReply.remove();
     addMessage("assistant", result.data.ai_response, result.data.ai_feedback);
+    if (speakResponse) speakText(result.data.ai_response);
+    void loadConversationHistory();
   } catch (error) {
     pendingReply.remove();
     messageInput.value = userMessage;
     showToast(error instanceof Error ? error.message : "Không thể gửi tin nhắn.");
   } finally {
+    isSendingMessage = false;
+    if (assistantStatus) assistantStatus.hidden = true;
     sendButton.disabled = !activeConversation;
     messageInput.focus();
   }
@@ -279,6 +346,12 @@ function initialize(): void {
   }
 
   conversationForm?.addEventListener("submit", (event) => void startConversation(event));
+  topicPreset?.addEventListener("change", () => {
+    if (topicPreset instanceof HTMLSelectElement && topicInput instanceof HTMLInputElement) {
+      topicInput.value = topicPreset.value;
+    }
+  });
+  document.getElementById("refreshHistory")?.addEventListener("click", () => void loadConversationHistory());
   messageForm?.addEventListener("submit", (event) => void sendMessage(event));
   messageInput?.addEventListener("input", () => {
     if (messageInput instanceof HTMLTextAreaElement) {
