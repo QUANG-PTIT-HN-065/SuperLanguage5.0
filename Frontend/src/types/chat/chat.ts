@@ -421,7 +421,6 @@ async function startVoicePractice(): Promise<void> {
 }
 
 
-
 function stopVoicePractice(): void {
   if (!isVoiceRecording) return;
   isVoiceRecording = false;
