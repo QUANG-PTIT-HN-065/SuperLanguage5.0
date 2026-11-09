@@ -4,6 +4,34 @@
  * flashcard interactions, XP tracker, streak logic, and lesson preview modal.
  */
 
+import { slanguageApi } from '../shared/api-client';
+
+interface VocabularyReviewResult {
+  data: {
+    xp_total: number;
+    current_streak: number;
+    xp_awarded: number;
+    already_completed: boolean;
+  };
+}
+
+function isVocabularyReviewResult(value: unknown): value is VocabularyReviewResult {
+  if (!value || typeof value !== 'object' || !('data' in value)) return false;
+  const data = value.data;
+  return Boolean(
+    data &&
+    typeof data === 'object' &&
+    'xp_total' in data &&
+    typeof data.xp_total === 'number' &&
+    'current_streak' in data &&
+    typeof data.current_streak === 'number' &&
+    'xp_awarded' in data &&
+    typeof data.xp_awarded === 'number' &&
+    'already_completed' in data &&
+    typeof data.already_completed === 'boolean'
+  );
+}
+
 // Interface for language specific data
 interface LanguageData {
   id: 'en' | 'ja' | 'vi';
@@ -111,6 +139,8 @@ class SlanguageDashboard {
   private currentXP: number = 2450;
   private currentStreak: number = 14;
   private isLoggedIn: boolean = false;
+  private isCompletingReview = false;
+  private pendingReview: { sessionId: string; knowsWord: boolean } | null = null;
   private langCarouselTimer: number | null = null;
   private currentSlideIndex: number = 0;
   private isCarouselPaused: boolean = false;
@@ -145,10 +175,15 @@ class SlanguageDashboard {
     if (savedXP) {
       this.currentXP = parseInt(savedXP, 10);
     }
+    const savedStreak = localStorage.getItem('slanguage_user_streak');
+    if (savedStreak) {
+      this.currentStreak = parseInt(savedStreak, 10);
+    }
     const xpBadge = document.getElementById('headerXPVal');
     if (xpBadge) {
       xpBadge.textContent = `${this.currentXP.toLocaleString()} XP`;
     }
+    this.updateStreakDisplay();
 
     // Check saved user name and sync with Header & Leaderboard
     const savedUserName = localStorage.getItem('slanguage_user_name') || 'Vua Xứ Thanh';
@@ -293,28 +328,11 @@ class SlanguageDashboard {
     const btnAgain = document.getElementById('btnFlashcardAgain');
 
     if (btnKnow) {
-      btnKnow.addEventListener('click', () => {
-        this.addXP(15);
-        this.showToast('Tuyệt vời! +15 XP vào kho báu học tập 🎉');
-        if (flashcardBox) {
-          flashcardBox.classList.remove('flipped');
-          flashcardBox.setAttribute('aria-pressed', 'false');
-          flashcardBox.querySelector('.flashcard-front')?.setAttribute('aria-hidden', 'false');
-          flashcardBox.querySelector('.flashcard-back')?.setAttribute('aria-hidden', 'true');
-        }
-      });
+      btnKnow.addEventListener('click', () => void this.completeVocabularyReview(true, flashcardBox));
     }
 
     if (btnAgain) {
-      btnAgain.addEventListener('click', () => {
-        this.showToast('Đã thêm từ này vào danh sách cần ôn lại hôm nay 📌');
-        if (flashcardBox) {
-          flashcardBox.classList.remove('flipped');
-          flashcardBox.setAttribute('aria-pressed', 'false');
-          flashcardBox.querySelector('.flashcard-front')?.setAttribute('aria-hidden', 'false');
-          flashcardBox.querySelector('.flashcard-back')?.setAttribute('aria-hidden', 'true');
-        }
-      });
+      btnAgain.addEventListener('click', () => void this.completeVocabularyReview(false, flashcardBox));
     }
 
     // Modal lesson quiz trigger
@@ -499,6 +517,89 @@ class SlanguageDashboard {
     if (userRankXP) {
       userRankXP.textContent = `${this.currentXP.toLocaleString()} XP`;
     }
+  }
+
+  private async completeVocabularyReview(knowsWord: boolean, flashcardBox: HTMLElement | null): Promise<void> {
+    if (this.isCompletingReview) return;
+
+    if (!this.isLoggedIn) {
+      this.showToast('Đăng nhập để lưu tiến độ ôn tập và nhận XP.');
+      return;
+    }
+
+    if (this.pendingReview && this.pendingReview.knowsWord !== knowsWord) {
+      this.showToast('Hãy thử gửi lại lựa chọn ôn tập trước đó để đồng bộ tiến độ.');
+      return;
+    }
+
+    this.isCompletingReview = true;
+    const reviewButtons = [
+      document.getElementById('btnFlashcardKnow'),
+      document.getElementById('btnFlashcardAgain'),
+    ].filter((button): button is HTMLButtonElement => button instanceof HTMLButtonElement);
+    reviewButtons.forEach(button => {
+      button.disabled = true;
+    });
+
+    try {
+      this.pendingReview ??= {
+        sessionId: window.crypto.randomUUID(),
+        knowsWord,
+      };
+      const sessionId = this.pendingReview.sessionId;
+      const response: unknown = await slanguageApi('/api/v1/vocabulary/review-sessions/complete', {
+        method: 'POST',
+        body: {
+          session_id: sessionId,
+          reviewed_count: 1,
+          known_count: knowsWord ? 1 : 0,
+        },
+      });
+      if (!isVocabularyReviewResult(response)) {
+        throw new Error('Máy chủ chưa trả về số liệu XP và streak hợp lệ.');
+      }
+
+      this.currentXP = response.data.xp_total;
+      this.currentStreak = response.data.current_streak;
+      localStorage.setItem('slanguage_user_xp', this.currentXP.toString());
+      localStorage.setItem('slanguage_user_streak', this.currentStreak.toString());
+      const xpBadge = document.getElementById('headerXPVal');
+      if (xpBadge) xpBadge.textContent = `${this.currentXP.toLocaleString()} XP`;
+      const userRankXP = document.getElementById('currentUserRankXP')
+        || document.querySelector('.rank-item.is-user .rank-xp');
+      if (userRankXP) userRankXP.textContent = `${this.currentXP.toLocaleString()} XP`;
+      this.updateStreakDisplay();
+      this.pendingReview = null;
+
+      if (response.data.already_completed) {
+        this.showToast('Phiên ôn tập này đã được đồng bộ trước đó.');
+      } else if (knowsWord) {
+        this.showToast(`Tuyệt vời! +${response.data.xp_awarded} XP. Chuỗi học: ${this.currentStreak} ngày.`);
+      } else {
+        this.showToast(`Đã ghi nhận từ cần ôn lại. Chuỗi học: ${this.currentStreak} ngày.`);
+      }
+
+      if (flashcardBox) {
+        flashcardBox.classList.remove('flipped');
+        flashcardBox.setAttribute('aria-pressed', 'false');
+        flashcardBox.querySelector('.flashcard-front')?.setAttribute('aria-hidden', 'false');
+        flashcardBox.querySelector('.flashcard-back')?.setAttribute('aria-hidden', 'true');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Lỗi không xác định.';
+      this.showToast(`Không thể lưu phiên ôn tập: ${message}`);
+    } finally {
+      this.isCompletingReview = false;
+      reviewButtons.forEach(button => {
+        button.disabled = false;
+      });
+    }
+  }
+
+  private updateStreakDisplay(): void {
+    document.querySelectorAll('.stat-chip.streak span, .streak-count span').forEach(element => {
+      element.textContent = `${this.currentStreak} Ngày`;
+    });
   }
 
   private updateUserRankDisplay(): void {

@@ -10,7 +10,7 @@
  * Không tạo số liệu, cấp độ hay mục tiêu nếu API không trả về.
  */
 
-import { slanguageApi } from "./api-client";
+import { slanguageApi } from "../shared/api-client";
 
 export const XP_PER_LEVEL = 100;
 

@@ -1,0 +1,624 @@
+.slg-study-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(0, 180, 216, 0.1), transparent 25rem),
+    var(--bg-page, #f8f6fd);
+}
+
+.slg-study-page .navbar-container,
+.slg-study-page .nav-left,
+.slg-study-page .nav-left nav {
+  min-width: 0;
+}
+
+.slg-study-page .nav-left {
+  flex: 1 1 auto;
+}
+
+.slg-study-page .nav-right,
+.study-user,
+.study-user .guest-nav-auth {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.study-user {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.study-main {
+  width: min(1120px, calc(100% - 40px));
+  margin: 40px auto 72px;
+}
+
+.study-hero {
+  padding: clamp(24px, 5vw, 48px);
+  border: 1px solid rgba(0, 119, 182, 0.16);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.78), transparent 34%),
+    linear-gradient(125deg, #dff7fb, #f0e8fa 74%, #fff8e4);
+  box-shadow: 0 14px 36px rgba(6, 26, 40, 0.08);
+}
+
+.study-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #00699f;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.study-hero h1 {
+  margin-top: 12px;
+  color: #061a28;
+  font-family: 'Baloo 2', 'Be Vietnam Pro', sans-serif;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  line-height: 1.15;
+}
+
+.study-hero p {
+  max-width: 680px;
+  margin-top: 12px;
+  color: #405766;
+  line-height: 1.7;
+}
+
+.study-notice,
+.learning-overview,
+.learning-guest-card,
+.review-session {
+  margin-top: 24px;
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid #e6dcf5;
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 8px 26px rgba(6, 26, 40, 0.06);
+}
+
+.study-notice:empty {
+  display: none;
+}
+
+.study-notice[data-state="error"] {
+  border-color: #efb6c0;
+  color: #9e1735;
+  background: #fff7f8;
+}
+
+.learning-overview-heading,
+.review-session-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.learning-overview-heading h2,
+.review-session-heading h2,
+.learning-guest-card h2 {
+  margin-top: 6px;
+  color: #061a28;
+  font-family: 'Baloo 2', 'Be Vietnam Pro', sans-serif;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+}
+
+.learning-language-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-radius: 999px;
+  color: #064e69;
+  background: #e0f7fa;
+  font-weight: 700;
+}
+
+.learning-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.learning-stat {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #edf0f3;
+  border-radius: 18px;
+  background: #fbfcfe;
+}
+
+.learning-stat span,
+.learning-stat strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.learning-stat span {
+  color: #586c79;
+  font-size: 0.82rem;
+}
+
+.learning-stat strong {
+  margin-top: 8px;
+  color: #061a28;
+  font-size: 1.4rem;
+}
+
+.learning-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+
+.learning-action-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #e6dcf5;
+  border-radius: 20px;
+  color: inherit;
+  background: #fff;
+  text-decoration: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.learning-action-card:hover {
+  transform: translateY(-2px);
+  border-color: #67c8dc;
+  box-shadow: 0 10px 26px rgba(0, 119, 182, 0.1);
+}
+
+.learning-action-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  place-items: center;
+  border-radius: 16px;
+  color: #0077b6;
+  background: #e0f2fe;
+  font-size: 1.2rem;
+}
+
+.learning-action-icon.ai {
+  color: #7c3aed;
+  background: #f1eafe;
+}
+
+.learning-action-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  gap: 4px;
+}
+
+.learning-action-copy strong {
+  color: #061a28;
+}
+
+.learning-action-copy span,
+.learning-data-note,
+.learning-guest-card p {
+  color: #586c79;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.learning-action-card > .fa-arrow-right {
+  flex: 0 0 auto;
+  color: #0077b6;
+}
+
+.learning-data-note {
+  margin-top: 20px;
+}
+
+.learning-guest-card {
+  text-align: center;
+}
+
+.learning-guest-card .learning-action-icon {
+  margin: 0 auto 12px;
+}
+
+.learning-guest-card p {
+  margin: 8px 0 18px;
+}
+
+.study-primary-button,
+.study-secondary-button,
+.study-text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.study-primary-button {
+  color: #fff;
+  background: #0077b6;
+}
+
+.study-primary-button:hover {
+  background: #005f92;
+}
+
+.study-secondary-button {
+  border-color: #d7e0e6;
+  color: #284555;
+  background: #fff;
+}
+
+.study-secondary-button:hover {
+  border-color: #63bfd5;
+  background: #f0fbfd;
+}
+
+.study-primary-button:disabled,
+.study-secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.study-text-button {
+  color: #00699f;
+  background: transparent;
+}
+
+.vocabulary-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1.2fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin: 24px 0 18px;
+  padding: 18px;
+  border: 1px solid #e6dcf5;
+  border-radius: 20px;
+  background: #fff;
+}
+
+.vocabulary-filter {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  color: #405766;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.vocabulary-filter select,
+.vocabulary-filter input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #d5e0e6;
+  border-radius: 12px;
+  color: #061a28;
+  background: #fff;
+  font: inherit;
+}
+
+.vocabulary-count {
+  padding: 12px 4px;
+  color: #586c79;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.vocabulary-toolbar-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.word-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.word-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 220px;
+  padding: 22px;
+  border: 1px solid #e6dcf5;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(6, 26, 40, 0.04);
+}
+
+.word-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.vocab-level {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #075985;
+  background: #e0f2fe;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.word-pos {
+  color: #647782;
+  font-size: 0.78rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.word-card h2 {
+  margin-top: 18px;
+  color: #061a28;
+  font-family: 'Baloo 2', 'Be Vietnam Pro', sans-serif;
+  font-size: 1.6rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.vocab-phonetic {
+  margin-top: 4px;
+  color: #647782;
+  overflow-wrap: anywhere;
+}
+
+.word-meaning {
+  margin-top: 12px;
+  color: #284555;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.word-example {
+  margin-top: 12px;
+  color: #586c79;
+  font-size: 0.88rem;
+  font-style: italic;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.word-card .study-secondary-button {
+  align-self: flex-start;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.word-empty-state {
+  padding: 36px 18px;
+  border: 1px dashed #cbd9e1;
+  border-radius: 18px;
+  color: #586c79;
+  text-align: center;
+}
+
+.word-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 22px 0;
+}
+
+.word-pagination span {
+  color: #405766;
+  font-size: 0.88rem;
+}
+
+.review-session {
+  margin-bottom: 20px;
+}
+
+.review-progress {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 20px 0;
+  color: #586c79;
+  font-size: 0.85rem;
+}
+
+.review-progress-track {
+  height: 8px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e6edf1;
+}
+
+.review-progress-track span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0077b6, #00b4d8);
+  transition: width 180ms ease;
+}
+
+.review-card {
+  max-width: 760px;
+  min-height: 330px;
+  margin: 0 auto;
+  padding: clamp(22px, 5vw, 42px);
+  border: 1px solid #dce8ee;
+  border-radius: 24px;
+  background: linear-gradient(145deg, #fff, #f5fbfd);
+  text-align: center;
+}
+
+.review-card .vocab-level {
+  margin: 0 auto;
+}
+
+.review-card h3 {
+  margin-top: 18px;
+  color: #061a28;
+  font-family: 'Baloo 2', 'Be Vietnam Pro', sans-serif;
+  font-size: clamp(2rem, 6vw, 3.2rem);
+  overflow-wrap: anywhere;
+}
+
+.review-card .study-secondary-button {
+  margin-top: 20px;
+}
+
+.review-meaning {
+  margin: 20px auto 0;
+  padding: 18px;
+  border-radius: 16px;
+  color: #284555;
+  background: #eaf7fb;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.review-meaning strong {
+  color: #061a28;
+}
+
+.review-meaning p {
+  margin-top: 8px;
+}
+
+.review-example-meaning {
+  color: #647782;
+  font-size: 0.88rem;
+}
+
+.review-choice-group,
+.review-completion {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.review-completion {
+  align-items: center;
+}
+
+.review-completion p {
+  flex: 0 0 100%;
+  color: #284555;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .learning-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vocabulary-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .vocabulary-count {
+    grid-column: 1 / -1;
+  }
+
+  .vocabulary-toolbar-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .slg-study-page .navbar-container {
+    align-items: flex-start;
+  }
+
+  .slg-study-page .nav-left {
+    flex-wrap: wrap;
+  }
+
+  .slg-study-page .nav-left nav {
+    width: 100%;
+  }
+
+  .slg-study-page .nav-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .study-main {
+    width: min(100% - 28px, 680px);
+    margin-top: 24px;
+  }
+
+  .learning-actions-grid,
+  .word-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .learning-overview-heading,
+  .review-session-heading {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .study-main {
+    width: calc(100% - 24px);
+  }
+
+  .study-hero {
+    border-radius: 22px;
+  }
+
+  .learning-stat-grid,
+  .vocabulary-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .learning-stat {
+    padding: 14px;
+  }
+
+  .vocabulary-count {
+    grid-column: auto;
+  }
+
+  .vocabulary-toolbar-actions {
+    grid-column: auto;
+  }
+
+  .word-pagination {
+    gap: 8px;
+  }
+
+  .word-pagination .study-secondary-button {
+    padding-inline: 10px;
+  }
+}

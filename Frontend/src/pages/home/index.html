@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Bảng Điều Khiển Học Viên</title>
+  <title>Slanguage - Học Viên</title>
+  <link rel="icon" type="image/png" href="../../../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
@@ -21,16 +22,16 @@
           <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </a>
-
-        <nav>
-          <ul class="nav-links">
-            <li><a href="./index.html" class="active">Trang chủ</a></li>
-            <li><a href="#learningSection">Học tập</a></li>
-            <li><a href="#vocabularySection">Từ vựng</a></li>
-            <li><a href="../chat/index.html">Luyện tập AI</a></li>
-          </ul>
-        </nav>
       </div>
+
+      <nav class="nav-center" aria-label="Điều hướng chính">
+        <ul class="nav-links">
+          <li><a href="./index.html" class="active" aria-current="page">Trang chủ</a></li>
+          <li><a href="../learning/index.html">Học tập</a></li>
+          <li><a href="../vocabulary/index.html">Từ vựng</a></li>
+          <li><a href="../chat/index.html">Luyện tập AI</a></li>
+        </ul>
+      </nav>
 
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
@@ -121,96 +122,6 @@
         <p class="hero-description" id="heroWelcomeDesc">
           Chào mừng bạn đến với S Language – nền tảng học tập kết nối ba nền văn hóa Việt, Anh và Nhật Bản. Tại đây, chúng tôi mang đến cho bạn lộ trình bài bản, dễ tiếp cận và giàu tính thực tế để tự tin làm chủ ngôn ngữ từ những bước đầu tiên. Dù bạn học để giao tiếp hàng ngày, phục vụ công việc hay khám phá thế giới, S Language luôn sẵn sàng đồng hành cùng bạn.
         </p>
-      </section>
-
-      <section class="learning-section" id="learningSection" aria-labelledby="learningTitle">
-        <div class="section-title-wrap">
-          <h2 class="section-title" id="learningTitle">
-            <i class="fa-solid fa-book-open" aria-hidden="true"></i> Học tập
-          </h2>
-        </div>
-
-        <div class="learning-card">
-          <div class="learning-card-heading">
-            <div>
-              <span class="learning-eyebrow">LỘ TRÌNH ĐANG HỌC</span>
-              <h3 id="heroCourseTitle">Tiếng Nhật Sơ Cấp JLPT N5</h3>
-              <p class="learning-lesson">
-                <i class="fa-solid fa-play" aria-hidden="true"></i>
-                <span id="heroLessonName">Bài 14: Gọi món trong quán ăn Tokyo &amp; Mẫu câu V-tai desu</span>
-              </p>
-            </div>
-            <div class="learning-language-badge">
-              <span class="learning-eyebrow">NGÔN NGỮ</span>
-              <span class="lang-name" id="heroActiveLang">
-                <img src="../../../assets/flags/flag-jp.png" alt="" class="flag-icon-badge">
-                <span>Tiếng Nhật</span>
-              </span>
-              <span class="learning-status" id="heroBadgeLabel">Đang chọn</span>
-            </div>
-          </div>
-
-          <div class="learning-progress">
-            <div class="progress-header">
-              <span class="lesson-name">Tiến độ học tập</span>
-              <span class="percentage" id="heroProgressPercent">72%</span>
-            </div>
-            <div class="progress-track" role="progressbar" aria-label="Tiến độ khóa học" aria-valuemin="0" aria-valuemax="100" aria-valuenow="72">
-              <div class="progress-fill" id="heroProgressFill" style="width: 72%;"></div>
-            </div>
-          </div>
-
-          <div class="hero-actions">
-            <button type="button" class="btn-primary" id="btnResumeLesson">
-              <i class="fa-solid fa-bolt" aria-hidden="true"></i> Luyện nhanh
-            </button>
-            <a href="#roadmapTeaserSection" class="btn-secondary">
-              <i class="fa-solid fa-code-branch" aria-hidden="true"></i> Xem lộ trình
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section class="flashcard-section" id="vocabularySection" aria-labelledby="vocabularyTitle">
-        <div class="section-title-wrap">
-          <h2 class="section-title" id="vocabularyTitle">
-            <i class="fa-solid fa-clone" aria-hidden="true"></i> Từ vựng hôm nay
-          </h2>
-          <span class="vocabulary-level">Ôn tập chủ động</span>
-        </div>
-
-        <div class="flashcard-container">
-          <div class="flashcard-box" id="flashcardBox" role="button" tabindex="0" aria-label="Lật thẻ từ vựng" aria-pressed="false">
-            <div class="flashcard-inner">
-              <div class="flashcard-front">
-                <span class="flashcard-tag" id="fcTag">Kanji &amp; Từ Vựng N5</span>
-                <strong class="flashcard-word" id="fcWord">美味しい (Oishii)</strong>
-                <span class="flashcard-phonetic" id="fcPhonetic">/oɪ.ʃiː/ - [Tính từ đuôi い]</span>
-                <span class="flashcard-hint"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Nhấn để xem nghĩa</span>
-              </div>
-              <div class="flashcard-back" aria-hidden="true">
-                <strong class="meaning" id="fcMeaning">Ngon miệng, thơm ngon</strong>
-                <span class="example" id="fcExample">「このラーメンはとても美味しいですね！」(Món ramen này thực sự rất ngon!)</span>
-                <span class="flashcard-hint">Ví dụ sử dụng</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="flashcard-controls">
-            <div>
-              <h4>Ghi nhớ từ mới</h4>
-              <p>Lật thẻ để xem nghĩa và ví dụ. Chọn mức độ ghi nhớ để điều chỉnh nhịp ôn tập của bạn.</p>
-            </div>
-            <div class="fc-btn-group">
-              <button type="button" class="fc-btn fc-btn-again" id="btnFlashcardAgain">
-                <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Cần ôn lại
-              </button>
-              <button type="button" class="fc-btn fc-btn-know" id="btnFlashcardKnow">
-                <i class="fa-solid fa-check" aria-hidden="true"></i> Đã nhớ
-              </button>
-            </div>
-          </div>
-        </div>
       </section>
 
       <!-- 3 LANGUAGES SHOWCASE BANNER CAROUSEL -->
@@ -1060,7 +971,7 @@
     <div class="footer-bottom">
       <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu.</div>
       <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
-      <a class="footer-admin-link" href="../LoginAdmin/index.html">
+      <a class="footer-admin-link" href="../LoginAdmin/code.html">
         <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
         Đăng nhập quản trị
       </a>

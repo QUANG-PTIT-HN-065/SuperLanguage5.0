@@ -1,10 +1,39 @@
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.schemas.profile import LANG_PATTERN, Level
 
 PartOfSpeech = Literal["noun", "verb", "adjective", "adverb", "phrase", "other"]
+
+
+class VocabularyReviewComplete(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: UUID
+    reviewed_count: int = Field(ge=1, le=100)
+    known_count: int = Field(ge=0, le=100)
+
+    @model_validator(mode="after")
+    def known_cannot_exceed_reviewed(self) -> "VocabularyReviewComplete":
+        if self.known_count > self.reviewed_count:
+            raise ValueError("Số từ đã nhớ không thể nhiều hơn số từ đã ôn.")
+        return self
+
+
+class VocabularyReviewCompletionResult(BaseModel):
+    session_id: UUID
+    reviewed_count: int
+    known_count: int
+    xp_awarded: int
+    xp_total: int
+    current_streak: int
+    longest_streak: int
+    already_completed: bool
+    xp_today: Optional[int] = None
+    goal_met_today: Optional[bool] = None
 
 
 class WordCreate(BaseModel):

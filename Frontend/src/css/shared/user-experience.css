@@ -83,14 +83,23 @@ body.slg-user-home .brand-name .brand-language {
 
 body.slg-user-home .nav-links a {
   color: var(--user-muted);
-  border-radius: 14px;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
 }
 
-body.slg-user-home .nav-links a:hover,
+body.slg-user-home .nav-links a:hover {
+  color: var(--user-primary);
+  background: transparent;
+  border-bottom-color: #c4b5fd;
+  box-shadow: none;
+  text-shadow: none;
+}
+
 body.slg-user-home .nav-links a.active {
   color: var(--user-primary);
-  background: #eef2ff;
-  border-color: transparent;
+  background: transparent;
+  border-bottom: 2px solid var(--user-primary);
   box-shadow: none;
   text-shadow: none;
 }

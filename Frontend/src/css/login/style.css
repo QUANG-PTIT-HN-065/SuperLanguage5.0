@@ -404,6 +404,26 @@ form h1 {
   transition: var(--transition);
 }
 
+.language-field-label {
+  display: block;
+  margin: 0 0 6px 2px;
+  color: var(--text-light);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.form-select {
+  min-height: 44px;
+  padding-left: 14px;
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+.form-select option {
+  background: #061c2e;
+  color: #fff;
+}
+
 .form-input:focus {
   border-color: var(--color-topaz);
   background: rgba(6, 40, 70, 0.85);

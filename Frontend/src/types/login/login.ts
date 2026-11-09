@@ -106,6 +106,8 @@ class SlanguageLogin {
   private regEmailInput: HTMLInputElement | null = null;
   private regPasswordInput: HTMLInputElement | null = null;
   private regConfirmPasswordInput: HTMLInputElement | null = null;
+  private regNativeLanguageInput: HTMLSelectElement | null = null;
+  private regTargetLanguageInput: HTMLSelectElement | null = null;
   private regTermsCheckbox: HTMLInputElement | null = null;
   private btnSubmitRegister: HTMLButtonElement | null = null;
 
@@ -128,6 +130,8 @@ class SlanguageLogin {
     this.regEmailInput = document.getElementById('regEmail') as HTMLInputElement;
     this.regPasswordInput = document.getElementById('regPassword') as HTMLInputElement;
     this.regConfirmPasswordInput = document.getElementById('regConfirmPassword') as HTMLInputElement;
+    this.regNativeLanguageInput = document.getElementById('regNativeLanguage') as HTMLSelectElement;
+    this.regTargetLanguageInput = document.getElementById('regTargetLanguage') as HTMLSelectElement;
     this.regTermsCheckbox = document.getElementById('regTerms') as HTMLInputElement;
     this.btnSubmitRegister = document.getElementById('btnSubmitRegister') as HTMLButtonElement;
 
@@ -197,6 +201,8 @@ class SlanguageLogin {
     if (this.regConfirmPasswordInput) {
       this.regConfirmPasswordInput.addEventListener('input', () => this.clearError('confirmPassError'));
     }
+    this.regNativeLanguageInput?.addEventListener('change', () => this.clearError('languageError'));
+    this.regTargetLanguageInput?.addEventListener('change', () => this.clearError('languageError'));
 
     // Forgot password trigger
     const forgotLink = document.getElementById('forgotPasswordLink');
@@ -368,6 +374,8 @@ class SlanguageLogin {
     const email = this.regEmailInput?.value.trim() || '';
     const password = this.regPasswordInput?.value || '';
     const confirmPassword = this.regConfirmPasswordInput?.value || '';
+    const nativeLanguage = this.regNativeLanguageInput?.value || '';
+    const targetLanguage = this.regTargetLanguageInput?.value || '';
     const terms = this.regTermsCheckbox?.checked || false;
 
     if (!fullName) {
@@ -396,6 +404,11 @@ class SlanguageLogin {
       isValid = false;
     }
 
+    if (!nativeLanguage || !targetLanguage || nativeLanguage === targetLanguage) {
+      this.showError('languageError', 'Ngôn ngữ mẹ đẻ và ngôn ngữ muốn học phải khác nhau.');
+      isValid = false;
+    }
+
     if (!terms) {
       alert('Vui lòng đồng ý với Điều khoản của Slanguage.');
       isValid = false;
@@ -413,8 +426,8 @@ class SlanguageLogin {
         email,
         password,
         display_name: fullName,
-        native_language: 'vi',
-        target_language: 'en',
+        native_language: nativeLanguage,
+        target_language: targetLanguage,
         accept_terms: terms
       });
 
@@ -424,6 +437,8 @@ class SlanguageLogin {
         localStorage.setItem('slanguage_user_id', result.data.user_id);
         localStorage.setItem('slanguage_user_name', fullName);
         localStorage.setItem('slanguage_user_email', email);
+        localStorage.setItem('slanguage_native_language', nativeLanguage);
+        localStorage.setItem('slanguage_active_language', targetLanguage);
         localStorage.setItem('slanguage_is_logged_in', 'true');
         this.triggerLoadingAndRedirect(this.getPostLoginUrl(), 500);
       } else {
@@ -447,8 +462,12 @@ class SlanguageLogin {
     if (redirect) {
       try {
         const requestedUrl = new URL(redirect, window.location.href);
-        const chatUrl = new URL('../chat/index.html', window.location.href);
-        if (requestedUrl.origin === window.location.origin && requestedUrl.pathname === chatUrl.pathname) {
+        const allowedPaths = [
+          '../chat/index.html',
+          '../learning/index.html',
+          '../vocabulary/index.html',
+        ].map((path) => new URL(path, window.location.href).pathname);
+        if (requestedUrl.origin === window.location.origin && allowedPaths.includes(requestedUrl.pathname)) {
           return requestedUrl.href;
         }
       } catch {

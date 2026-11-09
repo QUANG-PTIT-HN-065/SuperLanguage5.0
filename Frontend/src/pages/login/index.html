@@ -42,6 +42,25 @@
           <div class="error-text" id="nameError">Vui lòng nhập họ tên.</div>
         </div>
 
+        <div class="form-group">
+          <label class="language-field-label" for="regNativeLanguage">Ngôn ngữ mẹ đẻ *</label>
+          <select id="regNativeLanguage" class="form-input form-select" required>
+            <option value="vi" selected>Tiếng Việt</option>
+            <option value="en">Tiếng Anh</option>
+            <option value="ja">Tiếng Nhật</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="language-field-label" for="regTargetLanguage">Ngôn ngữ muốn học *</label>
+          <select id="regTargetLanguage" class="form-input form-select" required>
+            <option value="en" selected>Tiếng Anh</option>
+            <option value="ja">Tiếng Nhật</option>
+            <option value="vi">Tiếng Việt</option>
+          </select>
+          <div class="error-text" id="languageError">Ngôn ngữ mẹ đẻ và ngôn ngữ muốn học phải khác nhau.</div>
+        </div>
+
         <!-- Email -->
         <div class="form-group">
           <div class="input-wrapper">
