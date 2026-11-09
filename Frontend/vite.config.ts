@@ -1,26 +1,20 @@
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
+import { globSync } from "glob";
+import { fileURLToPath } from "url";
+import path from "path";
+
+// Tự động tìm tất cả file .html trong dự án (trừ node_modules và dist)
+const htmlFiles = globSync("**/*.html", {
+  ignore: ["node_modules/**", "dist/**"],
+}).map((file) => fileURLToPath(new URL(file, import.meta.url)));
 
 export default defineConfig({
   plugins: [tailwindcss()],
   base: "./",
   build: {
     rollupOptions: {
-      input: [
-        "index.html",
-        "src/pages/login/index.html",
-        "src/pages/register/index.html",
-        "src/pages/forgot-password/index.html",
-        "src/pages/terms/index.html",
-        "src/pages/home/index.html",
-        "src/pages/LoginAdmin/code.html",
-        "src/pages/LoginAdmin/index.html",
-        "src/pages/dasboardAdmin/code.html",
-        "src/pages/dasboardAdmin/index.html",
-        "src/pages/chat/index.html",
-        "src/pages/vocabularyAdmin/code.html",
-        "src/pages/vocabularyAdmin/index.html",
-      ],
+      input: htmlFiles,
     },
   },
 });

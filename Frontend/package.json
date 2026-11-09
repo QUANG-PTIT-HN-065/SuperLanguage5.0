@@ -14,7 +14,8 @@
   "license": "ISC",
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.4",
-    "puppeteer-core": "^25.16.0",
+    "@types/node": "^22.15.0",
+    "glob": "^11.0.0",
     "tailwindcss": "^4.3.4",
     "typescript": "^7.0.2",
     "vite": "^7.0.0",
@@ -22,7 +23,6 @@
   },
   "dependencies": {
     "@tailwindcss/cli": "^4.3.4",
-    "chart.js": "^4.6.1",
-    "gsap": "^3.15.1"
+    "chart.js": "^4.6.1"
   }
 }

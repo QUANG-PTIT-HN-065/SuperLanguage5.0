@@ -15,7 +15,7 @@
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ScrollToPlugin } from "gsap/ScrollToPlugin";
-import { escapeHtml } from "./shared/learner-progress";
+import { escapeHtml } from "./home/learner-progress";
 
 gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
 

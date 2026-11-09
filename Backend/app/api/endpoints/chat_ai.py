@@ -323,10 +323,10 @@ async def send_message(
 
     if not conv.data:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy phòng trò chuyện.")
-    lang = conv.data[0]["language_code"]
+    lang = conv.data[0]["language_code"] # type: ignore
 
     try:
-        ai_reply, ai_feedback = await AIService.generate_chat_response(data.user_message, lang)
+        ai_reply, ai_feedback = await AIService.generate_chat_response(data.user_message, lang) # type: ignore
     except Exception as exc:
         logger.exception("AI chat response generation failed.")
         raise HTTPException(
