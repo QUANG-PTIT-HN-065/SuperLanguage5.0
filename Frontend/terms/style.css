@@ -1,0 +1,248 @@
+/* ===================================================================
+   SLANGUAGE - USER TERMS OF SERVICE (ĐIỀU KHOẢN NGƯỜI DÙNG)
+   Color Palette:
+   - Background: Gradient (Cyan #00B4D8 + Yellow Cream #FDEB9E + White Amethyst #F8F6FD)
+   - Accent: Yellow Topaz #FFB703, Red Crimson #DC143C
+   - Typography: 'K2D', sans-serif
+=================================================================== */
+
+:root {
+  --color-crimson: #DC143C;
+  --color-crimson-deep: #A7102D;
+  --color-ocean: #0077B6;
+  --color-ocean-light: #00B4D8;
+  --color-ocean-deep: #061A28;
+  --color-topaz: #FFB703;
+  --color-topaz-light: #FFF4D4;
+  --color-amethyst-white: #F8F6FD;
+  --color-amethyst-border: #E2D7F3;
+  --color-yellow-cream: #FDEB9E;
+
+  --color-yellow: var(--color-topaz);
+  --color-mint: var(--color-ocean-light);
+  --color-teal: var(--color-ocean);
+  --color-dark: var(--color-ocean-deep);
+  --text-light: #d0e0ec;
+  --text-muted: #8298a8;
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'K2D', sans-serif;
+}
+
+body {
+  background-color: #00B4D8;
+  color: #fff;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-image: 
+    radial-gradient(circle at 10% 15%, rgba(0, 180, 216, 0.45) 0%, transparent 45%),
+    radial-gradient(circle at 90% 85%, rgba(248, 246, 253, 0.6) 0%, transparent 45%),
+    linear-gradient(135deg, #00B4D8 0%, #48CAE4 22%, #FDEB9E 62%, #F8F6FD 100%);
+  background-attachment: fixed;
+  background-size: cover;
+  padding: clamp(16px, 3vw, 40px);
+}
+
+/* ================= TERMS RECTANGLE CARD ================= */
+.terms-card {
+  width: min(880px, 94vw);
+  min-height: 480px;
+  background: rgba(6, 28, 46, 0.94);
+  border: 1.5px solid rgba(255, 183, 3, 0.35);
+  border-radius: 15px; /* Border radius đúng khoảng 15px theo yêu cầu */
+  box-shadow: 0 25px 65px rgba(0, 30, 50, 0.45), 0 0 35px rgba(255, 183, 3, 0.18);
+  backdrop-filter: blur(24px);
+  padding: clamp(24px, 4vw, 44px) clamp(20px, 5vw, 48px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative ambient glow inside card */
+.terms-card::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(0, 180, 216, 0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.terms-card::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  left: -60px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(255, 183, 3, 0.18) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Header Section */
+.terms-header {
+  border-bottom: 1.5px solid rgba(255, 183, 3, 0.2);
+  padding-bottom: 24px;
+  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  padding: 6px 14px;
+  background: rgba(0, 180, 216, 0.15);
+  border: 1px solid rgba(0, 180, 216, 0.35);
+  border-radius: 20px;
+  text-decoration: none;
+  color: inherit;
+  transition: var(--transition);
+}
+
+.brand-badge:hover {
+  background: rgba(0, 180, 216, 0.25);
+  border-color: var(--color-topaz);
+  transform: translateY(-1px);
+}
+
+.brand-badge img {
+  height: 22px;
+  width: auto;
+  object-fit: contain;
+}
+
+.brand-badge span {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-amethyst-white);
+  letter-spacing: 0.5px;
+}
+
+.brand-badge span strong {
+  background: linear-gradient(135deg, #FFB703 0%, #FF8800 45%, #DC143C 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.terms-header h1 {
+  font-size: clamp(1.6rem, 3.2vw, 2.3rem);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFF4D4 60%, #FFB703 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.terms-header h1 i {
+  color: var(--color-topaz);
+  -webkit-text-fill-color: initial;
+  font-size: 1.8rem;
+  filter: drop-shadow(0 0 10px rgba(255, 183, 3, 0.5));
+}
+
+/* Content Area - Terms List căn lề trái, hiển thị từ trên xuống dưới */
+.terms-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 14px;
+  position: relative;
+  z-index: 2;
+  min-height: 220px;
+  width: 100%;
+}
+
+.terms-body p {
+  margin: 0;
+  text-align: left;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: #e6f1f8;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.035);
+  border-left: 3.5px solid var(--color-topaz, #FFB703);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.terms-body p:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-left-color: var(--color-ocean-light, #00B4D8);
+  padding-left: 20px;
+}
+
+.terms-empty-placeholder {
+  text-align: left;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+/* Footer / Back Action */
+.terms-footer {
+  margin-top: auto;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  z-index: 2;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.btn-back-auth {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, var(--color-topaz) 0%, #e59d00 100%);
+  color: var(--color-ocean-deep);
+  font-weight: 700;
+  font-size: 0.92rem;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: var(--transition);
+  box-shadow: 0 4px 15px rgba(255, 183, 3, 0.35);
+}
+
+.btn-back-auth:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 183, 3, 0.5);
+  background: linear-gradient(135deg, #ffc425 0%, #f0a500 100%);
+}
+
+.terms-meta-info {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
