@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEYS: str = ""
     DEEPSEEK_API_KEYS: str = ""
     RAG_EMBEDDING_API_KEYS: str = ""
-    RAG_SIMILARITY_THRESHOLD:  float = 0.45
+    RAG_SIMILARITY_THRESHOLD: float = 0.45
     RAG_TOP_K: int = 4
     RAG_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
