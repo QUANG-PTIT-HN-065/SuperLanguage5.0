@@ -6,12 +6,12 @@
   <title>Slanguage - Khôi Phục Mật Khẩu & Xác Thực OTP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../css/forgot-password/style.css">
-  <script type="module" src="../../types/forgot-password/forgot-password.ts"></script>
+  <link rel="stylesheet" href="../../css/shared/user-experience.css">
 </head>
-<body>
+<body class="slg-user-recovery">
 
   <!-- EMAIL OTP NOTIFICATION BANNER -->
   <div class="web-otp-toast" id="webOtpToast">
@@ -27,9 +27,9 @@
   <div class="forgot-card">
     <!-- Brand Header -->
     <div class="forgot-header">
-      <a href="../../../index.html" class="brand-badge" style="display:inline-flex; align-items:center; gap:8px;">
-        <div class="sl-header-brand-mark" style="width:36px; height:36px; font-size:1.15rem;">S</div>
-        <span class="brand-name">Super<span class="brand-language">Language</span><span class="brand-dot">.</span></span>
+      <a href="../home/index.html" class="brand-badge">
+        <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+        <span class="brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
       </a>
       <h2>Khôi Phục Mật Khẩu</h2>
       <p id="headerSubtitle">Nhập email đã đăng ký tài khoản của bạn để nhận mã xác thực OTP 6 số.</p>
@@ -171,7 +171,7 @@
     </div>
 
     <div style="text-align: center; margin-top: 14px;">
-      <a href="../../../index.html" style="font-size: 0.85rem; color: var(--text-muted); text-decoration: none;">
+      <a href="../home/index.html" style="font-size: 0.85rem; color: var(--text-muted); text-decoration: none;">
         <i class="fa-solid fa-arrow-left"></i> Quay lại Trang chủ
       </a>
     </div>
@@ -181,7 +181,7 @@
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" playsinline></video>
+        <video id="loadingVideoPlayer" src="../../../assets/loading.mp4" autoplay loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>
@@ -189,5 +189,6 @@
     </div>
   </div>
 
+  <script type="module" src="../../types/forgot-password/forgot-password.ts"></script>
 </body>
 </html>

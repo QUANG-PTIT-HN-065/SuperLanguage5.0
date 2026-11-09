@@ -6,12 +6,12 @@
   <title>Slanguage - Đăng Nhập & Đăng Ký Học Viên</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../css/login/style.css">
-  <script type="module" src="../../types/login/login.ts"></script>
+  <link rel="stylesheet" href="../../css/shared/user-experience.css">
 </head>
-<body>
+<body class="slg-user-auth">
 
   <!-- Toast Notification Container -->
   <div class="login-toast" id="loginToast"></div>
@@ -40,6 +40,25 @@
             <i class="fa-solid fa-user input-icon"></i>
           </div>
           <div class="error-text" id="nameError">Vui lòng nhập họ tên.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="language-field-label" for="regNativeLanguage">Ngôn ngữ mẹ đẻ *</label>
+          <select id="regNativeLanguage" class="form-input form-select" required>
+            <option value="vi" selected>Tiếng Việt</option>
+            <option value="en">Tiếng Anh</option>
+            <option value="ja">Tiếng Nhật</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="language-field-label" for="regTargetLanguage">Ngôn ngữ muốn học *</label>
+          <select id="regTargetLanguage" class="form-input form-select" required>
+            <option value="en" selected>Tiếng Anh</option>
+            <option value="ja">Tiếng Nhật</option>
+            <option value="vi">Tiếng Việt</option>
+          </select>
+          <div class="error-text" id="languageError">Ngôn ngữ mẹ đẻ và ngôn ngữ muốn học phải khác nhau.</div>
         </div>
 
         <!-- Email -->
@@ -72,7 +91,7 @@
         <!-- Terms and Conditions -->
         <label class="checkbox-wrap terms-check">
           <input type="checkbox" id="regTerms" checked>
-          <span>Tôi đồng ý với <a href="#" style="color: var(--color-mint);">Điều khoản</a> của Slanguage</span>
+          <span>Tôi đồng ý với <a href="../terms/index.html" style="color: var(--color-mint);">Điều khoản</a> của Slanguage</span>
         </label>
 
         <!-- Submit Button -->
@@ -82,7 +101,7 @@
         </button>
 
         <!-- Back to Home Button -->
-        <a href="../../../index.html" class="btn-back-home" id="btnBackHomeRegister">
+        <a href="../home/index.html" class="btn-back-home" id="btnBackHomeRegister">
           <i class="fa-solid fa-house"></i>
           <span>Quay lại Trang chủ</span>
         </a>
@@ -106,7 +125,7 @@
               type="text" 
               id="emailOrUser" 
               class="form-input" 
-              placeholder="Địa chỉ Email *"
+              placeholder="Địa chỉ email *"
               autocomplete="username"
               required
             >
@@ -150,7 +169,7 @@
         </button>
 
         <!-- Back to Home Button -->
-        <a href="../../../index.html" class="btn-back-home" id="btnBackHomeLogin">
+        <a href="../home/index.html" class="btn-back-home" id="btnBackHomeLogin">
           <i class="fa-solid fa-house"></i>
           <span>Quay lại Trang chủ</span>
         </a>
@@ -167,15 +186,15 @@
         <!-- OVERLAY LEFT (Appears when Sign Up is shown, prompts user to Sign In) -->
         <div class="overlay-panel overlay-left">
           <div class="overlay-brand">
-            <div class="sl-header-brand-mark" style="width:44px; height:44px; font-size:1.4rem;">S</div>
-            <span class="overlay-brand-name">Super<span class="brand-language">Language</span><span class="brand-dot">.</span></span>
+            <img src="../../../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
+            <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
           </div>
           <h2>Chào mừng trở lại!</h2>
           <p>Để tiếp tục lộ trình học tập và tích lũy XP, vui lòng đăng nhập tài khoản của bạn</p>
           <div class="overlay-lang-chips">
-            <span class="lang-pill">🇬🇧 Tiếng Anh</span>
-            <span class="lang-pill">🇯🇵 Tiếng Nhật</span>
-            <span class="lang-pill">🇻🇳 Tiếng Việt</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
           </div>
           <label for="showSignIn" class="btn ghost">Đăng Nhập Ngay</label>
         </div>
@@ -183,15 +202,15 @@
         <!-- OVERLAY RIGHT (Appears when Sign In is shown, prompts user to Sign Up) -->
         <div class="overlay-panel overlay-right">
           <div class="overlay-brand">
-            <div class="sl-header-brand-mark" style="width:44px; height:44px; font-size:1.4rem;">S</div>
-            <span class="overlay-brand-name">Super<span class="brand-language">Language</span><span class="brand-dot">.</span></span>
+            <img src="../../../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
+            <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
           </div>
-          <h2>Khám phá SuperLanguage!</h2>
+          <h2>Khám phá Slanguage!</h2>
           <p>Đăng nhập để khám phá nhiều hơn về khóa học của chúng tôi.</p>
           <div class="overlay-lang-chips">
-            <span class="lang-pill">🇬🇧 Tiếng Anh</span>
-            <span class="lang-pill">🇯🇵 Tiếng Nhật</span>
-            <span class="lang-pill">🇻🇳 Tiếng Việt</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
           </div>
           <label for="showSignUp" class="btn ghost">Đăng Ký Tài Khoản</label>
         </div>
@@ -199,17 +218,11 @@
     </div>
   </div>
 
-  <div style="text-align: center; margin-top: 18px;">
-    <a href="../../../index.html" class="btn-bottom-home">
-      <i class="fa-solid fa-arrow-left"></i> Quay lại Trang chủ
-    </a>
-  </div>
-
   <!-- GLOBAL TRANSITION LOADING SCREEN -->
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" playsinline></video>
+        <video id="loadingVideoPlayer" src="../../../assets/loading.mp4" autoplay loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>
@@ -217,5 +230,6 @@
     </div>
   </div>
 
+  <script type="module" src="../../types/login/login.ts"></script>
 </body>
 </html>
