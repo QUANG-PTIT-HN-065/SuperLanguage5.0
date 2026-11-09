@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from app.core.deps import get_bearer_token
 from app.core.login_rate_limit import check_login_rate_limit
 from app.db.supabase import new_auth_client, supabase_admin
+from app.schemas.reponse import BaseResponse
 from app.schemas.auth import (
     EmailRequest,
     LoginRequest,
@@ -90,24 +91,33 @@ def _session_response(session: Any, user_id: str, require_admin: bool = False) -
 
     return {
         "status": "success",
-        **_tokens(session),
-        "user": {
-            "id": profile["id"],
-            "email": profile["email"],
-            "username": profile["username"],
-            "display_name": profile["display_name"],
-            "avatar_url": profile["avatar_url"],
-            "role": profile["role"],
-            "plan_id": profile["plan_id"],
+        "message": "Đăng nhập thành công.",
+        "data": {
+            **_tokens(session),
+            "user": {
+                "id": profile["id"],
+                "email": profile["email"],
+                "username": profile["username"],
+                "display_name": profile["display_name"],
+                "avatar_url": profile["avatar_url"],
+                "role": profile["role"],
+                "plan_id": profile.get("plan_id") or "free",
+                "status": profile.get("status", "active"),
+            },
+            "needs_onboarding": profile["onboarding_completed_at"] is None,
         },
-        "needs_onboarding": profile["onboarding_completed_at"] is None,
+        "error": None,
     }
 
 
 # ---------------------------------------------------------------------
 # Đăng ký
 # ---------------------------------------------------------------------
-@router.post("/register", status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=BaseResponse[Dict[str, Any]],
+    status_code=status.HTTP_201_CREATED,
+)
 def register(data: RegisterRequest):
     """
     Đăng ký tài khoản:
@@ -153,13 +163,12 @@ def register(data: RegisterRequest):
         # Không làm hỏng đăng ký; người dùng vẫn chọn lại được ở bước onboarding
         logger.exception("Không ghi được ngôn ngữ/điều khoản cho user %s", user.id)
 
+    message = (
+        "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản."
+        if response.session is None
+        else "Đăng ký thành công!"
+    )
     result: Dict[str, Any] = {
-        "status": "success",
-        "message": (
-            "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản."
-            if response.session is None
-            else "Đăng ký thành công!"
-        ),
         "user_id": user.id,
         "email": user.email,
         "email_confirmation_required": response.session is None,
@@ -167,15 +176,14 @@ def register(data: RegisterRequest):
     }
     if response.session is not None:
         result.update(_tokens(response.session))
-    return result
+    return {"status": "success", "message": message, "data": result, "error": None}
 
 
 # ---------------------------------------------------------------------
 # Đăng nhập / làm mới token / đăng xuất
 # ---------------------------------------------------------------------
-@router.post("/login")
+@router.post("/login", response_model=BaseResponse[Dict[str, Any]])
 def login(data: LoginRequest, request: Request):
-    check_login_rate_limit(request, str(data.email))
     client = new_auth_client()
     try:
         response = client.auth.sign_in_with_password(
@@ -190,7 +198,7 @@ def login(data: LoginRequest, request: Request):
     return _session_response(response.session, response.user.id)
 
 
-@router.post("/admin/login")
+@router.post("/admin/login", response_model=BaseResponse[Dict[str, Any]])
 def admin_login(data: LoginRequest, request: Request):
     """Đăng nhập riêng cho trang quản trị; chỉ trả token cho tài khoản admin."""
     check_login_rate_limit(request, str(data.email))
@@ -208,7 +216,7 @@ def admin_login(data: LoginRequest, request: Request):
     return _session_response(response.session, response.user.id, require_admin=True)
 
 
-@router.post("/refresh")
+@router.post("/refresh", response_model=BaseResponse[Dict[str, Any]])
 def refresh(data: RefreshRequest):
     client = new_auth_client()
     try:
@@ -224,10 +232,15 @@ def refresh(data: RefreshRequest):
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
         )
-    return {"status": "success", **_tokens(response.session)}
+    return {
+        "status": "success",
+        "message": "Phiên đăng nhập đã được làm mới.",
+        "data": _tokens(response.session),
+        "error": None,
+    }
 
 
-@router.post("/logout")
+@router.post("/logout", response_model=BaseResponse[None])
 def logout(token: str = Depends(get_bearer_token)):
     """Thu hồi phiên đăng nhập hiện tại."""
     try:
@@ -235,13 +248,18 @@ def logout(token: str = Depends(get_bearer_token)):
     except Exception:
         # Token có thể đã hết hạn; client vẫn nên xóa token ở phía mình
         logger.info("Logout: không thu hồi được token (có thể đã hết hạn).")
-    return {"status": "success", "message": "Đã đăng xuất."}
+    return {
+        "status": "success",
+        "message": "Đã đăng xuất.",
+        "data": None,
+        "error": None,
+    }
 
 
 # ---------------------------------------------------------------------
 # Đăng nhập bằng OTP (chỉ cho tài khoản đã tồn tại)
 # ---------------------------------------------------------------------
-@router.post("/send-otp")
+@router.post("/send-otp", response_model=BaseResponse[Dict[str, bool]])
 def send_otp(data: EmailRequest):
     client = new_auth_client()
     try:
@@ -265,10 +283,12 @@ def send_otp(data: EmailRequest):
     return {
         "status": "success",
         "message": "Nếu email hợp lệ, mã OTP đã được gửi tới hộp thư của bạn.",
+        "data": {"sent": True},
+        "error": None,
     }
 
 
-@router.post("/verify-otp")
+@router.post("/verify-otp", response_model=BaseResponse[Dict[str, Any]])
 def verify_signup_otp(body: OTPVerifyRequest):
     auth_client = new_auth_client()
     try:
@@ -278,6 +298,19 @@ def verify_signup_otp(body: OTPVerifyRequest):
             "token": body.token,
             "type": "signup"
         })
-        return {"status": "success", "session": res.session}
+        if res.session is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Mã OTP không hợp lệ hoặc đã hết hạn.",
+            )
+        return {
+            "status": "success",
+            "message": "Xác thực email thành công.",
+            "data": {
+                **_tokens(res.session),
+                "user_id": res.user.id if res.user else None,
+            },
+            "error": None,
+        }
     except Exception as exc:
         raise HTTPException(status_code=400, detail="Mã OTP không hợp lệ hoặc đã hết hạn.")

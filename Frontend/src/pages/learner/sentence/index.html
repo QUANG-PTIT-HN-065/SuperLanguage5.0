@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ghép câu | SuperLanguage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+    <link rel="stylesheet" href="../../../css/shared/design-system.css">
+    <link rel="stylesheet" href="../../../css/shared/dungeon-ui.css">
+    <script type="module" src="../../../types/shared/api-client.ts"></script>
+    <script type="module" src="../../../types/shared/toast.ts"></script>
+    <script type="module" src="../../../types/shared/header.ts"></script>
+    <script type="module" src="../../../types/shared/gsap-animations.ts"></script>
+    <script type="module" src="./sentence.ts"></script>
+  </head>
+  <body class="sl-app-shell slg-app">
+    <div id="sl-header"></div>
+
+    <main class="sl-main">
+      <div id="sl-auth-guard" class="sl-card sl-card-lg sl-text-center" style="padding:3rem 1rem; display:none;">
+        <div style="font-size:3rem; margin-bottom:1rem; opacity:0.5">🔒</div>
+        <h2 class="font-title text-lg font-bold text-slate-900 mb-1">Bạn cần đăng nhập</h2>
+        <p class="text-slate-muted text-sm mb-4">Vui lòng đăng nhập để sử dụng chức năng ghép câu.</p>
+        <a href="../../login/index.html" class="sl-btn sl-btn-primary">Đăng nhập ngay</a>
+      </div>
+
+      <div id="sl-sentence-content" class="sl-hidden">
+        <div class="sl-page-header sl-page-reveal">
+          <h1>Ghép câu</h1>
+          <p>Kéo các từ vào đúng vị trí để tạo thành câu hoàn chỉnh.</p>
+        </div>
+
+        <!-- Câu cần ghép -->
+        <div class="sl-card mb-6 sl-page-reveal" style="--stagger-index:0;">
+          <div class="sl-card-body sl-text-center">
+            <h3 class="font-title font-bold text-slate-900 mb-4" id="sl-sentence-target">Câu target sẽ hiển thị ở đây</h3>
+            <div id="sl-sentence-output" class="min-h-[80px] border border-slate-200 rounded-lg p-4 bg-slate-50 flex items-center justify-center text-slate-900 font-medium text-lg sl-stagger-item" style="--stagger-index:0;">
+              (Kéo từ vào đây)
+            </div>
+            <div class="mt-4 sl-text-center" id="sl-sentence-feedback" style="display:none;"></div>
+            <div class="sl-text-center mt-4 gap-2">
+              <button id="sl-sentence-check" class="sl-btn sl-btn-primary sl-btn-sm">Kiểm tra</button>
+              <button id="sl-sentence-reset" class="sl-btn sl-btn-secondary sl-btn-sm">Làm lại</button>
+              <button id="sl-sentence-next" class="sl-btn sl-btn-secondary sl-btn-sm" disabled>Câu tiếp</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Từ vựng để kéo -->
+        <div class="sl-card mb-6 sl-page-reveal" style="--stagger-index:1;">
+          <div class="sl-card-body">
+            <h3 class="font-title font-bold text-slate-900 mb-4">Từ vựng available</h3>
+            <div id="sl-sentence-words" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <!-- Words injected by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Kết quả -->
+        <div id="sl-sentence-result" class="sl-card sl-hidden sl-page-reveal" style="--stagger-index:2;">
+          <div class="sl-card-body sl-text-center py-8">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+              <svg class="sl-icon sl-icon-xl" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h2 class="font-title text-2xl font-bold text-slate-900 mb-2" id="sl-sentence-result-title">Hoàn thành ghép câu!</h2>
+            <p id="sl-sentence-result-message" class="text-slate-600 text-sm mb-6"></p>
+            <div class="sl-progress-wrap mb-6" style="max-width:280px; margin:0 auto;">
+              <div class="sl-progress-track">
+                <div class="sl-progress-fill" id="sl-sentence-result-fill"></div>
+              </div>
+            </div>
+            <div class="flex gap-3 justify-center">
+              <button id="sl-sentence-retake" class="sl-btn sl-btn-primary sl-btn-sm">Luyện tập tiếp</button>
+              <a href="../dashboard/index.html" class="sl-btn sl-btn-secondary sl-btn-sm">Về Dashboard</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </body>
+</html>

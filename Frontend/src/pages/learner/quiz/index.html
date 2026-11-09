@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Làm bài trắc nghiệm | SuperLanguage</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+    <link rel="stylesheet" href="../../../css/shared/design-system.css">
+    <link rel="stylesheet" href="../../../css/shared/dungeon-ui.css">
+    <script type="module" src="../../../types/shared/api-client.ts"></script>
+    <script type="module" src="../../../types/shared/toast.ts"></script>
+    <script type="module" src="../../../types/shared/header.ts"></script>
+    <script type="module" src="../../../types/shared/gsap-animations.ts"></script>
+    <script type="module" src="./quiz.ts"></script>
+  </head>
+  <body class="sl-app-shell slg-app">
+    <div id="sl-header"></div>
+
+    <main class="sl-main">
+      <div id="sl-auth-guard" class="sl-card sl-card-lg sl-text-center" style="padding:3rem 1rem; display:none;">
+        <div style="font-size:3rem; margin-bottom:1rem; opacity:0.5">🔒</div>
+        <h2 class="font-title text-lg font-bold text-slate-900 mb-1">Bạn cần đăng nhập</h2>
+        <p class="text-slate-muted text-sm mb-4">Vui lòng đăng nhập để làm bài trắc nghiệm.</p>
+        <a href="../../login/index.html" class="sl-btn sl-btn-primary">Đăng nhập ngay</a>
+      </div>
+
+      <div id="sl-quiz-content" class="sl-hidden">
+        <div class="sl-page-header sl-page-reveal">
+          <h1>Làm bài trắc nghiệm</h1>
+          <p id="sl-quiz-subtitle">Chọn câu trả lời đúng nhất cho mỗi câu hỏi.</p>
+        </div>
+
+        <!-- Quiz progress bar -->
+        <div class="sl-card mb-6 sl-page-reveal" style="--stagger-index:0;">
+          <div class="sl-card-body">
+            <div class="flex justify-between items-center mb-2">
+              <span class="sl-form-label">Tiến độ bài làm</span>
+              <span id="sl-quiz-progress-text" class="font-semibold text-slate-600">Câu 0 / 0</span>
+            </div>
+            <div class="sl-progress-wrap">
+              <div class="sl-progress-track">
+                <div class="sl-progress-fill" id="sl-quiz-progress-fill"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quiz question card -->
+        <div id="sl-quiz-card" class="sl-card sl-card-lg mb-6 sl-page-reveal" style="--stagger-index:1; min-height:300px;">
+          <div class="sl-card-body">
+            <div id="sl-quiz-loading" class="sl-empty" style="display:none;">
+              <div class="sl-empty-icon">⏳</div>
+              <h3>Đang tải câu hỏi...</h3>
+            </div>
+
+            <div id="sl-quiz-empty" class="sl-empty" style="display:none;">
+              <div class="sl-empty-icon">📭</div>
+              <h3>Chưa có câu hỏi</h3>
+              <p class="text-sm">Backend chưa cung cấp dữ liệu câu hỏi trắc nghiệm.</p>
+            </div>
+
+            <div id="sl-quiz-question-area" class="sl-hidden">
+              <h2 id="sl-quiz-question" class="font-title text-xl sm:text-2xl font-bold text-slate-900 mb-6 sl-text-center">Câu hỏi sẽ hiển thị ở đây</h2>
+
+              <div id="sl-quiz-options" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                <!-- Options injected by JS -->
+              </div>
+
+              <div id="sl-quiz-feedback" class="sl-card-body p-4" style="display:none;">
+                <div id="sl-feedback-icon" class="text-2xl mb-2"></div>
+                <h4 id="sl-feedback-title" class="font-bold text-slate-900 mb-1"></h4>
+                <p id="sl-feedback-message" class="text-slate-muted text-sm"></p>
+              </div>
+
+              <div class="flex justify-between">
+                <button id="sl-quiz-prev" class="sl-btn sl-btn-secondary sl-btn-sm" disabled>Trước</button>
+                <div class="sl-text-right">
+                  <button id="sl-quiz-next" class="sl-btn sl-btn-primary sl-btn-sm" disabled>Tiếp theo</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quiz result (hiển thị khi hoàn thành) -->
+        <div id="sl-quiz-result" class="sl-card sl-card-lg sl-hidden sl-page-reveal" style="--stagger-index:2;">
+          <div class="sl-card-body sl-text-center py-8">
+            <div id="sl-result-icon" class="text-4xl mb-3">🏆</div>
+            <h2 id="sl-result-title" class="font-title text-2xl font-bold text-slate-900 mb-2">Bài làm hoàn tất!</h2>
+            <div class="text-4xl font-bold mb-2" id="sl-result-score">0 / 0</div>
+            <p id="sl-result-message" class="text-slate-muted text-sm mb-6">Hoàn thành bài làm để xem điểm số.</p>
+            <div class="sl-progress-wrap mb-6" style="max-width:300px; margin:0 auto;">
+              <div class="sl-progress-track">
+                <div class="sl-progress-fill" id="sl-result-progress-fill"></div>
+              </div>
+            </div>
+            <div class="flex gap-2 justify-center">
+              <button id="sl-quiz-retake" class="sl-btn sl-btn-primary sl-btn-sm">Làm lại</button>
+              <a href="../dashboard/index.html" class="sl-btn sl-btn-secondary sl-btn-sm">Về Dashboard</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </body>
+</html>

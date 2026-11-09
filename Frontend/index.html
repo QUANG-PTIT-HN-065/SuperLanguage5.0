@@ -1,52 +1,387 @@
 <!doctype html>
 <html lang="vi">
   <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SuperLanguage 5.0</title>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="SuperLanguage mở ra hành trình học ngoại ngữ qua chủ đề, hội thoại AI, từ vựng và thử thách."
+    />
+    <meta name="theme-color" content="#0a1018" />
+    <title>SuperLanguage 5.0 — Hành trình mở cổng ngôn ngữ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./src/css/shared/design-system.css" />
+    <link rel="stylesheet" href="./src/css/shared/dungeon-ui.css" />
+    <script type="module" src="./src/types/landing.ts"></script>
   </head>
-  <body class="bg-slate-50 font-sans text-slate-800 antialiased min-h-screen flex items-center justify-center p-6">
-    <main class="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-slate-100 text-center space-y-6">
-      <div class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mx-auto shadow-lg shadow-indigo-600/30">
-        <span class="material-symbols-outlined text-3xl">language</span>
+  <body class="slg-landing">
+    <a class="slg-skip" href="#main">Bỏ qua điều hướng</a>
+
+    <header class="slg-header">
+      <div class="slg-header-inner">
+        <a href="#chapter-0" class="slg-brand" aria-label="SuperLanguage - đầu trang">
+          <span class="slg-brand-mark" aria-hidden="true">SL</span>
+          <span class="slg-brand-text">
+            <strong>SuperLanguage</strong>
+            <small>Hành trình ngôn ngữ</small>
+          </span>
+        </a>
+
+        <nav class="slg-nav" aria-label="Điều hướng landing">
+          <a href="#hanh-trinh" class="slg-nav-link">Hành trình</a>
+          <a href="#hoc-lieu" class="slg-nav-link">Học liệu</a>
+          <a href="#bat-dau" class="slg-nav-link">Bắt đầu</a>
+        </nav>
+
+        <div class="slg-header-tools slg-landing-actions" id="sl-landing-actions"></div>
+
+        <button
+          type="button"
+          class="slg-icon-btn slg-mobile-toggle"
+          id="sl-landing-mobile-toggle"
+          aria-label="Mở menu điều hướng"
+          aria-expanded="false"
+          aria-controls="sl-landing-drawer"
+        >
+          <svg class="slg-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
       </div>
-      <div>
-        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">SuperLanguage 5.0</h1>
-        <p class="text-xs text-slate-500 mt-1">Hệ thống học ngoại ngữ & Quản trị trung tâm</p>
+    </header>
+
+    <div class="slg-overlay" id="sl-landing-overlay" hidden></div>
+    <aside
+      class="slg-drawer"
+      id="sl-landing-drawer"
+      aria-label="Menu landing"
+      aria-hidden="true"
+    >
+      <div class="slg-drawer-head">
+        <span class="slg-brand-text">
+          <strong>SuperLanguage</strong>
+          <small>Hành trình ngôn ngữ</small>
+        </span>
+        <button
+          type="button"
+          class="slg-icon-btn"
+          id="sl-landing-drawer-close"
+          aria-label="Đóng menu"
+        >
+          <svg class="slg-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
       </div>
-      <div class="space-y-3 text-left">
-        <a href="./src/pages/LoginAdmin/code.html" class="flex items-center justify-between p-3.5 rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-semibold text-sm transition-colors">
-          <div class="flex items-center gap-2.5">
-            <span class="material-symbols-outlined text-indigo-600">admin_panel_settings</span>
-            <span>Đăng nhập Quản trị (LingoAdmin)</span>
+      <nav class="slg-drawer-nav" aria-label="Điều hướng di động">
+        <a href="#hanh-trinh" class="slg-nav-link">Hành trình</a>
+        <a href="#hoc-lieu" class="slg-nav-link">Học liệu</a>
+        <a href="#bat-dau" class="slg-nav-link">Bắt đầu</a>
+      </nav>
+      <div class="slg-drawer-account" id="sl-landing-drawer-auth"></div>
+    </aside>
+
+    <main id="main">
+      <section class="slg-hero" id="chapter-0" aria-labelledby="hero-title">
+        <div class="slg-hero-bg" aria-hidden="true">
+          <div class="slg-stars" data-parallax="-6"></div>
+          <div class="slg-ridge slg-ridge--far" data-parallax="7"></div>
+          <div class="slg-ridge slg-ridge--near" data-parallax="11"></div>
+          <div class="slg-gate" data-parallax="4">
+            <div class="slg-gate-ring slg-gate-ring--outer"></div>
+            <div class="slg-gate-ring slg-gate-ring--inner"></div>
+            <div class="slg-gate-glow"></div>
           </div>
-          <span class="material-symbols-outlined text-sm">arrow_forward</span>
-        </a>
-        <a href="./src/pages/dasboardAdmin/code.html" class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-colors">
-          <div class="flex items-center gap-2.5">
-            <span class="material-symbols-outlined text-slate-600">dashboard</span>
-            <span>Dashboard Quản trị (code.html)</span>
+        </div>
+
+        <div class="slg-hero-inner">
+          <p class="slg-eyebrow">SuperLanguage · Hành trình ngôn ngữ</p>
+          <h1 id="hero-title">
+            Mỗi ngôn ngữ mới<br />
+            <em>là một thế giới để bước vào.</em>
+          </h1>
+          <p class="slg-lead">
+            Chọn chủ đề, trò chuyện cùng gia sư AI, ôn từ vựng và thử sức với các
+            hoạt động học tập. Đi qua từng chặng theo nhịp riêng của bạn.
+          </p>
+
+          <div class="slg-cta-row">
+            <a href="src/pages/register/index.html" class="slg-btn slg-btn--primary" id="sl-hero-cta">
+              Bắt đầu miễn phí
+            </a>
+            <a href="#chapter-1" class="slg-btn slg-btn--ghost">Mở bản đồ hành trình</a>
           </div>
-          <span class="material-symbols-outlined text-sm">arrow_forward</span>
+
+          <ul class="slg-hero-facts" aria-label="Các hoạt động học tập">
+            <li>Đối thoại cùng gia sư AI</li>
+            <li>Chủ đề và kho từ vựng</li>
+            <li>Flashcard tự đánh giá</li>
+            <li>Quiz, ghép câu và luyện nói</li>
+          </ul>
+        </div>
+
+        <a href="#chapter-1" class="slg-scroll-cue" aria-label="Cuộn xuống chương một">
+          <span>Bước vào</span>
+          <span aria-hidden="true"></span>
         </a>
-        <a href="./src/pages/vocabularyAdmin/code.html" class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-colors">
-          <div class="flex items-center gap-2.5">
-            <span class="material-symbols-outlined text-slate-600">translate</span>
-            <span>Quản lý Từ vựng riêng (code.html)</span>
+      </section>
+
+      <section class="slg-journey" id="hanh-trinh" aria-labelledby="journey-title">
+        <aside class="slg-journey-rail" aria-label="Mục lục hành trình">
+          <div class="slg-rail-head">
+            <span>Bản đồ hành trình</span>
+            <strong id="sl-chapter-readout">Chương I</strong>
           </div>
-          <span class="material-symbols-outlined text-sm">arrow_forward</span>
-        </a>
-        <a href="./src/pages/login/index.html" class="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-colors">
-          <div class="flex items-center gap-2.5">
-            <span class="material-symbols-outlined text-slate-600">person</span>
-            <span>Cổng đăng nhập Học viên</span>
+          <div class="slg-rail-track" id="sl-rail-track">
+            <div class="slg-rail-marker" id="sl-rail-marker" aria-hidden="true"></div>
+            <div class="slg-rail-stop is-active">
+              <b>I · Chọn chủ đề</b>
+              <span>Một lối vào cụ thể</span>
+            </div>
+            <div class="slg-rail-stop">
+              <b>II · Đối thoại</b>
+              <span>Nói trong ngữ cảnh</span>
+            </div>
+            <div class="slg-rail-stop">
+              <b>III · Khắc từ</b>
+              <span>Lật thẻ, tự đánh giá</span>
+            </div>
+            <div class="slg-rail-stop">
+              <b>IV · Thử thách</b>
+              <span>Phản xạ và ghép câu</span>
+            </div>
+            <div class="slg-rail-stop">
+              <b>V · Nhìn lại</b>
+              <span>Đọc tiến độ thật</span>
+            </div>
           </div>
-          <span class="material-symbols-outlined text-sm">arrow_forward</span>
-        </a>
-      </div>
+          <p class="slg-rail-note">
+            Cuộn để đi qua từng chương. Chuyển động có thể tắt trong cài đặt
+            trợ năng của thiết bị.
+          </p>
+        </aside>
+
+        <div class="slg-chapters">
+          <div class="slg-section-head slg-reveal">
+            <div>
+              <p class="slg-eyebrow">Hành trình học tập</p>
+              <h2 id="journey-title">Năm chương, một lộ trình bạn tự đi</h2>
+            </div>
+            <p>Mỗi chương mở ra một hoạt động đang có trong SuperLanguage.</p>
+          </div>
+
+          <article class="slg-chapter is-active" id="chapter-1" data-chapter="1" data-mark="I">
+            <header class="slg-chapter-head">
+              <span class="slg-chapter-index">Chương I</span>
+              <h2>Chọn một chủ đề để bước vào</h2>
+            </header>
+            <p class="slg-chapter-lead">
+              Bắt đầu từ một ngữ cảnh cụ thể. Thư viện chủ đề tải những lựa chọn
+              khả dụng cho ngôn ngữ đích trong hồ sơ của bạn.
+            </p>
+            <ul class="slg-chapter-list">
+              <li>
+                <strong>Chủ đề theo ngôn ngữ đích</strong>
+                <span>Danh sách được lấy từ kho học liệu hiện có.</span>
+              </li>
+              <li>
+                <strong>Mở một lối luyện tập</strong>
+                <span>Đi tới phòng chat AI hoặc kho thẻ từ vựng.</span>
+              </li>
+            </ul>
+            <div class="slg-chapter-foot">
+              <a class="slg-link" href="src/pages/learner/topics/index.html">
+                Mở thư viện chủ đề <span aria-hidden="true">→</span>
+              </a>
+              <span class="slg-chapter-note">Cần tài khoản học viên</span>
+            </div>
+          </article>
+
+          <article class="slg-chapter" id="chapter-2" data-chapter="2" data-mark="II">
+            <header class="slg-chapter-head">
+              <span class="slg-chapter-index">Chương II</span>
+              <h2>Đối thoại trong ngữ cảnh</h2>
+            </header>
+            <p class="slg-chapter-lead">
+              Vào phòng chat AI để luyện phản xạ bằng tin nhắn hoặc bản ghi âm.
+              Cuộc trò chuyện dùng luồng API hiện có.
+            </p>
+            <ul class="slg-chapter-list">
+              <li>
+                <strong>Gia sư AI theo chủ đề</strong>
+                <span>Mang chủ đề đã chọn vào phòng luyện.</span>
+              </li>
+              <li>
+                <strong>Tin nhắn và ghi âm</strong>
+                <span>Gửi câu trả lời bằng văn bản hoặc âm thanh.</span>
+              </li>
+            </ul>
+            <div class="slg-chapter-foot">
+              <a class="slg-link" href="src/pages/chat/index.html">
+                Vào phòng Chat AI <span aria-hidden="true">→</span>
+              </a>
+              <span class="slg-chapter-note">Cần tài khoản học viên</span>
+            </div>
+          </article>
+
+          <article class="slg-chapter" id="chapter-3" data-chapter="3" data-mark="III">
+            <header class="slg-chapter-head">
+              <span class="slg-chapter-index">Chương III</span>
+              <h2>Khắc từ vựng thành tri thức</h2>
+            </header>
+            <p class="slg-chapter-lead">
+              Mở kho từ vựng, xem nghĩa và ví dụ, nghe phát âm rồi tự đánh giá
+              mức độ ghi nhớ bằng flashcard.
+            </p>
+            <ul class="slg-chapter-list">
+              <li>
+                <strong>Ôn tập từ đang có</strong>
+                <span>Thẻ được lấy từ kho học liệu của ứng dụng.</span>
+              </li>
+              <li>
+                <strong>Tự đánh giá</strong>
+                <span>Chọn mức độ nhớ trong phiên ôn của bạn.</span>
+              </li>
+            </ul>
+            <div class="slg-chapter-foot">
+              <a class="slg-link" href="src/pages/learner/flashcard/index.html">
+                Mở kho thẻ từ vựng <span aria-hidden="true">→</span>
+              </a>
+              <a class="slg-link" href="src/pages/learner/topics/index.html">Chọn chủ đề</a>
+            </div>
+          </article>
+
+          <article class="slg-chapter" id="chapter-4" data-chapter="4" data-mark="IV">
+            <header class="slg-chapter-head">
+              <span class="slg-chapter-index">Chương IV</span>
+              <h2>Thử thách phản xạ ở nhiều lối đi</h2>
+            </header>
+            <p class="slg-chapter-lead">
+              Chọn cách luyện phù hợp: trắc nghiệm, ghép câu hoặc ghi âm bài nói.
+              Mỗi hoạt động giữ mục tiêu riêng.
+            </p>
+            <ul class="slg-chapter-list">
+              <li>
+                <strong>Trắc nghiệm và ghép câu</strong>
+                <span>Kiểm tra kiến thức và sắp xếp từ thành câu.</span>
+              </li>
+              <li>
+                <strong>Luyện nói</strong>
+                <span>Ghi âm, nghe lại và gửi bài luyện qua micro.</span>
+              </li>
+            </ul>
+            <div class="slg-chapter-foot">
+              <a class="slg-link" href="src/pages/learner/quiz/index.html">Làm trắc nghiệm</a>
+              <a class="slg-link" href="src/pages/learner/sentence/index.html">Ghép câu</a>
+              <a class="slg-link" href="src/pages/learner/speech/index.html">Luyện nói</a>
+            </div>
+          </article>
+
+          <article class="slg-chapter" id="chapter-5" data-chapter="5" data-mark="V">
+            <header class="slg-chapter-head">
+              <span class="slg-chapter-index">Chương V</span>
+              <h2>Nhìn lại chặng đường đã qua</h2>
+            </header>
+            <p class="slg-chapter-lead">
+              Dashboard tập hợp cấp độ, XP, chuỗi ngày và các chỉ số học tập
+              được máy chủ ghi nhận. Không có thành tích mẫu thay cho dữ liệu thật.
+            </p>
+            <ul class="slg-chapter-list">
+              <li>
+                <strong>Tiến độ và hồ sơ học tập</strong>
+                <span>Đọc số liệu hiện có từ tài khoản của bạn.</span>
+              </li>
+              <li>
+                <strong>Tiếp tục từ điểm dừng</strong>
+                <span>Chọn một cửa học khác để mở chương tiếp theo.</span>
+              </li>
+            </ul>
+            <div class="slg-chapter-foot">
+              <a class="slg-link" href="src/pages/learner/dashboard/index.html">Vào Dashboard</a>
+              <a class="slg-link" href="src/pages/learner/stats/index.html">Xem tiến độ</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="slg-section" id="hoc-lieu" aria-labelledby="materials-title">
+        <div class="slg-section-head slg-reveal">
+          <div>
+            <p class="slg-eyebrow">Học liệu và lối vào</p>
+            <h2 id="materials-title">Chọn công cụ cho chặng tiếp theo</h2>
+          </div>
+          <p>Điều hướng tới các hoạt động hiện có, không cần tìm đường trong mê cung.</p>
+        </div>
+        <div class="slg-feature-list">
+          <a class="slg-feature" href="src/pages/chat/index.html">
+            <span class="slg-feature-index">01</span>
+            <span><h3>Phòng Chat AI</h3><p>Đối thoại bằng tin nhắn hoặc ghi âm.</p></span>
+          </a>
+          <a class="slg-feature" href="src/pages/learner/topics/index.html">
+            <span class="slg-feature-index">02</span>
+            <span><h3>Thư viện chủ đề</h3><p>Chọn ngữ cảnh theo ngôn ngữ đích.</p></span>
+          </a>
+          <a class="slg-feature" href="src/pages/learner/flashcard/index.html">
+            <span class="slg-feature-index">03</span>
+            <span><h3>Kho thẻ từ vựng</h3><p>Ôn tập và tự đánh giá mức độ ghi nhớ.</p></span>
+          </a>
+          <a class="slg-feature" href="src/pages/learner/quiz/index.html">
+            <span class="slg-feature-index">04</span>
+            <span><h3>Trắc nghiệm</h3><p>Thử sức với hoạt động quiz hiện có.</p></span>
+          </a>
+          <a class="slg-feature" href="src/pages/learner/sentence/index.html">
+            <span class="slg-feature-index">05</span>
+            <span><h3>Ghép câu</h3><p>Luyện sắp xếp từ thành câu.</p></span>
+          </a>
+          <a class="slg-feature" href="src/pages/learner/speech/index.html">
+            <span class="slg-feature-index">06</span>
+            <span><h3>Luyện nói</h3><p>Ghi âm, nghe lại và gửi bài luyện.</p></span>
+          </a>
+        </div>
+      </section>
+
+      <section class="slg-section slg-final-cta" id="bat-dau" aria-labelledby="start-title">
+        <div>
+          <p class="slg-eyebrow">Cánh cổng đang mở</p>
+          <h2 id="start-title">Bắt đầu từ một bước nhỏ.</h2>
+          <p>
+            Đăng nhập để lưu hành trình và xem tiến độ gắn với hồ sơ học tập của bạn.
+          </p>
+        </div>
+        <div class="slg-cta-row">
+          <a href="src/pages/register/index.html" class="slg-btn slg-btn--primary" id="sl-landing-cta">
+            Tạo tài khoản miễn phí
+          </a>
+          <a href="src/pages/login/index.html" class="slg-btn slg-btn--ghost" id="sl-landing-secondary">
+            Đã có tài khoản? Đăng nhập
+          </a>
+        </div>
+      </section>
     </main>
+
+    <footer class="slg-footer">
+      <div class="slg-footer-inner">
+        <div class="slg-brand-text">
+          <strong>SuperLanguage 5.0</strong>
+          <small>Hành trình ngôn ngữ</small>
+        </div>
+        <nav class="slg-footer-links" aria-label="Liên kết chân trang">
+          <a href="#chapter-0">Trang chủ</a>
+          <a href="src/pages/learner/dashboard/index.html">Dashboard</a>
+          <a href="src/pages/learner/stats/index.html">Tiến độ</a>
+          <a href="src/pages/chat/index.html">Chat AI</a>
+          <a href="src/pages/login/index.html">Đăng nhập</a>
+        </nav>
+        <p>Hành trình của bạn, theo nhịp của bạn.</p>
+      </div>
+    </footer>
   </body>
 </html>
