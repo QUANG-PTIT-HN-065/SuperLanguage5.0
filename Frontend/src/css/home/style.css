@@ -59,7 +59,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
 }
 
 html {
@@ -137,7 +137,7 @@ body {
 }
 
 .brand-name {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.85rem;
   font-weight: 800;
   color: #ffffff;
@@ -424,7 +424,7 @@ body {
   border-radius: 26px;
   padding: 8px 18px;
   color: #ffffff;
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 0.95rem;
   font-weight: 700;
   display: inline-flex;
@@ -511,7 +511,7 @@ body {
   border: none;
   background: transparent;
   color: #e0ecf4;
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 0.92rem;
   font-weight: 600;
   border-radius: 12px;
@@ -577,7 +577,7 @@ body {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   color: #fff;
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   text-align: left;
 }
 
@@ -664,7 +664,7 @@ body {
   border-radius: 12px;
   text-decoration: none;
   color: #e0ecf4;
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   transition: all 0.18s ease;
   box-sizing: border-box;
 }
@@ -835,6 +835,92 @@ body.user-authenticated .guest-only {
   width: 100%;
 }
 
+#learningSection,
+#vocabularySection,
+#roadmapTeaserSection {
+  scroll-margin-top: 120px;
+}
+
+.learning-card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: clamp(20px, 3vw, 32px);
+  background: linear-gradient(140deg, #ffffff 0%, #f0f9ff 100%);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.learning-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.learning-eyebrow {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.learning-card-heading h3 {
+  margin: 8px 0;
+  color: var(--color-dark);
+  font-size: clamp(1.15rem, 2vw, 1.5rem);
+  line-height: 1.35;
+}
+
+.learning-lesson {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+.learning-lesson i {
+  margin-top: 4px;
+  color: var(--color-teal);
+}
+
+.learning-language-badge {
+  min-width: 140px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: #e0f2fe;
+}
+
+.learning-language-badge .lang-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;
+  color: var(--color-dark);
+  font-weight: 800;
+}
+
+.learning-status {
+  color: var(--color-teal);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.learning-progress .progress-header {
+  color: var(--color-dark);
+}
+
+.learning-progress .progress-track {
+  background: #dce8ee;
+}
+
+.learning-progress .progress-fill {
+  background: linear-gradient(90deg, var(--color-ocean), var(--color-ocean-light));
+}
+
 /* Hero Welcome Card - Ocean Water Surface Gradient (Light Ocean Blue & White Amethyst) */
 .hero-card {
   background:
@@ -905,7 +991,7 @@ body.user-authenticated .guest-only {
 }
 
 .hero-title {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 2.1rem;
   font-weight: 800;
   line-height: 1.25;
@@ -962,7 +1048,7 @@ body.user-authenticated .guest-only {
 }
 
 .active-course-badge .lang-name {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--color-mint);
@@ -1074,7 +1160,7 @@ body.user-authenticated .guest-only {
 }
 
 .section-title {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.45rem;
   font-weight: 700;
   color: var(--color-dark);
@@ -1210,7 +1296,7 @@ body.user-authenticated .guest-only {
 }
 
 .lang-banner-title {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 2.15rem;
   font-weight: 800;
   color: #061A28;
@@ -1292,7 +1378,7 @@ body.user-authenticated .guest-only {
 }
 
 .banner-stat-chip .stat-val {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.18rem;
   font-weight: 800;
   color: #0077B6;
@@ -1411,7 +1497,7 @@ body.user-authenticated .guest-only {
 }
 
 .lang-card-info h4 {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--color-dark);
@@ -1563,7 +1649,7 @@ body.user-authenticated .guest-only {
 }
 
 .flashcard-word {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 2.2rem;
   font-weight: 800;
   margin-bottom: 8px;
@@ -1584,7 +1670,7 @@ body.user-authenticated .guest-only {
 }
 
 .flashcard-back .meaning {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.6rem;
   font-weight: 700;
   color: var(--color-teal);
@@ -1608,7 +1694,7 @@ body.user-authenticated .guest-only {
 }
 
 .flashcard-controls h4 {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.25rem;
   color: var(--color-dark);
 }
@@ -1728,7 +1814,7 @@ body.user-authenticated .guest-only {
 }
 
 .module-info h4 {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--color-dark);
@@ -1939,7 +2025,7 @@ body.user-authenticated .guest-only {
 }
 
 .sidebar-card-title {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.28rem;
   font-weight: 700;
   color: var(--color-dark);
@@ -2052,7 +2138,7 @@ body.user-authenticated .guest-only {
 }
 
 .streak-count {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 2.3rem;
   font-weight: 800;
   color: var(--color-topaz);
@@ -2161,7 +2247,7 @@ body.user-authenticated .guest-only {
 }
 
 .rank-num {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-weight: 800;
   font-size: 1.15rem;
   width: 28px;
@@ -2304,7 +2390,7 @@ body.user-authenticated .guest-only {
 }
 
 .footer-col h4 {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--color-mint);
@@ -2425,8 +2511,38 @@ body.user-authenticated .guest-only {
 }
 
 @media (max-width: 768px) {
+  .navbar-container {
+    flex-wrap: wrap;
+  }
+  .nav-left {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .nav-left nav {
+    width: 100%;
+    min-width: 0;
+  }
   .nav-links {
+    display: flex;
+    max-width: 100%;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 2px;
+    scrollbar-width: none;
+  }
+  .nav-links::-webkit-scrollbar {
     display: none;
+  }
+  .nav-links a {
+    padding: 8px 10px;
+    font-size: 0.88rem;
+  }
+  .nav-right {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
   .hero-title {
     font-size: 1.6rem;
@@ -2506,7 +2622,7 @@ body.user-authenticated .guest-only {
 }
 
 .loading-title {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--color-amethyst-white);
@@ -2584,7 +2700,7 @@ body.user-authenticated .guest-only {
 }
 
 .teaser-title {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: clamp(1.6rem, 2.4vw, 2.1rem);
   font-weight: 800;
   margin-bottom: 12px;
@@ -2718,6 +2834,21 @@ body.user-authenticated .guest-only {
 }
 
 @media (max-width: 580px) {
+  .learning-card-heading {
+    flex-direction: column;
+  }
+  .learning-language-badge {
+    width: 100%;
+  }
+  .flashcard-section {
+    padding: 20px;
+  }
+  .flashcard-box {
+    height: 260px;
+  }
+  .fc-btn-group {
+    flex-direction: column;
+  }
   .methodology-grid {
     grid-template-columns: 1fr;
   }
@@ -2741,7 +2872,7 @@ body.user-authenticated .guest-only {
 }
 
 .method-card h3 {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--color-dark);
@@ -2771,7 +2902,7 @@ body.user-authenticated .guest-only {
 }
 
 .stat-cell .stat-number {
-  font-family: 'K2D', sans-serif;
+  font-family: 'Be Vietnam Pro', sans-serif;
   font-size: clamp(1.8rem, 2.5vw, 2.4rem);
   font-weight: 800;
   color: var(--color-ocean);

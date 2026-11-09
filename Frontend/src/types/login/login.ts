@@ -10,6 +10,86 @@ interface LoginCredentials {
   rememberMe: boolean;
 }
 
+interface AuthUser {
+  id: string;
+  email: string;
+  username?: string | null;
+  display_name?: string | null;
+  role?: string;
+}
+
+interface AuthResult {
+  user_id?: string;
+  email?: string;
+  access_token?: string;
+  refresh_token?: string;
+  user?: AuthUser;
+  email_confirmation_required?: boolean;
+}
+
+interface AuthEnvelope<T> {
+  status: string;
+  message: string;
+  data: T;
+}
+
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+).replace(/\/+$/, '');
+const ACCESS_TOKEN_KEY = 'slanguage_access_token';
+const REFRESH_TOKEN_KEY = 'slanguage_refresh_token';
+
+function getApiErrorMessage(payload: unknown, status: number): string {
+  if (typeof payload === 'object' && payload !== null && 'detail' in payload) {
+    const detail = (payload as { detail: unknown }).detail;
+    if (typeof detail === 'string' && detail.trim()) return detail.trim();
+    if (Array.isArray(detail)) {
+      const messages = detail.map((item) => {
+        if (typeof item === 'object' && item !== null && 'msg' in item) {
+          return String((item as { msg: unknown }).msg);
+        }
+        return String(item);
+      }).filter(Boolean);
+      if (messages.length) return messages.join('; ');
+    }
+  }
+  return `Không thể kết nối dịch vụ xác thực (HTTP ${status}).`;
+}
+
+async function postAuth<T>(path: string, body: unknown): Promise<AuthEnvelope<T>> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch {
+    throw new Error('Không kết nối được máy chủ. Vui lòng kiểm tra backend và thử lại.');
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error(`Máy chủ trả về phản hồi không hợp lệ (HTTP ${response.status}).`);
+  }
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(payload, response.status));
+  }
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    !('data' in payload) ||
+    !('status' in payload) ||
+    typeof payload.status !== 'string'
+  ) {
+    throw new Error('Máy chủ trả về dữ liệu xác thực không đúng định dạng.');
+  }
+  return payload as AuthEnvelope<T>;
+}
+
 class SlanguageLogin {
   private loginForm: HTMLFormElement | null = null;
   private registerForm: HTMLFormElement | null = null;
@@ -214,10 +294,10 @@ class SlanguageLogin {
 
     // Validate Email/Username
     if (!emailVal) {
-      this.showError('emailError', 'Vui lòng nhập email hoặc tên đăng nhập của học viên.');
+      this.showError('emailError', 'Vui lòng nhập địa chỉ email của học viên.');
       isValid = false;
-    } else if (emailVal.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      this.showError('emailError', 'Địa chỉ email không đúng định dạng.');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      this.showError('emailError', 'Vui lòng đăng nhập bằng địa chỉ email đã đăng ký.');
       isValid = false;
     }
 
@@ -239,32 +319,49 @@ class SlanguageLogin {
     };
   }
 
-  private handleLogin(): void {
+  private async handleLogin(): Promise<void> {
     const creds = this.validateLogin();
     if (!creds) return;
 
-    // Show loading indicator
+    const originalButtonContent = this.submitBtn?.innerHTML;
     if (this.submitBtn) {
       this.submitBtn.disabled = true;
       this.submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...`;
     }
 
-    setTimeout(() => {
-      // Simulate Successful Login
-      localStorage.setItem('slanguage_is_logged_in', 'true');
-      localStorage.setItem('slanguage_user_email', creds.emailOrUser);
-      
-      // If student name not set yet, set default
-      if (!localStorage.getItem('slanguage_user_name')) {
-        localStorage.setItem('slanguage_user_name', 'Nguyễn Nhật Anh');
+    try {
+      const result = await postAuth<AuthResult>('/api/v1/auth/login', {
+        email: creds.emailOrUser,
+        password: creds.password
+      });
+      if (!result.data.access_token || !result.data.refresh_token || !result.data.user?.id) {
+        throw new Error('Đăng nhập thành công nhưng máy chủ không cấp đủ thông tin phiên.');
       }
 
-      // Show video loading screen for 1.5s
-      this.triggerLoadingAndRedirect('../home/index.html', 1500);
-    }, 400);
+      localStorage.setItem(ACCESS_TOKEN_KEY, result.data.access_token);
+      localStorage.setItem(REFRESH_TOKEN_KEY, result.data.refresh_token);
+      localStorage.setItem('slanguage_is_logged_in', 'true');
+      localStorage.setItem('slanguage_user_id', result.data.user.id);
+      localStorage.setItem('slanguage_user_email', result.data.user.email || creds.emailOrUser);
+      if (result.data.user.display_name) {
+        localStorage.setItem('slanguage_user_name', result.data.user.display_name);
+      }
+      if (creds.rememberMe) {
+        localStorage.setItem('slanguage_remembered_email', creds.emailOrUser);
+      } else {
+        localStorage.removeItem('slanguage_remembered_email');
+      }
+      this.triggerLoadingAndRedirect(this.getPostLoginUrl(), 500);
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : 'Đăng nhập thất bại. Vui lòng thử lại.', 'info');
+      if (this.submitBtn && originalButtonContent) {
+        this.submitBtn.innerHTML = originalButtonContent;
+        this.submitBtn.disabled = false;
+      }
+    }
   }
 
-  private handleRegister(): void {
+  private async handleRegister(): Promise<void> {
     let isValid = true;
 
     const fullName = this.regFullNameInput?.value.trim() || '';
@@ -289,8 +386,8 @@ class SlanguageLogin {
     if (!password) {
       this.showError('passError', 'Vui lòng đặt mật khẩu.');
       isValid = false;
-    } else if (password.length < 6) {
-      this.showError('passError', 'Mật khẩu phải từ 6 ký tự trở lên.');
+    } else if (password.length < 8) {
+      this.showError('passError', 'Mật khẩu phải từ 8 ký tự trở lên.');
       isValid = false;
     }
 
@@ -311,17 +408,54 @@ class SlanguageLogin {
       this.btnSubmitRegister.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo tài khoản...`;
     }
 
-    setTimeout(() => {
-      localStorage.setItem('slanguage_user_name', fullName);
-      localStorage.setItem('slanguage_user_email', email);
-      if (!localStorage.getItem('slanguage_active_language')) {
-        localStorage.setItem('slanguage_active_language', 'ja');
-      }
-      localStorage.setItem('slanguage_user_xp', '100');
-      localStorage.setItem('slanguage_is_logged_in', 'true');
+    try {
+      const result = await postAuth<AuthResult>('/api/v1/auth/register', {
+        email,
+        password,
+        display_name: fullName,
+        native_language: 'vi',
+        target_language: 'en',
+        accept_terms: terms
+      });
 
-      this.triggerLoadingAndRedirect('../home/index.html', 1500);
-    }, 400);
+      if (result.data.access_token && result.data.refresh_token && result.data.user_id) {
+        localStorage.setItem(ACCESS_TOKEN_KEY, result.data.access_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, result.data.refresh_token);
+        localStorage.setItem('slanguage_user_id', result.data.user_id);
+        localStorage.setItem('slanguage_user_name', fullName);
+        localStorage.setItem('slanguage_user_email', email);
+        localStorage.setItem('slanguage_is_logged_in', 'true');
+        this.triggerLoadingAndRedirect(this.getPostLoginUrl(), 500);
+      } else {
+        const radioSignIn = document.getElementById('showSignIn') as HTMLInputElement | null;
+        if (radioSignIn) radioSignIn.checked = true;
+        if (this.emailInput) this.emailInput.value = email;
+        this.showToast(result.message || 'Vui lòng xác thực email trước khi đăng nhập.', 'info');
+        if (this.btnSubmitRegister) {
+          this.btnSubmitRegister.disabled = false;
+          this.btnSubmitRegister.innerHTML = '<span>Xác nhận thông tin</span><i class="fa-solid fa-arrow-right"></i>';
+        }
+      }
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : 'Không thể tạo tài khoản. Vui lòng thử lại.', 'info');
+      if (this.btnSubmitRegister) this.btnSubmitRegister.disabled = false;
+    }
+  }
+
+  private getPostLoginUrl(): string {
+    const redirect = new URLSearchParams(window.location.search).get('redirect');
+    if (redirect) {
+      try {
+        const requestedUrl = new URL(redirect, window.location.href);
+        const chatUrl = new URL('../chat/index.html', window.location.href);
+        if (requestedUrl.origin === window.location.origin && requestedUrl.pathname === chatUrl.pathname) {
+          return requestedUrl.href;
+        }
+      } catch {
+        // Fall back to the learner home page for an invalid redirect.
+      }
+    }
+    return '../home/index.html';
   }
 
   private showError(elementId: string, message: string): void {

@@ -58,13 +58,13 @@ button { cursor: pointer; }
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 1440px;
-  margin: 24px auto;
-  min-height: calc(100vh - 48px);
-  border: 1px solid var(--border);
-  border-radius: 24px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
   background: var(--bg-surface);
-  box-shadow: var(--shadow-lg);
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -440,14 +440,17 @@ button { cursor: pointer; }
 /* Messages */
 .messages {
   width: 100%;
-  min-height: 100px;
-  flex: 1;
+  min-height: 0;
+  flex: 1 1 auto;
+  max-height: min(52vh, 560px);
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
-  padding: 16px 0 4px;
-  scroll-behavior: smooth;
+  padding: 16px 8px 8px;
+  scroll-behavior: auto;
+  overscroll-behavior: contain;
   display: flex;
+  scrollbar-gutter: stable;
 }
 .welcome-card {
   max-width: 420px;
@@ -484,6 +487,7 @@ button { cursor: pointer; }
 .message-row {
   display: flex;
   align-items: flex-start;
+  flex: 0 0 auto;
   gap: 10px;
   max-width: 72%;
 }
@@ -647,42 +651,46 @@ button { cursor: pointer; }
   width: 100%;
   padding: 16px 0 0;
   border: 0;
+  flex: 0 0 auto;
 }
 .composer {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 12px;
+  min-height: 58px;
+  padding: 7px 8px 7px 16px;
+  border: 1px solid #dcd6f3;
+  border-radius: 24px;
   background: #ffffff;
-  transition: border-color var(--transition), box-shadow var(--transition);
+  box-shadow: 0 4px 16px rgb(49 46 129 / 6%);
+  transition: border-color var(--transition), box-shadow var(--transition), background-color var(--transition);
 }
 .composer:focus-within {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgb(79 70 229 / 0.15);
+  border-color: #9a8df4;
+  box-shadow: 0 0 0 4px rgb(129 115 244 / 12%), 0 6px 20px rgb(49 46 129 / 8%);
 }
 .composer textarea {
   width: 100%;
+  min-height: 28px;
   max-height: 120px;
   resize: none;
   border: 0;
   outline: 0;
   color: #1e293b;
   background: transparent;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.6;
 }
 .composer textarea::placeholder { color: #94a3b8; }
 .composer textarea:disabled { cursor: not-allowed; color: #94a3b8; }
 .send-button {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   flex: 0 0 auto;
   place-items: center;
   border: 0;
-  border-radius: 10px;
+  border-radius: 50%;
   color: #ffffff;
   background: #4f46e5;
   font-size: 16px;
@@ -758,6 +766,18 @@ button { cursor: pointer; }
   font-size: 11px;
   color: #64748b;
   line-height: 1.5;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ---------- Phải: Reference panel ---------- */
@@ -964,8 +984,8 @@ button { cursor: pointer; }
 
 /* ===== Responsive: tablet (2 cột) ===== */
 @media (max-width: 1100px) {
-  .app-shell { padding: 16px; }
-  .room-frame { margin: 16px auto; min-height: calc(100vh - 32px); }
+  .app-shell { padding: 0; }
+  .room-frame { margin: 0; min-height: 100vh; min-height: 100dvh; }
   .room-grid {
     grid-template-columns: 200px minmax(360px, 1fr);
   }
@@ -1036,6 +1056,10 @@ button { cursor: pointer; }
   .lesson-account { margin-top: 16px; }
   .voice-stage { min-height: 140px; }
   .message-row { max-width: 92%; }
+  .messages {
+    min-height: 180px;
+    max-height: min(44vh, 380px);
+  }
 }
 @media (max-width: 480px) {
   .room-topbar { padding: 0 12px; }
@@ -1048,6 +1072,53 @@ button { cursor: pointer; }
   .voice-actions { gap: 6px; }
   .voice-button { min-height: 32px; padding: 0 10px; font-size: 11px; }
   .reference-panel > section { padding: 16px 14px; }
+}
+
+@media (min-width: 1101px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell,
+  .room-frame {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .room-grid {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .lesson-panel,
+  .reference-panel {
+    min-height: 0;
+  }
+
+  .practice-panel {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .practice-heading,
+  .session-clock {
+    flex: 0 0 auto;
+  }
+
+  .voice-stage {
+    min-height: 112px;
+    flex: 0 0 clamp(112px, 17vh, 150px);
+  }
+
+  .session-clock {
+    margin-bottom: 8px;
+  }
+
+  .chat-footer {
+    padding-top: 8px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
