@@ -11,6 +11,8 @@ export default defineConfig({
         "src/pages/login/index.html",
         "src/pages/register/index.html",
         "src/pages/forgot-password/index.html",
+        "src/pages/terms/index.html",
+        "src/pages/home/index.html",
         "src/pages/LoginAdmin/code.html",
         "src/pages/LoginAdmin/index.html",
         "src/pages/dasboardAdmin/code.html",

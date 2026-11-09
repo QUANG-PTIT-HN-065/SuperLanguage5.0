@@ -6,12 +6,12 @@
   <title>Slanguage - Đăng Ký & Đăng Nhập Học Viên</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="../../css/register/style.css">
-  <script type="module" src="../../types/register/register.ts"></script>
+  <link rel="stylesheet" href="../../css/login/style.css">
+  <link rel="stylesheet" href="../../css/shared/user-experience.css">
 </head>
-<body>
+<body class="slg-user-auth">
 
   <!-- Toast Notification Container -->
   <div class="login-toast" id="loginToast"></div>
@@ -72,7 +72,7 @@
         <!-- Terms and Conditions -->
         <label class="checkbox-wrap terms-check">
           <input type="checkbox" id="regTerms" checked>
-          <span>Tôi đồng ý với <a href="#" style="color: var(--color-mint);">Điều khoản</a> của Slanguage</span>
+          <span>Tôi đồng ý với <a href="../terms/index.html" style="color: var(--color-mint);">Điều khoản</a> của Slanguage</span>
         </label>
 
         <!-- Submit Button -->
@@ -82,7 +82,7 @@
         </button>
 
         <!-- Back to Home Button -->
-        <a href="../../../index.html" class="btn-back-home" id="btnBackHomeRegister">
+        <a href="../home/index.html" class="btn-back-home" id="btnBackHomeRegister">
           <i class="fa-solid fa-house"></i>
           <span>Quay lại Trang chủ</span>
         </a>
@@ -150,7 +150,7 @@
         </button>
 
         <!-- Back to Home Button -->
-        <a href="../../../index.html" class="btn-back-home" id="btnBackHomeLogin">
+        <a href="../home/index.html" class="btn-back-home" id="btnBackHomeLogin">
           <i class="fa-solid fa-house"></i>
           <span>Quay lại Trang chủ</span>
         </a>
@@ -167,7 +167,7 @@
         <!-- OVERLAY LEFT (Appears when Sign Up is shown, prompts user to Sign In) -->
         <div class="overlay-panel overlay-left">
           <div class="overlay-brand">
-            <img src="../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
+            <img src="../../../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
             <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
           </div>
           <h2>Chào mừng trở lại!</h2>
@@ -183,7 +183,7 @@
         <!-- OVERLAY RIGHT (Appears when Sign In is shown, prompts user to Sign Up) -->
         <div class="overlay-panel overlay-right">
           <div class="overlay-brand">
-            <img src="../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
+            <img src="../../../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
             <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
           </div>
           <h2>Khám phá Slanguage!</h2>
@@ -199,17 +199,11 @@
     </div>
   </div>
 
-  <div style="text-align: center; margin-top: 18px;">
-    <a href="../../../index.html" class="btn-bottom-home">
-      <i class="fa-solid fa-arrow-left"></i> Quay lại Trang chủ
-    </a>
-  </div>
-
   <!-- GLOBAL TRANSITION LOADING SCREEN -->
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" src="../assets/loading.mp4" autoplay loop playsinline></video>
+        <video id="loadingVideoPlayer" src="../../../assets/loading.mp4" autoplay loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>
@@ -217,5 +211,6 @@
     </div>
   </div>
 
+  <script type="module" src="../../types/login/login.ts"></script>
 </body>
 </html>

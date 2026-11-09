@@ -10,26 +10,85 @@ interface LoginCredentials {
   rememberMe: boolean;
 }
 
+interface AuthUser {
+  id: string;
+  email: string;
+  username?: string | null;
+  display_name?: string | null;
+  role?: string;
+}
+
+interface AuthResult {
+  user_id?: string;
+  email?: string;
+  access_token?: string;
+  refresh_token?: string;
+  user?: AuthUser;
+  email_confirmation_required?: boolean;
+}
+
 interface AuthEnvelope<T> {
   status: string;
   message: string;
   data: T;
-  error: unknown;
-}
-
-interface StudentAuthData {
-  access_token: string;
-  refresh_token: string;
-  user?: {
-    id: string;
-    email: string;
-    display_name: string | null;
-  };
 }
 
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 ).replace(/\/+$/, '');
+const ACCESS_TOKEN_KEY = 'slanguage_access_token';
+const REFRESH_TOKEN_KEY = 'slanguage_refresh_token';
+
+function getApiErrorMessage(payload: unknown, status: number): string {
+  if (typeof payload === 'object' && payload !== null && 'detail' in payload) {
+    const detail = (payload as { detail: unknown }).detail;
+    if (typeof detail === 'string' && detail.trim()) return detail.trim();
+    if (Array.isArray(detail)) {
+      const messages = detail.map((item) => {
+        if (typeof item === 'object' && item !== null && 'msg' in item) {
+          return String((item as { msg: unknown }).msg);
+        }
+        return String(item);
+      }).filter(Boolean);
+      if (messages.length) return messages.join('; ');
+    }
+  }
+  return `Không thể kết nối dịch vụ xác thực (HTTP ${status}).`;
+}
+
+async function postAuth<T>(path: string, body: unknown): Promise<AuthEnvelope<T>> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch {
+    throw new Error('Không kết nối được máy chủ. Vui lòng kiểm tra backend và thử lại.');
+  }
+
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error(`Máy chủ trả về phản hồi không hợp lệ (HTTP ${response.status}).`);
+  }
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(payload, response.status));
+  }
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    !('data' in payload) ||
+    !('status' in payload) ||
+    typeof payload.status !== 'string'
+  ) {
+    throw new Error('Máy chủ trả về dữ liệu xác thực không đúng định dạng.');
+  }
+  return payload as AuthEnvelope<T>;
+}
 
 class SlanguageLogin {
   private loginForm: HTMLFormElement | null = null;
@@ -47,6 +106,8 @@ class SlanguageLogin {
   private regEmailInput: HTMLInputElement | null = null;
   private regPasswordInput: HTMLInputElement | null = null;
   private regConfirmPasswordInput: HTMLInputElement | null = null;
+  private regNativeLanguageInput: HTMLSelectElement | null = null;
+  private regTargetLanguageInput: HTMLSelectElement | null = null;
   private regTermsCheckbox: HTMLInputElement | null = null;
   private btnSubmitRegister: HTMLButtonElement | null = null;
 
@@ -69,6 +130,8 @@ class SlanguageLogin {
     this.regEmailInput = document.getElementById('regEmail') as HTMLInputElement;
     this.regPasswordInput = document.getElementById('regPassword') as HTMLInputElement;
     this.regConfirmPasswordInput = document.getElementById('regConfirmPassword') as HTMLInputElement;
+    this.regNativeLanguageInput = document.getElementById('regNativeLanguage') as HTMLSelectElement;
+    this.regTargetLanguageInput = document.getElementById('regTargetLanguage') as HTMLSelectElement;
     this.regTermsCheckbox = document.getElementById('regTerms') as HTMLInputElement;
     this.btnSubmitRegister = document.getElementById('btnSubmitRegister') as HTMLButtonElement;
 
@@ -138,6 +201,8 @@ class SlanguageLogin {
     if (this.regConfirmPasswordInput) {
       this.regConfirmPasswordInput.addEventListener('input', () => this.clearError('confirmPassError'));
     }
+    this.regNativeLanguageInput?.addEventListener('change', () => this.clearError('languageError'));
+    this.regTargetLanguageInput?.addEventListener('change', () => this.clearError('languageError'));
 
     // Forgot password trigger
     const forgotLink = document.getElementById('forgotPasswordLink');
@@ -235,10 +300,10 @@ class SlanguageLogin {
 
     // Validate Email/Username
     if (!emailVal) {
-      this.showError('emailError', 'Vui lòng nhập email hoặc tên đăng nhập của học viên.');
+      this.showError('emailError', 'Vui lòng nhập địa chỉ email của học viên.');
       isValid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      this.showError('emailError', 'Vui lòng nhập địa chỉ email hợp lệ.');
+      this.showError('emailError', 'Vui lòng đăng nhập bằng địa chỉ email đã đăng ký.');
       isValid = false;
     }
 
@@ -264,43 +329,40 @@ class SlanguageLogin {
     const creds = this.validateLogin();
     if (!creds) return;
 
+    const originalButtonContent = this.submitBtn?.innerHTML;
     if (this.submitBtn) {
       this.submitBtn.disabled = true;
       this.submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...`;
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: creds.emailOrUser,
-          password: creds.password,
-        }),
+      const result = await postAuth<AuthResult>('/api/v1/auth/login', {
+        email: creds.emailOrUser,
+        password: creds.password
       });
-      const result = await this.readAuthResponse(response);
-      const auth = result.data;
-      if (!auth.access_token || !auth.refresh_token) {
-        throw new Error('Backend không trả về thông tin phiên đăng nhập.');
+      if (!result.data.access_token || !result.data.refresh_token || !result.data.user?.id) {
+        throw new Error('Đăng nhập thành công nhưng máy chủ không cấp đủ thông tin phiên.');
       }
 
-      localStorage.setItem('slanguage_access_token', auth.access_token);
-      localStorage.setItem('slanguage_refresh_token', auth.refresh_token);
+      localStorage.setItem(ACCESS_TOKEN_KEY, result.data.access_token);
+      localStorage.setItem(REFRESH_TOKEN_KEY, result.data.refresh_token);
       localStorage.setItem('slanguage_is_logged_in', 'true');
-      localStorage.setItem('slanguage_user_email', auth.user?.email || creds.emailOrUser);
-      if (auth.user?.id) localStorage.setItem('slanguage_user_id', auth.user.id);
-      if (auth.user?.display_name) {
-        localStorage.setItem('slanguage_user_name', auth.user.display_name);
+      localStorage.setItem('slanguage_user_id', result.data.user.id);
+      localStorage.setItem('slanguage_user_email', result.data.user.email || creds.emailOrUser);
+      if (result.data.user.display_name) {
+        localStorage.setItem('slanguage_user_name', result.data.user.display_name);
       }
-      this.triggerLoadingAndRedirect('../../../index.html', 1500);
+      if (creds.rememberMe) {
+        localStorage.setItem('slanguage_remembered_email', creds.emailOrUser);
+      } else {
+        localStorage.removeItem('slanguage_remembered_email');
+      }
+      this.triggerLoadingAndRedirect(this.getPostLoginUrl(), 500);
     } catch (error) {
-      this.showToast(
-        error instanceof Error ? error.message : 'Đăng nhập thất bại. Vui lòng thử lại.',
-        'info',
-      );
-      if (this.submitBtn) {
+      this.showToast(error instanceof Error ? error.message : 'Đăng nhập thất bại. Vui lòng thử lại.', 'info');
+      if (this.submitBtn && originalButtonContent) {
+        this.submitBtn.innerHTML = originalButtonContent;
         this.submitBtn.disabled = false;
-        this.submitBtn.innerHTML = `<span>Đăng nhập</span><i class="fa-solid fa-arrow-right"></i>`;
       }
     }
   }
@@ -312,6 +374,8 @@ class SlanguageLogin {
     const email = this.regEmailInput?.value.trim() || '';
     const password = this.regPasswordInput?.value || '';
     const confirmPassword = this.regConfirmPasswordInput?.value || '';
+    const nativeLanguage = this.regNativeLanguageInput?.value || '';
+    const targetLanguage = this.regTargetLanguageInput?.value || '';
     const terms = this.regTermsCheckbox?.checked || false;
 
     if (!fullName) {
@@ -340,6 +404,11 @@ class SlanguageLogin {
       isValid = false;
     }
 
+    if (!nativeLanguage || !targetLanguage || nativeLanguage === targetLanguage) {
+      this.showError('languageError', 'Ngôn ngữ mẹ đẻ và ngôn ngữ muốn học phải khác nhau.');
+      isValid = false;
+    }
+
     if (!terms) {
       alert('Vui lòng đồng ý với Điều khoản của Slanguage.');
       isValid = false;
@@ -353,68 +422,59 @@ class SlanguageLogin {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email,
-          password,
-          display_name: fullName,
-          native_language: 'vi',
-          target_language: 'en',
-          accept_terms: terms,
-        }),
+      const result = await postAuth<AuthResult>('/api/v1/auth/register', {
+        email,
+        password,
+        display_name: fullName,
+        native_language: nativeLanguage,
+        target_language: targetLanguage,
+        accept_terms: terms
       });
-      const result = await this.readAuthResponse(response);
-      if (result.data.access_token && result.data.refresh_token) {
-        localStorage.setItem('slanguage_access_token', result.data.access_token);
-        localStorage.setItem('slanguage_refresh_token', result.data.refresh_token);
-        localStorage.setItem('slanguage_is_logged_in', 'true');
-        localStorage.setItem('slanguage_user_email', email);
-        localStorage.setItem('slanguage_user_name', fullName);
-        this.triggerLoadingAndRedirect('../../../index.html', 1500);
-        return;
-      }
 
-      this.showToast(result.message, 'success');
-    } catch (error) {
-      this.showToast(
-        error instanceof Error ? error.message : 'Đăng ký thất bại. Vui lòng thử lại.',
-        'info',
-      );
-    } finally {
-      if (this.btnSubmitRegister) {
-        this.btnSubmitRegister.disabled = false;
-        this.btnSubmitRegister.innerHTML = `<span>Xác nhận thông tin</span><i class="fa-solid fa-arrow-right"></i>`;
+      if (result.data.access_token && result.data.refresh_token && result.data.user_id) {
+        localStorage.setItem(ACCESS_TOKEN_KEY, result.data.access_token);
+        localStorage.setItem(REFRESH_TOKEN_KEY, result.data.refresh_token);
+        localStorage.setItem('slanguage_user_id', result.data.user_id);
+        localStorage.setItem('slanguage_user_name', fullName);
+        localStorage.setItem('slanguage_user_email', email);
+        localStorage.setItem('slanguage_native_language', nativeLanguage);
+        localStorage.setItem('slanguage_active_language', targetLanguage);
+        localStorage.setItem('slanguage_is_logged_in', 'true');
+        this.triggerLoadingAndRedirect(this.getPostLoginUrl(), 500);
+      } else {
+        const radioSignIn = document.getElementById('showSignIn') as HTMLInputElement | null;
+        if (radioSignIn) radioSignIn.checked = true;
+        if (this.emailInput) this.emailInput.value = email;
+        this.showToast(result.message || 'Vui lòng xác thực email trước khi đăng nhập.', 'info');
+        if (this.btnSubmitRegister) {
+          this.btnSubmitRegister.disabled = false;
+          this.btnSubmitRegister.innerHTML = '<span>Xác nhận thông tin</span><i class="fa-solid fa-arrow-right"></i>';
+        }
       }
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : 'Không thể tạo tài khoản. Vui lòng thử lại.', 'info');
+      if (this.btnSubmitRegister) this.btnSubmitRegister.disabled = false;
     }
   }
 
-  private async readAuthResponse(
-    response: Response,
-  ): Promise<AuthEnvelope<StudentAuthData>> {
-    const payload: unknown = await response.json();
-    if (!response.ok) {
-      const detail =
-        typeof payload === 'object' &&
-        payload !== null &&
-        'detail' in payload &&
-        typeof payload.detail === 'string'
-          ? payload.detail
-          : `Backend trả về lỗi HTTP ${response.status}.`;
-      throw new Error(detail);
+  private getPostLoginUrl(): string {
+    const redirect = new URLSearchParams(window.location.search).get('redirect');
+    if (redirect) {
+      try {
+        const requestedUrl = new URL(redirect, window.location.href);
+        const allowedPaths = [
+          '../chat/index.html',
+          '../learning/index.html',
+          '../vocabulary/index.html',
+        ].map((path) => new URL(path, window.location.href).pathname);
+        if (requestedUrl.origin === window.location.origin && allowedPaths.includes(requestedUrl.pathname)) {
+          return requestedUrl.href;
+        }
+      } catch {
+        // Fall back to the learner home page for an invalid redirect.
+      }
     }
-
-    if (
-      typeof payload !== 'object' ||
-      payload === null ||
-      !('data' in payload) ||
-      typeof payload.data !== 'object' ||
-      payload.data === null
-    ) {
-      throw new Error('Backend trả về dữ liệu không đúng định dạng.');
-    }
-    return payload as AuthEnvelope<StudentAuthData>;
+    return '../home/index.html';
   }
 
   private showError(elementId: string, message: string): void {
@@ -436,11 +496,9 @@ class SlanguageLogin {
     const toast = document.getElementById('loginToast');
     if (!toast) return;
 
-    const icon = document.createElement('i');
-    icon.className = type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-info';
-    icon.style.color = type === 'success' ? '#FFB703' : '#00B4D8';
-    icon.style.fontSize = '1.2rem';
-    toast.replaceChildren(icon, document.createTextNode(` ${message}`));
+    toast.innerHTML = type === 'success' 
+      ? `<i class="fa-solid fa-circle-check" style="color: #FFB703; font-size: 1.2rem;"></i> ${message}`
+      : `<i class="fa-solid fa-circle-info" style="color: #00B4D8; font-size: 1.2rem;"></i> ${message}`;
 
     toast.style.display = 'flex';
 

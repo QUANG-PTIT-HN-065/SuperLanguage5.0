@@ -129,7 +129,7 @@ class SlanguageRegister {
     const btnGoToStudy = document.getElementById('btnGoToStudy');
     if (btnGoToStudy) {
       btnGoToStudy.addEventListener('click', () => {
-        this.triggerLoadingAndRedirect('../../../index.html', 1500);
+        this.triggerLoadingAndRedirect('../home/index.html', 1500);
       });
     }
 
