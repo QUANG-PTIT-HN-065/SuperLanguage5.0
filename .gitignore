@@ -47,6 +47,6 @@ firebase-debug.log
 ####
 .vscode
 .opencode
-.agents
+.agents/skills
 .freebuff
 .github
