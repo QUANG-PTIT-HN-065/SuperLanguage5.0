@@ -270,7 +270,7 @@ export async function fetchVocabularyTopics(
   const payload = (await slanguageApi(
     `/api/v1/vocabulary/topics?limit=${limit}&offset=${offset}`,
     { method: "GET" },
-  )) as Record<string, unknown>;
+  )) as unknown as Record<string, unknown>;
 
   const items = Array.isArray(payload.items) ? payload.items : [];
   return {
@@ -297,7 +297,7 @@ export async function fetchVocabularyWords(
   const payload = (await slanguageApi(
     `/api/v1/vocabulary/words?${qs.toString()}`,
     { method: "GET" },
-  )) as Record<string, unknown>;
+  )) as unknown as Record<string, unknown>;
 
   const items = Array.isArray(payload.items) ? payload.items : [];
   return {
