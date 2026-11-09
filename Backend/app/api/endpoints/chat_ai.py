@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.schemas.chat_ai import (
     AudioUploadResponse,
     ConversationCreate,
+    ConversationMessageResponse,
     ConversationResponse,
     MessageSend,
     MessageResponse,
@@ -91,7 +92,7 @@ def create_conversation(
                 "title": data.title,
                 "language_code": target_lang_code,
             })
-            .select("id,title,language_code,created_at")
+            .select("id,title,language_code,created_at,updated_at")
             .single()
             .execute()
         )
@@ -117,6 +118,7 @@ def create_conversation(
             title=conversation["title"],
             language_code=conversation["language_code"],
             created_at=conversation.get("created_at"),
+            updated_at=conversation.get("updated_at"),
         ),
     )
 
