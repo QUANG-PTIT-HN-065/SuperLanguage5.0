@@ -10,6 +10,27 @@ interface LoginCredentials {
   rememberMe: boolean;
 }
 
+interface AuthEnvelope<T> {
+  status: string;
+  message: string;
+  data: T;
+  error: unknown;
+}
+
+interface StudentAuthData {
+  access_token: string;
+  refresh_token: string;
+  user?: {
+    id: string;
+    email: string;
+    display_name: string | null;
+  };
+}
+
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+).replace(/\/+$/, '');
+
 class SlanguageLogin {
   private loginForm: HTMLFormElement | null = null;
   private registerForm: HTMLFormElement | null = null;
@@ -216,8 +237,8 @@ class SlanguageLogin {
     if (!emailVal) {
       this.showError('emailError', 'Vui lòng nhập email hoặc tên đăng nhập của học viên.');
       isValid = false;
-    } else if (emailVal.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      this.showError('emailError', 'Địa chỉ email không đúng định dạng.');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      this.showError('emailError', 'Vui lòng nhập địa chỉ email hợp lệ.');
       isValid = false;
     }
 
@@ -239,32 +260,52 @@ class SlanguageLogin {
     };
   }
 
-  private handleLogin(): void {
+  private async handleLogin(): Promise<void> {
     const creds = this.validateLogin();
     if (!creds) return;
 
-    // Show loading indicator
     if (this.submitBtn) {
       this.submitBtn.disabled = true;
       this.submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...`;
     }
 
-    setTimeout(() => {
-      // Simulate Successful Login
-      localStorage.setItem('slanguage_is_logged_in', 'true');
-      localStorage.setItem('slanguage_user_email', creds.emailOrUser);
-      
-      // If student name not set yet, set default
-      if (!localStorage.getItem('slanguage_user_name')) {
-        localStorage.setItem('slanguage_user_name', 'Nguyễn Nhật Anh');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: creds.emailOrUser,
+          password: creds.password,
+        }),
+      });
+      const result = await this.readAuthResponse(response);
+      const auth = result.data;
+      if (!auth.access_token || !auth.refresh_token) {
+        throw new Error('Backend không trả về thông tin phiên đăng nhập.');
       }
 
-      // Show video loading screen for 1.5s
-      this.triggerLoadingAndRedirect('../../../index.html', 1500);
-    }, 400);
+      localStorage.setItem('slanguage_access_token', auth.access_token);
+      localStorage.setItem('slanguage_refresh_token', auth.refresh_token);
+      localStorage.setItem('slanguage_is_logged_in', 'true');
+      localStorage.setItem('slanguage_user_email', auth.user?.email || creds.emailOrUser);
+      if (auth.user?.id) localStorage.setItem('slanguage_user_id', auth.user.id);
+      if (auth.user?.display_name) {
+        localStorage.setItem('slanguage_user_name', auth.user.display_name);
+      }
+      this.triggerLoadingAndRedirect('../learner/dashboard/index.html', 1200);
+    } catch (error) {
+      this.showToast(
+        error instanceof Error ? error.message : 'Đăng nhập thất bại. Vui lòng thử lại.',
+        'info',
+      );
+      if (this.submitBtn) {
+        this.submitBtn.disabled = false;
+        this.submitBtn.innerHTML = `<span>Đăng nhập</span><i class="fa-solid fa-arrow-right"></i>`;
+      }
+    }
   }
 
-  private handleRegister(): void {
+  private async handleRegister(): Promise<void> {
     let isValid = true;
 
     const fullName = this.regFullNameInput?.value.trim() || '';
@@ -289,8 +330,8 @@ class SlanguageLogin {
     if (!password) {
       this.showError('passError', 'Vui lòng đặt mật khẩu.');
       isValid = false;
-    } else if (password.length < 6) {
-      this.showError('passError', 'Mật khẩu phải từ 6 ký tự trở lên.');
+    } else if (password.length < 8) {
+      this.showError('passError', 'Mật khẩu phải từ 8 ký tự trở lên.');
       isValid = false;
     }
 
@@ -311,17 +352,79 @@ class SlanguageLogin {
       this.btnSubmitRegister.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo tài khoản...`;
     }
 
-    setTimeout(() => {
-      localStorage.setItem('slanguage_user_name', fullName);
-      localStorage.setItem('slanguage_user_email', email);
-      if (!localStorage.getItem('slanguage_active_language')) {
-        localStorage.setItem('slanguage_active_language', 'ja');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          display_name: fullName,
+          native_language: 'vi',
+          target_language: 'en',
+          accept_terms: terms,
+        }),
+      });
+      const result = await this.readAuthResponse(response);
+      if (result.data.access_token && result.data.refresh_token) {
+        localStorage.setItem('slanguage_access_token', result.data.access_token);
+        localStorage.setItem('slanguage_refresh_token', result.data.refresh_token);
+        localStorage.setItem('slanguage_is_logged_in', 'true');
+        localStorage.setItem('slanguage_user_email', email);
+        localStorage.setItem('slanguage_user_name', fullName);
+        if (result.data.user?.id) localStorage.setItem('slanguage_user_id', result.data.user.id);
+        if (!localStorage.getItem('slanguage_active_language')) {
+          localStorage.setItem('slanguage_active_language', 'ja');
+        }
+        if (!localStorage.getItem('slanguage_daily_goal')) {
+          localStorage.setItem('slanguage_daily_goal', '30');
+        }
+        if (!localStorage.getItem('slanguage_user_xp')) {
+          localStorage.setItem('slanguage_user_xp', '100');
+        }
+        this.triggerLoadingAndRedirect('../learner/dashboard/index.html', 1200);
+        return;
       }
-      localStorage.setItem('slanguage_user_xp', '100');
-      localStorage.setItem('slanguage_is_logged_in', 'true');
 
-      this.triggerLoadingAndRedirect('../../../index.html', 1500);
-    }, 400);
+      this.showToast(result.message, 'success');
+    } catch (error) {
+      this.showToast(
+        error instanceof Error ? error.message : 'Đăng ký thất bại. Vui lòng thử lại.',
+        'info',
+      );
+    } finally {
+      if (this.btnSubmitRegister) {
+        this.btnSubmitRegister.disabled = false;
+        this.btnSubmitRegister.innerHTML = `<span>Xác nhận thông tin</span><i class="fa-solid fa-arrow-right"></i>`;
+      }
+    }
+  }
+
+  private async readAuthResponse(
+    response: Response,
+  ): Promise<AuthEnvelope<StudentAuthData>> {
+    const payload: unknown = await response.json();
+    if (!response.ok) {
+      const detail =
+        typeof payload === 'object' &&
+        payload !== null &&
+        'detail' in payload &&
+        typeof payload.detail === 'string'
+          ? payload.detail
+          : `Backend trả về lỗi HTTP ${response.status}.`;
+      throw new Error(detail);
+    }
+
+    if (
+      typeof payload !== 'object' ||
+      payload === null ||
+      !('data' in payload) ||
+      typeof payload.data !== 'object' ||
+      payload.data === null
+    ) {
+      throw new Error('Backend trả về dữ liệu không đúng định dạng.');
+    }
+    return payload as AuthEnvelope<StudentAuthData>;
   }
 
   private showError(elementId: string, message: string): void {
@@ -343,9 +446,11 @@ class SlanguageLogin {
     const toast = document.getElementById('loginToast');
     if (!toast) return;
 
-    toast.innerHTML = type === 'success' 
-      ? `<i class="fa-solid fa-circle-check" style="color: #FFB703; font-size: 1.2rem;"></i> ${message}`
-      : `<i class="fa-solid fa-circle-info" style="color: #00B4D8; font-size: 1.2rem;"></i> ${message}`;
+    const icon = document.createElement('i');
+    icon.className = type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-info';
+    icon.style.color = type === 'success' ? '#FFB703' : '#00B4D8';
+    icon.style.fontSize = '1.2rem';
+    toast.replaceChildren(icon, document.createTextNode(` ${message}`));
 
     toast.style.display = 'flex';
 

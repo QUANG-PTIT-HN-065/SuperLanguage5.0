@@ -1,160 +1,388 @@
 /**
- * Slanguage - Learner Registration TypeScript Logic
- * Multi-step wizard for selecting study language (English, Japanese, Vietnamese),
- * password strength evaluation, validation, and profile initialization.
+ * Slanguage - Learner Registration & Login TypeScript Logic
+ * Handles student registration submission, validation, backend auth communication,
+ * session storage, and direct redirection to the Learner Dashboard.
  */
 
-interface LearnerRegistrationData {
-  targetLanguage: 'en' | 'ja' | 'vi';
-  dailyGoalMinutes: number;
-  fullName: string;
-  email: string;
-  password: string;
+interface AuthEnvelope<T> {
+  status: string;
+  message: string;
+  data: T;
+  error: unknown;
 }
 
+interface StudentAuthData {
+  access_token?: string;
+  refresh_token?: string;
+  user_id?: string;
+  email?: string;
+  email_confirmation_required?: boolean;
+  needs_onboarding?: boolean;
+  user?: {
+    id: string;
+    email: string;
+    display_name: string | null;
+  };
+}
+
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+).replace(/\/+$/, '');
+
 class SlanguageRegister {
-  private currentStep: number = 1;
-  private selectedLanguage: 'en' | 'ja' | 'vi' = 'ja';
-  private selectedGoal: number = 30;
+  // Sign Up DOM Elements
+  private registerForm: HTMLFormElement | null = null;
+  private regFullNameInput: HTMLInputElement | null = null;
+  private regEmailInput: HTMLInputElement | null = null;
+  private regPasswordInput: HTMLInputElement | null = null;
+  private regConfirmPasswordInput: HTMLInputElement | null = null;
+  private regTermsCheckbox: HTMLInputElement | null = null;
+  private btnSubmitRegister: HTMLButtonElement | null = null;
 
-  // DOM Elements
-  private step1Panel: HTMLElement | null = null;
-  private step2Panel: HTMLElement | null = null;
-  private stepperItem1: HTMLElement | null = null;
-  private stepperItem2: HTMLElement | null = null;
-  private stepLine: HTMLElement | null = null;
-
-  private fullNameInput: HTMLInputElement | null = null;
+  // Sign In DOM Elements
+  private loginForm: HTMLFormElement | null = null;
   private emailInput: HTMLInputElement | null = null;
   private passwordInput: HTMLInputElement | null = null;
-  private confirmPasswordInput: HTMLInputElement | null = null;
-  private termsCheckbox: HTMLInputElement | null = null;
-
-  private strengthFill: HTMLElement | null = null;
-  private strengthText: HTMLElement | null = null;
-  private successModal: HTMLElement | null = null;
+  private rememberCheckbox: HTMLInputElement | null = null;
+  private togglePasswordBtn: HTMLButtonElement | null = null;
+  private submitBtn: HTMLButtonElement | null = null;
 
   constructor() {
     this.init();
   }
 
   private init(): void {
-    this.step1Panel = document.getElementById('step1Panel');
-    this.step2Panel = document.getElementById('step2Panel');
-    this.stepperItem1 = document.getElementById('stepperItem1');
-    this.stepperItem2 = document.getElementById('stepperItem2');
-    this.stepLine = document.getElementById('stepLine');
+    // Sign Up
+    this.registerForm = document.getElementById('registerForm') as HTMLFormElement;
+    this.regFullNameInput = document.getElementById('regFullName') as HTMLInputElement;
+    this.regEmailInput = document.getElementById('regEmail') as HTMLInputElement;
+    this.regPasswordInput = document.getElementById('regPassword') as HTMLInputElement;
+    this.regConfirmPasswordInput = document.getElementById('regConfirmPassword') as HTMLInputElement;
+    this.regTermsCheckbox = document.getElementById('regTerms') as HTMLInputElement;
+    this.btnSubmitRegister = document.getElementById('btnSubmitRegister') as HTMLButtonElement;
 
-    this.fullNameInput = document.getElementById('regFullName') as HTMLInputElement;
-    this.emailInput = document.getElementById('regEmail') as HTMLInputElement;
-    this.passwordInput = document.getElementById('regPassword') as HTMLInputElement;
-    this.confirmPasswordInput = document.getElementById('regConfirmPassword') as HTMLInputElement;
-    this.termsCheckbox = document.getElementById('regTerms') as HTMLInputElement;
+    // Sign In
+    this.loginForm = document.getElementById('loginForm') as HTMLFormElement;
+    this.emailInput = document.getElementById('emailOrUser') as HTMLInputElement;
+    this.passwordInput = document.getElementById('password') as HTMLInputElement;
+    this.rememberCheckbox = document.getElementById('rememberMe') as HTMLInputElement;
+    this.togglePasswordBtn = document.getElementById('togglePassword') as HTMLButtonElement;
+    this.submitBtn = document.getElementById('btnSubmitLogin') as HTMLButtonElement;
 
-    this.strengthFill = document.getElementById('strengthFill');
-    this.strengthText = document.getElementById('strengthText');
-    this.successModal = document.getElementById('successOverlay');
-
+    this.checkInitialMode();
     this.bindEvents();
+    this.bindPageTransitions();
+  }
+
+  private checkInitialMode(): void {
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+    const hash = window.location.hash;
+
+    const radioSignUp = document.getElementById('showSignUp') as HTMLInputElement;
+    const radioSignIn = document.getElementById('showSignIn') as HTMLInputElement;
+
+    if (mode === 'signin' || hash === '#signin') {
+      if (radioSignIn) radioSignIn.checked = true;
+    } else {
+      if (radioSignUp) radioSignUp.checked = true;
+    }
   }
 
   private bindEvents(): void {
-    // Password strength listener
-    if (this.passwordInput) {
-      this.passwordInput.addEventListener('input', () => {
-        this.checkPasswordStrength(this.passwordInput!.value);
+    // Register Form Submit
+    if (this.registerForm) {
+      this.registerForm.addEventListener('submit', (e: Event) => {
+        e.preventDefault();
+        this.handleRegister();
       });
     }
 
-    // Clear field errors on input
-    if (this.fullNameInput) {
-      this.fullNameInput.addEventListener('input', () => this.clearError('nameError'));
+    // Login Form Submit
+    if (this.loginForm) {
+      this.loginForm.addEventListener('submit', (e: Event) => {
+        e.preventDefault();
+        this.handleLogin();
+      });
+    }
+
+    // Toggle Password Visibility
+    if (this.togglePasswordBtn && this.passwordInput) {
+      this.togglePasswordBtn.addEventListener('click', () => {
+        const isPassword = this.passwordInput!.type === 'password';
+        this.passwordInput!.type = isPassword ? 'text' : 'password';
+        const icon = this.togglePasswordBtn!.querySelector('i');
+        if (icon) {
+          icon.className = isPassword ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        }
+      });
+    }
+
+    // Real-time error clear
+    if (this.regFullNameInput) {
+      this.regFullNameInput.addEventListener('input', () => this.clearError('nameError'));
+    }
+    if (this.regEmailInput) {
+      this.regEmailInput.addEventListener('input', () => this.clearError('regEmailError'));
+    }
+    if (this.regPasswordInput) {
+      this.regPasswordInput.addEventListener('input', () => this.clearError('passError'));
+    }
+    if (this.regConfirmPasswordInput) {
+      this.regConfirmPasswordInput.addEventListener('input', () => this.clearError('confirmPassError'));
     }
     if (this.emailInput) {
       this.emailInput.addEventListener('input', () => this.clearError('emailError'));
     }
     if (this.passwordInput) {
-      this.passwordInput.addEventListener('input', () => this.clearError('passError'));
+      this.passwordInput.addEventListener('input', () => this.clearError('passwordError'));
     }
-    if (this.confirmPasswordInput) {
-      this.confirmPasswordInput.addEventListener('input', () => this.clearError('confirmPassError'));
-    }
+  }
 
-    // Step 1: Confirm Personal Info Form Submit
-    const personalInfoForm = document.getElementById('personalInfoForm');
-    if (personalInfoForm) {
-      personalInfoForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        this.handleStep1Submit();
-      });
-    }
+  private async handleRegister(): Promise<void> {
+    let isValid = true;
 
-    // Step 2: Language card selections (English, Japanese, Vietnamese)
-    const choiceCards = document.querySelectorAll<HTMLElement>('.choice-card');
-    choiceCards.forEach(card => {
-      card.addEventListener('click', () => {
-        choiceCards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        this.selectedLanguage = card.getAttribute('data-lang') as 'en' | 'ja' | 'vi';
-      });
-    });
+    const fullName = this.regFullNameInput?.value.trim() || '';
+    const email = this.regEmailInput?.value.trim() || '';
+    const password = this.regPasswordInput?.value || '';
+    const confirmPassword = this.regConfirmPasswordInput?.value || '';
+    const terms = this.regTermsCheckbox?.checked || false;
 
-    // Step 2: Daily goal cards
-    const goalCards = document.querySelectorAll<HTMLElement>('.goal-card');
-    goalCards.forEach(card => {
-      card.addEventListener('click', () => {
-        goalCards.forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        this.selectedGoal = parseInt(card.getAttribute('data-minutes') || '30', 10);
-      });
-    });
-
-    // Step 2 -> Back to Step 1
-    const btnBackToStep1 = document.getElementById('btnBackToStep1');
-    if (btnBackToStep1) {
-      btnBackToStep1.addEventListener('click', () => {
-        this.goToStep(1);
-      });
+    // Validate Full Name
+    if (!fullName) {
+      this.showError('nameError', 'Vui lòng nhập họ và tên của học viên.');
+      isValid = false;
     }
 
-    // Step 2 -> Finalize Registration
-    const btnCompleteRegister = document.getElementById('btnCompleteRegister');
-    if (btnCompleteRegister) {
-      btnCompleteRegister.addEventListener('click', () => {
-        this.handleFinalizeRegistration();
-      });
+    // Validate Email
+    if (!email) {
+      this.showError('regEmailError', 'Vui lòng nhập địa chỉ email.');
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.showError('regEmailError', 'Địa chỉ email không hợp lệ.');
+      isValid = false;
     }
 
-    // Modal redirect
-    const btnGoToStudy = document.getElementById('btnGoToStudy');
-    if (btnGoToStudy) {
-      btnGoToStudy.addEventListener('click', () => {
-        this.triggerLoadingAndRedirect('../../../index.html', 1500);
-      });
+    // Validate Password
+    if (!password) {
+      this.showError('passError', 'Vui lòng đặt mật khẩu.');
+      isValid = false;
+    } else if (password.length < 8) {
+      this.showError('passError', 'Mật khẩu phải từ 8 ký tự trở lên.');
+      isValid = false;
     }
 
-    // Intercept navigation links
-    this.bindPageTransitions();
+    // Validate Confirm Password
+    if (password !== confirmPassword) {
+      this.showError('confirmPassError', 'Xác nhận mật khẩu không khớp.');
+      isValid = false;
+    }
 
-    // Reset and mute video if page is shown from bfcache or when hidden
-    window.addEventListener('pageshow', () => {
-      const overlay = document.getElementById('slanguageLoadingOverlay');
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
-      if (overlay) overlay.classList.remove('active');
-      if (video) {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
+    // Validate Terms
+    if (!terms) {
+      this.showToast('Vui lòng đồng ý với Điều khoản của Slanguage.', 'info');
+      isValid = false;
+    }
+
+    if (!isValid) return;
+
+    if (this.btnSubmitRegister) {
+      this.btnSubmitRegister.disabled = true;
+      this.btnSubmitRegister.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo tài khoản...`;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          display_name: fullName,
+          native_language: 'vi',
+          target_language: 'ja',
+          accept_terms: terms,
+        }),
+      });
+
+      const result = await this.readAuthResponse(response);
+
+      // Save user session in localStorage
+      if (result.data.access_token && result.data.refresh_token) {
+        localStorage.setItem('slanguage_access_token', result.data.access_token);
+        localStorage.setItem('slanguage_refresh_token', result.data.refresh_token);
+        localStorage.setItem('slanguage_is_logged_in', 'true');
+        localStorage.setItem('slanguage_user_email', email);
+        localStorage.setItem('slanguage_user_name', fullName);
+        if (result.data.user_id) {
+          localStorage.setItem('slanguage_user_id', result.data.user_id);
+        }
+        localStorage.setItem('slanguage_active_language', 'ja');
+        localStorage.setItem('slanguage_daily_goal', '30');
+        localStorage.setItem('slanguage_user_xp', '100'); // Welcome bonus
+
+        this.showToast('Đăng ký thành công! Đang chuyển đến Bảng điều khiển...', 'success');
+        // Direct redirect to Learner Dashboard
+        this.triggerLoadingAndRedirect('../learner/dashboard/index.html', 1200);
+        return;
       }
-    });
 
-    window.addEventListener('pagehide', () => {
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
-      if (video) {
-        video.pause();
-        video.muted = true;
+      // If email confirmation is required by backend configuration
+      if (result.data.email_confirmation_required) {
+        this.showToast(result.message || 'Vui lòng kiểm tra email để xác thực tài khoản.', 'info');
+        return;
       }
-    });
+
+      // Fallback: If backend returns success without direct tokens
+      this.showToast(result.message || 'Đăng ký thành công!', 'success');
+      setTimeout(() => {
+        const radioSignIn = document.getElementById('showSignIn') as HTMLInputElement;
+        if (radioSignIn) radioSignIn.checked = true;
+      }, 1500);
+
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Đăng ký thất bại. Vui lòng thử lại.';
+      this.showToast(errorMsg, 'info');
+
+      if (errorMsg.toLowerCase().includes('đã được đăng ký') || errorMsg.toLowerCase().includes('already')) {
+        this.showError('regEmailError', 'Email này đã tồn tại trong hệ thống.');
+      } else if (errorMsg.toLowerCase().includes('mật khẩu') || errorMsg.toLowerCase().includes('password')) {
+        this.showError('passError', errorMsg);
+      }
+    } finally {
+      if (this.btnSubmitRegister) {
+        this.btnSubmitRegister.disabled = false;
+        this.btnSubmitRegister.innerHTML = `<span>Xác nhận thông tin</span><i class="fa-solid fa-arrow-right"></i>`;
+      }
+    }
+  }
+
+  private async handleLogin(): Promise<void> {
+    const emailOrUser = this.emailInput?.value.trim() || '';
+    const password = this.passwordInput?.value || '';
+
+    let isValid = true;
+    if (!emailOrUser) {
+      this.showError('emailError', 'Vui lòng nhập email hoặc tên đăng nhập.');
+      isValid = false;
+    }
+    if (!password) {
+      this.showError('passwordError', 'Vui lòng nhập mật khẩu.');
+      isValid = false;
+    }
+
+    if (!isValid) return;
+
+    if (this.submitBtn) {
+      this.submitBtn.disabled = true;
+      this.submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang đăng nhập...`;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: emailOrUser,
+          password: password,
+        }),
+      });
+
+      const result = await this.readAuthResponse(response);
+      const auth = result.data;
+      if (!auth.access_token || !auth.refresh_token) {
+        throw new Error('Backend không trả về thông tin phiên đăng nhập.');
+      }
+
+      localStorage.setItem('slanguage_access_token', auth.access_token);
+      localStorage.setItem('slanguage_refresh_token', auth.refresh_token);
+      localStorage.setItem('slanguage_is_logged_in', 'true');
+      localStorage.setItem('slanguage_user_email', auth.user?.email || emailOrUser);
+      if (auth.user?.id) localStorage.setItem('slanguage_user_id', auth.user.id);
+      if (auth.user?.display_name) {
+        localStorage.setItem('slanguage_user_name', auth.user.display_name);
+      }
+      if (!localStorage.getItem('slanguage_active_language')) {
+        localStorage.setItem('slanguage_active_language', 'ja');
+      }
+      if (!localStorage.getItem('slanguage_daily_goal')) {
+        localStorage.setItem('slanguage_daily_goal', '30');
+      }
+      if (!localStorage.getItem('slanguage_user_xp')) {
+        localStorage.setItem('slanguage_user_xp', '100');
+      }
+
+      this.showToast('Đăng nhập thành công!', 'success');
+      this.triggerLoadingAndRedirect('../learner/dashboard/index.html', 1200);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Đăng nhập thất bại. Vui lòng thử lại.';
+      this.showToast(msg, 'info');
+      this.showError('passwordError', msg);
+    } finally {
+      if (this.submitBtn) {
+        this.submitBtn.disabled = false;
+        this.submitBtn.innerHTML = `<span>Đăng nhập</span><i class="fa-solid fa-arrow-right"></i>`;
+      }
+    }
+  }
+
+  private async readAuthResponse(
+    response: Response
+  ): Promise<AuthEnvelope<StudentAuthData>> {
+    const payload: unknown = await response.json().catch(() => null);
+    if (!response.ok) {
+      const detail =
+        typeof payload === 'object' &&
+        payload !== null &&
+        'detail' in payload &&
+        typeof payload.detail === 'string'
+          ? payload.detail
+          : `Backend trả về lỗi HTTP ${response.status}.`;
+      throw new Error(detail);
+    }
+
+    if (
+      typeof payload !== 'object' ||
+      payload === null ||
+      !('data' in payload) ||
+      typeof payload.data !== 'object' ||
+      payload.data === null
+    ) {
+      throw new Error('Backend trả về dữ liệu không đúng định dạng.');
+    }
+    return payload as AuthEnvelope<StudentAuthData>;
+  }
+
+  private showError(elementId: string, message: string): void {
+    const errEl = document.getElementById(elementId);
+    if (errEl) {
+      errEl.textContent = message;
+      errEl.style.display = 'flex';
+    }
+  }
+
+  private clearError(elementId: string): void {
+    const errEl = document.getElementById(elementId);
+    if (errEl) {
+      errEl.style.display = 'none';
+    }
+  }
+
+  private showToast(message: string, type: 'success' | 'info' = 'success'): void {
+    const toast = document.getElementById('loginToast');
+    if (!toast) return;
+
+    const icon = document.createElement('i');
+    icon.className = type === 'success' ? 'fa-solid fa-circle-check' : 'fa-solid fa-circle-info';
+    icon.style.color = type === 'success' ? '#FFB703' : '#00B4D8';
+    icon.style.fontSize = '1.2rem';
+    toast.replaceChildren(icon, document.createTextNode(` ${message}`));
+
+    toast.style.display = 'flex';
+
+    setTimeout(() => {
+      toast.style.display = 'none';
+    }, 3500);
   }
 
   private bindPageTransitions(): void {
@@ -174,194 +402,17 @@ class SlanguageRegister {
     });
   }
 
-  private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
+  private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1200): void {
     const overlay = document.getElementById('slanguageLoadingOverlay');
-    const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     if (overlay) {
       overlay.classList.add('active');
-      if (video) {
-        video.muted = false;
-        video.volume = 1.0;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            video.muted = true;
-            video.play();
-          });
-        }
-      }
     }
     setTimeout(() => {
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
       if (overlay) {
         overlay.classList.remove('active');
       }
       window.location.href = targetUrl;
     }, duration);
-  }
-
-  private goToStep(step: number): void {
-    this.currentStep = step;
-    if (step === 2) {
-      this.step1Panel?.classList.remove('active');
-      this.step2Panel?.classList.add('active');
-
-      this.stepperItem1?.classList.remove('active');
-      this.stepperItem1?.classList.add('done');
-      this.stepperItem2?.classList.add('active');
-      this.stepLine?.classList.add('active');
-    } else {
-      this.step2Panel?.classList.remove('active');
-      this.step1Panel?.classList.add('active');
-
-      this.stepperItem2?.classList.remove('active');
-      this.stepperItem1?.classList.remove('done');
-      this.stepperItem1?.classList.add('active');
-      this.stepLine?.classList.remove('active');
-    }
-  }
-
-  private checkPasswordStrength(pass: string): void {
-    if (!this.strengthFill || !this.strengthText) return;
-
-    if (!pass) {
-      this.strengthFill.className = 'strength-bar-fill';
-      this.strengthFill.style.width = '0%';
-      this.strengthText.textContent = 'Độ mạnh mật khẩu: Chưa nhập';
-      return;
-    }
-
-    let score = 0;
-    if (pass.length >= 6) score++;
-    if (pass.length >= 9) score++;
-    if (/[A-Z]/.test(pass)) score++;
-    if (/[0-9]/.test(pass)) score++;
-    if (/[^A-Za-z0-9]/.test(pass)) score++;
-
-    if (score <= 2) {
-      this.strengthFill.className = 'strength-bar-fill strength-weak';
-      this.strengthText.innerHTML = '<span style="color: #ff7675;">Độ mạnh: Yếu</span> (Nên thêm chữ hoa, số & ký tự đặc biệt)';
-    } else if (score <= 4) {
-      this.strengthFill.className = 'strength-bar-fill strength-medium';
-      this.strengthText.innerHTML = '<span style="color: #FFB703;">Độ mạnh: Trung bình</span> (Khá an toàn)';
-    } else {
-      this.strengthFill.className = 'strength-bar-fill strength-strong';
-      this.strengthText.innerHTML = '<span style="color: #00B4D8;">Độ mạnh: Rất mạnh</span> (Bảo mật xuất sắc!)';
-    }
-  }
-
-  private registeredFullName: string = '';
-  private registeredEmail: string = '';
-  private registeredPassword: string = '';
-
-  private handleStep1Submit(): void {
-    let isValid = true;
-
-    const fullName = this.fullNameInput?.value.trim() || '';
-    const email = this.emailInput?.value.trim() || '';
-    const password = this.passwordInput?.value || '';
-    const confirmPassword = this.confirmPasswordInput?.value || '';
-    const terms = this.termsCheckbox?.checked || false;
-
-    // Validate Full Name
-    if (!fullName) {
-      this.showError('nameError', 'Vui lòng nhập họ và tên của học viên.');
-      isValid = false;
-    }
-
-    // Validate Email
-    if (!email) {
-      this.showError('emailError', 'Vui lòng nhập địa chỉ email.');
-      isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      this.showError('emailError', 'Địa chỉ email không hợp lệ.');
-      isValid = false;
-    }
-
-    // Validate Password
-    if (!password) {
-      this.showError('passError', 'Vui lòng đặt mật khẩu.');
-      isValid = false;
-    } else if (password.length < 6) {
-      this.showError('passError', 'Mật khẩu phải từ 6 ký tự trở lên.');
-      isValid = false;
-    }
-
-    // Validate Confirm Password
-    if (password !== confirmPassword) {
-      this.showError('confirmPassError', 'Xác nhận mật khẩu không khớp.');
-      isValid = false;
-    }
-
-    // Terms
-    if (!terms) {
-      alert('Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật của Slanguage.');
-      isValid = false;
-    }
-
-    if (!isValid) return;
-
-    // Store verified credentials and proceed to Step 2 (Choose roadmap)
-    this.registeredFullName = fullName;
-    this.registeredEmail = email;
-    this.registeredPassword = password;
-
-    this.goToStep(2);
-  }
-
-  private handleFinalizeRegistration(): void {
-    const fullName = this.registeredFullName || this.fullNameInput?.value.trim() || 'Học viên Slanguage';
-    const email = this.registeredEmail || this.emailInput?.value.trim() || 'hocvien@slanguage.edu.vn';
-    const password = this.registeredPassword || this.passwordInput?.value || '';
-
-    // Save student profile to localStorage
-    const registrationData: LearnerRegistrationData = {
-      targetLanguage: this.selectedLanguage,
-      dailyGoalMinutes: this.selectedGoal,
-      fullName: fullName,
-      email: email,
-      password: password
-    };
-
-    localStorage.setItem('slanguage_user_name', registrationData.fullName);
-    localStorage.setItem('slanguage_user_email', registrationData.email);
-    localStorage.setItem('slanguage_active_language', registrationData.targetLanguage);
-    localStorage.setItem('slanguage_daily_goal', registrationData.dailyGoalMinutes.toString());
-    localStorage.setItem('slanguage_user_xp', '100'); // 100 XP Welcome bonus!
-    localStorage.setItem('slanguage_is_logged_in', 'true');
-
-    // Show celebration modal
-    if (this.successModal) {
-      const summaryMsg = document.getElementById('successSummary');
-      const langNames = { en: 'Tiếng Anh 🇬🇧', ja: 'Tiếng Nhật 🇯🇵', vi: 'Tiếng Việt 🇻🇳' };
-      if (summaryMsg) {
-        summaryMsg.innerHTML = `
-          Chúc mừng <strong>${fullName}</strong>!<br>
-          Bạn đã đăng ký thành công khóa học <strong>${langNames[this.selectedLanguage]}</strong> với mục tiêu <strong>${this.selectedGoal} phút/ngày</strong>.<br>
-          <span style="color: #FFB703; font-weight: 700; margin-top: 8px; display: inline-block;">🎁 Đã tặng +100 XP thưởng tân thủ!</span>
-        `;
-      }
-      this.successModal.style.display = 'flex';
-    }
-  }
-
-  private showError(id: string, msg: string): void {
-    const el = document.getElementById(id);
-    if (el) {
-      el.textContent = msg;
-      el.style.display = 'block';
-    }
-  }
-
-  private clearError(id: string): void {
-    const el = document.getElementById(id);
-    if (el) {
-      el.style.display = 'none';
-    }
   }
 }
 

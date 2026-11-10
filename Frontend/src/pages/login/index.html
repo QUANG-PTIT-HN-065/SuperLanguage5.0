@@ -54,7 +54,7 @@
         <!-- Password -->
         <div class="form-group">
           <div class="input-wrapper">
-            <input type="password" id="regPassword" class="form-input" placeholder="Mật khẩu (từ 6 ký tự) *" required>
+            <input type="password" id="regPassword" class="form-input" placeholder="Mật khẩu (từ 8 ký tự) *" required>
             <i class="fa-solid fa-lock input-icon"></i>
           </div>
           <div class="error-text" id="passError">Mật khẩu quá ngắn.</div>
@@ -106,7 +106,7 @@
               type="text" 
               id="emailOrUser" 
               class="form-input" 
-              placeholder="Email hoặc Tên đăng nhập *" 
+              placeholder="Địa chỉ Email *"
               autocomplete="username"
               required
             >
@@ -167,15 +167,15 @@
         <!-- OVERLAY LEFT (Appears when Sign Up is shown, prompts user to Sign In) -->
         <div class="overlay-panel overlay-left">
           <div class="overlay-brand">
-            <img src="../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
-            <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
+            <div class="sl-header-brand-mark" style="width:44px; height:44px; font-size:1.4rem;">S</div>
+            <span class="overlay-brand-name">Super<span class="brand-language">Language</span><span class="brand-dot">.</span></span>
           </div>
           <h2>Chào mừng trở lại!</h2>
           <p>Để tiếp tục lộ trình học tập và tích lũy XP, vui lòng đăng nhập tài khoản của bạn</p>
           <div class="overlay-lang-chips">
-            <span class="lang-pill"><img src="../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
-            <span class="lang-pill"><img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
-            <span class="lang-pill"><img src="../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
+            <span class="lang-pill">🇬🇧 Tiếng Anh</span>
+            <span class="lang-pill">🇯🇵 Tiếng Nhật</span>
+            <span class="lang-pill">🇻🇳 Tiếng Việt</span>
           </div>
           <label for="showSignIn" class="btn ghost">Đăng Nhập Ngay</label>
         </div>
@@ -183,15 +183,15 @@
         <!-- OVERLAY RIGHT (Appears when Sign In is shown, prompts user to Sign Up) -->
         <div class="overlay-panel overlay-right">
           <div class="overlay-brand">
-            <img src="../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
-            <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
+            <div class="sl-header-brand-mark" style="width:44px; height:44px; font-size:1.4rem;">S</div>
+            <span class="overlay-brand-name">Super<span class="brand-language">Language</span><span class="brand-dot">.</span></span>
           </div>
-          <h2>Khám phá Slanguage!</h2>
+          <h2>Khám phá SuperLanguage!</h2>
           <p>Đăng nhập để khám phá nhiều hơn về khóa học của chúng tôi.</p>
           <div class="overlay-lang-chips">
-            <span class="lang-pill"><img src="../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
-            <span class="lang-pill"><img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
-            <span class="lang-pill"><img src="../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
+            <span class="lang-pill">🇬🇧 Tiếng Anh</span>
+            <span class="lang-pill">🇯🇵 Tiếng Nhật</span>
+            <span class="lang-pill">🇻🇳 Tiếng Việt</span>
           </div>
           <label for="showSignUp" class="btn ghost">Đăng Ký Tài Khoản</label>
         </div>
@@ -209,7 +209,7 @@
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" src="../assets/loading.mp4" autoplay loop playsinline></video>
+        <video id="loadingVideoPlayer" playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>

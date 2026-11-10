@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Khung Làm Bài Trắc Nghiệm</title>
+  
+  <!-- Google Fonts: K2D & Be Vietnam Pro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=K2D:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome Icons 6.5.1 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Be Vietnam Pro"', '"K2D"', 'sans-serif'],
+            brand: ['"K2D"', 'sans-serif']
+          },
+          colors: {
+            brand: {
+              ocean: '#00A3C4',
+              teal: '#0891B2',
+              dark: '#061A28',
+              crimson: '#DC143C',
+              topaz: '#FFB703',
+              gold: '#EAB308'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Option card interactive feedback */
+    .quiz-option-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      user-select: none;
+    }
+    .quiz-option-card:not(.locked):not(.selected):hover {
+      border-color: #0891b2;
+      background-color: #f0fdfa;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 14px rgba(8, 145, 178, 0.12);
+    }
+    .quiz-option-card.selected {
+      border-color: #0891b2 !important;
+      background-color: #ecfeff !important;
+      box-shadow: 0 4px 16px rgba(8, 145, 178, 0.18);
+    }
+    .quiz-option-card.locked {
+      cursor: not-allowed !important;
+      pointer-events: none;
+      filter: grayscale(12%);
+    }
+    .quiz-option-card.locked:hover {
+      transform: none !important;
+      box-shadow: none !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#f8faff] text-[#0f172a] font-sans antialiased">
+
+  <!-- ================= 1. TOP NAVBAR SLANGUAGE ================= -->
+  <header class="w-full bg-gradient-to-r from-[#0096C7] via-[#059669] to-[#EAB308] text-white sticky top-0 z-50 shadow-md">
+    <div class="max-w-[1440px] mx-auto px-6 h-[72px] flex items-center justify-between">
+      
+      <!-- Brand Logo & Main Nav Links -->
+      <div class="flex items-center gap-10">
+        <a href="../home/index.html" class="flex items-center gap-2 decoration-transparent">
+          <span class="text-xs font-semibold text-white/80 self-start -mr-1">L</span>
+          <span class="font-brand font-extrabold text-2xl tracking-tight text-white drop-shadow-sm">S</span>
+          <span class="font-brand font-extrabold text-2xl tracking-tight text-[#DC2626] -ml-1">language</span>
+        </a>
+
+        <nav class="hidden md:flex items-center gap-2">
+          <a href="../home/index.html" class="px-5 py-2.5 rounded-full font-bold text-sm text-[#FFB703] bg-[#06202c] shadow-sm border border-[#FFB703]/30 transition-all">
+            Trang chủ
+          </a>
+          <a href="../roadmap/index.html" class="px-5 py-2.5 rounded-full font-bold text-sm text-white/95 hover:text-white hover:bg-black/15 transition-all">
+            Học tập
+          </a>
+          <a href="../vocabulary/index.html" class="px-5 py-2.5 rounded-full font-bold text-sm text-white/95 hover:text-white hover:bg-black/15 transition-all">
+            Luyện từ vựng
+          </a>
+          <a href="../profile/index.html" class="px-5 py-2.5 rounded-full font-bold text-sm text-white/95 hover:text-white hover:bg-black/15 transition-all">
+            Tiến độ học
+          </a>
+        </nav>
+      </div>
+
+      <!-- Right Header Actions (Lang selector & Auth) -->
+      <div class="flex items-center gap-3">
+        <!-- Language Switcher Capsule -->
+        <button type="button" class="flex items-center gap-2.5 bg-[#072435]/85 hover:bg-[#072435] text-white px-4 py-2 rounded-full font-semibold text-sm border border-white/20 transition shadow-sm">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white/50"></span>
+          <span>Tiếng Nhật</span>
+          <i class="fa-solid fa-chevron-down text-xs text-white/70 ml-1"></i>
+        </button>
+
+        <!-- Auth Actions -->
+        <a href="../login/index.html" class="px-5 py-2 rounded-full font-bold text-sm text-white bg-[#072435]/85 hover:bg-[#072435] border border-white/25 transition">
+          Đăng nhập
+        </a>
+        <a href="../register/index.html" class="px-5 py-2 rounded-full font-bold text-sm text-[#061A28] bg-[#FFB703] hover:bg-[#f59e0b] shadow-md transition">
+          Đăng ký
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= 2. MAIN ASSESSMENT CONTAINER ================= -->
+  <main class="flex-1 max-w-[1240px] w-full mx-auto px-4 py-8 flex flex-col gap-6">
+
+    <!-- TOP PROGRESS BAR & SESSION CONTROLS -->
+    <section class="bg-white rounded-2xl border border-slate-200/90 shadow-sm px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Pause / Exit Button -->
+      <button type="button" id="btnPauseExit" class="flex items-center gap-2 font-bold text-sm text-slate-700 hover:text-slate-900 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition">
+        <i class="fa-solid fa-xmark text-base"></i>
+        <span>Tạm dừng</span>
+      </button>
+
+      <!-- Center Progress Track -->
+      <div class="flex-1 max-w-[540px] flex items-center gap-4">
+        <span id="questionCounterLabel" class="font-bold text-xs uppercase tracking-wider text-slate-700 whitespace-nowrap flex items-center gap-1.5">
+          <i class="fa-regular fa-square-check text-[#0891B2]"></i> CÂU HỎI 04 / 10
+        </span>
+        <div class="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200/60">
+          <div id="quizProgressBar" class="h-full bg-gradient-to-r from-[#0891B2] to-[#10B981] rounded-full transition-all duration-500" style="width: 40%;"></div>
+        </div>
+      </div>
+
+      <!-- Right Indicator Stats -->
+      <div class="flex items-center gap-5 text-sm font-bold text-slate-700">
+        <!-- Timer Countdown -->
+        <div class="flex items-center gap-2 text-slate-600">
+          <i class="fa-regular fa-clock text-slate-400"></i>
+          <span id="quizTimerText" class="font-mono font-bold text-base text-slate-800">12 : 42</span>
+        </div>
+
+        <!-- Hearts Remaining -->
+        <div class="flex items-center gap-1.5 text-rose-500">
+          <i class="fa-solid fa-heart"></i>
+          <span>3/3</span>
+        </div>
+
+        <!-- Experience XP -->
+        <div class="flex items-center gap-1.5 text-amber-500">
+          <i class="fa-solid fa-bolt"></i>
+          <span>+15 XP</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUESTION CONTENT CARD -->
+    <section class="bg-white rounded-3xl border border-slate-200/90 shadow-sm p-8 sm:p-10 flex flex-col gap-6">
+      
+      <!-- Category Tags & Native Audio Action -->
+      <div class="flex flex-wrap items-center justify-between gap-4 pb-2">
+        <div class="flex items-center gap-3">
+          <span class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wide">
+            <i class="fa-solid fa-book-open text-slate-400"></i> Từ vựng & Ngữ cảnh • JLPT N4–N5
+          </span>
+          <span class="px-2.5 py-1 rounded-md bg-slate-100 font-bold text-xs text-slate-600">
+            #ThựcChiến
+          </span>
+        </div>
+
+        <button type="button" id="btnPlayNativeAudio" class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition shadow-sm active:scale-95">
+          <i class="fa-solid fa-volume-high text-[#0891B2]"></i>
+          <span>Nghe mẫu (Tokyo native)</span>
+        </button>
+      </div>
+
+      <!-- Dialogue Context Box -->
+      <div class="rounded-2xl border-l-4 border-l-[#0891B2] bg-gradient-to-r from-cyan-50/70 via-slate-50/50 to-transparent p-6 flex items-start gap-4">
+        <div class="w-10 h-10 rounded-xl bg-[#0891B2] text-white flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5">
+          <i class="fa-solid fa-language text-lg"></i>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <span class="text-[11px] font-extrabold uppercase tracking-wider text-[#0891B2]">Ngữ cảnh hội thoại:</span>
+          <div class="text-xl sm:text-2xl font-bold text-slate-900 tracking-wide font-sans">
+            『 このラーメンはとても<span class="text-[#0891B2] underline underline-offset-4 decoration-2 font-black">美味しい</span>ですね！ 』
+          </div>
+          <span class="text-xs sm:text-sm italic font-medium text-slate-500">
+            "Kono raamen wa totemo oishii desu ne!"
+          </span>
+        </div>
+      </div>
+
+      <!-- Core Question Stem -->
+      <div class="pt-2">
+        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-snug">
+          Ý nghĩa chính xác của từ vựng <span class="text-[#0891B2]">「美味しい」</span> (Oishii) trong câu trên là gì?
+        </h2>
+      </div>
+
+      <!-- 4 Quiz Answer Cards (Option A selected, B/C/D locked) -->
+      <div class="flex flex-col gap-3.5 pt-2">
+        
+        <!-- Option A (Selected & Correct) -->
+        <button type="button" data-option="A" class="quiz-option-card selected w-full text-left p-5 rounded-2xl border-2 border-[#0891B2] bg-cyan-50/60 flex items-center justify-between gap-4 cursor-pointer">
+          <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-xl bg-[#0891B2] text-white font-black text-sm flex items-center justify-center shadow-sm flex-shrink-0">
+              A
+            </div>
+            <div class="flex flex-col">
+              <span class="font-bold text-slate-900 text-sm sm:text-base leading-snug">
+                Ngon miệng, thơm ngon, đậm đà hương vị
+              </span>
+              <span class="text-xs font-semibold text-[#0891B2] flex items-center gap-1 mt-0.5">
+                <i class="fa-regular fa-circle-check"></i> Lựa chọn của bạn
+              </span>
+            </div>
+          </div>
+          <span class="status-icon text-[#0891B2] text-lg font-bold">
+            <i class="fa-solid fa-check"></i>
+          </span>
+        </button>
+
+        <!-- Option B (Locked) -->
+        <button type="button" data-option="B" disabled class="quiz-option-card locked w-full text-left p-5 rounded-2xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm flex items-center justify-center flex-shrink-0">
+              B
+            </div>
+            <span class="font-medium text-slate-600 text-sm sm:text-base">
+              Cay nồng, khó ăn
+            </span>
+          </div>
+          <span class="status-icon text-slate-400 text-sm">
+            <i class="fa-solid fa-lock"></i>
+          </span>
+        </button>
+
+        <!-- Option C (Locked) -->
+        <button type="button" data-option="C" disabled class="quiz-option-card locked w-full text-left p-5 rounded-2xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm flex items-center justify-center flex-shrink-0">
+              C
+            </div>
+            <span class="font-medium text-slate-600 text-sm sm:text-base">
+              Đắt đỏ, xa xỉ
+            </span>
+          </div>
+          <span class="status-icon text-slate-400 text-sm">
+            <i class="fa-solid fa-lock"></i>
+          </span>
+        </button>
+
+        <!-- Option D (Locked) -->
+        <button type="button" data-option="D" disabled class="quiz-option-card locked w-full text-left p-5 rounded-2xl border border-slate-200 bg-slate-50/70 flex items-center justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-xl bg-slate-200 text-slate-500 font-bold text-sm flex items-center justify-center flex-shrink-0">
+              D
+            </div>
+            <span class="font-medium text-slate-600 text-sm sm:text-base">
+              Nguội lạnh, thanh đạm
+            </span>
+          </div>
+          <span class="status-icon text-slate-400 text-sm">
+            <i class="fa-solid fa-lock"></i>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <!-- FEEDBACK & NEXT ACTION BOTTOM BAR -->
+    <section class="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 sm:p-6 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Explanation & Feedback Message -->
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 text-2xl shadow-sm">
+          <i class="fa-regular fa-face-smile"></i>
+        </div>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-base text-slate-900">Chính xác tuyệt đối! 🎉</span>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-700">+10 XP</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-600 font-medium mt-1 leading-relaxed">
+            <strong class="text-slate-900 font-bold">美味しい (Oishii)</strong> là tính từ đuôi -i dùng để khen món ăn thơm ngon, hợp khẩu vị. Trái nghĩa với nó là <strong class="text-slate-800">不味い (Mazui)</strong> (dở, khó ăn).
+          </p>
+        </div>
+      </div>
+
+      <!-- Action CTA Buttons -->
+      <div class="flex items-center gap-3">
+        <button type="button" id="btnListenExplanation" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-2">
+          <i class="fa-solid fa-headphones text-slate-500"></i>
+          <span>Nghe ví dụ</span>
+        </button>
+
+        <button type="button" id="btnReportQuestion" class="px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-2">
+          <i class="fa-regular fa-flag text-slate-500"></i>
+          <span>Báo cáo câu hỏi</span>
+        </button>
+
+        <button type="button" id="btnNextQuestion" class="px-6 py-2.5 rounded-xl bg-[#061A28] hover:bg-slate-900 text-white text-xs sm:text-sm font-bold shadow-md hover:shadow-lg transition flex items-center gap-2">
+          <span>Câu tiếp theo</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= 3. FOOTER SLANGUAGE ================= -->
+  <footer class="w-full bg-[#061A28] text-white mt-auto border-t border-slate-800">
+    <div class="max-w-[1440px] mx-auto px-8 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
+      
+      <!-- Brand info -->
+      <div class="flex flex-col gap-4">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold text-slate-400 self-start -mr-1">L</span>
+          <span class="font-brand font-extrabold text-2xl tracking-tight text-white drop-shadow-sm">S</span>
+          <span class="font-brand font-extrabold text-2xl tracking-tight text-[#DC2626] -ml-1">language</span>
+        </div>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Nền tảng học và luyện giao tiếp ngoại ngữ thực chiến với công nghệ AI phản xạ tự nhiên.
+        </p>
+      </div>
+
+      <!-- Links 1 -->
+      <div class="flex flex-col gap-3">
+        <h4 class="font-bold text-xs uppercase tracking-wider text-slate-200">Chương trình học</h4>
+        <ul class="flex flex-col gap-2 text-xs text-slate-400 font-medium">
+          <li><a href="#" class="hover:text-white transition">Tiếng Nhật Giao Tiếp (JLPT)</a></li>
+          <li><a href="#" class="hover:text-white transition">Tiếng Anh Thực Chiến</a></li>
+          <li><a href="#" class="hover:text-white transition">Luyện Phản Xạ 1–kèm–1 AI</a></li>
+        </ul>
+      </div>
+
+      <!-- Links 2 -->
+      <div class="flex flex-col gap-3">
+        <h4 class="font-bold text-xs uppercase tracking-wider text-slate-200">Tài nguyên</h4>
+        <ul class="flex flex-col gap-2 text-xs text-slate-400 font-medium">
+          <li><a href="#" class="hover:text-white transition">Thư viện mẫu câu bản xứ</a></li>
+          <li><a href="#" class="hover:text-white transition">Bản đồ chuẩn âm vị IPA</a></li>
+          <li><a href="#" class="hover:text-white transition">Kiểm tra đầu vào miễn phí</a></li>
+        </ul>
+      </div>
+
+      <!-- Links 3 -->
+      <div class="flex flex-col gap-3">
+        <h4 class="font-bold text-xs uppercase tracking-wider text-slate-200">Hỗ trợ & Pháp lý</h4>
+        <ul class="flex flex-col gap-2 text-xs text-slate-400 font-medium">
+          <li><a href="#" class="hover:text-white transition">Điều khoản dịch vụ</a></li>
+          <li><a href="#" class="hover:text-white transition">Chính sách bảo mật</a></li>
+          <li><a href="#" class="hover:text-white transition">Liên hệ hỗ trợ: support@slanguage.edu</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Copyright Sub-footer -->
+    <div class="max-w-[1440px] mx-auto px-8 py-5 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-400">
+      <div>&copy; 2025 Slanguage Education Platform. Bảo lưu mọi quyền.</div>
+      <div>Ocean Blue • Topaz • Crimson Design System</div>
+    </div>
+  </footer>
+
+  <!-- Include logic script -->
+  <script src="./home.js"></script>
+</body>
+</html>

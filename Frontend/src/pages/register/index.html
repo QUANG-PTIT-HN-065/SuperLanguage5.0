@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Đăng Ký & Đăng Nhập Học Viên</title>
+  <title>Đăng Ký & Đăng Nhập — SuperLanguage 5.0 AI Academy</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..700;1,9..40,400..700&family=Manrope:wght@500;600;700;800&family=K2D:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../css/register/style.css">
   <script type="module" src="../../types/register/register.ts"></script>
@@ -14,205 +14,309 @@
 <body>
 
   <!-- Toast Notification Container -->
-  <div class="login-toast" id="loginToast"></div>
+  <div class="login-toast" id="loginToast" role="status" aria-live="polite"></div>
 
-  <!-- Radios must be siblings BEFORE .container for the ~ selectors to work (Sign Up checked by default here) -->
-  <input type="radio" name="panel" id="showSignIn" class="panel-radio" aria-label="Hiện form đăng nhập" />
-  <input type="radio" name="panel" id="showSignUp" class="panel-radio" checked aria-label="Hiện form đăng ký" />
+  <!-- Radios must precede the container for CSS sibling selectors to switch panels -->
+  <input type="radio" name="authMode" id="showSignIn" class="panel-radio" aria-label="Chuyển sang form Đăng nhập" />
+  <input type="radio" name="authMode" id="showSignUp" class="panel-radio" checked aria-label="Chuyển sang form Đăng ký" />
 
-  <div class="container" id="container">
-    <!-- Mobile segmented control -->
-    <div class="segmented" role="group" aria-label="Đăng nhập hoặc Đăng ký">
-      <label for="showSignIn">Đăng Nhập</label>
-      <label for="showSignUp">Đăng Ký</label>
-    </div>
+  <!-- Main Authentication Wrapper -->
+  <main class="sl-auth-page">
+    <div class="container" id="container">
 
-    <!-- SIGN UP FORM CONTAINER -->
-    <div class="form-container sign-up-container">
-      <form id="registerForm" novalidate>
-        <h1>Tạo Tài Khoản</h1>
-        <span class="form-subtitle">Điền thông tin để bắt đầu hành trình học ngôn ngữ</span>
+      <!-- LEFT ZONE: SuperLanguage Ecosystem & Value Proposition -->
+      <aside class="auth-showcase-panel" aria-label="Giới thiệu SuperLanguage">
+        <div class="showcase-header">
+          <a href="../../../index.html" class="auth-brand" title="Quay lại trang chủ SuperLanguage">
+            <div class="sl-brand-emblem">SLG</div>
+            <div class="sl-brand-text">
+              <span class="sl-brand-title">Super<span class="brand-highlight">Language</span><span class="sl-brand-version">5.0</span></span>
+              <span class="sl-brand-subtitle">AI ACADEMY</span>
+            </div>
+          </a>
+        </div>
 
-        <!-- Full Name -->
-        <div class="form-group">
-          <div class="input-wrapper">
-            <input type="text" id="regFullName" class="form-input" placeholder="Họ và tên học viên *" required>
-            <i class="fa-solid fa-user input-icon"></i>
+        <div class="showcase-content">
+          <div class="showcase-badge">
+            <span class="badge-dot"></span>
+            <span>Hệ thống học ngoại ngữ thế hệ mới</span>
           </div>
-          <div class="error-text" id="nameError">Vui lòng nhập họ tên.</div>
-        </div>
 
-        <!-- Email -->
-        <div class="form-group">
-          <div class="input-wrapper">
-            <input type="email" id="regEmail" class="form-input" placeholder="Địa chỉ Email *" required>
-            <i class="fa-solid fa-envelope input-icon"></i>
+          <h2 class="showcase-headline">
+            Chinh phục 3 ngôn ngữ<br>
+            <span class="gradient-text">tự nhiên cùng AI Tutor</span>
+          </h2>
+
+          <p class="showcase-desc">
+            Kết nối ba nền văn hóa Việt - Anh - Nhật thông qua mô hình Cây Kỹ Năng thực chiến, Flashcard ngắt quãng SRS 2.0 và luyện phát âm thông minh.
+          </p>
+
+          <!-- 3 Languages Mini Pill List (Đồng bộ với Dashboard) -->
+          <div class="lang-curriculum-chips">
+            <div class="lang-chip">
+              <span class="lang-flag">🇯🇵</span>
+              <div class="lang-info">
+                <strong>Tiếng Nhật</strong>
+                <small>JLPT N5 - N1</small>
+              </div>
+            </div>
+            <div class="lang-chip">
+              <span class="lang-flag">🇬🇧</span>
+              <div class="lang-info">
+                <strong>Tiếng Anh</strong>
+                <small>IELTS • Phản xạ</small>
+              </div>
+            </div>
+            <div class="lang-chip">
+              <span class="lang-flag">🇻🇳</span>
+              <div class="lang-info">
+                <strong>Tiếng Việt</strong>
+                <small>Văn hóa ứng xử</small>
+              </div>
+            </div>
           </div>
-          <div class="error-text" id="regEmailError">Email không hợp lệ.</div>
-        </div>
 
-        <!-- Password -->
-        <div class="form-group">
-          <div class="input-wrapper">
-            <input type="password" id="regPassword" class="form-input" placeholder="Mật khẩu (từ 6 ký tự) *" required>
-            <i class="fa-solid fa-lock input-icon"></i>
+          <!-- Feature Highlights Card -->
+          <div class="showcase-perks">
+            <div class="perk-item">
+              <div class="perk-icon perk-icon-ai">🎙</div>
+              <div class="perk-body">
+                <h4>AI Speaking Coach 24/7</h4>
+                <p>Nhận diện âm điệu và sửa phát âm thời gian thực theo ngữ cảnh bản ngữ.</p>
+              </div>
+            </div>
+            <div class="perk-item">
+              <div class="perk-icon perk-icon-srs">🧠</div>
+              <div class="perk-body">
+                <h4>Kho báu từ vựng SRS 2.0</h4>
+                <p>Thuật toán ngắt quãng Spaced Repetition tối ưu ghi nhớ vào bộ nhớ dài hạn.</p>
+              </div>
+            </div>
+            <div class="perk-item">
+              <div class="perk-icon perk-icon-streak">🔥</div>
+              <div class="perk-body">
+                <h4>Chuỗi học tập Streak & Đấu trường XP</h4>
+                <p>Tích lũy điểm kinh nghiệm, vượt Ải săn quái và đua top Bảng Vàng Kim Cương.</p>
+              </div>
+            </div>
           </div>
-          <div class="error-text" id="passError">Mật khẩu quá ngắn.</div>
         </div>
 
-        <!-- Confirm Password -->
-        <div class="form-group">
-          <div class="input-wrapper">
-            <input type="password" id="regConfirmPassword" class="form-input" placeholder="Xác nhận mật khẩu *" required>
-            <i class="fa-solid fa-shield-halved input-icon"></i>
-          </div>
-          <div class="error-text" id="confirmPassError">Mật khẩu không khớp.</div>
+        <div class="showcase-footer">
+          <span>Slanguage 5.0 — Đồng hành cùng công dân toàn cầu</span>
         </div>
+      </aside>
 
-        <!-- Terms and Conditions -->
-        <label class="checkbox-wrap terms-check">
-          <input type="checkbox" id="regTerms" checked>
-          <span>Tôi đồng ý với <a href="#" style="color: var(--color-mint);">Điều khoản</a> của Slanguage</span>
-        </label>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn-submit" id="btnSubmitRegister">
-          <span>Xác nhận thông tin</span>
-          <i class="fa-solid fa-arrow-right"></i>
-        </button>
-
-        <!-- Back to Home Button -->
-        <a href="../../../index.html" class="btn-back-home" id="btnBackHomeRegister">
-          <i class="fa-solid fa-house"></i>
-          <span>Quay lại Trang chủ</span>
-        </a>
-
-        <div class="mobile-switch-note">
-          Đã có tài khoản? <label for="showSignIn">Đăng nhập</label>
-        </div>
-      </form>
-    </div>
-
-    <!-- SIGN IN FORM CONTAINER -->
-    <div class="form-container sign-in-container">
-      <form id="loginForm" novalidate>
-        <h1>Chào mừng trở lại!</h1>
-        <span class="form-subtitle">Vui lòng đăng nhập với tài khoản học viên của bạn</span>
-
-        <!-- Email/Username -->
-        <div class="form-group">
-          <div class="input-wrapper">
-            <input 
-              type="text" 
-              id="emailOrUser" 
-              class="form-input" 
-              placeholder="Email hoặc Tên đăng nhập *" 
-              autocomplete="username"
-              required
-            >
-            <i class="fa-solid fa-envelope input-icon"></i>
-          </div>
-          <div class="error-text" id="emailError">Vui lòng nhập email hợp lệ.</div>
-        </div>
-
-        <!-- Password -->
-        <div class="form-group">
-          <div class="input-wrapper">
-            <input 
-              type="password" 
-              id="password" 
-              class="form-input" 
-              placeholder="Mật khẩu *" 
-              autocomplete="current-password"
-              required
-            >
-            <i class="fa-solid fa-lock input-icon"></i>
-            <button type="button" class="toggle-password" id="togglePassword" title="Hiện/Ẩn mật khẩu">
-              <i class="fa-solid fa-eye"></i>
-            </button>
-          </div>
-          <div class="error-text" id="passwordError">Mật khẩu không đúng.</div>
-        </div>
-
-        <!-- Options: Remember & Forgot -->
-        <div class="form-options">
-          <label class="checkbox-wrap">
-            <input type="checkbox" id="rememberMe">
-            <span>Ghi nhớ đăng nhập</span>
+      <!-- RIGHT ZONE: Focus Authentication Card -->
+      <section class="auth-form-panel" aria-label="Biểu mẫu tài khoản học viên">
+        
+        <!-- Segmented Tab Switch -->
+        <div class="segmented" role="tablist" aria-label="Lựa chọn đăng nhập hoặc đăng ký">
+          <label for="showSignUp" class="segmented-tab tab-signup" role="tab" id="tabSignUp">
+            <i class="fa-solid fa-user-plus"></i>
+            <span>Đăng Ký</span>
           </label>
-          <a href="../forgot-password/index.html" class="forgot-link" id="forgotPasswordLink">Quên mật khẩu?</a>
+          <label for="showSignIn" class="segmented-tab tab-signin" role="tab" id="tabSignIn">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Đăng Nhập</span>
+          </label>
         </div>
 
-        <!-- Submit Button -->
-        <button type="submit" class="btn-submit" id="btnSubmitLogin">
-          <span>Đăng nhập</span>
-          <i class="fa-solid fa-arrow-right"></i>
-        </button>
+        <!-- ================= FORM 1: SIGN UP ================= -->
+        <div class="form-container sign-up-container">
+          <form id="registerForm" novalidate autocomplete="on">
+            <div class="form-header">
+              <h1>Tạo Tài Khoản Học Viên</h1>
+              <p class="form-subtitle">Điền thông tin để bắt đầu hành trình học tập và nhận +100 XP tân thủ</p>
+            </div>
 
-        <!-- Back to Home Button -->
-        <a href="../../../index.html" class="btn-back-home" id="btnBackHomeLogin">
-          <i class="fa-solid fa-house"></i>
-          <span>Quay lại Trang chủ</span>
-        </a>
+            <!-- Full Name -->
+            <div class="form-group">
+              <label for="regFullName" class="form-label">Họ và tên học viên <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-user input-icon" aria-hidden="true"></i>
+                <input 
+                  type="text" 
+                  id="regFullName" 
+                  class="form-input" 
+                  placeholder="Ví dụ: Nguyễn Nhật Anh" 
+                  autocomplete="name" 
+                  required 
+                />
+              </div>
+              <div class="error-text" id="nameError" role="alert">Vui lòng nhập họ và tên của học viên.</div>
+            </div>
 
-        <div class="mobile-switch-note">
-          Chưa có tài khoản? <label for="showSignUp">Đăng ký ngay</label>
+            <!-- Email -->
+            <div class="form-group">
+              <label for="regEmail" class="form-label">Địa chỉ Email <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-envelope input-icon" aria-hidden="true"></i>
+                <input 
+                  type="email" 
+                  id="regEmail" 
+                  class="form-input" 
+                  placeholder="name@example.com" 
+                  autocomplete="email" 
+                  required 
+                />
+              </div>
+              <div class="error-text" id="regEmailError" role="alert">Địa chỉ email không hợp lệ.</div>
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+              <label for="regPassword" class="form-label">Mật khẩu <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-lock input-icon" aria-hidden="true"></i>
+                <input 
+                  type="password" 
+                  id="regPassword" 
+                  class="form-input" 
+                  placeholder="Từ 8 ký tự trở lên" 
+                  autocomplete="new-password" 
+                  required 
+                />
+              </div>
+              <div class="error-text" id="passError" role="alert">Mật khẩu phải từ 8 ký tự trở lên.</div>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group">
+              <label for="regConfirmPassword" class="form-label">Xác nhận mật khẩu <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-shield-halved input-icon" aria-hidden="true"></i>
+                <input 
+                  type="password" 
+                  id="regConfirmPassword" 
+                  class="form-input" 
+                  placeholder="Nhập lại mật khẩu vừa đặt" 
+                  autocomplete="new-password" 
+                  required 
+                />
+              </div>
+              <div class="error-text" id="confirmPassError" role="alert">Xác nhận mật khẩu không khớp.</div>
+            </div>
+
+            <!-- Terms and Conditions -->
+            <div class="form-options">
+              <label class="checkbox-wrap terms-check" for="regTerms">
+                <input type="checkbox" id="regTerms" checked />
+                <span>Tôi đồng ý với <a href="#" class="accent-link">Điều khoản dịch vụ</a> và <a href="#" class="accent-link">Chính sách bảo mật</a></span>
+              </label>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn-submit" id="btnSubmitRegister">
+              <span>Xác nhận thông tin & Bắt đầu học</span>
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </button>
+
+            <!-- Bottom Action Navigation -->
+            <div class="form-footer-actions">
+              <a href="../../../index.html" class="btn-back-home" id="btnBackHomeRegister">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                <span>Quay lại Trang chủ</span>
+              </a>
+              <div class="switch-mode-note">
+                Đã có tài khoản? <label for="showSignIn" class="switch-link">Đăng nhập ngay</label>
+              </div>
+            </div>
+          </form>
         </div>
-      </form>
+
+        <!-- ================= FORM 2: SIGN IN ================= -->
+        <div class="form-container sign-in-container">
+          <form id="loginForm" novalidate autocomplete="on">
+            <div class="form-header">
+              <h1>Chào Mừng Trở Lại!</h1>
+              <p class="form-subtitle">Đăng nhập tài khoản học viên để duy trì chuỗi Streak và tích lũy XP</p>
+            </div>
+
+            <!-- Email/Username -->
+            <div class="form-group">
+              <label for="emailOrUser" class="form-label">Email hoặc Tên đăng nhập <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-envelope input-icon" aria-hidden="true"></i>
+                <input 
+                  type="text" 
+                  id="emailOrUser" 
+                  class="form-input" 
+                  placeholder="name@example.com hoặc username" 
+                  autocomplete="username" 
+                  required 
+                />
+              </div>
+              <div class="error-text" id="emailError" role="alert">Vui lòng nhập email hoặc tên đăng nhập hợp lệ.</div>
+            </div>
+
+            <!-- Password with Toggle -->
+            <div class="form-group">
+              <label for="password" class="form-label">Mật khẩu <span class="required">*</span></label>
+              <div class="input-wrapper">
+                <i class="fa-solid fa-lock input-icon" aria-hidden="true"></i>
+                <input 
+                  type="password" 
+                  id="password" 
+                  class="form-input" 
+                  placeholder="Nhập mật khẩu tài khoản" 
+                  autocomplete="current-password" 
+                  required 
+                />
+                <button type="button" class="toggle-password" id="togglePassword" title="Hiện hoặc ẩn mật khẩu" aria-label="Hiện hoặc ẩn mật khẩu">
+                  <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+              <div class="error-text" id="passwordError" role="alert">Mật khẩu không chính xác.</div>
+            </div>
+
+            <!-- Options: Remember & Forgot -->
+            <div class="form-options">
+              <label class="checkbox-wrap" for="rememberMe">
+                <input type="checkbox" id="rememberMe" checked />
+                <span>Ghi nhớ đăng nhập</span>
+              </label>
+              <a href="../forgot-password/index.html" class="forgot-link" id="forgotPasswordLink">Quên mật khẩu?</a>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="btn-submit" id="btnSubmitLogin">
+              <span>Đăng nhập vào Bảng điều khiển</span>
+              <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+            </button>
+
+            <!-- Bottom Action Navigation -->
+            <div class="form-footer-actions">
+              <a href="../../../index.html" class="btn-back-home" id="btnBackHomeLogin">
+                <i class="fa-solid fa-house" aria-hidden="true"></i>
+                <span>Quay lại Trang chủ</span>
+              </a>
+              <div class="switch-mode-note">
+                Chưa có tài khoản? <label for="showSignUp" class="switch-link">Đăng ký miễn phí</label>
+              </div>
+            </div>
+          </form>
+        </div>
+
+      </section>
     </div>
 
-    <!-- SLIDING OVERLAY CONTAINER -->
-    <div class="overlay-container">
-      <div class="overlay">
-        <!-- OVERLAY LEFT (Appears when Sign Up is shown, prompts user to Sign In) -->
-        <div class="overlay-panel overlay-left">
-          <div class="overlay-brand">
-            <img src="../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
-            <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
-          </div>
-          <h2>Chào mừng trở lại!</h2>
-          <p>Để tiếp tục lộ trình học tập và tích lũy XP, vui lòng đăng nhập tài khoản của bạn</p>
-          <div class="overlay-lang-chips">
-            <span class="lang-pill">🇬🇧 Tiếng Anh</span>
-            <span class="lang-pill">🇯🇵 Tiếng Nhật</span>
-            <span class="lang-pill">🇻🇳 Tiếng Việt</span>
-          </div>
-          <label for="showSignIn" class="btn ghost">Đăng Nhập Ngay</label>
-        </div>
+    <!-- Bottom Secondary Navigation -->
+    <footer class="auth-bottom-nav">
+      <a href="../../../index.html" class="btn-bottom-home">
+        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        <span>Về trang chủ SuperLanguage</span>
+      </a>
+      <span class="auth-copyright">© 2026 SuperLanguage AI Academy. Nền tảng học ngôn ngữ toàn diện.</span>
+    </footer>
+  </main>
 
-        <!-- OVERLAY RIGHT (Appears when Sign In is shown, prompts user to Sign Up) -->
-        <div class="overlay-panel overlay-right">
-          <div class="overlay-brand">
-            <img src="../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
-            <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
-          </div>
-          <h2>Khám phá Slanguage!</h2>
-          <p>Đăng nhập để khám phá nhiều hơn về khóa học của chúng tôi.</p>
-          <div class="overlay-lang-chips">
-            <span class="lang-pill">🇬🇧 Tiếng Anh</span>
-            <span class="lang-pill">🇯🇵 Tiếng Nhật</span>
-            <span class="lang-pill">🇻🇳 Tiếng Việt</span>
-          </div>
-          <label for="showSignUp" class="btn ghost">Đăng Ký Tài Khoản</label>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div style="text-align: center; margin-top: 18px;">
-    <a href="../../../index.html" class="btn-bottom-home">
-      <i class="fa-solid fa-arrow-left"></i> Quay lại Trang chủ
-    </a>
-  </div>
-
-  <!-- GLOBAL TRANSITION LOADING SCREEN -->
-  <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
+  <!-- Global Transition Loading Screen Overlay -->
+  <div id="slanguageLoadingOverlay" class="loading-screen-overlay" aria-hidden="true">
     <div class="loading-content-box">
-      <div class="video-frame">
-        <video id="loadingVideoPlayer" src="../assets/loading.mp4" autoplay loop playsinline></video>
-      </div>
+      <div class="loading-spinner-ring"></div>
       <div class="loading-text-wrap">
-        <span class="loading-title">Đang tải, hãy đợi...</span>
+        <span class="loading-title">Đang xác thực & đồng bộ phiên học...</span>
       </div>
     </div>
   </div>
