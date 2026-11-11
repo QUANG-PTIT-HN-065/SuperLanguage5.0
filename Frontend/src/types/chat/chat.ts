@@ -8,7 +8,17 @@ interface ApiResponse<T> {
 interface Conversation {
   id: string;
   title: string;
-  language_code: "English" | "Japanese";
+  language_code: "English" | "Japanese" | "en" | "ja";
+  created_at: string | null;
+  updated_at?: string | null;
+}
+
+interface ConversationMessage {
+  id: string;
+  conversation_id: string;
+  sender_type: "user" | "ai";
+  content: string;
+  ai_feedback: string | null;
   created_at: string | null;
 }
 
@@ -19,35 +29,45 @@ interface ChatMessage {
   ai_feedback: string | null;
 }
 
-interface SpeechRecognitionAlternativeLike {
-  transcript: string;
+interface SpeechRecognitionAlternative {
+  readonly transcript: string;
 }
 
-interface SpeechRecognitionResultLike {
+interface SpeechRecognitionResult extends ArrayLike<SpeechRecognitionAlternative> {
   readonly isFinal: boolean;
-  readonly length: number;
-  readonly [index: number]: SpeechRecognitionAlternativeLike;
 }
 
-interface SpeechRecognitionEventLike {
+interface SpeechRecognitionResultList extends ArrayLike<SpeechRecognitionResult> {}
+
+interface SpeechRecognitionEvent extends Event {
   readonly resultIndex: number;
-  readonly results: ArrayLike<SpeechRecognitionResultLike>;
+  readonly results: SpeechRecognitionResultList;
 }
 
-interface SpeechRecognitionLike {
+interface SpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+}
+
+interface SpeechRecognition extends EventTarget {
   lang: string;
   continuous: boolean;
   interimResults: boolean;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: ((event: { error: string }) => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
   onend: (() => void) | null;
   start(): void;
   stop(): void;
 }
 
-interface SpeechRecognitionWindow extends Window {
-  SpeechRecognition?: new () => SpeechRecognitionLike;
-  webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognition;
+}
+
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
 }
 
 const API_BASE_URL = (
@@ -62,22 +82,24 @@ const messageInput = document.getElementById("messageInput");
 const sendButton = document.getElementById("sendButton");
 const conversationForm = document.getElementById("conversationForm");
 const languageSelect = document.getElementById("languageSelect");
+const topicPreset = document.getElementById("topicPreset");
 const topicInput = document.getElementById("topicInput");
 const toastElement = document.getElementById("toast");
 const authOverlay = document.getElementById("authOverlay");
+const historyList = document.getElementById("conversationHistory");
+const historyStatus = document.getElementById("historyStatus");
+const assistantStatus = document.getElementById("assistantStatus");
+const voiceButton = document.getElementById("voiceButton");
+const voiceButtonLabel = voiceButton?.querySelector("span");
+const voiceStatus = document.getElementById("voiceStatus");
 
 let activeConversation: Conversation | null = null;
-let toastTimer = 0;
-let speechRecognition: SpeechRecognitionLike | null = null;
-let microphoneStream: MediaStream | null = null;
-let mediaRecorder: MediaRecorder | null = null;
-let recordedAudioChunks: BlobPart[] = [];
-let pendingAudio: Blob | null = null;
-let pendingAudioUrl: string | null = null;
-let finalTranscript = "";
+let conversationHistory: Conversation[] = [];
+let isSendingMessage = false;
+let isLoadingConversation = false;
 let isVoiceRecording = false;
-let recordingTimer = 0;
-let recordingSeconds = 0;
+let speechRecognition: SpeechRecognition | null = null;
+let toastTimer = 0;
 
 class ChatApiError extends Error {
   constructor(message: string, readonly status: number) {
@@ -147,25 +169,22 @@ async function apiRequest<T>(
   allowRefresh = true,
 ): Promise<ApiResponse<T>> {
   const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-  if (!accessToken) throw new ChatApiError("Vui lòng đăng nhập để sử dụng AI Conversation.", 401);
 
+  const headers = new Headers({ "Content-Type": "application/json" });
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers,
     body: JSON.stringify(body),
   });
 
-  if (response.status === 401 && allowRefresh) {
+  if (response.status === 401 && allowRefresh && accessToken) {
     const refreshedToken = await refreshAccessToken();
+    const retryHeaders = new Headers({ "Content-Type": "application/json" });
+    retryHeaders.set("Authorization", `Bearer ${refreshedToken}`);
     const retry = await fetch(`${API_BASE_URL}${path}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${refreshedToken}`,
-      },
+      headers: retryHeaders,
       body: JSON.stringify(body),
     });
     return parseResponse<T>(retry);
@@ -173,23 +192,52 @@ async function apiRequest<T>(
   return parseResponse<T>(response);
 }
 
-function addMessage(role: "user" | "assistant", content: string, feedback?: string | null): HTMLElement {
+async function apiGet<T>(path: string, allowRefresh = true): Promise<ApiResponse<T>> {
+  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!accessToken) throw new ChatApiError("Vui lòng đăng nhập để sử dụng AI Conversation.", 401);
+
+  const send = (token: string) => fetch(`${API_BASE_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  let response = await send(accessToken);
+  if (response.status === 401 && allowRefresh) {
+    response = await send(await refreshAccessToken());
+  }
+  return parseResponse<T>(response);
+}
+
+function addMessage(
+  role: "user" | "assistant",
+  content: string,
+  feedback?: string | null,
+  createdAt?: string | null,
+): HTMLElement {
   if (!(messagesElement instanceof HTMLElement)) throw new Error("Không tìm thấy vùng hiển thị tin nhắn.");
   document.getElementById("welcomeCard")?.remove();
 
   const row = document.createElement("div");
   row.className = `message-row ${role}`;
 
-  if (role === "assistant") {
-    const avatar = document.createElement("div");
-    avatar.className = "message-avatar";
-    avatar.textContent = "✦";
-    avatar.setAttribute("aria-hidden", "true");
-    row.append(avatar);
-  }
+  const avatar = document.createElement("div");
+  avatar.className = `message-avatar ${role === "user" ? "user-avatar" : "assistant-avatar"}`;
+  avatar.textContent =
+    role === "assistant"
+      ? "✦"
+      : (localStorage.getItem("slanguage_user_name") || "B").trim().slice(0, 1).toUpperCase();
+  avatar.setAttribute("aria-hidden", "true");
+  row.append(avatar);
 
   const contentWrap = document.createElement("div");
   contentWrap.className = "message-content";
+  const sender = document.createElement("span");
+  sender.className = "message-sender";
+  sender.textContent =
+    role === "user"
+      ? localStorage.getItem(ACCESS_TOKEN_KEY)
+        ? localStorage.getItem("slanguage_user_name") || "Bạn"
+        : "Bạn"
+      : "Gia sư AI";
+  contentWrap.append(sender);
   const bubble = document.createElement("div");
   bubble.className = "message-bubble";
   bubble.textContent = content;
@@ -201,7 +249,7 @@ function addMessage(role: "user" | "assistant", content: string, feedback?: stri
     time.textContent = new Intl.DateTimeFormat("vi-VN", {
       hour: "2-digit",
       minute: "2-digit",
-    }).format(new Date());
+    }).format(createdAt ? new Date(createdAt) : new Date());
     const speakButton = document.createElement("button");
     speakButton.className = "speak-message-button";
     speakButton.type = "button";
@@ -231,268 +279,302 @@ function addMessage(role: "user" | "assistant", content: string, feedback?: stri
 
 function speakText(text: string): void {
   if (!("speechSynthesis" in window)) {
-    showToast("Trình duyệt này chưa hỗ trợ phát giọng nói.");
+    showToast("Trình duyệt không hỗ trợ phát giọng nói.");
     return;
   }
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = languageSelect instanceof HTMLSelectElement && languageSelect.value === "Japanese"
-    ? "ja-JP"
-    : "en-US";
-  utterance.rate = 0.92;
+
   window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  const languageCode = activeConversation?.language_code;
+  utterance.lang =
+    languageCode === "Japanese" || languageCode === "ja" ? "ja-JP" : "en-US";
   window.speechSynthesis.speak(utterance);
 }
 
-function setComposerEnabled(enabled: boolean): void {
-  if (messageInput instanceof HTMLTextAreaElement) messageInput.disabled = !enabled;
-  if (sendButton instanceof HTMLButtonElement) sendButton.disabled = !enabled;
-  const recordButton = document.getElementById("recordButton");
-  if (recordButton instanceof HTMLButtonElement) recordButton.disabled = !enabled;
+function updateVoiceControls(recording: boolean, message: string): void {
+  isVoiceRecording = recording;
+  if (voiceButton instanceof HTMLButtonElement) {
+    voiceButton.setAttribute("aria-pressed", String(recording));
+    voiceButton.classList.toggle("is-recording", recording);
+    voiceButton.disabled = recording
+      ? false
+      : !activeConversation || isSendingMessage || isLoadingConversation;
+    if (voiceButtonLabel) {
+      voiceButtonLabel.textContent = recording ? "Dừng nói" : "Nói với AI";
+    }
+    voiceButton.setAttribute(
+      "aria-label",
+      recording ? "Dừng nhận giọng nói" : "Bắt đầu nói với AI",
+    );
+  }
+  if (voiceStatus instanceof HTMLElement) voiceStatus.textContent = message;
+  if (messageInput instanceof HTMLTextAreaElement) {
+    messageInput.disabled = recording || !activeConversation;
+  }
+  if (sendButton instanceof HTMLButtonElement) {
+    sendButton.disabled = recording || !activeConversation || isSendingMessage;
+  }
 }
 
-function updateVoiceStatus(message: string): void {
-  const status = document.getElementById("recordingStatus");
-  const hint = document.getElementById("visualizerHint");
-  if (status) status.textContent = message;
-  if (hint) hint.textContent = message;
-}
-
-function finishVoicePractice(): void {
-  const transcript = finalTranscript.trim();
-  finalTranscript = "";
-  if (!transcript || !(messageInput instanceof HTMLTextAreaElement)) {
-    updateVoiceStatus("Chưa nhận được giọng nói. Hãy thử nói rõ hơn hoặc nhập tin nhắn.");
+function startVoiceConversation(): void {
+  if (isVoiceRecording) {
+    speechRecognition?.stop();
     return;
   }
-
-  messageInput.value = transcript;
-  void sendMessage(undefined, true);
-}
-
-async function startVoicePractice(): Promise<void> {
   if (!activeConversation) {
-    showToast("Hãy bắt đầu buổi luyện tập trước khi nói với AI.");
-    return;
-  }
-  const speechWindow = window as SpeechRecognitionWindow;
-  const SpeechRecognitionConstructor =
-    speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
-  if (!SpeechRecognitionConstructor) {
-    updateVoiceStatus("Trình duyệt chưa hỗ trợ nhận diện giọng nói. Bạn vẫn có thể nhập tin nhắn.");
-    showToast("Hãy dùng Chrome hoặc Edge để luyện nói bằng giọng nói.");
-    return;
-  }
-  if (!navigator.mediaDevices?.getUserMedia) {
-    updateVoiceStatus("Không thể truy cập micro. Hãy mở trang bằng HTTPS hoặc localhost.");
-    showToast("Trình duyệt không cấp quyền truy cập micro.");
+    showToast("Hãy bắt đầu hoặc mở một hội thoại trước khi nói với AI.");
     return;
   }
 
-  const recordButton = document.getElementById("recordButton");
-  const stopButton = document.getElementById("stopRecordingButton");
-  const uploadButton = document.getElementById("uploadAudioButton");
-  const audioPreview = document.getElementById("audioPreview");
-  try {
-    microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    finalTranscript = "";
-    pendingAudio = null;
-    recordedAudioChunks = [];
-    if (pendingAudioUrl) URL.revokeObjectURL(pendingAudioUrl);
-    pendingAudioUrl = null;
-    if (audioPreview instanceof HTMLAudioElement) {
-      audioPreview.pause();
-      audioPreview.removeAttribute("src");
-      audioPreview.hidden = true;
-    }
-    if (uploadButton instanceof HTMLButtonElement) uploadButton.disabled = true;
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) {
+    showToast("Trình duyệt chưa hỗ trợ nhận diện giọng nói. Hãy dùng Chrome hoặc Edge mới nhất.");
+    return;
+  }
 
-    if (typeof MediaRecorder !== "undefined") {
-      const supportedType = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]
-        .find((type) => MediaRecorder.isTypeSupported(type));
-      mediaRecorder = supportedType
-        ? new MediaRecorder(microphoneStream, { mimeType: supportedType })
-        : new MediaRecorder(microphoneStream);
-      mediaRecorder.addEventListener("dataavailable", (event: BlobEvent) => {
-        if (event.data.size > 0) recordedAudioChunks.push(event.data);
-      });
-      mediaRecorder.addEventListener("stop", () => {
-        const recording = new Blob(recordedAudioChunks, {
-          type: mediaRecorder?.mimeType || "audio/webm",
-        });
-        if (recording.size > 0) {
-          pendingAudio = recording;
-          pendingAudioUrl = URL.createObjectURL(recording);
-          if (audioPreview instanceof HTMLAudioElement) {
-            audioPreview.src = pendingAudioUrl;
-            audioPreview.hidden = false;
-          }
-          if (uploadButton instanceof HTMLButtonElement) uploadButton.disabled = false;
-        }
-        microphoneStream?.getTracks().forEach((track) => track.stop());
-        microphoneStream = null;
-      });
-      mediaRecorder.start();
-    }
-
-    speechRecognition = new SpeechRecognitionConstructor();
-    speechRecognition.lang = languageSelect instanceof HTMLSelectElement && languageSelect.value === "Japanese"
+  const recognition = new Recognition();
+  speechRecognition = recognition;
+  recognition.lang =
+    activeConversation.language_code === "Japanese" ||
+    activeConversation.language_code === "ja"
       ? "ja-JP"
       : "en-US";
-    speechRecognition.continuous = true;
-    speechRecognition.interimResults = true;
-    speechRecognition.onresult = (event) => {
-      let interim = "";
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const result = event.results[index];
-        const phrase = result[0]?.transcript || "";
-        if (result.isFinal) finalTranscript += `${phrase} `;
-        else interim += phrase;
-      }
-      updateVoiceStatus(interim || "Đang nghe… hãy nói tự nhiên bằng ngôn ngữ đã chọn.");
-    };
-    speechRecognition.onerror = (event) => {
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        stopVoicePractice();
-        showToast("Bạn chưa cấp quyền micro cho trang web.");
-      } else if (event.error !== "no-speech" && event.error !== "aborted") {
-        showToast(`Không nhận diện được giọng nói (${event.error}).`);
-      }
-    };
-    speechRecognition.onend = () => {
-      if (isVoiceRecording) {
-        window.setTimeout(() => {
-          if (isVoiceRecording) {
-            try {
-              speechRecognition?.start();
-            } catch {
-              updateVoiceStatus("Đang khởi động lại nhận diện giọng nói…");
-            }
-          }
-        }, 200);
-        return;
-      }
-      finishVoicePractice();
-    };
+  recognition.continuous = false;
+  recognition.interimResults = true;
 
-    isVoiceRecording = true;
-    recordingSeconds = 0;
-    const timer = document.getElementById("recordingTimer");
-    if (timer) timer.textContent = "00:00";
-    recordingTimer = window.setInterval(() => {
-      recordingSeconds += 1;
-      if (timer) {
-        const minutes = Math.floor(recordingSeconds / 60).toString().padStart(2, "0");
-        const seconds = (recordingSeconds % 60).toString().padStart(2, "0");
-        timer.textContent = `${minutes}:${seconds}`;
-      }
-      if (recordingSeconds >= 60) stopVoicePractice();
-    }, 1000);
-    if (recordButton instanceof HTMLButtonElement) {
-      recordButton.disabled = true;
-      recordButton.classList.add("recording");
-      recordButton.setAttribute("aria-pressed", "true");
+  const originalDraft =
+    messageInput instanceof HTMLTextAreaElement ? messageInput.value.trim() : "";
+  let transcript = "";
+  let recognitionMessage = "Nhấn “Nói với AI” rồi nói bằng ngôn ngữ đang luyện tập.";
+  recognition.onresult = (event) => {
+    const finalText: string[] = [];
+    const interimText: string[] = [];
+    for (let index = 0; index < event.results.length; index += 1) {
+      const result = event.results[index];
+      if (!result) continue;
+      const text = result[0]?.transcript.trim();
+      if (!text) continue;
+      (result.isFinal ? finalText : interimText).push(text);
     }
-    if (stopButton instanceof HTMLButtonElement) stopButton.disabled = false;
-    document.querySelector(".room-frame")?.classList.add("is-recording");
-    const roomStatus = document.getElementById("roomStatus");
-    if (roomStatus) roomStatus.textContent = "Đang nghe";
-    updateVoiceStatus("Đang nghe… hãy nói tự nhiên bằng ngôn ngữ đã chọn.");
-    speechRecognition.start();
-  } catch (error) {
-    isVoiceRecording = false;
-    window.clearInterval(recordingTimer);
-    recordingTimer = 0;
-    if (mediaRecorder?.state === "recording") mediaRecorder.stop();
-    microphoneStream?.getTracks().forEach((track) => track.stop());
-    microphoneStream = null;
-    if (recordButton instanceof HTMLButtonElement) {
-      recordButton.disabled = false;
-      recordButton.classList.remove("recording");
-      recordButton.setAttribute("aria-pressed", "false");
+    transcript = finalText.join(" ");
+
+    if (messageInput instanceof HTMLTextAreaElement) {
+      const currentTranscript = [...finalText, ...interimText].join(" ").trim();
+      messageInput.value = [originalDraft, currentTranscript].filter(Boolean).join(" ");
     }
-    if (stopButton instanceof HTMLButtonElement) stopButton.disabled = true;
-    document.querySelector(".room-frame")?.classList.remove("is-recording");
-    const message = error instanceof Error && error.name === "NotAllowedError"
-      ? "Bạn chưa cấp quyền micro cho trang web."
-      : "Không thể bắt đầu ghi âm. Hãy kiểm tra micro rồi thử lại.";
-    updateVoiceStatus(message);
+    if (voiceStatus instanceof HTMLElement) {
+      const currentTranscript = [...finalText, ...interimText].join(" ");
+      voiceStatus.textContent = currentTranscript
+        ? `Đang nghe: ${currentTranscript}`
+        : "Đang nghe bạn nói...";
+    }
+  };
+  recognition.onerror = (event) => {
+    if (event.error === "aborted") return;
+    if (event.error === "no-speech") {
+      recognitionMessage = "Chưa nhận được giọng nói. Hãy thử nói lại.";
+      return;
+    }
+    const message =
+      event.error === "not-allowed" || event.error === "service-not-allowed"
+        ? "Bạn cần cấp quyền micro cho trình duyệt để nói với AI."
+        : `Không thể nhận diện giọng nói (${event.error}). Vui lòng thử lại.`;
+    recognitionMessage = message;
     showToast(message);
-  }
-}
-
-function stopVoicePractice(): void {
-  if (!isVoiceRecording) return;
-  isVoiceRecording = false;
-  window.clearInterval(recordingTimer);
-  recordingTimer = 0;
-  try {
-    speechRecognition?.stop();
-  } catch {
-    finishVoicePractice();
-  }
-  if (mediaRecorder?.state === "recording") mediaRecorder.stop();
-  else {
-    microphoneStream?.getTracks().forEach((track) => track.stop());
-    microphoneStream = null;
-  }
-  const recordButton = document.getElementById("recordButton");
-  const stopButton = document.getElementById("stopRecordingButton");
-  if (recordButton instanceof HTMLButtonElement) {
-    recordButton.disabled = !activeConversation;
-    recordButton.classList.remove("recording");
-    recordButton.setAttribute("aria-pressed", "false");
-  }
-  if (stopButton instanceof HTMLButtonElement) stopButton.disabled = true;
-  document.querySelector(".room-frame")?.classList.remove("is-recording");
-  const roomStatus = document.getElementById("roomStatus");
-  if (roomStatus) roomStatus.textContent = "Chờ bắt đầu";
-  updateVoiceStatus("Đã dừng micro. Tin nhắn nhận diện sẽ được gửi cho AI.");
-}
-
-async function uploadAudioRecording(): Promise<void> {
-  if (!activeConversation || !pendingAudio) return;
-  const button = document.getElementById("uploadAudioButton");
-  if (button instanceof HTMLButtonElement) button.disabled = true;
-
-  try {
-    const formData = new FormData();
-    formData.append("conversation_id", activeConversation.id);
-    formData.append("audio", pendingAudio, "voice-recording");
-    const send = (token: string) => fetch(`${API_BASE_URL}/api/v1/chat-ai/upload-audio`, {
-      method: "POST",
-      headers: {       Authorization: `Bearer ${accessToken}`, },
-      body: formData,
-    });
-
-    let accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-    if (!accessToken) throw new ChatApiError("Vui lòng đăng nhập để tải bản ghi lên.", 401);
-    let response = await send(accessToken);
-    if (response.status === 401) {
-      accessToken = await refreshAccessToken();
-      response = await send(accessToken);
+  };
+  recognition.onend = () => {
+    speechRecognition = null;
+    updateVoiceControls(
+      false,
+      transcript ? "Đã nhận dạng lời nói; đang gửi tới AI..." : recognitionMessage,
+    );
+    const finalMessage = [originalDraft, transcript].filter(Boolean).join(" ").trim();
+    if (transcript && messageInput instanceof HTMLTextAreaElement) {
+      messageInput.value = finalMessage;
+      void sendMessage(undefined, true);
+    } else if (messageInput instanceof HTMLTextAreaElement) {
+      messageInput.focus();
     }
-    await parseResponse<{ storage_path: string }>(response);
-    pendingAudio = null;
-    showToast("Đã tải bản ghi âm lên hội thoại.");
-    updateVoiceStatus("Bản ghi đã được lưu vào hội thoại.");
+  };
+
+  updateVoiceControls(true, "Đang nghe bạn nói...");
+  try {
+    recognition.start();
   } catch (error) {
-    if (button instanceof HTMLButtonElement) button.disabled = false;
-    showToast(error instanceof Error ? error.message : "Không thể tải bản ghi lên.");
+    speechRecognition = null;
+    updateVoiceControls(false, "Không thể bật micro. Hãy kiểm tra quyền truy cập rồi thử lại.");
+    showToast(error instanceof Error ? error.message : "Không thể bật micro.");
   }
+}
+
+function renderConversationHistory(): void {
+  if (!(historyList instanceof HTMLElement) || !(historyStatus instanceof HTMLElement)) return;
+  historyList.replaceChildren();
+
+  if (conversationHistory.length === 0) {
+    historyStatus.textContent = "Chưa có hội thoại nào được lưu.";
+    return;
+  }
+
+  historyStatus.textContent = `${conversationHistory.length} hội thoại gần đây`;
+  for (const conversation of conversationHistory) {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "history-item";
+    if (conversation.id === activeConversation?.id) {
+      item.setAttribute("aria-current", "true");
+    }
+
+    const title = document.createElement("strong");
+    title.textContent = conversation.title;
+    const details = document.createElement("span");
+    const updatedAt = conversation.updated_at || conversation.created_at;
+    const date = updatedAt ? new Date(updatedAt) : null;
+    const formattedDate =
+      date && !Number.isNaN(date.getTime())
+        ? new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(date)
+        : "Chưa có thời gian";
+    details.textContent = `${conversation.language_code === "Japanese" || conversation.language_code === "ja" ? "Tiếng Nhật" : "Tiếng Anh"} · ${formattedDate}`;
+    item.append(title, details);
+    item.addEventListener("click", () => void openConversation(conversation));
+    historyList.append(item);
+  }
+}
+
+async function loadConversationHistory(showError = false): Promise<void> {
+  if (!(historyStatus instanceof HTMLElement)) return;
+  if (!localStorage.getItem(ACCESS_TOKEN_KEY)) {
+    conversationHistory = [];
+    renderConversationHistory();
+    historyStatus.textContent = "Đăng nhập để xem và lưu lịch sử hội thoại.";
+    return;
+  }
+
+  historyStatus.textContent = "Đang tải lịch sử...";
+  try {
+    const result = await apiGet<Conversation[]>("/api/v1/chat-ai/conversations");
+    if (!Array.isArray(result.data)) {
+      throw new Error("Backend trả về danh sách hội thoại không hợp lệ.");
+    }
+    conversationHistory = result.data;
+    renderConversationHistory();
+  } catch (error) {
+    historyStatus.textContent =
+      error instanceof ChatApiError && error.status === 401
+        ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+        : "Không thể tải lịch sử hội thoại.";
+    if (error instanceof ChatApiError && error.status === 401) {
+      const connectionStatus = document.getElementById("connectionStatus");
+      const connectionLabel = document.getElementById("connectionLabel");
+      if (connectionStatus) {
+        connectionStatus.classList.remove("is-authenticated");
+        connectionStatus.classList.add("is-guest");
+        if (connectionLabel) connectionLabel.textContent = "Phiên đăng nhập hết hạn";
+      }
+    }
+    if (showError) {
+      showToast(error instanceof Error ? error.message : "Không thể tải lịch sử hội thoại.");
+    }
+  }
+}
+
+async function openConversation(conversation: Conversation): Promise<void> {
+  if (isSendingMessage || isLoadingConversation || isVoiceRecording) {
+    showToast("Hãy đợi thao tác hiện tại hoàn tất trước khi mở hội thoại khác.");
+    return;
+  }
+
+  isLoadingConversation = true;
+  setComposerEnabled(false);
+  if (historyStatus instanceof HTMLElement) historyStatus.textContent = "Đang mở hội thoại...";
+  try {
+    const result = await apiGet<ConversationMessage[]>(
+      `/api/v1/chat-ai/conversations/${encodeURIComponent(conversation.id)}/messages?limit=1000&offset=0`,
+    );
+    if (!Array.isArray(result.data)) {
+      throw new Error("Backend trả về danh sách tin nhắn không hợp lệ.");
+    }
+
+    activeConversation = conversation;
+    const title = document.getElementById("conversationTitle");
+    const language = document.getElementById("conversationLanguage");
+    if (title) title.textContent = conversation.title;
+    if (language) {
+      language.textContent =
+        conversation.language_code === "Japanese" || conversation.language_code === "ja"
+          ? "Luyện tập bằng tiếng Nhật"
+          : "Luyện tập bằng tiếng Anh";
+    }
+    const roomStatus = document.getElementById("roomStatusBadge");
+    if (roomStatus) roomStatus.textContent = "ĐANG LUYỆN TẬP";
+    if (messagesElement instanceof HTMLElement) {
+      messagesElement.replaceChildren();
+      if (result.data.length === 0) {
+        const welcome = document.createElement("div");
+        welcome.className = "welcome-card";
+        welcome.id = "welcomeCard";
+        const heading = document.createElement("h2");
+        heading.textContent = "Hội thoại chưa có tin nhắn";
+        const description = document.createElement("p");
+        description.textContent = "Gửi tin nhắn đầu tiên để bắt đầu luyện tập.";
+        welcome.append(heading, description);
+        messagesElement.append(welcome);
+      } else {
+        for (const message of result.data) {
+          addMessage(
+            message.sender_type === "ai" ? "assistant" : "user",
+            message.content,
+            message.ai_feedback,
+            message.created_at,
+          );
+        }
+      }
+    }
+    setComposerEnabled(true);
+    renderConversationHistory();
+    if (messageInput instanceof HTMLTextAreaElement) messageInput.focus();
+  } catch (error) {
+    setComposerEnabled(Boolean(activeConversation));
+    if (historyStatus instanceof HTMLElement) {
+      historyStatus.textContent = "Không thể mở hội thoại.";
+    }
+    showToast(error instanceof Error ? error.message : "Không thể mở hội thoại.");
+  } finally {
+    isLoadingConversation = false;
+    setComposerEnabled(Boolean(activeConversation));
+  }
+}
+
+function setComposerEnabled(enabled: boolean): void {
+  updateVoiceControls(false, "Nhấn “Nói với AI” rồi nói bằng ngôn ngữ đang luyện tập.");
+  if (messageInput instanceof HTMLTextAreaElement) messageInput.disabled = !enabled;
+  if (sendButton instanceof HTMLButtonElement) sendButton.disabled = !enabled;
 }
 
 async function startConversation(event?: SubmitEvent): Promise<void> {
   event?.preventDefault();
+  if (isSendingMessage || isLoadingConversation || isVoiceRecording) {
+    showToast("Hãy đợi đến khi lượt luyện tập hiện tại kết thúc.");
+    return;
+  }
   if (!(languageSelect instanceof HTMLSelectElement) || !(topicInput instanceof HTMLInputElement)) return;
+  const topic = topicInput.value.trim() ||
+    (topicPreset instanceof HTMLSelectElement ? topicPreset.value : "");
+  if (!topic) {
+    showToast("Hãy chọn hoặc nhập chủ đề trước khi bắt đầu.");
+    topicPreset instanceof HTMLSelectElement && topicPreset.focus();
+    return;
+  }
 
   const button = conversationForm?.querySelector<HTMLButtonElement>("button[type=submit]");
   if (button) button.disabled = true;
   try {
     const result = await apiRequest<Conversation>("/api/v1/chat-ai/conversations", {
-      title: topicInput.value.trim(),
+      title: topic,
       language_code: languageSelect.value,
     });
     activeConversation = result.data;
+    toastElement?.classList.remove("visible");
     const title = document.getElementById("conversationTitle");
     const language = document.getElementById("conversationLanguage");
     if (title) title.textContent = activeConversation.title;
@@ -501,14 +583,8 @@ async function startConversation(event?: SubmitEvent): Promise<void> {
         ? "Luyện tập bằng tiếng Anh"
         : "Luyện tập bằng tiếng Nhật";
     }
-    const practiceTitle = document.getElementById("practiceTitle");
-    const practiceSubtitle = document.getElementById("practiceSubtitle");
-    const roomStatus = document.getElementById("roomStatus");
-    const roomStatusBadge = document.getElementById("roomStatusBadge");
-    if (practiceTitle) practiceTitle.textContent = activeConversation.title;
-    if (practiceSubtitle) practiceSubtitle.textContent = "Gửi tin nhắn hoặc bật micro để luyện hội thoại.";
-    if (roomStatus) roomStatus.textContent = "Đã sẵn sàng";
-    if (roomStatusBadge) roomStatusBadge.textContent = "Đã sẵn sàng";
+    const roomStatus = document.getElementById("roomStatusBadge");
+    if (roomStatus) roomStatus.textContent = "ĐANG LUYỆN TẬP";
 
     if (messagesElement) {
       messagesElement.replaceChildren();
@@ -526,7 +602,7 @@ async function startConversation(event?: SubmitEvent): Promise<void> {
       messagesElement.append(welcome);
     }
     setComposerEnabled(true);
-    if (roomStatusBadge) roomStatusBadge.textContent = "Conversation ready";
+    await loadConversationHistory();
     if (messageInput instanceof HTMLTextAreaElement) messageInput.focus();
   } catch (error) {
     showToast(error instanceof Error ? error.message : "Không thể tạo phòng trò chuyện.");
@@ -537,15 +613,24 @@ async function startConversation(event?: SubmitEvent): Promise<void> {
 
 async function sendMessage(event?: SubmitEvent, speakResponse = false): Promise<void> {
   event?.preventDefault();
-  if (!(messageInput instanceof HTMLTextAreaElement) || !(sendButton instanceof HTMLButtonElement)) return;
+  if (
+    isSendingMessage ||
+    isLoadingConversation ||
+    !(messageInput instanceof HTMLTextAreaElement) ||
+    !(sendButton instanceof HTMLButtonElement)
+  ) return;
   const userMessage = messageInput.value.trim();
   if (!userMessage || !activeConversation) return;
 
+  isSendingMessage = true;
+  if (voiceButton instanceof HTMLButtonElement) voiceButton.disabled = true;
   addMessage("user", userMessage);
   messageInput.value = "";
   messageInput.style.height = "auto";
   sendButton.disabled = true;
   const pendingReply = addMessage("assistant", "Đang soạn phản hồi...");
+  pendingReply.classList.add("is-typing");
+  if (assistantStatus) assistantStatus.hidden = false;
 
   try {
     const result = await apiRequest<ChatMessage>("/api/v1/chat-ai/send-message", {
@@ -555,39 +640,66 @@ async function sendMessage(event?: SubmitEvent, speakResponse = false): Promise<
     pendingReply.remove();
     addMessage("assistant", result.data.ai_response, result.data.ai_feedback);
     if (speakResponse) speakText(result.data.ai_response);
+    void loadConversationHistory();
   } catch (error) {
     pendingReply.remove();
     messageInput.value = userMessage;
     showToast(error instanceof Error ? error.message : "Không thể gửi tin nhắn.");
   } finally {
+    isSendingMessage = false;
+    if (assistantStatus) assistantStatus.hidden = true;
     sendButton.disabled = !activeConversation;
+    if (voiceButton instanceof HTMLButtonElement) voiceButton.disabled = !activeConversation;
     messageInput.focus();
   }
 }
 
 function initialize(): void {
-  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-  if (!accessToken) {
-    authOverlay?.removeAttribute("hidden");
-    return;
-  }
-
   const name = localStorage.getItem("slanguage_user_name") || "Học viên";
   const email = localStorage.getItem("slanguage_user_email") || "Tài khoản của bạn";
+  const isAuthenticated = Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
   const profileName = document.getElementById("profileName");
   const profileEmail = document.getElementById("profileEmail");
   const profileAvatar = document.getElementById("profileAvatar");
-  const loginLink = document.getElementById("chatLoginLink");
-  if (loginLink instanceof HTMLAnchorElement) loginLink.hidden = true;
+  const loginLink = document.getElementById("loginLink");
+  const userAccount = document.getElementById("userAccount");
+  const accountNote = document.getElementById("accountNote");
+  const logoutButton = document.getElementById("logoutButton");
+  const connectionStatus = document.getElementById("connectionStatus");
+  const connectionLabel = document.getElementById("connectionLabel");
   if (profileName) profileName.textContent = name;
   if (profileEmail) profileEmail.textContent = email;
   if (profileAvatar) profileAvatar.textContent = name.slice(0, 1).toUpperCase();
+  if (!isAuthenticated) {
+    if (profileName) profileName.textContent = "Khách";
+    if (profileEmail) profileEmail.textContent = "Đang dùng thử";
+    if (profileAvatar) profileAvatar.textContent = "G";
+    if (userAccount) userAccount.hidden = true;
+    if (loginLink) loginLink.hidden = false;
+    if (logoutButton instanceof HTMLElement) logoutButton.hidden = true;
+    if (connectionStatus) {
+      connectionStatus.classList.add("is-guest");
+      if (connectionLabel) connectionLabel.textContent = "Đăng nhập để lưu lịch sử";
+    }
+  } else {
+    if (userAccount) userAccount.hidden = false;
+    if (loginLink) loginLink.hidden = true;
+    if (accountNote) accountNote.hidden = true;
+    if (connectionStatus) {
+      connectionStatus.classList.add("is-authenticated");
+      if (connectionLabel) connectionLabel.textContent = "Đã kết nối";
+    }
+  }
 
   conversationForm?.addEventListener("submit", (event) => void startConversation(event));
+  topicPreset?.addEventListener("change", () => {
+    if (topicPreset instanceof HTMLSelectElement && topicInput instanceof HTMLInputElement) {
+      topicInput.value = topicPreset.value;
+    }
+  });
+  document.getElementById("refreshHistory")?.addEventListener("click", () => void loadConversationHistory(true));
+  voiceButton?.addEventListener("click", startVoiceConversation);
   messageForm?.addEventListener("submit", (event) => void sendMessage(event));
-  document.getElementById("recordButton")?.addEventListener("click", () => void startVoicePractice());
-  document.getElementById("stopRecordingButton")?.addEventListener("click", stopVoicePractice);
-  document.getElementById("uploadAudioButton")?.addEventListener("click", () => void uploadAudioRecording());
   messageInput?.addEventListener("input", () => {
     if (messageInput instanceof HTMLTextAreaElement) {
       messageInput.style.height = "auto";
@@ -606,19 +718,14 @@ function initialize(): void {
     }
   });
   document.getElementById("logoutButton")?.addEventListener("click", () => {
-    window.speechSynthesis?.cancel();
-    microphoneStream?.getTracks().forEach((track) => track.stop());
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem("slanguage_is_logged_in");
+    localStorage.removeItem("slanguage_user_name");
+    localStorage.removeItem("slanguage_user_email");
     window.location.assign("../login/index.html");
   });
-
-  window.addEventListener("pagehide", () => {
-    window.clearInterval(recordingTimer);
-    window.speechSynthesis?.cancel();
-    microphoneStream?.getTracks().forEach((track) => track.stop());
-  });
+  void loadConversationHistory();
 }
 
 document.addEventListener("DOMContentLoaded", initialize);

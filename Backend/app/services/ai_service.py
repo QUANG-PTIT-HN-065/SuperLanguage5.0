@@ -1,7 +1,6 @@
 from app.core.config import settings
 from google import genai
 from openai import OpenAI
-from groq import Groq
 from fastapi import HTTPException, status
 
 class AIService:

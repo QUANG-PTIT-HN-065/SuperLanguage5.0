@@ -3,7 +3,7 @@ from pathlib import PurePath
 from typing import Any, Dict
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from supabase import create_client, Client
 
 from app.core.deps import get_current_profile
@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.schemas.chat_ai import (
     AudioUploadResponse,
     ConversationCreate,
+    ConversationMessageResponse,
     ConversationResponse,
     MessageSend,
     MessageResponse,
@@ -61,6 +62,109 @@ def _verify_audio_conversation(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy phòng trò chuyện.")
 
 
+@router.get("/conversations", response_model=BaseResponse[list[ConversationResponse]])
+def list_conversations(
+    limit: int = Query(default=100, ge=1, le=1000),
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[list[ConversationResponse]]:
+    """Lấy các hội thoại gần đây của tài khoản hiện tại."""
+    try:
+        result = (
+            supabase.table("conversations")
+            .select("id,title,language_code,created_at,updated_at")
+            .eq("user_id", profile["id"])
+            .order("updated_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+    except Exception as exc:
+        logger.exception("Could not load AI chat conversation history.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải lịch sử hội thoại lúc này. Vui lòng thử lại.",
+        ) from exc
+
+    conversations = [
+        ConversationResponse(
+            id=row["id"],
+            title=row["title"],
+            language_code=row["language_code"],
+            created_at=row.get("created_at"),
+            updated_at=row.get("updated_at"),
+        )
+        for row in (result.data or [])
+    ]
+    return BaseResponse(
+        status="success",
+        message="Đã tải lịch sử hội thoại.",
+        data=conversations,
+    )
+
+
+@router.get(
+    "/conversations/{conversation_id}/messages",
+    response_model=BaseResponse[list[ConversationMessageResponse]],
+)
+def list_conversation_messages(
+    conversation_id: UUID,
+    limit: int = Query(default=1000, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[list[ConversationMessageResponse]]:
+    """Lấy tin nhắn sau khi xác nhận hội thoại thuộc tài khoản hiện tại."""
+    try:
+        conversation = (
+            supabase.table("conversations")
+            .select("id")
+            .eq("id", str(conversation_id))
+            .eq("user_id", profile["id"])
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        logger.exception("Could not verify AI chat conversation ownership.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải phòng trò chuyện lúc này. Vui lòng thử lại.",
+        ) from exc
+
+    if not conversation.data:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy phòng trò chuyện.")
+
+    try:
+        result = (
+            supabase.table("messages")
+            .select("id,conversation_id,sender_type,content,ai_feedback,created_at")
+            .eq("conversation_id", str(conversation_id))
+            .order("created_at", desc=False)
+            .range(offset, offset + limit - 1)
+            .execute()
+        )
+    except Exception as exc:
+        logger.exception("Could not load AI chat conversation messages.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải tin nhắn lúc này. Vui lòng thử lại.",
+        ) from exc
+
+    messages = [
+        ConversationMessageResponse(
+            id=row["id"],
+            conversation_id=row["conversation_id"],
+            sender_type=row["sender_type"],
+            content=row["content"],
+            ai_feedback=row.get("ai_feedback"),
+            created_at=row.get("created_at"),
+        )
+        for row in (result.data or [])
+    ]
+    return BaseResponse(
+        status="success",
+        message="Đã tải tin nhắn hội thoại.",
+        data=messages,
+    )
+
+
 @router.post("/conversations")
 def create_conversation(
     data: ConversationCreate,
@@ -91,7 +195,7 @@ def create_conversation(
                 "title": data.title,
                 "language_code": target_lang_code,
             })
-            .select("id,title,language_code,created_at")
+            .select("id,title,language_code,created_at,updated_at")
             .single()
             .execute()
         )
@@ -113,10 +217,11 @@ def create_conversation(
         status="success",
         message="Đã tạo phòng trò chuyện.",
         data=ConversationResponse(
-            id=conversation["id"], # type: ignore
-            title=conversation["title"], # type: ignore
-            language_code=conversation["language_code"], # type: ignore
-            created_at=conversation.get("created_at"), # type: ignore
+            id=conversation["id"],
+            title=conversation["title"],
+            language_code=conversation["language_code"],
+            created_at=conversation.get("created_at"),
+            updated_at=conversation.get("updated_at"),
         ),
     )
 
