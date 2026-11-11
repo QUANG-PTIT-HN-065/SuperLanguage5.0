@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Hồ sơ của tôi</title>
+  <link rel="icon" type="image/png" href="../../../assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../../css/home/style.css">
+  <link rel="stylesheet" href="../../css/shared/user-experience.css">
+  <link rel="stylesheet" href="../../css/study/style.css">
+  <link rel="stylesheet" href="../../css/shared/learner-header.css">
+  <link rel="stylesheet" href="../../css/profile/profile.css">
+</head>
+<body class="slg-study-page profile-page user-guest">
+  <header class="navbar slg-app-navbar">
+    <div class="navbar-container">
+      <div class="nav-left">
+        <a href="../home/index.html" class="brand-logo">
+          <img src="../../../assets/logo.png" alt="Slanguage" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </a>
+      </div>
+      <nav class="nav-center" aria-label="Điều hướng chính">
+        <ul class="nav-links">
+          <li><a href="../home/index.html">Trang chủ</a></li>
+          <li><a href="../learning/index.html">Học tập</a></li>
+          <li><a href="../vocabulary/index.html">Từ vựng</a></li>
+          <li><a href="../chat/index.html">Luyện tập AI</a></li>
+        </ul>
+      </nav>
+      <div class="nav-right">
+        <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
+          <img src="../../../assets/streak-flame.gif?v=4" alt="" aria-hidden="true">
+          <span data-learner-streak>0 Ngày</span>
+        </div>
+        <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
+          <i class="fa-solid fa-star" aria-hidden="true"></i><span id="headerXPVal">0 XP</span>
+        </div>
+        <div class="lang-dropdown auth-only" id="langDropdown">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../../../assets/flags/flag-jp.png" alt="" class="flag-icon" id="currentLangFlag">
+            <span class="lang-current-label" id="currentLangLabel">Đang tải...</span>
+            <i class="fa-solid fa-chevron-down lang-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
+            <button type="button" class="lang-dropdown-item" data-lang="ja" role="menuitem"><img src="../../../assets/flags/flag-jp.png" alt="" class="flag-icon"><span>Tiếng Nhật</span><i class="fa-solid fa-check check-icon" aria-hidden="true"></i></button>
+            <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem"><img src="../../../assets/flags/flag-en.png" alt="" class="flag-icon"><span>Tiếng Anh</span><i class="fa-solid fa-check check-icon" aria-hidden="true"></i></button>
+            <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem"><img src="../../../assets/flags/flag-vn.png" alt="" class="flag-icon"><span>Tiếng Việt</span><i class="fa-solid fa-check check-icon" aria-hidden="true"></i></button>
+          </div>
+        </div>
+        <div class="user-dropdown auth-only" id="userDropdown">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false">
+            <img src="../../../assets/logo.png" alt="" class="user-avatar-mini" id="headerAvatar">
+            <span class="user-info-text"><span class="name">Học viên</span><span class="role">Học viên</span></span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <a href="./index.html" class="user-dropdown-item" role="menuitem"><span class="menu-item-icon"><i class="fa-solid fa-user-pen"></i></span><span class="menu-item-text"><span class="title">Hồ sơ của tôi</span><span class="sub">Xem và chỉnh sửa thông tin</span></span></a>
+            <a href="../login/index.html" class="user-dropdown-item logout-item" id="navLogoutItem" role="menuitem"><span class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span><span class="menu-item-text"><span class="title">Đăng xuất</span><span class="sub">Thoát khỏi phiên học</span></span></a>
+          </div>
+        </div>
+        <div class="guest-nav-auth guest-only" id="guestNavAuth">
+          <a class="nav-auth-login" href="../login/index.html?redirect=../profile/index.html">Đăng nhập</a>
+          <a class="nav-auth-register" href="../login/index.html?mode=signup">Đăng ký</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="profile-main">
+    <section class="profile-hero">
+      <div class="profile-hero-icon" aria-hidden="true"><i class="fa-solid fa-user-pen"></i></div>
+      <div>
+        <span class="study-kicker">TÀI KHOẢN CỦA BẠN</span>
+        <h1>Hồ sơ &amp; mục tiêu học tập</h1>
+        <p>Xem và cập nhật thông tin cá nhân, ngôn ngữ cùng kế hoạch học mỗi ngày.</p>
+      </div>
+    </section>
+
+    <div class="profile-notice" id="profileNotice" role="status" aria-live="polite">
+      Đang tải hồ sơ của bạn...
+    </div>
+
+    <form class="profile-form" id="profileForm" hidden>
+      <section class="profile-card profile-identity" aria-label="Thông tin tài khoản">
+        <div class="profile-avatar" aria-hidden="true"><i class="fa-solid fa-user"></i></div>
+        <div class="profile-identity-copy">
+          <h2 id="profileDisplayName">Học viên</h2>
+          <p id="profileEmail">Đang tải email...</p>
+          <span class="profile-stat-pill"><i class="fa-solid fa-star" aria-hidden="true"></i><span id="profileXp">0 XP</span></span>
+          <span class="profile-stat-pill"><i class="fa-solid fa-fire" aria-hidden="true"></i><span id="profileStreak">0 ngày liên tục</span></span>
+        </div>
+        <span class="profile-readonly-note"><i class="fa-solid fa-lock" aria-hidden="true"></i> Email chỉ xem</span>
+      </section>
+
+      <section class="profile-card" aria-labelledby="identityTitle">
+        <div class="profile-section-heading">
+          <span class="profile-section-icon"><i class="fa-solid fa-id-card" aria-hidden="true"></i></span>
+          <div><h2 id="identityTitle">Thông tin cá nhân</h2><p>Cập nhật tên hiển thị và thông tin hồ sơ.</p></div>
+        </div>
+        <div class="profile-fields">
+          <label class="profile-field">
+            <span>Họ và tên</span>
+            <input name="display_name" type="text" maxlength="50" autocomplete="name" required>
+          </label>
+          <label class="profile-field">
+            <span>Tên đăng nhập</span>
+            <input name="username" type="text" minlength="3" maxlength="30" pattern="[a-z0-9_]{3,30}" autocomplete="username" required>
+            <small>Dùng chữ thường, số và dấu gạch dưới.</small>
+          </label>
+          <label class="profile-field profile-field-wide">
+            <span>Đường dẫn ảnh đại diện (tùy chọn)</span>
+            <input name="avatar_url" type="url" maxlength="500" pattern="https://.*" placeholder="https://...">
+          </label>
+          <label class="profile-field">
+            <span>Năm sinh</span>
+            <input name="birth_year" type="number" min="1900" max="2100" inputmode="numeric">
+          </label>
+          <label class="profile-field">
+            <span>Mã quốc gia</span>
+            <input name="country_code" type="text" maxlength="2" pattern="[A-Za-z]{2}" placeholder="VN" autocomplete="country">
+            <small>Ví dụ: VN, JP, US.</small>
+          </label>
+          <label class="profile-field profile-field-wide">
+            <span>Múi giờ</span>
+            <input name="timezone" type="text" maxlength="64" placeholder="Asia/Ho_Chi_Minh" required>
+          </label>
+        </div>
+      </section>
+
+      <section class="profile-card" aria-labelledby="learningTitle">
+        <div class="profile-section-heading">
+          <span class="profile-section-icon"><i class="fa-solid fa-book-open" aria-hidden="true"></i></span>
+          <div><h2 id="learningTitle">Thiết lập học tập</h2><p>Chọn ngôn ngữ, trình độ và mục tiêu bạn đang hướng tới.</p></div>
+        </div>
+        <div class="profile-fields">
+          <label class="profile-field">
+            <span>Ngôn ngữ mẹ đẻ</span>
+            <select name="native_language" required>
+              <option value="">Chọn ngôn ngữ</option>
+              <option value="vi">Tiếng Việt</option>
+              <option value="en">Tiếng Anh</option>
+              <option value="ja">Tiếng Nhật</option>
+            </select>
+          </label>
+          <label class="profile-field">
+            <span>Ngôn ngữ đang học</span>
+            <select name="target_language" required>
+              <option value="">Chọn ngôn ngữ</option>
+              <option value="en">Tiếng Anh</option>
+              <option value="ja">Tiếng Nhật</option>
+              <option value="vi">Tiếng Việt</option>
+            </select>
+          </label>
+          <label class="profile-field">
+            <span>Trình độ hiện tại</span>
+            <select name="current_level">
+              <option value="">Chưa thiết lập</option>
+              <option value="A1">A1 · Mới bắt đầu</option>
+              <option value="A2">A2 · Sơ cấp</option>
+              <option value="B1">B1 · Trung cấp</option>
+              <option value="B2">B2 · Trên trung cấp</option>
+              <option value="C1">C1 · Nâng cao</option>
+              <option value="C2">C2 · Thành thạo</option>
+            </select>
+          </label>
+          <label class="profile-field">
+            <span>Trình độ mục tiêu</span>
+            <select name="target_level">
+              <option value="">Chưa thiết lập</option>
+              <option value="A1">A1 · Mới bắt đầu</option>
+              <option value="A2">A2 · Sơ cấp</option>
+              <option value="B1">B1 · Trung cấp</option>
+              <option value="B2">B2 · Trên trung cấp</option>
+              <option value="C1">C1 · Nâng cao</option>
+              <option value="C2">C2 · Thành thạo</option>
+            </select>
+          </label>
+          <label class="profile-field">
+            <span>Mục đích học</span>
+            <select name="learning_goal">
+              <option value="">Chọn mục đích</option>
+              <option value="travel">Du lịch</option>
+              <option value="work">Công việc</option>
+              <option value="study">Học tập</option>
+              <option value="exam">Thi cử</option>
+              <option value="hobby">Sở thích</option>
+              <option value="other">Khác</option>
+            </select>
+          </label>
+          <label class="profile-field">
+            <span>Giờ nhắc học</span>
+            <input name="reminder_time" type="time">
+          </label>
+        </div>
+      </section>
+
+      <section class="profile-card" aria-labelledby="goalsTitle">
+        <div class="profile-section-heading">
+          <span class="profile-section-icon"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></span>
+          <div><h2 id="goalsTitle">Mục tiêu mỗi ngày</h2><p>Đặt mục tiêu vừa sức để duy trì thói quen học đều đặn.</p></div>
+        </div>
+        <div class="profile-fields profile-goals-fields">
+          <label class="profile-field">
+            <span>Thời gian học <b>(phút/ngày)</b></span>
+            <input name="daily_goal_minutes" type="number" min="5" max="240" required>
+          </label>
+          <label class="profile-field">
+            <span>Số bài học <b>(bài/ngày)</b></span>
+            <input name="daily_goal_lessons" type="number" min="1" max="20" required>
+          </label>
+          <label class="profile-field">
+            <span>Điểm XP <b>(XP/ngày)</b></span>
+            <input name="daily_goal_xp" type="number" min="10" max="500" required>
+          </label>
+        </div>
+      </section>
+
+      <div class="profile-actions">
+        <p id="profileSaveStatus" role="status" aria-live="polite"></p>
+        <button class="profile-save-button" type="submit" id="saveProfileButton">
+          <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i><span id="saveProfileLabel">Lưu thay đổi</span>
+        </button>
+      </div>
+    </form>
+  </main>
+  <script type="module" src="../../types/home/profile.ts"></script>
+</body>
+</html>

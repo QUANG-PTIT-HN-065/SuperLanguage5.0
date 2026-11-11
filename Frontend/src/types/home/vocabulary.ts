@@ -1,4 +1,5 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { initializeLearnerHeader } from "../shared/learner-header";
 
 interface Topic {
   id: number;
@@ -45,7 +46,7 @@ const topicGrid = document.getElementById("topicGrid");
 const wordEmpty = document.getElementById("wordEmpty");
 const sessionPanel = document.getElementById("reviewSession");
 const wordListSection = document.getElementById("wordListSection");
-const xpValue = document.getElementById("vocabularyXp");
+const xpValue = document.getElementById("headerXPVal");
 
 let pageOffset = 0;
 let totalAvailable = 0;
@@ -668,22 +669,6 @@ document.getElementById("markKnown")?.addEventListener("click", () => recordAnsw
 document.getElementById("saveReview")?.addEventListener("click", () => void saveReview());
 document.getElementById("retrySaveReview")?.addEventListener("click", () => void saveReview());
 document.getElementById("cancelReview")?.addEventListener("click", leaveReview);
-document.getElementById("vocabularyLogout")?.addEventListener("click", (event) => {
-  event.preventDefault();
-  for (const key of [
-    "slanguage_access_token",
-    "slanguage_refresh_token",
-    "slanguage_is_logged_in",
-    "slanguage_user_id",
-    "slanguage_user_email",
-    "slanguage_user_name",
-    "slanguage_active_language",
-    "slanguage_user_xp",
-    "slanguage_user_streak",
-  ]) {
-    localStorage.removeItem(key);
-  }
-  window.location.assign("../home/index.html");
-});
+void initializeLearnerHeader();
 
 void initVocabularyPage();

@@ -11,30 +11,58 @@
   <link rel="stylesheet" href="../../css/home/style.css">
   <link rel="stylesheet" href="../../css/shared/user-experience.css">
   <link rel="stylesheet" href="../../css/study/style.css">
+  <link rel="stylesheet" href="../../css/shared/learner-header.css">
 </head>
 <body class="slg-study-page learning-path-page user-guest">
-  <header class="navbar">
+  <header class="navbar slg-app-navbar">
     <div class="navbar-container">
       <div class="nav-left">
         <a href="../home/index.html" class="brand-logo">
           <img src="../../../assets/logo.png" alt="Slanguage" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </a>
-        <nav aria-label="Điều hướng chính">
-          <ul class="nav-links">
-            <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="./index.html" class="active" aria-current="page">Học tập</a></li>
-            <li><a href="../vocabulary/index.html">Từ vựng</a></li>
-            <li><a href="../chat/index.html">Luyện tập AI</a></li>
-          </ul>
-        </nav>
       </div>
+      <nav class="nav-center" aria-label="Điều hướng chính">
+        <ul class="nav-links">
+          <li><a href="../home/index.html">Trang chủ</a></li>
+          <li><a href="./index.html" class="active" aria-current="page">Học tập</a></li>
+          <li><a href="../vocabulary/index.html">Từ vựng</a></li>
+          <li><a href="../chat/index.html">Luyện tập AI</a></li>
+        </ul>
+      </nav>
       <div class="nav-right">
-        <div class="study-user auth-only">
-          <span class="stat-chip xp"><i class="fa-solid fa-star" aria-hidden="true"></i><span id="studyXp">0 XP</span></span>
-          <a class="nav-auth-login" href="../home/index.html" id="studyLogout">Đăng xuất</a>
+        <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
+          <img src="../../../assets/streak-flame.gif?v=4" alt="" aria-hidden="true">
+          <span data-learner-streak>0 Ngày</span>
         </div>
-        <div class="guest-nav-auth guest-only">
+        <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
+          <i class="fa-solid fa-star" aria-hidden="true"></i><span id="headerXPVal">0 XP</span>
+        </div>
+        <div class="lang-dropdown auth-only" id="langDropdown">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../../../assets/flags/flag-jp.png" alt="" class="flag-icon" id="currentLangFlag">
+            <span class="lang-current-label" id="currentLangLabel">Đang tải...</span>
+            <i class="fa-solid fa-chevron-down lang-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
+            <button type="button" class="lang-dropdown-item" data-lang="ja" role="menuitem"><img src="../../../assets/flags/flag-jp.png" alt="" class="flag-icon"><span>Tiếng Nhật</span><i class="fa-solid fa-check check-icon" aria-hidden="true"></i></button>
+            <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem"><img src="../../../assets/flags/flag-en.png" alt="" class="flag-icon"><span>Tiếng Anh</span><i class="fa-solid fa-check check-icon" aria-hidden="true"></i></button>
+            <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem"><img src="../../../assets/flags/flag-vn.png" alt="" class="flag-icon"><span>Tiếng Việt</span><i class="fa-solid fa-check check-icon" aria-hidden="true"></i></button>
+          </div>
+        </div>
+        <div class="user-dropdown auth-only" id="userDropdown">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false">
+            <img src="../../../assets/logo.png" alt="" class="user-avatar-mini" id="headerAvatar">
+            <span class="user-info-text"><span class="name">Học viên</span><span class="role">Học viên</span></span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+          </button>
+          <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem"><span class="menu-item-icon"><i class="fa-solid fa-user-pen"></i></span><span class="menu-item-text"><span class="title">Hồ sơ của tôi</span><span class="sub">Xem và chỉnh sửa thông tin</span></span></a>
+            <a href="../chat/index.html" class="user-dropdown-item" role="menuitem"><span class="menu-item-icon"><i class="fa-solid fa-comments"></i></span><span class="menu-item-text"><span class="title">Luyện tập AI</span><span class="sub">Thực hành giao tiếp</span></span></a>
+            <a href="../login/index.html" class="user-dropdown-item logout-item" id="navLogoutItem" role="menuitem"><span class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span><span class="menu-item-text"><span class="title">Đăng xuất</span><span class="sub">Thoát khỏi phiên học</span></span></a>
+          </div>
+        </div>
+        <div class="guest-nav-auth guest-only" id="guestNavAuth">
           <a class="nav-auth-login" href="../login/index.html?redirect=../learning/index.html">Đăng nhập</a>
           <a class="nav-auth-register" href="../login/index.html?mode=signup">Đăng ký</a>
         </div>

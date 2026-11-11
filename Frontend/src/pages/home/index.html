@@ -11,11 +11,12 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../css/home/style.css">
   <link rel="stylesheet" href="../../css/shared/user-experience.css">
+  <link rel="stylesheet" href="../../css/shared/learner-header.css">
 </head>
 <body class="slg-user-home">
 
   <!-- ================= TOP NAVBAR ================= -->
-  <header class="navbar">
+  <header class="navbar slg-app-navbar">
     <div class="navbar-container">
       <div class="nav-left">
         <a href="./index.html" class="brand-logo">
@@ -36,11 +37,11 @@
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
           <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
-          <span>14 Ngày</span>
+          <span data-learner-streak>0 Ngày</span>
         </div>
         <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
           <i class="fa-solid fa-star"></i>
-          <span id="headerXPVal">2,450 XP</span>
+          <span id="headerXPVal">0 XP</span>
         </div>
         <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
           <i class="fa-solid fa-heart"></i>
@@ -76,14 +77,18 @@
         <!-- User Account Dropdown (Shown when logged in) -->
         <div class="user-dropdown auth-only" id="userDropdown">
           <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini">
+            <img src="../../../assets/logo.png" alt="Ảnh đại diện" class="user-avatar-mini" id="headerAvatar">
             <div class="user-info-text">
-              <div class="name">Vua Xứ Thanh</div>
+              <div class="name">Học viên</div>
               <div class="role">Học viên</div>
             </div>
             <i class="fa-solid fa-chevron-down user-chevron"></i>
           </button>
           <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
+              <span class="menu-item-icon"><i class="fa-solid fa-user-pen"></i></span>
+              <span class="menu-item-text"><span class="title">Hồ sơ của tôi</span><span class="sub">Xem và chỉnh sửa thông tin</span></span>
+            </a>
             <a href="../chat/index.html" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
               <div class="menu-item-text">

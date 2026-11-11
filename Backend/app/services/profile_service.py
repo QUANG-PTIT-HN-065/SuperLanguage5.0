@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from fastapi import HTTPException, status
 
 from app.db.supabase import supabase_admin
+from app.schemas.profile import LEVEL_ORDER
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,8 @@ PROFILE_UPDATE_FIELDS = frozenset(
         "target_level",
         "learning_goal",
         "daily_goal_xp",
+        "daily_goal_minutes",
+        "daily_goal_lessons",
         "reminder_time",
         "marketing_opt_in",
         "show_on_leaderboard",
@@ -38,6 +41,8 @@ ONBOARDING_FIELDS = frozenset(
         "target_level",
         "learning_goal",
         "daily_goal_xp",
+        "daily_goal_minutes",
+        "daily_goal_lessons",
         "timezone",
         "country_code",
         "reminder_time",
@@ -50,6 +55,8 @@ NOT_NULLABLE_FIELDS = {
     "native_language",
     "target_language",
     "daily_goal_xp",
+    "daily_goal_minutes",
+    "daily_goal_lessons",
     "timezone",
     "marketing_opt_in",
     "show_on_leaderboard",
@@ -182,7 +189,34 @@ def _ensure_allowed_fields(data: Dict[str, Any], allowed_fields: frozenset[str])
 def update_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
     """Cập nhật hồ sơ của user hiện tại với allowlist trường dành cho PATCH /me."""
     _ensure_allowed_fields(data, PROFILE_UPDATE_FIELDS)
-    validate_languages(data.get("native_language"), data.get("target_language"))
+    related_fields = {"native_language", "target_language", "current_level", "target_level"}
+    if not data.keys() & related_fields:
+        return _update_profile(user_id, data)
+
+    profile = get_profile(user_id)
+    if profile is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy hồ sơ.")
+    updated = {**profile, **data}
+    if data.keys() & {"native_language", "target_language"}:
+        validate_languages(updated.get("native_language"), updated.get("target_language"))
+        if updated.get("native_language") == updated.get("target_language"):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                "Ngôn ngữ mẹ đẻ và ngôn ngữ muốn học phải khác nhau.",
+            )
+
+    current_level = updated.get("current_level")
+    target_level = updated.get("target_level")
+    if (
+        data.keys() & {"current_level", "target_level"}
+        and current_level in LEVEL_ORDER
+        and target_level in LEVEL_ORDER
+        and LEVEL_ORDER.index(target_level) < LEVEL_ORDER.index(current_level)
+    ):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Trình độ mục tiêu không được thấp hơn trình độ hiện tại.",
+        )
     return _update_profile(user_id, data)
 
 
