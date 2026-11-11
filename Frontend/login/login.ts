@@ -1,27 +1,30 @@
 /**
- * Slanguage - Learner Login & Registration Slider TypeScript Logic
- * Handles credential validation, password reveal/hide, registration submission,
- * dual-panel slider synchronization, and redirection to Home dashboard.
+ * ===================================================================
+ * SLANGUAGE - LOGIN CONTROLLER
+ * Module: login/login.ts
+ * Purpose: Authentication portal (Sign In & Sign Up)
+ * Post-Registration Flow: Redirects to dedicated ../select-language/index.html
+ * ===================================================================
  */
 
 interface LoginCredentials {
   emailOrUser: string;
   password: string;
-  rememberMe: boolean;
+  remember: boolean;
 }
 
 class SlanguageLogin {
+  // DOM Elements - Forms & Inputs
+  private container: HTMLElement | null = null;
   private loginForm: HTMLFormElement | null = null;
   private registerForm: HTMLFormElement | null = null;
-
-  // Sign In inputs
   private emailInput: HTMLInputElement | null = null;
   private passwordInput: HTMLInputElement | null = null;
   private rememberCheckbox: HTMLInputElement | null = null;
   private togglePasswordBtn: HTMLButtonElement | null = null;
-  private submitBtn: HTMLButtonElement | null = null;
+  private btnSubmitLogin: HTMLButtonElement | null = null;
 
-  // Sign Up inputs
+  // Sign Up Form Elements
   private regFullNameInput: HTMLInputElement | null = null;
   private regEmailInput: HTMLInputElement | null = null;
   private regPasswordInput: HTMLInputElement | null = null;
@@ -29,27 +32,47 @@ class SlanguageLogin {
   private regTermsCheckbox: HTMLInputElement | null = null;
   private btnSubmitRegister: HTMLButtonElement | null = null;
 
+  // Feedback & Loading Elements
+  private loginToast: HTMLElement | null = null;
+  private toastTimer: number | null = null;
+  private loadingOverlay: HTMLElement | null = null;
+  private loadingVideo: HTMLVideoElement | null = null;
+
   constructor() {
     this.init();
   }
 
   private init(): void {
-    // Sign In DOM Elements
+    // Container & Forms
+    this.container = document.getElementById('container');
     this.loginForm = document.getElementById('loginForm') as HTMLFormElement;
+    this.registerForm = document.getElementById('registerForm') as HTMLFormElement;
+
+    // Sign In Elements
     this.emailInput = document.getElementById('emailOrUser') as HTMLInputElement;
     this.passwordInput = document.getElementById('password') as HTMLInputElement;
     this.rememberCheckbox = document.getElementById('rememberMe') as HTMLInputElement;
     this.togglePasswordBtn = document.getElementById('togglePassword') as HTMLButtonElement;
-    this.submitBtn = document.getElementById('btnSubmitLogin') as HTMLButtonElement;
+    this.btnSubmitLogin = document.getElementById('btnSubmitLogin') as HTMLButtonElement;
 
-    // Sign Up DOM Elements
-    this.registerForm = document.getElementById('registerForm') as HTMLFormElement;
+    // Sign Up Elements
     this.regFullNameInput = document.getElementById('regFullName') as HTMLInputElement;
     this.regEmailInput = document.getElementById('regEmail') as HTMLInputElement;
     this.regPasswordInput = document.getElementById('regPassword') as HTMLInputElement;
     this.regConfirmPasswordInput = document.getElementById('regConfirmPassword') as HTMLInputElement;
     this.regTermsCheckbox = document.getElementById('regTerms') as HTMLInputElement;
     this.btnSubmitRegister = document.getElementById('btnSubmitRegister') as HTMLButtonElement;
+
+    // Overlay & Video
+    this.loadingOverlay = document.getElementById('slanguageLoadingOverlay');
+    this.loadingVideo = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
+    if (this.loadingVideo) {
+      this.loadingVideo.pause();
+      this.loadingVideo.muted = true;
+      this.loadingVideo.volume = 0;
+      this.loadingVideo.currentTime = 0;
+    }
+    this.loginToast = document.getElementById('loginToast');
 
     this.checkInitialMode();
     this.checkExistingSession();
@@ -58,17 +81,15 @@ class SlanguageLogin {
 
   private checkInitialMode(): void {
     const urlParams = new URLSearchParams(window.location.search);
-    const mode = urlParams.get('mode');
-    const hash = window.location.hash;
-
-    if (mode === 'signup' || hash === '#signup') {
+    const mode = urlParams.get('mode') || window.location.hash.replace('#', '');
+    if (mode === 'signup' || mode === 'register') {
       const radioSignUp = document.getElementById('showSignUp') as HTMLInputElement;
       if (radioSignUp) radioSignUp.checked = true;
     }
   }
 
   private bindEvents(): void {
-    // Sign In Form submit
+    // 1. Sign In Form Submit
     if (this.loginForm) {
       this.loginForm.addEventListener('submit', (e: Event) => {
         e.preventDefault();
@@ -76,7 +97,7 @@ class SlanguageLogin {
       });
     }
 
-    // Sign Up Form submit
+    // 2. Sign Up Form Submit -> Validates & Redirects to dedicated select-language page
     if (this.registerForm) {
       this.registerForm.addEventListener('submit', (e: Event) => {
         e.preventDefault();
@@ -84,7 +105,7 @@ class SlanguageLogin {
       });
     }
 
-    // Toggle Password Visibility
+    // 3. Toggle Password Visibility
     if (this.togglePasswordBtn && this.passwordInput) {
       this.togglePasswordBtn.addEventListener('click', () => {
         const isPassword = this.passwordInput!.type === 'password';
@@ -96,15 +117,13 @@ class SlanguageLogin {
       });
     }
 
-    // Real-time input clearing errors for Sign In
+    // 4. Input Error Clearing
     if (this.emailInput) {
       this.emailInput.addEventListener('input', () => this.clearError('emailError'));
     }
     if (this.passwordInput) {
       this.passwordInput.addEventListener('input', () => this.clearError('passwordError'));
     }
-
-    // Real-time input clearing errors for Sign Up
     if (this.regFullNameInput) {
       this.regFullNameInput.addEventListener('input', () => this.clearError('nameError'));
     }
@@ -118,84 +137,24 @@ class SlanguageLogin {
       this.regConfirmPasswordInput.addEventListener('input', () => this.clearError('confirmPassError'));
     }
 
-    // Forgot password trigger
-    const forgotLink = document.getElementById('forgotPasswordLink');
-    if (forgotLink) {
-      forgotLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.triggerLoadingAndRedirect('../forgot-password/index.html', 1500);
-      });
-    }
-
-    // Intercept navigation links
-    this.bindPageTransitions();
-
-    // Reset and mute video if page is shown from bfcache or when hidden
+    // 5. Audio & Page Visibility Handling
     window.addEventListener('pageshow', () => {
-      const overlay = document.getElementById('slanguageLoadingOverlay');
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
-      if (overlay) overlay.classList.remove('active');
-      if (video) {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
+      if (this.loadingOverlay) this.loadingOverlay.classList.remove('active');
+      if (this.loadingVideo) {
+        this.loadingVideo.pause();
+        this.loadingVideo.muted = true;
+        this.loadingVideo.volume = 0;
+        this.loadingVideo.currentTime = 0;
       }
     });
 
     window.addEventListener('pagehide', () => {
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
-      if (video) {
-        video.pause();
-        video.muted = true;
+      if (this.loadingVideo) {
+        this.loadingVideo.pause();
+        this.loadingVideo.muted = true;
+        this.loadingVideo.volume = 0;
       }
     });
-  }
-
-  private bindPageTransitions(): void {
-    document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(link => {
-      const href = link.getAttribute('href');
-      if (
-        href && 
-        !href.startsWith('#') && 
-        !href.startsWith('javascript:') && 
-        !link.hasAttribute('target')
-      ) {
-        link.addEventListener('click', (e: MouseEvent) => {
-          e.preventDefault();
-          this.triggerLoadingAndRedirect(href);
-        });
-      }
-    });
-  }
-
-  private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
-    const overlay = document.getElementById('slanguageLoadingOverlay');
-    const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
-    if (overlay) {
-      overlay.classList.add('active');
-      if (video) {
-        video.muted = false;
-        video.volume = 1.0;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            video.muted = true;
-            video.play();
-          });
-        }
-      }
-    }
-    setTimeout(() => {
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
-      if (overlay) {
-        overlay.classList.remove('active');
-      }
-      window.location.href = targetUrl;
-    }, duration);
   }
 
   private checkExistingSession(): void {
@@ -203,6 +162,13 @@ class SlanguageLogin {
     if (savedUser && this.emailInput && this.rememberCheckbox) {
       this.emailInput.value = savedUser;
       this.rememberCheckbox.checked = true;
+    }
+
+    if (window.location.hash === '#register' || window.location.hash === '#signup' || window.location.search.includes('mode=register')) {
+      const radioSignUp = document.getElementById('showSignUp') as HTMLInputElement | null;
+      if (radioSignUp) {
+        radioSignUp.checked = true;
+      }
     }
   }
 
@@ -212,7 +178,6 @@ class SlanguageLogin {
     const passVal = this.passwordInput ? this.passwordInput.value : '';
     const rememberVal = this.rememberCheckbox ? this.rememberCheckbox.checked : false;
 
-    // Validate Email/Username
     if (!emailVal) {
       this.showError('emailError', 'Vui lòng nhập email hoặc tên đăng nhập của học viên.');
       isValid = false;
@@ -221,7 +186,6 @@ class SlanguageLogin {
       isValid = false;
     }
 
-    // Validate Password
     if (!passVal) {
       this.showError('passwordError', 'Vui lòng nhập mật khẩu.');
       isValid = false;
@@ -235,33 +199,36 @@ class SlanguageLogin {
     return {
       emailOrUser: emailVal,
       password: passVal,
-      rememberMe: rememberVal
+      remember: rememberVal
     };
   }
 
   private handleLogin(): void {
-    const creds = this.validateLogin();
-    if (!creds) return;
+    const credentials = this.validateLogin();
+    if (!credentials) return;
 
-    // Show loading indicator
-    if (this.submitBtn) {
-      this.submitBtn.disabled = true;
-      this.submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang xác thực...`;
+    if (this.btnSubmitLogin) {
+      this.btnSubmitLogin.disabled = true;
+      this.btnSubmitLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đăng nhập...';
     }
 
-    setTimeout(() => {
-      // Simulate Successful Login
-      localStorage.setItem('slanguage_is_logged_in', 'true');
-      localStorage.setItem('slanguage_user_email', creds.emailOrUser);
-      
-      // If student name not set yet, set default
-      if (!localStorage.getItem('slanguage_user_name')) {
-        localStorage.setItem('slanguage_user_name', 'Nguyễn Nhật Anh');
-      }
+    if (credentials.remember) {
+      localStorage.setItem('slanguage_user_email', credentials.emailOrUser);
+    } else {
+      localStorage.removeItem('slanguage_user_email');
+    }
 
-      // Show video loading screen for 1.5s
-      this.triggerLoadingAndRedirect('../home/index.html', 1500);
-    }, 400);
+    localStorage.setItem('slanguage_is_logged_in', 'true');
+    const existingName = localStorage.getItem('slanguage_user_name');
+    if (!existingName) {
+      const displayName = credentials.emailOrUser.includes('@') 
+        ? credentials.emailOrUser.split('@')[0] 
+        : credentials.emailOrUser;
+      localStorage.setItem('slanguage_user_name', displayName);
+    }
+
+    this.showToast('Đăng nhập thành công! Đang chuyển hướng...');
+    this.triggerLoadingAndRedirect('../home/index.html', 1200);
   }
 
   private handleRegister(): void {
@@ -306,57 +273,82 @@ class SlanguageLogin {
 
     if (!isValid) return;
 
-    if (this.btnSubmitRegister) {
-      this.btnSubmitRegister.disabled = true;
-      this.btnSubmitRegister.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo tài khoản...`;
-    }
+    // Save temporary registration draft to sessionStorage
+    sessionStorage.setItem('slanguage_reg_name', fullName);
+    sessionStorage.setItem('slanguage_reg_email', email);
+    sessionStorage.setItem('slanguage_reg_pass', password);
 
-    setTimeout(() => {
-      localStorage.setItem('slanguage_user_name', fullName);
-      localStorage.setItem('slanguage_user_email', email);
-      if (!localStorage.getItem('slanguage_active_language')) {
-        localStorage.setItem('slanguage_active_language', 'ja');
-      }
-      localStorage.setItem('slanguage_user_xp', '100');
-      localStorage.setItem('slanguage_is_logged_in', 'true');
+    // Also persist email to localStorage so verify-otp can always read it
+    localStorage.setItem('slanguage_user_name', fullName);
+    localStorage.setItem('slanguage_user_email', email);
 
-      this.triggerLoadingAndRedirect('../home/index.html', 1500);
-    }, 400);
+    // NAVIGATE TO DEDICATED STAGE 2: LANGUAGE SELECTION PAGE
+    window.location.href = '../select-language/index.html';
   }
 
   private showError(elementId: string, message: string): void {
-    const errEl = document.getElementById(elementId);
-    if (errEl) {
-      errEl.textContent = message;
-      errEl.style.display = 'flex';
+    const errorEl = document.getElementById(elementId);
+    if (errorEl) {
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      const input = errorEl.previousElementSibling?.querySelector('input');
+      if (input) input.classList.add('error');
     }
   }
 
   private clearError(elementId: string): void {
-    const errEl = document.getElementById(elementId);
-    if (errEl) {
-      errEl.style.display = 'none';
+    const errorEl = document.getElementById(elementId);
+    if (errorEl) {
+      errorEl.style.display = 'none';
+      const input = errorEl.previousElementSibling?.querySelector('input');
+      if (input) input.classList.remove('error');
     }
   }
 
-  private showToast(message: string, type: 'success' | 'info' = 'success'): void {
-    const toast = document.getElementById('loginToast');
-    if (!toast) return;
+  private showToast(message: string): void {
+    if (!this.loginToast) return;
+    this.loginToast.textContent = message;
+    this.loginToast.classList.add('show');
 
-    toast.innerHTML = type === 'success' 
-      ? `<i class="fa-solid fa-circle-check" style="color: #FFB703; font-size: 1.2rem;"></i> ${message}`
-      : `<i class="fa-solid fa-circle-info" style="color: #00B4D8; font-size: 1.2rem;"></i> ${message}`;
+    if (this.toastTimer) window.clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => {
+      if (this.loginToast) this.loginToast.classList.remove('show');
+    }, 3500);
+  }
 
-    toast.style.display = 'flex';
+  private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
+    if (this.loadingOverlay) {
+      this.loadingOverlay.classList.add('active');
+      if (this.loadingVideo) {
+        this.loadingVideo.currentTime = 0;
+        this.loadingVideo.muted = false;
+        this.loadingVideo.volume = 1.0;
+        const playPromise = this.loadingVideo.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            if (this.loadingVideo) {
+              this.loadingVideo.muted = true;
+              this.loadingVideo.play();
+            }
+          });
+        }
+      }
+    }
 
     setTimeout(() => {
-      toast.style.display = 'none';
-    }, 3500);
+      if (this.loadingVideo) {
+        this.loadingVideo.pause();
+        this.loadingVideo.muted = true;
+        this.loadingVideo.volume = 0;
+        this.loadingVideo.currentTime = 0;
+      }
+      if (this.loadingOverlay) this.loadingOverlay.classList.remove('active');
+      window.location.href = targetUrl;
+    }, duration);
   }
 }
 
-// Initialize on DOM load
-
+// Start on DOM ready
 function initSlanguageLogin(): void {
   (window as unknown as { loginApp?: SlanguageLogin }).loginApp = new SlanguageLogin();
 }
