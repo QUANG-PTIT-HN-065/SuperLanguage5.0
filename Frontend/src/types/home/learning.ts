@@ -1,4 +1,5 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { initializeLearnerHeader, renderLearnerHeader } from "../shared/learner-header";
 
 interface LearnerProfileData {
   display_name?: string;
@@ -207,6 +208,7 @@ async function loadLearningProfile(): Promise<void> {
   try {
     const response = await slanguageApi("/api/v1/me", { method: "GET" });
     const payload = asRecord(response.data);
+    renderLearnerHeader(response.data);
     const profile = asRecord(payload.profile) as LearnerProfileData;
     const stats = asRecord(payload.stats) as LearnerStatsData;
     const name = toText(profile.display_name, toText(profile.username, "học viên"));
@@ -304,22 +306,5 @@ window.addEventListener("popstate", () => {
   }
 });
 
-document.getElementById("studyLogout")?.addEventListener("click", (event) => {
-  event.preventDefault();
-  for (const key of [
-    "slanguage_access_token",
-    "slanguage_refresh_token",
-    "slanguage_is_logged_in",
-    "slanguage_user_id",
-    "slanguage_user_email",
-    "slanguage_user_name",
-    "slanguage_active_language",
-    "slanguage_user_xp",
-    "slanguage_user_streak",
-  ]) {
-    localStorage.removeItem(key);
-  }
-  window.location.assign("../home/index.html");
-});
-
+void initializeLearnerHeader({ loadProfile: false });
 void loadLearningProfile();

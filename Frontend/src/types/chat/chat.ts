@@ -1,3 +1,5 @@
+import { initializeLearnerHeader } from "../shared/learner-header";
+
 interface ApiResponse<T> {
   status: string;
   message: string;
@@ -655,35 +657,16 @@ async function sendMessage(event?: SubmitEvent, speakResponse = false): Promise<
 }
 
 function initialize(): void {
-  const name = localStorage.getItem("slanguage_user_name") || "Học viên";
-  const email = localStorage.getItem("slanguage_user_email") || "Tài khoản của bạn";
   const isAuthenticated = Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
-  const profileName = document.getElementById("profileName");
-  const profileEmail = document.getElementById("profileEmail");
-  const profileAvatar = document.getElementById("profileAvatar");
-  const loginLink = document.getElementById("loginLink");
-  const userAccount = document.getElementById("userAccount");
   const accountNote = document.getElementById("accountNote");
-  const logoutButton = document.getElementById("logoutButton");
   const connectionStatus = document.getElementById("connectionStatus");
   const connectionLabel = document.getElementById("connectionLabel");
-  if (profileName) profileName.textContent = name;
-  if (profileEmail) profileEmail.textContent = email;
-  if (profileAvatar) profileAvatar.textContent = name.slice(0, 1).toUpperCase();
   if (!isAuthenticated) {
-    if (profileName) profileName.textContent = "Khách";
-    if (profileEmail) profileEmail.textContent = "Đang dùng thử";
-    if (profileAvatar) profileAvatar.textContent = "G";
-    if (userAccount) userAccount.hidden = true;
-    if (loginLink) loginLink.hidden = false;
-    if (logoutButton instanceof HTMLElement) logoutButton.hidden = true;
     if (connectionStatus) {
       connectionStatus.classList.add("is-guest");
       if (connectionLabel) connectionLabel.textContent = "Đăng nhập để lưu lịch sử";
     }
   } else {
-    if (userAccount) userAccount.hidden = false;
-    if (loginLink) loginLink.hidden = true;
     if (accountNote) accountNote.hidden = true;
     if (connectionStatus) {
       connectionStatus.classList.add("is-authenticated");
@@ -691,6 +674,7 @@ function initialize(): void {
     }
   }
 
+  void initializeLearnerHeader();
   conversationForm?.addEventListener("submit", (event) => void startConversation(event));
   topicPreset?.addEventListener("change", () => {
     if (topicPreset instanceof HTMLSelectElement && topicInput instanceof HTMLInputElement) {
@@ -716,14 +700,6 @@ function initialize(): void {
       event.preventDefault();
       messageForm.requestSubmit();
     }
-  });
-  document.getElementById("logoutButton")?.addEventListener("click", () => {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem("slanguage_is_logged_in");
-    localStorage.removeItem("slanguage_user_name");
-    localStorage.removeItem("slanguage_user_email");
-    window.location.assign("../login/index.html");
   });
   void loadConversationHistory();
 }

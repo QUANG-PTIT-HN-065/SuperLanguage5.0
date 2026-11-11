@@ -33,6 +33,8 @@ export interface LearnerProfileSummary {
   currentLevel: string;
   targetLevel: string;
   dailyGoalXp: number;
+  dailyGoalMinutes: number;
+  dailyGoalLessons: number;
   planId: string;
 }
 
@@ -135,6 +137,8 @@ export async function fetchLearnerOverview(): Promise<LearnerOverview> {
       currentLevel: toText(profile.current_level),
       targetLevel: toText(profile.target_level),
       dailyGoalXp: toInt(profile.daily_goal_xp),
+      dailyGoalMinutes: toInt(profile.daily_goal_minutes),
+      dailyGoalLessons: toInt(profile.daily_goal_lessons),
       planId: toText(profile.plan_id),
     },
     stats: {

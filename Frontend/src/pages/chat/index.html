@@ -7,35 +7,74 @@
     <title>AI Conversation | SuperLanguage</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../css/chat/style.css">
+    <link rel="stylesheet" href="../../css/shared/learner-header.css">
     <script type="module" src="../../types/chat/chat.ts"></script>
   </head>
   <body>
     <section class="workspace">
-      <header class="topbar">
-        <div class="page-heading">
-          <div class="eyebrow">LUYỆN GIAO TIẾP CÙNG AI</div>
-          <h1>AI Conversation</h1>
+      <header class="navbar slg-app-navbar">
+        <div class="navbar-container">
+          <div class="nav-left">
+            <a href="../home/index.html" class="brand-logo">
+              <img src="../../../assets/logo.png" alt="Slanguage" class="brand-logo-img">
+              <span class="brand-name">S<span class="brand-language">language</span></span>
+            </a>
+          </div>
+          <nav class="nav-center" aria-label="Điều hướng chính">
+            <ul class="nav-links">
+              <li><a href="../home/index.html">Trang chủ</a></li>
+              <li><a href="../learning/index.html">Học tập</a></li>
+              <li><a href="../vocabulary/index.html">Từ vựng</a></li>
+              <li><a href="./index.html" class="active" aria-current="page">Luyện tập AI</a></li>
+            </ul>
+          </nav>
+          <div class="nav-right">
+            <div class="connection-status" id="connectionStatus" role="status">
+              <span aria-hidden="true"></span>
+              <span id="connectionLabel">Đang kiểm tra phiên đăng nhập</span>
+            </div>
+            <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
+              <img src="../../../assets/streak-flame.gif?v=4" alt="" aria-hidden="true">
+              <span data-learner-streak>0 Ngày</span>
+            </div>
+            <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
+              <i class="fa-solid fa-star" aria-hidden="true"></i><span id="headerXPVal">0 XP</span>
+            </div>
+            <div class="lang-dropdown auth-only" id="langDropdown">
+              <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
+                <img src="../../../assets/flags/flag-jp.png" alt="" class="flag-icon" id="currentLangFlag">
+                <span class="lang-current-label" id="currentLangLabel">Đang tải...</span>
+                <i class="fa-solid fa-chevron-down lang-chevron" aria-hidden="true"></i>
+              </button>
+              <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
+                <button type="button" class="lang-dropdown-item" data-lang="ja" role="menuitem"><img src="../../../assets/flags/flag-jp.png" alt="" class="flag-icon"><span>Tiếng Nhật</span><i class="fa-solid fa-check check-icon" aria-hidden="true"></i></button>
+                <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem"><img src="../../../assets/flags/flag-en.png" alt="" class="flag-icon"><span>Tiếng Anh</span><i class="fa-solid fa-check check-icon" aria-hidden="true"></i></button>
+                <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem"><img src="../../../assets/flags/flag-vn.png" alt="" class="flag-icon"><span>Tiếng Việt</span><i class="fa-solid fa-check check-icon" aria-hidden="true"></i></button>
+              </div>
+            </div>
+            <div class="auth-only" id="userAccount">
+              <div class="user-dropdown" id="userDropdown">
+                <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                  <img src="../../../assets/logo.png" alt="" class="user-avatar-mini" id="headerAvatar">
+                  <span class="user-info-text"><span class="name" id="profileName">Học viên</span><span class="role" id="profileEmail">Tài khoản học viên</span></span>
+                  <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
+                <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+                  <a href="../profile/index.html" class="user-dropdown-item" role="menuitem"><span class="menu-item-icon"><i class="fa-solid fa-user-pen"></i></span><span class="menu-item-text"><span class="title">Hồ sơ của tôi</span><span class="sub">Xem và chỉnh sửa thông tin</span></span></a>
+                  <a href="../login/index.html" class="user-dropdown-item logout-item" id="logoutButton" role="menuitem"><span class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span><span class="menu-item-text"><span class="title">Đăng xuất</span><span class="sub">Thoát khỏi phiên học</span></span></a>
+                </div>
+              </div>
+            </div>
+            <div class="guest-nav-auth guest-only">
+              <a class="nav-auth-login" href="../login/index.html?redirect=../chat/index.html">Đăng nhập</a>
+              <a class="nav-auth-register" href="../login/index.html?mode=signup">Đăng ký</a>
+            </div>
+          </div>
         </div>
-        <nav class="topbar-actions" aria-label="Điều hướng và tài khoản">
-          <a class="home-link" href="../home/index.html">
-            <span aria-hidden="true">←</span> Về trang chủ
-          </a>
-          <div class="connection-status" id="connectionStatus" role="status">
-            <span aria-hidden="true"></span>
-            <span id="connectionLabel">Đang kiểm tra phiên đăng nhập</span>
-          </div>
-          <a class="header-login-link" id="loginLink" href="../login/index.html">Đăng nhập</a>
-          <div class="user-account" id="userAccount" hidden>
-            <span class="profile-avatar" id="profileAvatar" aria-hidden="true">H</span>
-            <span class="profile-copy">
-              <strong id="profileName">Học viên</strong>
-              <span id="profileEmail">Tài khoản của bạn</span>
-            </span>
-            <button class="logout-button" id="logoutButton" type="button">Đăng xuất</button>
-          </div>
-        </nav>
       </header>
 
       <main class="room-grid">

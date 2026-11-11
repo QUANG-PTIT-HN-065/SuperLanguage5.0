@@ -74,6 +74,8 @@ create table if not exists public.profiles (
   target_level         public.cefr_level,
   learning_goal        text check (learning_goal in ('travel','work','study','exam','hobby','other')),
   daily_goal_xp        smallint not null default 20 check (daily_goal_xp between 10 and 500),
+  daily_goal_minutes   smallint not null default 15 check (daily_goal_minutes between 5 and 240),
+  daily_goal_lessons   smallint not null default 1 check (daily_goal_lessons between 1 and 20),
   reminder_time        time,
   marketing_opt_in     boolean not null default false,
   show_on_leaderboard  boolean not null default true,
