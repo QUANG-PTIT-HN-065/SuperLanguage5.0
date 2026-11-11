@@ -109,8 +109,12 @@ export function languageLabel(code: string): string {
  * Không dùng giá trị mặc định mang tính "thành tích" (2450 XP, 14 ngày...).
  */
 export async function fetchLearnerOverview(): Promise<LearnerOverview> {
+  const response = await slanguageApi(
+    "/api/v1/me",
+    { method: "GET" },
+  );
   const payload = asRecord(
-    await slanguageApi("/api/v1/me", { method: "GET" })
+    response.data
   );
   const profile = asRecord(payload.profile);
   const stats = asRecord(payload.stats);
@@ -267,10 +271,11 @@ export async function fetchVocabularyTopics(
   limit = 50,
   offset = 0,
 ): Promise<PaginatedVocabulary<VocabularyTopic>> {
-  const payload = (await slanguageApi(
+  const response = await slanguageApi(
     `/api/v1/vocabulary/topics?limit=${limit}&offset=${offset}`,
     { method: "GET" },
-  )) as unknown as Record<string, unknown>;
+  );
+  const payload = asRecord(response.data);
 
   const items = Array.isArray(payload.items) ? payload.items : [];
   return {
@@ -294,10 +299,11 @@ export async function fetchVocabularyWords(
   const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   if (topicId !== undefined) qs.set("topic_id", String(topicId));
 
-  const payload = (await slanguageApi(
+  const response = await slanguageApi(
     `/api/v1/vocabulary/words?${qs.toString()}`,
     { method: "GET" },
-  )) as unknown as Record<string, unknown>;
+  );
+  const payload = asRecord(response.data);
 
   const items = Array.isArray(payload.items) ? payload.items : [];
   return {

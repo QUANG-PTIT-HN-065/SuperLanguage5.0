@@ -53,3 +53,4 @@ firebase-debug.log
 .tsupgrader
 dist
 tests
+Backend\Test

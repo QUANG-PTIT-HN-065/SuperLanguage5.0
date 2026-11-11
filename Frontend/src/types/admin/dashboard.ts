@@ -11,6 +11,16 @@ export interface TopicItem {
   word_count?: number;
 }
 
+interface LearningPathItem {
+  id: number;
+  language_code: string;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  topics: TopicItem[];
+  topic_ids?: number[];
+}
+
 export interface LanguageOption {
   code: string;
   name: string;
@@ -43,6 +53,7 @@ interface OverviewStats {
 
 const languagesMap = new Map<string, string>();
 let topicsList: TopicItem[] = [];
+let learningPaths: LearningPathItem[] = [];
 let usersList: UserItem[] = [];
 let activeTab = "dashboard";
 let currentTopicFilterLang = "all";
@@ -81,6 +92,7 @@ export async function initDashboard(): Promise<void> {
       loadDashboardStats(),
       loadTopics(),
       loadUsers(),
+      loadLearningPaths(),
     ]);
   } catch (error) {
     if (error instanceof ForbiddenError) {
@@ -178,8 +190,120 @@ async function loadTopics(langCode: string = "all"): Promise<void> {
       if (failed && topicsList.length === 0) throw failed.reason;
     }
     renderTopicsTable();
+    renderLearningPathTopicOptions();
   } catch (err) {
     showApiError(err);
+  }
+}
+
+async function loadLearningPaths(): Promise<void> {
+    try {
+      const response = await adminApi<{ items: LearningPathItem[] }>(
+        "/api/v1/admin/learning-paths?language_code=all",
+      );
+      learningPaths = response.items || [];
+      renderLearningPaths();
+    } catch (error) {
+      showApiError(error);
+    }
+  }
+
+function renderLearningPathTopicOptions(selectedIds: number[] = []): void {
+    const languageCode = getFieldValue("learningPathLanguage");
+    const select = getElement<HTMLSelectElement>("learningPathTopics");
+    if (!select) return;
+    const options = topicsList
+      .filter((topic) => topic.language_code === languageCode)
+      .map((topic) => {
+        const option = document.createElement("option");
+        option.value = String(topic.id);
+        option.textContent = topic.name;
+        option.selected = selectedIds.includes(topic.id);
+        return option;
+      });
+    select.replaceChildren(...options);
+  }
+
+function renderLearningPaths(): void {
+    const body = getElement("learningPathsTableBody");
+    if (!body) return;
+    if (!learningPaths.length) {
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 4;
+      cell.className = "p-6 text-center text-sm text-slate-500";
+      cell.textContent = "Chưa có lộ trình. Tạo lộ trình và thêm các chủ đề học tập.";
+      row.append(cell);
+      body.replaceChildren(row);
+      return;
+    }
+
+    body.replaceChildren(...learningPaths.map((path) => {
+      const row = document.createElement("tr");
+      const title = document.createElement("td");
+      title.className = "p-3";
+      const name = document.createElement("strong");
+      name.className = "block text-slate-800";
+      name.textContent = path.name;
+      const description = document.createElement("span");
+      description.className = "text-xs text-slate-500";
+      description.textContent = path.description || "Chưa có mô tả";
+      title.append(name, description);
+
+      const language = document.createElement("td");
+      language.className = "p-3 text-xs";
+      language.textContent = languagesMap.get(path.language_code) || path.language_code.toUpperCase();
+
+      const topics = document.createElement("td");
+      topics.className = "p-3 text-xs text-slate-600";
+      topics.textContent = `${path.topics.length} chủ đề`;
+
+      const actions = document.createElement("td");
+      actions.className = "p-3 text-right whitespace-nowrap";
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "px-2 py-1 text-blue-700 hover:bg-blue-50 rounded";
+      edit.textContent = "Sửa";
+      edit.addEventListener("click", () => editLearningPath(path));
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "ml-1 px-2 py-1 text-rose-700 hover:bg-rose-50 rounded";
+      remove.textContent = "Xóa";
+      remove.addEventListener("click", () => void removeLearningPath(path));
+      actions.append(edit, remove);
+      row.append(title, language, topics, actions);
+      return row;
+    }));
+  }
+
+function editLearningPath(path: LearningPathItem): void {
+    getElement<HTMLInputElement>("editLearningPathId")!.value = String(path.id);
+    getElement<HTMLInputElement>("learningPathName")!.value = path.name;
+    getElement<HTMLSelectElement>("learningPathLanguage")!.value = path.language_code;
+    getElement<HTMLTextAreaElement>("learningPathDescription")!.value = path.description || "";
+    getElement<HTMLInputElement>("learningPathOrder")!.value = String(path.sort_order || 100);
+    const topicIds = path.topics.map((topic) => topic.id);
+    renderLearningPathTopicOptions(topicIds);
+    getElement<HTMLButtonElement>("cancelLearningPathEdit")?.removeAttribute("hidden");
+    getElement("learningPathForm")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+function resetLearningPathForm(): void {
+    getElement<HTMLFormElement>("learningPathForm")?.reset();
+    getElement<HTMLInputElement>("editLearningPathId")!.value = "";
+    renderLearningPathTopicOptions();
+    getElement<HTMLButtonElement>("cancelLearningPathEdit")?.setAttribute("hidden", "");
+  }
+
+async function removeLearningPath(path: LearningPathItem): Promise<void> {
+    if (!window.confirm(`Xóa lộ trình "${path.name}"?`)) return;
+    try {
+      await adminApi(`/api/v1/admin/learning-paths/${path.id}`, { method: "DELETE" });
+      if (getFieldValue("editLearningPathId") === String(path.id)) resetLearningPathForm();
+      await loadLearningPaths();
+      showToast("Đã xóa lộ trình.", "success");
+    } catch (error) {
+      showApiError(error);
   }
 }
 
@@ -423,14 +547,19 @@ async function loadLanguages(): Promise<void> {
 
     const topicLangSelect = getElement<HTMLSelectElement>("inputTopicLanguage");
     const filterTopicLang = getElement<HTMLSelectElement>("filterTopicLanguage");
+    const pathLanguageSelect = getElement<HTMLSelectElement>("learningPathLanguage");
 
-    if (topicLangSelect) {
-      topicLangSelect.replaceChildren(...res.items.map((l) => {
+    const languageOptions = res.items.map((l) => {
         const opt = document.createElement("option");
         opt.value = l.code;
         opt.textContent = `${l.name} (${String(l.code ?? "").toUpperCase()})`;
         return opt;
-      }));
+      });
+    if (topicLangSelect) {
+      topicLangSelect.replaceChildren(...languageOptions.map((option) => option.cloneNode(true) as HTMLOptionElement));
+    }
+    if (pathLanguageSelect) {
+      pathLanguageSelect.replaceChildren(...languageOptions.map((option) => option.cloneNode(true) as HTMLOptionElement));
     }
 
     if (filterTopicLang) {
@@ -630,6 +759,55 @@ function setupEventListeners(): void {
   });
 
   getElement("btnCancelTopicEdit")?.addEventListener("click", resetTopicForm);
+
+  getElement("learningPathLanguage")?.addEventListener("change", () => {
+    renderLearningPathTopicOptions();
+  });
+  getElement("cancelLearningPathEdit")?.addEventListener("click", resetLearningPathForm);
+  getElement("learningPathForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const languageCode = getFieldValue("learningPathLanguage");
+    const topicSelect = getElement<HTMLSelectElement>("learningPathTopics");
+    const topicIds = topicSelect
+      ? Array.from(topicSelect.selectedOptions, (option) => Number(option.value))
+      : [];
+    if (!topicIds.length) {
+      showToast("Hãy chọn ít nhất một chủ đề cho lộ trình.", "error");
+      return;
+    }
+
+    const editId = Number(getFieldValue("editLearningPathId"));
+    const isEdit = Number.isInteger(editId) && editId > 0;
+    const submit = getElement<HTMLButtonElement>("submitLearningPath");
+    if (submit) submit.disabled = true;
+    try {
+      const payload = {
+        language_code: languageCode,
+        name: getFieldValue("learningPathName"),
+        description: getFieldValue("learningPathDescription") || null,
+        sort_order: Number(getFieldValue("learningPathOrder")) || 100,
+        topic_ids: topicIds,
+      };
+      if (isEdit) {
+        await adminApi(`/api/v1/admin/learning-paths/${editId}`, {
+          method: "PUT",
+          body: payload,
+        });
+      } else {
+        await adminApi("/api/v1/admin/learning-paths", {
+          method: "POST",
+          body: payload,
+        });
+      }
+      resetLearningPathForm();
+      await loadLearningPaths();
+      showToast(isEdit ? "Đã cập nhật lộ trình." : "Đã tạo lộ trình.", "success");
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
 
   // Search & Filter topics
   getElement("searchTopicInput")?.addEventListener("input", renderTopicsTable);

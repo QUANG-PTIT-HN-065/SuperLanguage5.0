@@ -52,19 +52,21 @@ def list_topics(
     )
     total = _count_rows(count_query)
     available = _access_count(total, is_premium)
+    topic_floor = None if is_premium else _free_topic_floor(language_code)
+    if not is_premium and topic_floor is None:
+        available = 0
     end = min(offset + limit, available)
 
-    topics = []
+    topics: list[Dict[str, Any]] = []
     if offset < end:
-        topics = (
+        query = (
             supabase_admin.table("topics")
             .select("id,language_code,name,description,icon_url,sort_order")
             .eq("language_code", language_code)
-            .order("id")
-            .range(offset, end - 1)
-            .execute()
-            .data
         )
+        if topic_floor is not None:
+            query = query.gte("id", topic_floor)
+        topics = query.order("id").range(offset, end - 1).execute().data
 
     return {
         "items": topics,
@@ -91,7 +93,7 @@ def _get_topic(topic_id: int, language_code: str) -> Dict[str, Any]:
     return rows[0] # type: ignore
 
 
-def _free_topic_cutoff(language_code: str) -> Optional[int]:
+def _free_topic_floor(language_code: str) -> Optional[int]:
     query = (
         supabase_admin.table("topics")
         .select("id", count="exact") # type: ignore
@@ -105,7 +107,7 @@ def _free_topic_cutoff(language_code: str) -> Optional[int]:
         supabase_admin.table("topics")
         .select("id")
         .eq("language_code", language_code)
-        .order("id")
+        .order("id", desc=True)
         .range(visible_count - 1, visible_count - 1)
         .execute()
         .data
@@ -113,7 +115,7 @@ def _free_topic_cutoff(language_code: str) -> Optional[int]:
     return int(rows[0]["id"]) if rows else None # type: ignore
 
 
-def _free_word_cutoff(language_code: str) -> tuple[int, int]:
+def _free_word_floor(language_code: str) -> tuple[int, int]:
     query = (
         supabase_admin.table("words")
         .select("id", count="exact") # type: ignore
@@ -127,7 +129,7 @@ def _free_word_cutoff(language_code: str) -> tuple[int, int]:
         supabase_admin.table("words")
         .select("id")
         .eq("language_code", language_code)
-        .order("id")
+        .order("id", desc=True)
         .range(visible_count - 1, visible_count - 1)
         .execute()
         .data
@@ -140,6 +142,7 @@ def list_words(
     limit: int,
     offset: int,
     topic_id: Optional[int] = None,
+    search_term: Optional[str] = None,
 ) -> Dict[str, Any]:
     language_code = profile["target_language"]
     is_premium = is_premium_profile(profile)
@@ -148,14 +151,48 @@ def list_words(
     if topic_id is not None:
         topic = _get_topic(topic_id, language_code)
         if not is_premium:
-            topic_cutoff = _free_topic_cutoff(language_code)
-            if topic_cutoff is None or topic_id > topic_cutoff:
+            topic_floor = _free_topic_floor(language_code)
+            if topic_floor is None or topic_id < topic_floor:
                 raise HTTPException(
                     status.HTTP_403_FORBIDDEN,
                     "Chủ đề này chỉ dành cho tài khoản Premium.",
                 )
 
-    total_words, free_word_cutoff = _free_word_cutoff(language_code)
+    total_words, free_word_floor = _free_word_floor(language_code)
+    matching_word_ids = None
+    if search_term:
+        pattern = f"%{search_term.strip()}%"
+        word_matches = (
+            supabase_admin.table("words")
+            .select("id")
+            .eq("language_code", language_code)
+            .ilike("word", pattern)
+            .execute()
+            .data
+            or []
+        )
+        meaning_matches = (
+            supabase_admin.table("words")
+            .select("id")
+            .eq("language_code", language_code)
+            .ilike("meaning", pattern)
+            .execute()
+            .data
+            or []
+        )
+        matching_word_ids = list({
+            row["id"] for row in [*word_matches, *meaning_matches]
+        })
+        if not matching_word_ids:
+            return {
+                "items": [],
+                "total": 0,
+                "available": 0,
+                "limit": limit,
+                "offset": offset,
+                "plan": "premium" if is_premium else "free",
+                "topic": topic,
+            }
     fields = (
         "id,language_code,word,phonetic,meaning,part_of_speech,audio_url,"
         "example_sentence,example_meaning,level,created_at"
@@ -166,9 +203,11 @@ def list_words(
             .select("id", count="exact") # type: ignore
             .eq("language_code", language_code)
         )
+        if matching_word_ids is not None:
+            count_query = count_query.in_("id", matching_word_ids)
         if not is_premium:
-            if free_word_cutoff:
-                count_query = count_query.lte("id", free_word_cutoff)
+            if free_word_floor:
+                count_query = count_query.gte("id", free_word_floor)
             else:
                 count_query = None
 
@@ -181,8 +220,10 @@ def list_words(
                 .select(fields)
                 .eq("language_code", language_code)
             )
+            if matching_word_ids is not None:
+                page_query = page_query.in_("id", matching_word_ids)
             if not is_premium:
-                page_query = page_query.lte("id", free_word_cutoff)
+                page_query = page_query.gte("id", free_word_floor)
             items = (
                 page_query.order("id")
                 .range(offset, page_end - 1)
@@ -196,15 +237,19 @@ def list_words(
             .select("word_id", count="exact") # type: ignore
             .eq("topic_id", topic_id)
         )
+        if matching_word_ids is not None:
+            link_count_query = link_count_query.in_("word_id", matching_word_ids)
         total = _count_rows(link_count_query)
         links_query = supabase_admin.table("word_topics").select(
             "word_id", count="exact" # type: ignore
         ).eq("topic_id", topic_id)
+        if matching_word_ids is not None:
+            links_query = links_query.in_("word_id", matching_word_ids)
         if not is_premium:
-            if not free_word_cutoff:
+            if not free_word_floor:
                 links_query = None
             else:
-                links_query = links_query.lte("word_id", free_word_cutoff)
+                links_query = links_query.gte("word_id", free_word_floor)
         if links_query is None:
             available = 0
             items = []
@@ -218,8 +263,10 @@ def list_words(
                     .select("word_id")
                     .eq("topic_id", topic_id)
                 )
+                if matching_word_ids is not None:
+                    word_ids = word_ids.in_("word_id", matching_word_ids)
                 if not is_premium:
-                    word_ids = word_ids.lte("word_id", free_word_cutoff)
+                    word_ids = word_ids.gte("word_id", free_word_floor)
                 ids = (
                     word_ids.order("word_id")
                     .range(offset, page_end - 1)

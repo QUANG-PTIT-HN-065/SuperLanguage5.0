@@ -77,19 +77,19 @@ class VocabularyAccessTests(unittest.TestCase):
 
     @patch("app.services.vocabulary_service.get_plan", return_value={"is_active": False})
     @patch("app.services.vocabulary_service.supabase_admin")
-    def test_free_topic_pagination_cannot_read_premium_topics(self, client, _get_plan):
+    def test_free_topic_pagination_returns_newest_half(self, client, _get_plan):
         query = Mock()
         query.select.return_value = query
         query.eq.return_value = query
+        query.gte.return_value = query
         query.limit.return_value = query
         query.order.return_value = query
         query.range.return_value = query
         query.execute.side_effect = [
             SimpleNamespace(count=5, data=[]),
-            SimpleNamespace(
-                count=None,
-                data=[{"id": 1}, {"id": 2}, {"id": 3}],
-            ),
+            SimpleNamespace(count=5, data=[]),
+            SimpleNamespace(count=None, data=[{"id": 3}]),
+            SimpleNamespace(count=None, data=[{"id": 3}, {"id": 4}, {"id": 5}]),
         ]
         client.table.return_value = query
 
@@ -101,27 +101,29 @@ class VocabularyAccessTests(unittest.TestCase):
 
         self.assertEqual(result["available"], 3)
         self.assertEqual(len(result["items"]), 3)
-        query.range.assert_called_once_with(0, 2)
+        query.order.assert_any_call("id", desc=True)
+        query.gte.assert_called_once_with("id", 3)
+        query.range.assert_any_call(0, 2)
 
     @patch("app.services.vocabulary_service.supabase_admin")
-    def test_free_word_listing_enforces_half_and_offset_cap(self, client):
+    def test_free_word_listing_returns_newest_half_and_enforces_offset_cap(self, client):
         query = Mock()
         query.select.return_value = query
         query.eq.return_value = query
+        query.gte.return_value = query
         query.limit.return_value = query
         query.order.return_value = query
         query.range.return_value = query
-        query.lte.return_value = query
         query.execute.side_effect = [
             SimpleNamespace(count=8, data=[]),
-            SimpleNamespace(count=None, data=[{"id": 4}]),
+            SimpleNamespace(count=None, data=[{"id": 5}]),
             SimpleNamespace(count=4, data=[]),
             SimpleNamespace(
                 count=None,
-                data=[{"id": index} for index in range(1, 5)],
+                data=[{"id": index} for index in range(5, 9)],
             ),
             SimpleNamespace(count=8, data=[]),
-            SimpleNamespace(count=None, data=[{"id": 4}]),
+            SimpleNamespace(count=None, data=[{"id": 5}]),
             SimpleNamespace(count=4, data=[]),
         ]
         client.table.return_value = query
@@ -133,7 +135,79 @@ class VocabularyAccessTests(unittest.TestCase):
         self.assertEqual(first_page["total"], 8)
         self.assertEqual(first_page["available"], 4)
         self.assertEqual(len(first_page["items"]), 4)
+        self.assertEqual([item["id"] for item in first_page["items"]], [5, 6, 7, 8])
         self.assertEqual(past_free_limit["items"], [])
+        query.order.assert_any_call("id", desc=True)
+        self.assertEqual(query.gte.call_args_list[0].args, ("id", 5))
+
+    @patch("app.services.vocabulary_service.get_plan", return_value={"is_active": False})
+    @patch("app.services.vocabulary_service.supabase_admin")
+    def test_free_user_cannot_open_an_older_topic_outside_latest_half(self, client, _get_plan):
+        query = Mock()
+        query.select.return_value = query
+        query.eq.return_value = query
+        query.limit.return_value = query
+        query.order.return_value = query
+        query.range.return_value = query
+        query.execute.side_effect = [
+            SimpleNamespace(data=[{"id": 2, "language_code": "en", "name": "Old"}]),
+            SimpleNamespace(count=4, data=[]),
+            SimpleNamespace(count=None, data=[{"id": 3}]),
+        ]
+        client.table.return_value = query
+
+        with self.assertRaises(HTTPException) as raised:
+            list_words(
+                {"target_language": "en", "plan_id": "free"},
+                limit=20,
+                offset=0,
+                topic_id=2,
+            )
+
+        self.assertEqual(raised.exception.status_code, 403)
+        query.order.assert_called_once_with("id", desc=True)
+
+    @patch("app.services.vocabulary_service._free_word_floor", return_value=(8, 5))
+    @patch("app.services.vocabulary_service._free_topic_floor", return_value=3)
+    @patch("app.services.vocabulary_service._get_topic")
+    @patch("app.services.vocabulary_service.is_premium_profile", return_value=False)
+    @patch("app.services.vocabulary_service.supabase_admin")
+    def test_free_topic_word_list_includes_newest_words(
+        self, client, _is_premium, get_topic, _topic_floor, _word_floor
+    ):
+        get_topic.return_value = {"id": 4, "language_code": "en", "name": "Latest"}
+        query = Mock()
+        query.select.return_value = query
+        query.eq.return_value = query
+        query.gte.return_value = query
+        query.in_.return_value = query
+        query.limit.return_value = query
+        query.order.return_value = query
+        query.range.return_value = query
+        query.execute.side_effect = [
+            SimpleNamespace(count=6, data=[]),
+            SimpleNamespace(count=3, data=[]),
+            SimpleNamespace(data=[{"word_id": 5}, {"word_id": 7}, {"word_id": 8}]),
+            SimpleNamespace(
+                data=[
+                    {"id": 5, "word": "five", "meaning": "5"},
+                    {"id": 7, "word": "seven", "meaning": "7"},
+                    {"id": 8, "word": "eight", "meaning": "8"},
+                ]
+            ),
+        ]
+        client.table.return_value = query
+
+        result = list_words(
+            {"target_language": "en", "plan_id": "free"},
+            limit=20,
+            offset=0,
+            topic_id=4,
+        )
+
+        self.assertEqual(result["available"], 3)
+        self.assertEqual([item["id"] for item in result["items"]], [5, 7, 8])
+        query.gte.assert_any_call("word_id", 5)
 
 
 if __name__ == "__main__":

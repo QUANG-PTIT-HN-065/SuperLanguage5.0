@@ -346,19 +346,24 @@ export async function requireAdminSession(): Promise<AdminProfile | null> {
     return null;
   }
 
+  const meData =
+    typeof result === "object" && result !== null && "data" in result
+      ? result.data
+      : result;
+
   if (
-    typeof result !== "object" ||
-    result === null ||
-    !("profile" in result) ||
-    typeof result.profile !== "object" ||
-    result.profile === null
+    typeof meData !== "object" ||
+    meData === null ||
+    !("profile" in meData) ||
+    typeof meData.profile !== "object" ||
+    meData.profile === null
   ) {
     clearTokens();
     goToLogin();
     return null;
   }
 
-  const profile = (result as { profile: Record<string, unknown> }).profile;
+  const profile = meData.profile as Record<string, unknown>;
   const userRole = typeof profile.role === "string" ? profile.role : "";
   const userEmail = typeof profile.email === "string" ? profile.email : "";
   const displayName = typeof profile.display_name === "string" ? profile.display_name : null;

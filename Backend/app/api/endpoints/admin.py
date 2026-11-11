@@ -3,7 +3,13 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, Query, status
 
 from app.core.deps import get_current_admin_profile
-from app.schemas.vocabulary import TopicCreate, TopicUpdate, WordCreate
+from app.schemas.vocabulary import (
+    LearningPathCreate,
+    LearningPathUpdate,
+    TopicCreate,
+    TopicUpdate,
+    WordCreate,
+)
 from app.services.admin import (
     create_admin_topic,
     delete_admin_topic,
@@ -11,6 +17,12 @@ from app.services.admin import (
     list_admin_topics_full,
     list_admin_users,
     update_admin_topic,
+)
+from app.services.learning_path_service import (
+    create_learning_path,
+    delete_learning_path,
+    list_learning_paths,
+    update_learning_path,
 )
 from app.services.vocabulary_service import (
     create_word,
@@ -80,6 +92,49 @@ def delete_topic(
     """Admin xóa một chủ đề theo ID."""
     delete_admin_topic(topic_id)
     return {"status": "success", "deleted_topic_id": topic_id}
+
+
+@router.get("/learning-paths")
+def get_learning_paths(
+    language_code: Optional[str] = Query(default=None),
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    if language_code and language_code != "all":
+        return {"items": list_learning_paths(language_code)}
+    languages = list_admin_languages()
+    paths = [
+        path
+        for language in languages
+        for path in list_learning_paths(language["code"])
+    ]
+    return {"items": paths}
+
+
+@router.post("/learning-paths", status_code=status.HTTP_201_CREATED)
+def add_learning_path(
+    body: LearningPathCreate,
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    return {"status": "success", "path": create_learning_path(body.model_dump(mode="json"))}
+
+
+@router.put("/learning-paths/{path_id}")
+def edit_learning_path(
+    path_id: int,
+    body: LearningPathUpdate,
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    data = body.model_dump(mode="json", exclude_unset=True)
+    return {"status": "success", "path": update_learning_path(path_id, data)}
+
+
+@router.delete("/learning-paths/{path_id}")
+def remove_learning_path(
+    path_id: int,
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    delete_learning_path(path_id)
+    return {"status": "success", "deleted_path_id": path_id}
 
 
 # ==================== WORDS & LANGUAGES ====================

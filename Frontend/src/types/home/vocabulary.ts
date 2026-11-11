@@ -4,6 +4,7 @@ interface Topic {
   id: number;
   name: string;
   description: string | null;
+  languageCode: string;
 }
 
 interface VocabularyWord {
@@ -34,12 +35,13 @@ interface ReviewCompletion {
 const PAGE_SIZE = 20;
 const MAX_TOPICS_PER_PAGE = 100;
 
-const topicFilter = document.getElementById("topicFilter") as HTMLSelectElement | null;
 const searchInput = document.getElementById("wordSearch") as HTMLInputElement | null;
+const addTopicSelect = document.getElementById("addTopicSelect") as HTMLSelectElement | null;
 const notice = document.getElementById("vocabularyNotice");
 const workspace = document.getElementById("vocabularyWorkspace");
 const guestCard = document.getElementById("vocabularyGuest");
 const wordGrid = document.getElementById("wordGrid");
+const topicGrid = document.getElementById("topicGrid");
 const wordEmpty = document.getElementById("wordEmpty");
 const sessionPanel = document.getElementById("reviewSession");
 const wordListSection = document.getElementById("wordListSection");
@@ -47,7 +49,11 @@ const xpValue = document.getElementById("vocabularyXp");
 
 let pageOffset = 0;
 let totalAvailable = 0;
+let selectedTopicId: number | null = null;
+let wordViewMode: "lookup" | "topic" = "lookup";
+let searchTimer: number | null = null;
 let topics: Topic[] = [];
+let selectedTopicIds: number[] = [];
 let currentWords: VocabularyWord[] = [];
 let reviewWords: VocabularyWord[] = [];
 let reviewIndex = 0;
@@ -94,6 +100,7 @@ function parseTopic(item: Record<string, unknown>): Topic {
     id,
     name,
     description: text(item.description),
+    languageCode: text(item.language_code) || "",
   };
 }
 
@@ -131,14 +138,102 @@ function setAuthState(authenticated: boolean): void {
   if (notice) notice.hidden = !authenticated;
 }
 
+const SAVED_TOPICS_KEY = "slanguage_saved_learning_topics";
+
+function readSavedTopicIds(): number[] {
+  const saved = localStorage.getItem(SAVED_TOPICS_KEY);
+  if (!saved) return [];
+  try {
+    const parsed: unknown = JSON.parse(saved);
+    if (!Array.isArray(parsed)) throw new Error("invalid saved topic list");
+    return Array.from(new Set(parsed.map(positiveInt).filter(Boolean)));
+  } catch {
+    setNotice("Danh sách chủ đề đã lưu không hợp lệ; bạn có thể chọn lại chủ đề.", true);
+    return [];
+  }
+}
+
+function saveTopicIds(): void {
+  localStorage.setItem(SAVED_TOPICS_KEY, JSON.stringify(selectedTopicIds));
+}
+
+function renderTopicCards(): void {
+  if (!topicGrid) return;
+  const savedTopics = topics.filter((topic) => selectedTopicIds.includes(topic.id));
+  topicGrid.replaceChildren();
+  for (const topic of savedTopics) {
+    const card = document.createElement("article");
+    card.className = "topic-card";
+
+    const top = document.createElement("div");
+    top.className = "topic-card-top";
+    const icon = document.createElement("span");
+    icon.className = "topic-card-icon";
+    icon.innerHTML = '<i class="fa-solid fa-book-open" aria-hidden="true"></i>';
+    top.append(icon);
+    const language = document.createElement("span");
+    language.className = "topic-language";
+    language.textContent = topic.languageCode.toUpperCase() || "HỌC TẬP";
+    top.append(language);
+    card.append(top);
+
+    const title = document.createElement("h3");
+    title.textContent = topic.name;
+    card.append(title);
+    const description = document.createElement("p");
+    description.className = "topic-description";
+    description.textContent = topic.description || "Chủ đề bạn đã lưu để học sau.";
+    card.append(description);
+
+    const footer = document.createElement("div");
+    footer.className = "topic-card-footer";
+    const meta = document.createElement("span");
+    meta.className = "topic-card-meta";
+    meta.innerHTML = '<i class="fa-solid fa-book-open" aria-hidden="true"></i> Chủ đề đã lưu';
+    const actions = document.createElement("div");
+    actions.className = "topic-card-actions";
+    for (const [action, label, style] of [
+      ["browse", "Xem từ", "study-secondary-button"],
+      ["study", "Học chủ đề", "study-primary-button"],
+    ]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = style;
+      button.dataset.topicId = String(topic.id);
+      button.dataset.topicAction = action;
+      button.textContent = label;
+      actions.append(button);
+    }
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "topic-remove-button";
+    removeButton.dataset.topicId = String(topic.id);
+    removeButton.dataset.topicAction = "remove";
+    removeButton.setAttribute("aria-label", `Xóa chủ đề ${topic.name}`);
+    removeButton.innerHTML = '<i class="fa-solid fa-xmark" aria-hidden="true"></i>';
+    actions.append(removeButton);
+    footer.append(meta, actions);
+    card.append(footer);
+    topicGrid.append(card);
+  }
+
+  const empty = document.getElementById("topicEmpty");
+  if (empty) empty.hidden = savedTopics.length > 0;
+  const count = document.getElementById("topicCount");
+  if (count) count.textContent = `${savedTopics.length} chủ đề`;
+}
+
 async function loadTopics(): Promise<void> {
   const collected: Topic[] = [];
   let offset = 0;
   let available = 0;
 
   do {
+    const response = await slanguageApi(
+      `/api/v1/vocabulary/topics?limit=${MAX_TOPICS_PER_PAGE}&offset=${offset}`,
+    );
     const page = parsePage(
-      await slanguageApi(`/api/v1/vocabulary/topics?limit=${MAX_TOPICS_PER_PAGE}&offset=${offset}`),
+      response.data,
       parseTopic,
     );
     collected.push(...page.items);
@@ -148,29 +243,59 @@ async function loadTopics(): Promise<void> {
   } while (offset < available);
 
   topics = collected;
-  if (!topicFilter) return;
-  topicFilter.replaceChildren(new Option("Tất cả chủ đề", ""));
-  for (const topic of topics) {
-    topicFilter.add(new Option(topic.name, String(topic.id)));
+  selectedTopicIds = readSavedTopicIds();
+  renderTopicCards();
+  if (addTopicSelect) {
+    addTopicSelect.replaceChildren(new Option("Chọn chủ đề...", ""));
+    for (const topic of topics) {
+      if (!selectedTopicIds.includes(topic.id)) {
+        addTopicSelect.add(new Option(topic.name, String(topic.id)));
+      }
+    }
   }
 }
 
 async function loadWords(): Promise<void> {
-  setNotice("Đang tải từ vựng và chủ đề...");
+  const searchTerm = searchInput?.value.trim() || "";
+  if (!searchTerm && selectedTopicId === null) {
+    currentWords = [];
+    totalAvailable = 0;
+    if (wordListSection) wordListSection.hidden = true;
+    if (wordGrid) wordGrid.replaceChildren();
+    const wordCount = document.getElementById("wordCount");
+    if (wordCount) wordCount.textContent = "";
+    return;
+  }
+
+  setNotice("Đang tải từ vựng...");
   if (wordGrid) wordGrid.replaceChildren();
+  if (wordListSection) wordListSection.hidden = false;
 
   const query = new URLSearchParams({
     limit: String(PAGE_SIZE),
     offset: String(pageOffset),
   });
-  if (topicFilter?.value) query.set("topic_id", topicFilter.value);
+  if (selectedTopicId !== null) query.set("topic_id", String(selectedTopicId));
+  if (searchTerm) query.set("q", searchTerm);
 
+  const response = await slanguageApi(`/api/v1/vocabulary/words?${query.toString()}`);
   const page = parsePage(
-    await slanguageApi(`/api/v1/vocabulary/words?${query.toString()}`),
+    response.data,
     parseWord,
   );
   currentWords = page.items;
   totalAvailable = page.available;
+  const selectedTopic = topics.find((topic) => topic.id === selectedTopicId);
+  const selectedTitle = document.getElementById("selectedTopicTitle");
+  const kicker = document.getElementById("wordListKicker");
+  if (selectedTitle) {
+    selectedTitle.textContent = selectedTopic
+      ? `Từ vựng · ${selectedTopic.name}`
+      : `Kết quả tra cứu${searchTerm ? `: “${searchTerm}”` : ""}`;
+  }
+  if (kicker) kicker.textContent = selectedTopic ? "CHỦ ĐỀ ĐÃ LƯU" : "TRA CỨU";
+  const startReviewButton = document.getElementById("startPageReview");
+  if (startReviewButton) startReviewButton.hidden = wordViewMode !== "topic";
   renderWords();
   setNotice("");
 }
@@ -207,10 +332,19 @@ function renderWords(): void {
     wordGrid.append(card);
   }
 
-  if (wordEmpty) wordEmpty.hidden = filtered.length > 0;
+  if (wordEmpty) {
+    wordEmpty.hidden = filtered.length > 0 || (!searchInput?.value.trim() && selectedTopicId === null);
+    if (filtered.length === 0) {
+      wordEmpty.textContent = selectedTopicId !== null
+        ? "Chủ đề này hiện chưa có từ vựng."
+        : "Không tìm thấy từ phù hợp. Hãy thử từ khóa khác.";
+    }
+  }
   const wordCount = document.getElementById("wordCount");
   if (wordCount) {
-    wordCount.textContent = `${filtered.length} từ trên trang · ${totalAvailable} từ có thể học`;
+    wordCount.textContent = totalAvailable
+      ? `${totalAvailable} kết quả phù hợp`
+      : "";
   }
   const pageLabel = document.getElementById("pageLabel");
   if (pageLabel) {
@@ -227,12 +361,7 @@ function renderWords(): void {
 }
 
 function getVisibleWords(): VocabularyWord[] {
-  const term = searchInput?.value.trim().toLocaleLowerCase("vi-VN") || "";
-  return currentWords.filter((word) =>
-    `${word.word} ${word.meaning} ${word.phonetic || ""}`
-      .toLocaleLowerCase("vi-VN")
-      .includes(term),
-  );
+  return currentWords;
 }
 
 function startReview(words: VocabularyWord[]): void {
@@ -369,6 +498,20 @@ function leaveReview(): void {
   reviewSessionId = null;
 }
 
+async function openTopic(topicId: number, action: "browse" | "study"): Promise<void> {
+  if (searchTimer !== null) window.clearTimeout(searchTimer);
+  selectedTopicId = topicId;
+  wordViewMode = "topic";
+  pageOffset = 0;
+  if (searchInput) searchInput.value = "";
+  const startReviewButton = document.getElementById("startPageReview");
+  if (startReviewButton) startReviewButton.hidden = false;
+  await loadWords();
+  if (wordListSection) wordListSection.hidden = false;
+  if (action === "study") startReview(getVisibleWords());
+  else wordListSection?.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
 async function initVocabularyPage(): Promise<void> {
   const authenticated = isLearnerAuthenticated();
   setAuthState(authenticated);
@@ -376,19 +519,114 @@ async function initVocabularyPage(): Promise<void> {
 
   try {
     await loadTopics();
-    await loadWords();
+    const params = new URLSearchParams(window.location.search);
+    const requestedTopicId = positiveInt(params.get("topic_id"));
+    if (requestedTopicId && topics.some((topic) => topic.id === requestedTopicId)) {
+      if (!selectedTopicIds.includes(requestedTopicId)) {
+        selectedTopicIds = [...selectedTopicIds, requestedTopicId];
+        saveTopicIds();
+        renderTopicCards();
+        if (addTopicSelect) {
+          const option = Array.from(addTopicSelect.options).find(
+            (item) => item.value === String(requestedTopicId),
+          );
+          option?.remove();
+        }
+      }
+      const action = params.get("action") === "study" ? "study" : "browse";
+      await openTopic(requestedTopicId, action);
+    } else if (params.get("q")) {
+      if (searchInput) searchInput.value = params.get("q") || "";
+      wordViewMode = "lookup";
+      await loadWords();
+    }
   } catch (error) {
     setNotice(error instanceof Error ? error.message : "Không thể tải kho từ vựng.", true);
   }
 }
 
-topicFilter?.addEventListener("change", () => {
+function removeSavedTopic(topicId: number): void {
+  selectedTopicIds = selectedTopicIds.filter((id) => id !== topicId);
+  saveTopicIds();
+  renderTopicCards();
+  const topic = topics.find((item) => item.id === topicId);
+  if (topic && addTopicSelect) {
+    addTopicSelect.add(new Option(topic.name, String(topic.id)));
+  }
+  if (selectedTopicId === topicId) {
+    selectedTopicId = null;
+    wordViewMode = "lookup";
+    if (sessionPanel) sessionPanel.hidden = true;
+    if (wordListSection) wordListSection.hidden = true;
+    const startReviewButton = document.getElementById("startPageReview");
+    if (startReviewButton) startReviewButton.hidden = true;
+    const wordCount = document.getElementById("wordCount");
+    if (wordCount) wordCount.textContent = "";
+  }
+}
+
+document.getElementById("addTopicButton")?.addEventListener("click", () => {
+  const topicId = positiveInt(addTopicSelect?.value);
+  if (!topicId || selectedTopicIds.includes(topicId)) return;
+  selectedTopicIds = [...selectedTopicIds, topicId];
+  saveTopicIds();
+  renderTopicCards();
+  const option = Array.from(addTopicSelect?.options || []).find(
+    (item) => item.value === String(topicId),
+  );
+  option?.remove();
+  if (addTopicSelect) addTopicSelect.value = "";
+});
+
+document.getElementById("searchWords")?.addEventListener("click", () => {
+  selectedTopicId = null;
+  wordViewMode = "lookup";
   pageOffset = 0;
+  if (sessionPanel) sessionPanel.hidden = true;
+  const startReviewButton = document.getElementById("startPageReview");
+  if (startReviewButton) startReviewButton.hidden = true;
   void loadWords().catch((error: unknown) =>
-    setNotice(error instanceof Error ? error.message : "Không thể tải chủ đề.", true),
+    setNotice(error instanceof Error ? error.message : "Không thể tra cứu từ.", true),
   );
 });
-searchInput?.addEventListener("input", renderWords);
+searchInput?.addEventListener("input", () => {
+  selectedTopicId = null;
+  wordViewMode = "lookup";
+  pageOffset = 0;
+  if (sessionPanel) sessionPanel.hidden = true;
+  const startReviewButton = document.getElementById("startPageReview");
+  if (startReviewButton) startReviewButton.hidden = true;
+  if (searchTimer !== null) window.clearTimeout(searchTimer);
+  searchTimer = window.setTimeout(() => {
+    void loadWords().catch((error: unknown) =>
+      setNotice(error instanceof Error ? error.message : "Không thể tra cứu từ.", true),
+    );
+  }, 250);
+});
+searchInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    if (searchTimer !== null) window.clearTimeout(searchTimer);
+    void loadWords().catch((error: unknown) =>
+      setNotice(error instanceof Error ? error.message : "Không thể tra cứu từ.", true),
+    );
+  }
+});
+topicGrid?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const button = target.closest<HTMLButtonElement>("button[data-topic-id]");
+  if (!button) return;
+  const topicId = positiveInt(button.dataset.topicId);
+  if (!topicId) return;
+  if (button.dataset.topicAction === "remove") {
+    removeSavedTopic(topicId);
+    return;
+  }
+  const action = button.dataset.topicAction === "study" ? "study" : "browse";
+  void openTopic(topicId, action).catch((error: unknown) =>
+    setNotice(error instanceof Error ? error.message : "Không thể mở chủ đề.", true),
+  );
+});
 document.getElementById("previousPage")?.addEventListener("click", () => {
   pageOffset = Math.max(0, pageOffset - PAGE_SIZE);
   void loadWords().catch((error: unknown) =>
@@ -406,8 +644,15 @@ document.getElementById("startPageReview")?.addEventListener("click", () => {
   startReview(getVisibleWords());
 });
 document.getElementById("refreshWords")?.addEventListener("click", () => {
-  void initVocabularyPage().catch((error: unknown) =>
-    setNotice(error instanceof Error ? error.message : "Không thể làm mới kho từ vựng.", true),
+  if (searchInput) searchInput.value = "";
+  selectedTopicId = null;
+  wordViewMode = "lookup";
+  pageOffset = 0;
+  if (sessionPanel) sessionPanel.hidden = true;
+  const startReviewButton = document.getElementById("startPageReview");
+  if (startReviewButton) startReviewButton.hidden = true;
+  void loadWords().catch((error: unknown) =>
+    setNotice(error instanceof Error ? error.message : "Không thể xóa tra cứu.", true),
   );
 });
 document.getElementById("revealMeaning")?.addEventListener("click", (event) => {

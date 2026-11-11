@@ -3,6 +3,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends
 
 from app.core.deps import get_current_profile
+from app.schemas.reponse import BaseResponse
 from app.schemas.profile import OnboardingRequest, ProfileUpdate
 from app.services.profile_service import (
     complete_onboarding as complete_onboarding_profile,
@@ -15,24 +16,27 @@ from app.services.profile_service import (
 router = APIRouter()
 
 
-def _me_payload(profile: Dict[str, Any]) -> Dict[str, Any]:
+def _me_payload(profile: Dict[str, Any]) -> BaseResponse[Dict[str, Any]]:
     stats = with_effective_streak(get_stats(profile["id"]), profile["timezone"])
-    return {
-        "status": "success",
-        "profile": profile,
-        "stats": stats,
-        "plan": get_plan(profile["plan_id"]),
-        "needs_onboarding": profile["onboarding_completed_at"] is None,
-    }
+    return BaseResponse(
+        status="success",
+        message="Đã tải hồ sơ học tập.",
+        data={
+            "profile": profile,
+            "stats": stats,
+            "plan": get_plan(profile["plan_id"]),
+            "needs_onboarding": profile["onboarding_completed_at"] is None,
+        },
+    )
 
 
-@router.get("")
+@router.get("", response_model=BaseResponse[Dict[str, Any]])
 def get_me(profile: Dict[str, Any] = Depends(get_current_profile)):
     """Hồ sơ + thống kê (XP, chuỗi ngày) + gói hiện tại của người dùng đang đăng nhập."""
     return _me_payload(profile)
 
 
-@router.patch("")
+@router.patch("", response_model=BaseResponse[Dict[str, Any]])
 def update_me(body: ProfileUpdate, profile: Dict[str, Any] = Depends(get_current_profile)):
     """Cập nhật hồ sơ; chỉ các trường được gửi lên mới bị thay đổi."""
     data = body.model_dump(mode="json", exclude_unset=True)
@@ -40,7 +44,7 @@ def update_me(body: ProfileUpdate, profile: Dict[str, Any] = Depends(get_current
     return _me_payload(updated)
 
 
-@router.post("/onboarding")
+@router.post("/onboarding", response_model=BaseResponse[Dict[str, Any]])
 def complete_onboarding(
     body: OnboardingRequest, profile: Dict[str, Any] = Depends(get_current_profile)
 ):

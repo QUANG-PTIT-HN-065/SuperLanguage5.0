@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Từ vựng</title>
+  <title>Slanguage - Tra cứu từ vựng</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="../../css/shared/user-experience.css">
   <link rel="stylesheet" href="../../css/study/style.css">
 </head>
-<body class="slg-study-page user-guest">
+<body class="slg-study-page vocabulary-page user-guest">
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
@@ -44,28 +44,51 @@
 
   <main class="study-main vocabulary-main">
     <section class="study-hero vocabulary-hero">
-      <span class="study-kicker"><i class="fa-solid fa-clone" aria-hidden="true"></i> KHO TỪ VỰNG</span>
-      <h1>Học từ vựng theo chủ đề</h1>
-      <p>Từ và chủ đề được đồng bộ trực tiếp từ nội dung Admin quản lý cho ngôn ngữ bạn đang học.</p>
+      <span class="study-kicker"><i class="fa-solid fa-language" aria-hidden="true"></i> TRA CỨU TỪ VỰNG</span>
+      <h1>Chủ đề bạn muốn học</h1>
+      <p>Lưu các chủ đề quan tâm trên trình duyệt này; tìm từ hoặc nghĩa bất cứ lúc nào.</p>
     </section>
 
     <div class="study-notice" id="vocabularyNotice" role="status" aria-live="polite">Đang tải kho từ vựng...</div>
     <section id="vocabularyWorkspace" hidden>
-      <div class="vocabulary-toolbar">
-        <label class="vocabulary-filter">
-          <span>Chủ đề</span>
-          <select id="topicFilter" aria-label="Lọc từ theo chủ đề">
-            <option value="">Tất cả chủ đề</option>
+      <div class="vocabulary-discovery-search">
+        <label class="sr-only" for="wordSearch">Tra cứu từ hoặc nghĩa</label>
+        <input id="wordSearch" type="search" placeholder="Tra cứu từ hoặc nghĩa..." autocomplete="off">
+        <button type="button" class="study-primary-button" id="searchWords" aria-label="Tra cứu từ vựng">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="topic-picker">
+        <label for="addTopicSelect">Thêm chủ đề muốn học</label>
+        <div class="topic-picker-controls">
+          <select id="addTopicSelect">
+            <option value="">Chọn chủ đề...</option>
           </select>
-        </label>
-        <label class="vocabulary-filter vocabulary-search">
-          <span>Tìm từ trên trang hiện tại</span>
-          <input id="wordSearch" type="search" placeholder="Nhập từ hoặc nghĩa...">
-        </label>
+          <button type="button" class="study-primary-button" id="addTopicButton">
+            <i class="fa-solid fa-plus" aria-hidden="true"></i> Thêm chủ đề
+          </button>
+        </div>
+        <p>Danh sách này được lưu trên trình duyệt hiện tại.</p>
+      </div>
+
+      <section class="catalog-panel" id="topicCatalogSection" aria-labelledby="myTopicsTitle">
+        <div class="catalog-heading">
+          <div>
+            <span class="study-kicker">DANH SÁCH CỦA BẠN</span>
+            <h2 id="myTopicsTitle">Chủ đề đã lưu</h2>
+          </div>
+          <span class="catalog-count" id="topicCount"></span>
+        </div>
+        <div class="topic-grid" id="topicGrid"></div>
+        <div class="word-empty-state" id="topicEmpty" hidden>Chưa lưu chủ đề nào. Chọn chủ đề ở phía trên để thêm vào danh sách của bạn.</div>
+      </section>
+
+      <div class="vocabulary-toolbar" id="wordToolbar">
         <div class="vocabulary-count" id="wordCount" aria-live="polite"></div>
         <div class="vocabulary-toolbar-actions">
-          <button type="button" class="study-secondary-button" id="refreshWords"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Làm mới</button>
-          <button type="button" class="study-primary-button" id="startPageReview"><i class="fa-solid fa-play" aria-hidden="true"></i> Ôn trang này</button>
+          <button type="button" class="study-secondary-button" id="refreshWords"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Xóa tra cứu</button>
+          <button type="button" class="study-primary-button" id="startPageReview" hidden><i class="fa-solid fa-play" aria-hidden="true"></i> Học chủ đề này</button>
         </div>
       </div>
 
@@ -103,7 +126,13 @@
         </article>
       </section>
 
-      <section id="wordListSection" aria-label="Danh sách từ vựng">
+      <section id="wordListSection" class="catalog-panel" aria-label="Kết quả tra cứu từ vựng" hidden>
+        <div class="catalog-heading">
+          <div>
+            <span class="study-kicker" id="wordListKicker">TRA CỨU</span>
+            <h2 id="selectedTopicTitle">Kết quả tra cứu</h2>
+          </div>
+        </div>
         <div class="word-grid" id="wordGrid"></div>
         <div class="word-empty-state" id="wordEmpty" hidden>Không tìm thấy từ vựng phù hợp trong chủ đề này.</div>
         <div class="word-pagination">
@@ -112,7 +141,7 @@
           <button type="button" class="study-secondary-button" id="nextPage">Trang sau</button>
         </div>
       </section>
-      <p class="learning-data-note">Mỗi phiên ôn ghi nhận một hoạt động học. Mỗi từ đã nhớ được thưởng 15 XP; gửi lại một phiên lỗi mạng không cộng trùng điểm.</p>
+      <p class="learning-data-note">Chủ đề và bộ từ được cập nhật từ kho nội dung học tập. Mỗi phiên học được lưu vào tiến độ của bạn.</p>
     </section>
 
     <section class="learning-guest-card" id="vocabularyGuest" hidden>
