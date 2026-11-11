@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>LingoAdmin - Quản lý Từ Vựng Chuyên Sâu</title>
+  
+  <!-- Chặn quyền truy cập tức thì ở FE trước khi render nếu không có token -->
+  <script>
+    (function() {
+      var token = sessionStorage.getItem("superlanguage.admin.accessToken");
+      if (!token) {
+        window.location.replace("../LoginAdmin/code.html");
+      }
+    })();
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  <link rel="stylesheet" href="../../css/Admin/styles.css">
+  <link rel="stylesheet" href="../../css/Admin/admin-ui.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: "#eff6ff",
+              100: "#dbeafe",
+              500: "#3b82f6",
+              600: "#2563eb",
+              700: "#1d4ed8",
+            }
+          },
+          fontFamily: {
+            title: ["Manrope", "sans-serif"],
+            body: ["Hanken Grotesk", "sans-serif"],
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-[#f8fafc] font-body text-slate-800 antialiased min-h-screen">
+
+  <!-- Màn hình trạng thái kiểm tra phiên -->
+  <div id="authStatus" role="status" class="fixed inset-0 z-50 bg-[#0f172a] text-white flex flex-col items-center justify-center p-6 text-center">
+    <div class="w-12 h-12 rounded-2xl bg-blue-600/30 text-blue-400 flex items-center justify-center mb-3 animate-spin">
+      <span class="material-symbols-outlined text-2xl">sync</span>
+    </div>
+    <p class="text-sm font-semibold text-slate-200">Đang xác thực bảo mật & kiểm tra quyền Quản trị viên...</p>
+    <p class="text-xs text-slate-400 mt-1">Vui lòng đợi trong giây lát</p>
+  </div>
+
+  <!-- Container màn hình chặn quyền truy cập 403 Access Denied (khi không phải admin) -->
+  <div id="accessDeniedScreen" hidden class="fixed inset-0 z-100 bg-[#020617] text-white flex items-center justify-center p-4"></div>
+
+  <div id="vocabApp" hidden class="min-h-screen flex flex-col">
+    <!-- Top Sticky Header Navigation -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        
+        <!-- Left: Logo & Breadcrumbs -->
+        <div class="flex items-center gap-4">
+          <a href="../dasboardAdmin/code.html" class="flex items-center gap-2.5 text-slate-900 group">
+            <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xs">
+              <span class="material-symbols-outlined text-lg">translate</span>
+            </div>
+            <div class="hidden sm:block">
+              <span class="font-title text-base font-bold block leading-tight">LingoAdmin</span>
+              <span class="text-[11px] text-slate-500 font-medium">Vocabulary Hub</span>
+            </div>
+          </a>
+
+          <div class="h-5 w-px bg-slate-200 hidden sm:block"></div>
+
+          <!-- Breadcrumb -->
+          <nav class="flex items-center gap-1.5 text-xs text-slate-500">
+            <a href="../dasboardAdmin/code.html" class="hover:text-blue-600 transition-colors flex items-center gap-1 font-medium">
+              <span class="material-symbols-outlined text-base">dashboard</span>
+              <span>Dashboard Quản Trị</span>
+            </a>
+            <span class="material-symbols-outlined text-xs text-slate-400">chevron_right</span>
+            <span class="text-blue-600 font-bold flex items-center gap-1">
+              <span class="material-symbols-outlined text-base">menu_book</span>
+              Quản lý Từ vựng
+            </span>
+          </nav>
+        </div>
+
+        <!-- Right: Actions & User Info -->
+        <div class="flex items-center gap-3">
+          <!-- Return to Dashboard Button -->
+          <a
+            href="../dasboardAdmin/code.html"
+            class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors"
+          >
+            <span class="material-symbols-outlined text-base">arrow_back</span>
+            <span>Về Dashboard</span>
+          </a>
+
+          <!-- Admin Profile Badge -->
+          <div class="flex items-center gap-2.5 pl-3 border-l border-slate-200">
+            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center ring-2 ring-blue-500/20">
+              A
+            </div>
+            <div class="hidden lg:block text-left">
+              <p id="adminDisplayName" class="text-xs font-bold text-slate-900 leading-tight">Admin</p>
+              <p id="adminEmail" class="text-[11px] text-slate-500 truncate max-w-35"></p>
+            </div>
+            <button
+              id="adminLogoutBtn"
+              type="button"
+              class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+              title="Đăng xuất"
+            >
+              <span class="material-symbols-outlined text-lg">logout</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Main Content Body -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+      <!-- Hero Header Banner (Tông màu Slate-900 / Blue sắc nét) -->
+      <section class="bg-slate-900 rounded-2xl p-6 sm:p-8 text-white relative overflow-hidden shadow-sm">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-800 text-blue-100 text-sm font-semibold mb-2">
+              <span class="material-symbols-outlined text-sm">spellcheck</span>
+              <span>LEXICON MANAGEMENT CENTER</span>
+            </div>
+            <h1 class="font-title text-2xl sm:text-3xl font-extrabold tracking-tight">Trung Tâm Quản Lý Từ Vựng</h1>
+            <p class="text-xs sm:text-sm text-slate-100 mt-1.5 max-w-2xl leading-relaxed">
+              Trang chuyên sâu phụ trách thêm mới, chuẩn hóa phiên âm IPA, cấp độ CEFR quốc tế và liên kết từ vựng với các chủ đề bài học trong Supabase.
+            </p>
+          </div>
+
+          <!-- Total count stat card -->
+          <div class="bg-slate-800 border border-slate-700 rounded-2xl p-4 sm:p-5 flex items-center gap-4 shrink-0">
+            <div class="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center">
+              <span class="material-symbols-outlined text-2xl">translate</span>
+            </div>
+            <div>
+              <p class="text-sm font-semibold text-slate-200">Tổng kho từ vựng</p>
+              <h2 id="totalVocabCount" class="font-title text-2xl font-extrabold text-white mt-0.5">...</h2>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Bento Grid: Left Form (4 cols) & Right Data Table (8 cols) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+        <!-- ==================== LEFT COLUMN: ADD / EDIT FORM ==================== -->
+        <div id="vocabFormContainer" class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-xs sticky top-20">
+          <div class="flex items-center justify-between pb-3.5 border-b border-slate-100 mb-4">
+            <div>
+              <h2 id="vocabFormTitle" class="font-title text-base sm:text-lg font-bold text-slate-900">Thêm Từ Vựng Mới</h2>
+              <p class="text-xs text-slate-500">Chuẩn hóa theo bảng mã CEFR & CSDL SQL</p>
+            </div>
+            <button
+              id="btnResetForm"
+              type="button"
+              class="text-xs font-semibold text-slate-500 hover:text-blue-600 transition-colors cursor-pointer"
+            >
+              Làm mới
+            </button>
+          </div>
+
+          <form id="vocabForm" class="space-y-4">
+            <input type="hidden" id="editWordId" value="-1"/>
+
+            <!-- Word Term -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputWord">
+                Từ / Thuật ngữ *
+              </label>
+              <input
+                id="inputWord"
+                type="text"
+                required
+                placeholder="Ví dụ: Serendipity, こんにちは..."
+                class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 transition-all font-semibold"
+              />
+            </div>
+
+            <!-- IPA Phonetic -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputIpa">
+                Phiên âm Quốc tế (IPA)
+              </label>
+              <div class="relative">
+                <input
+                  id="inputIpa"
+                  type="text"
+                  placeholder="Ví dụ: /ˌser.ənˈdɪp.ə.ti/"
+                  class="w-full h-11 pl-3 pr-11 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 transition-all font-mono"
+                />
+                <span class="material-symbols-outlined absolute inset-y-0 right-0 w-11 flex items-center justify-center text-slate-500 text-xl pointer-events-none">record_voice_over</span>
+              </div>
+            </div>
+
+            <!-- Meaning -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputMeaning">
+                Định nghĩa Tiếng Việt *
+              </label>
+              <textarea
+                id="inputMeaning"
+                required
+                rows="2"
+                placeholder="Ví dụ: Sự tình cờ may mắn tìm thấy điều quý giá..."
+                class="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 transition-all resize-none"
+              ></textarea>
+            </div>
+
+            <!-- Example Sentence -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputExample">
+                Ví dụ minh họa ngữ cảnh
+              </label>
+              <textarea
+                id="inputExample"
+                rows="2"
+                placeholder="Ví dụ: Finding this library was pure serendipity."
+                class="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 transition-all resize-none italic"
+              ></textarea>
+            </div>
+
+            <!-- Example Meaning -->
+            <div>
+              <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputExampleMeaning">
+                Nghĩa câu ví dụ
+              </label>
+              <textarea
+                id="inputExampleMeaning"
+                rows="2"
+                placeholder="Ví dụ: Tìm thấy thư viện này quả là duyên may tình cờ."
+                class="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 transition-all resize-none"
+              ></textarea>
+            </div>
+
+            <!-- Language & CEFR Level (2 cols) -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputLanguage">
+                  Ngôn ngữ *
+                </label>
+                <select
+                  id="inputLanguage"
+                  required
+                  class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 cursor-pointer"
+                >
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputDifficulty">
+                  Cấp độ CEFR *
+                </label>
+                <select
+                  id="inputDifficulty"
+                  class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 cursor-pointer font-semibold"
+                >
+                  <option value="A1">A1 - Khởi đầu</option>
+                  <option value="A2">A2 - Sơ cấp</option>
+                  <option value="B1">B1 - Trung cấp 1</option>
+                  <option value="B2">B2 - Trung cấp 2</option>
+                  <option value="C1">C1 - Cao cấp 1</option>
+                  <option value="C2">C2 - Thành thạo</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Part of speech & Audio URL (2 cols) -->
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputPartOfSpeech">
+                  Loại từ
+                </label>
+                <select
+                  id="inputPartOfSpeech"
+                  class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 cursor-pointer"
+                >
+                  <option value="">Chưa phân loại</option>
+                  <option value="noun">Danh từ (Noun)</option>
+                  <option value="verb">Động từ (Verb)</option>
+                  <option value="adjective">Tính từ (Adjective)</option>
+                  <option value="adverb">Trạng từ (Adverb)</option>
+                  <option value="phrase">Cụm từ (Phrase)</option>
+                  <option value="other">Khác (Other)</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputAudioUrl">
+                  URL Âm thanh
+                </label>
+                <input
+                  id="inputAudioUrl"
+                  type="url"
+                  placeholder="https://...mp3"
+                  class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                />
+              </div>
+            </div>
+
+            <!-- Topics Selection (from SQL table topics) -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-sm font-semibold text-slate-800" for="inputTopics">
+                  Chủ đề bài học liên kết *
+                </label>
+                <span class="text-[11px] text-slate-500">Giữ Ctrl / Cmd để chọn nhiều</span>
+              </div>
+              <select
+                id="inputTopics"
+                required
+                multiple
+                size="4"
+                class="w-full p-2 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+              >
+              </select>
+            </div>
+
+            <!-- Actions Buttons -->
+            <div class="pt-2 flex items-center gap-2">
+              <button
+                id="btnSubmitWord"
+                type="submit"
+                class="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer"
+              >
+                <span class="material-symbols-outlined text-lg">save</span>
+                <span id="btnSubmitText">Lưu Từ Vựng</span>
+              </button>
+
+              <button
+                id="btnCancelEdit"
+                type="button"
+                class="hidden px-4 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition-colors cursor-pointer"
+              >
+                Hủy
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ==================== RIGHT COLUMN: DATA TABLE ==================== -->
+        <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between overflow-hidden min-h-150">
+          
+          <div>
+            <!-- Table Header & Search Filter Bar -->
+            <div class="p-5 border-b border-slate-200 space-y-4 bg-slate-50/40">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h2 class="font-title text-base sm:text-lg font-bold text-slate-900">Danh Sách Từ Vựng Hệ Thống</h2>
+                  <p class="text-xs text-slate-500">Tìm kiếm, lọc đa chiều và thao tác dữ liệu từ vựng trực tiếp trong CSDL</p>
+                </div>
+              </div>
+
+              <!-- Filter Toolbar -->
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                <!-- Search input -->
+                <div class="sm:col-span-6 relative">
+                  <span class="material-symbols-outlined absolute inset-y-0 left-0 w-11 flex items-center justify-center text-slate-500 text-xl pointer-events-none">search</span>
+                  <input
+                    id="searchInput"
+                    type="text"
+                    placeholder="Tìm theo từ, nghĩa, IPA hoặc ngôn ngữ..."
+                    class="w-full h-11 pl-11 pr-4 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 transition-all"
+                  />
+                </div>
+
+                <!-- Filter Language -->
+                <div class="sm:col-span-3">
+                  <select
+                    id="filterLanguage"
+                    class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 cursor-pointer font-medium"
+                  >
+                    <option value="all">Tất cả ngôn ngữ</option>
+                  </select>
+                </div>
+
+                <!-- Filter CEFR Level -->
+                <div class="sm:col-span-3">
+                  <select
+                    id="filterCefr"
+                    class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 cursor-pointer font-medium"
+                  >
+                    <option value="all">Mọi cấp độ CEFR</option>
+                    <option value="A1">CEFR A1</option>
+                    <option value="A2">CEFR A2</option>
+                    <option value="B1">CEFR B1</option>
+                    <option value="B2">CEFR B2</option>
+                    <option value="C1">CEFR C1</option>
+                    <option value="C2">CEFR C2</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="overflow-x-auto w-full">
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="bg-slate-100/70 border-b border-slate-200 text-[13px] font-bold text-slate-700">
+                    <th class="py-3 px-4">Từ vựng & Phát âm</th>
+                    <th class="py-3 px-4">Định nghĩa & Ví dụ</th>
+                    <th class="py-3 px-4">Ngôn ngữ</th>
+                    <th class="py-3 px-4">Cấp độ</th>
+                    <th class="py-3 px-4 text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="vocabTableBody" class="divide-y divide-slate-100">
+                  <!-- Dynamic rows via vocabulary.ts -->
+                  <tr>
+                    <td colspan="5" class="py-8 text-center text-slate-400">
+                      Đang nạp danh sách từ vựng...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Pagination Footer -->
+          <div class="p-4 border-t border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600">
+            <span id="tableInfo">Đang tải số liệu...</span>
+            <div class="flex items-center gap-1.5">
+              <button
+                id="prevPage"
+                type="button"
+                disabled
+                class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                Trang trước
+              </button>
+              <span id="pageNumber" class="px-3 py-1 font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded-lg">1</span>
+              <button
+                id="nextPage"
+                type="button"
+                disabled
+                class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                Trang sau
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Word Detail Modal -->
+  <div id="detailModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+      <div class="flex items-start justify-between gap-4 pb-3.5 border-b border-slate-100">
+        <div>
+          <h3 id="detailTitle" class="font-title text-xl font-bold text-slate-900">Chi tiết từ vựng</h3>
+          <p id="detailSubtitle" class="text-xs text-slate-500 mt-0.5 font-medium"></p>
+        </div>
+        <button id="detailCloseBtn" type="button" class="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer">
+          <span class="material-symbols-outlined text-xl">close</span>
+        </button>
+      </div>
+      <dl id="detailBody" class="mt-4 space-y-3"></dl>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div id="deleteConfirmModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center border border-slate-200">
+      <div class="w-12 h-12 rounded-full bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center text-xl mx-auto mb-3">
+        <span class="material-symbols-outlined text-2xl">delete</span>
+      </div>
+      <h3 class="font-title text-lg font-bold text-slate-900">Xóa Từ Vựng Này?</h3>
+      <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
+        Từ vựng này sẽ bị xóa khỏi cơ sở dữ liệu và gỡ bỏ khỏi các chủ đề liên quan. Hành động này không thể hoàn tác.
+      </p>
+      <div class="mt-6 flex items-center gap-2.5">
+        <button
+          id="btnCancelDelete"
+          type="button"
+          class="flex-1 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors cursor-pointer"
+        >
+          Hủy bỏ
+        </button>
+        <button
+          id="btnConfirmDelete"
+          type="button"
+          class="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl text-xs shadow-xs transition-colors cursor-pointer"
+        >
+          Xác nhận Xóa
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <script type="module" src="../../types/admin/vocabulary.ts"></script>
+</body>
+</html>

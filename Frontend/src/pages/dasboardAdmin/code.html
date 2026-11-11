@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>LingoAdmin - Trung Tâm Quản Trị Hệ Thống</title>
+  
+  <!-- Chặn quyền truy cập tức thì ở FE nếu không có session admin -->
+  <script>
+    (function() {
+      var token = sessionStorage.getItem("superlanguage.admin.accessToken");
+      if (!token) {
+        window.location.replace("../LoginAdmin/code.html");
+      }
+    })();
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  <link rel="stylesheet" href="../../css/Admin/styles.css">
+  <link rel="stylesheet" href="../../css/Admin/admin-ui.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: "#eff6ff",
+              100: "#dbeafe",
+              500: "#3b82f6",
+              600: "#2563eb",
+              700: "#1d4ed8",
+            }
+          },
+          fontFamily: {
+            title: ["Manrope", "sans-serif"],
+            body: ["Hanken Grotesk", "sans-serif"],
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-[#f8fafc] font-body text-slate-800 antialiased min-h-screen overflow-x-hidden">
+
+  <!-- Màn hình trạng thái kiểm tra phiên -->
+  <div id="authStatus" role="status" class="fixed inset-0 z-50 bg-[#0f172a] text-white flex flex-col items-center justify-center p-6 text-center">
+    <div class="w-12 h-12 rounded-2xl bg-blue-600/30 text-blue-400 flex items-center justify-center mb-3 animate-spin">
+      <span class="material-symbols-outlined text-2xl">sync</span>
+    </div>
+    <p class="text-sm font-semibold text-slate-200">Đang xác thực bảo mật & kiểm tra quyền Quản trị viên...</p>
+    <p class="text-xs text-slate-400 mt-1">Vui lòng đợi trong giây lát</p>
+  </div>
+
+  <!-- Container màn hình chặn quyền truy cập 403 Access Denied (khi không phải admin) -->
+  <div id="accessDeniedScreen" hidden class="fixed inset-0 z-100 bg-[#020617] text-white flex items-center justify-center p-4"></div>
+
+  <!-- Toàn bộ Layout App Quản Trị -->
+  <div id="dashboardApp" hidden class="flex flex-col md:flex-row min-h-screen">
+
+    <!-- Mobile Top Navigation Bar -->
+    <header class="md:hidden bg-[#0f172a] text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow-md">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-base">
+          <span class="material-symbols-outlined text-lg">translate</span>
+        </div>
+        <span class="font-title font-bold text-base tracking-wide">LingoAdmin</span>
+      </div>
+      <button id="mobileMenuBtn" class="text-slate-300 hover:text-white p-1 rounded-lg">
+        <span class="material-symbols-outlined text-2xl">menu</span>
+      </button>
+    </header>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-slate-900/60 z-40 hidden md:hidden"></div>
+
+    <!-- ==================== SIDEBAR (MẶC ĐỊNH THU NHỎ W-20, MỞ RỘNG KHI HOVER W-64) ==================== -->
+    <aside
+      id="adminSidebar"
+      class="group/sidebar fixed inset-y-0 left-0 transform -translate-x-full md:translate-x-0 transition-all duration-300 ease-in-out md:w-20 md:hover:w-64 bg-[#0f172a] text-slate-300 z-50 flex flex-col justify-between shrink-0 shadow-2xl md:shadow-md md:hover:shadow-2xl md:hover:shadow-slate-950/70 border-r border-slate-800 overflow-hidden"
+    >
+      <div class="flex flex-col overflow-y-auto overflow-x-hidden">
+        
+        <!-- Brand Header (Thu nhỏ hiển thị icon, hover hiển thị tên) -->
+        <div class="p-4 md:p-5 flex items-center gap-3.5 border-b border-slate-800 min-h-18">
+          <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/25 shrink-0">
+            <span class="material-symbols-outlined text-xl">translate</span>
+          </div>
+          <div class="whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs overflow-hidden">
+            <h1 class="font-title font-bold text-white text-base leading-tight">LingoAdmin</h1>
+            <p class="text-[11px] text-slate-400 font-medium">Core Platform Hub v5.0</p>
+          </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="mt-4 px-2.5 space-y-1.5">
+          
+          <!-- 1. Dashboard -->
+          <a
+            href="#dashboard"
+            data-tab="dashboard"
+            class="sidebar-nav-item active flex items-center gap-3 px-3 py-2.5 text-sm font-semibold rounded-xl text-white bg-blue-600 shadow-sm transition-all group/item"
+            title="Dashboard tổng quan"
+          >
+            <span class="material-symbols-outlined text-xl shrink-0 w-6 text-center">dashboard</span>
+            <span class="whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs overflow-hidden">
+              Dashboard tổng quan
+            </span>
+          </a>
+
+          <!-- 2. Quản lý Chủ đề (THAY THẾ Khóa học & Bài học) -->
+          <a
+            href="#topics"
+            data-tab="topics"
+            class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all group/item"
+            title="Quản lý Chủ đề"
+          >
+            <span class="material-symbols-outlined text-xl shrink-0 w-6 text-center">category</span>
+            <span class="whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs overflow-hidden">
+              Quản lý Chủ đề
+            </span>
+          </a>
+
+          <!-- 3. Quản lý Từ vựng (ĐÃ TÁCH RA TRANG RIÊNG) -->
+          <a
+            href="../vocabularyAdmin/code.html"
+            class="flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all group/item"
+            title="Mở trang Quản lý Từ vựng riêng"
+          >
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-xl text-emerald-400 shrink-0 w-6 text-center group-hover/item:scale-110 transition-transform">menu_book</span>
+              <span class="whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs overflow-hidden">
+                Quản lý Từ vựng
+              </span>
+            </div>
+            <span class="hidden md:group-hover/sidebar:inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
+              Trang riêng
+            </span>
+          </a>
+
+          <!-- 4. Học viên & Người dùng -->
+          <a
+            href="#users"
+            data-tab="users"
+            class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all group/item"
+            title="Học viên & Người dùng"
+          >
+            <span class="material-symbols-outlined text-xl shrink-0 w-6 text-center">group</span>
+            <span class="whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs overflow-hidden">
+              Học viên & Người dùng
+            </span>
+          </a>
+
+          <!-- 5. Thống kê Báo cáo -->
+          <a
+            href="#analytics"
+            data-tab="analytics"
+            class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all group/item"
+            title="Thống kê Báo cáo"
+          >
+            <span class="material-symbols-outlined text-xl shrink-0 w-6 text-center">monitoring</span>
+            <span class="whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs overflow-hidden">
+              Thống kê Báo cáo
+            </span>
+          </a>
+
+          <!-- 6. Cài đặt Hệ thống -->
+          <a
+            href="#settings"
+            data-tab="settings"
+            class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all group/item"
+            title="Cài đặt Hệ thống"
+          >
+            <span class="material-symbols-outlined text-xl shrink-0 w-6 text-center">settings</span>
+            <span class="whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs overflow-hidden">
+              Cài đặt Hệ thống
+            </span>
+          </a>
+        </nav>
+
+        <!-- Quick Access Card to Vocab Page (chỉ hiển thị khi hover) -->
+        <div class="m-3 p-3 rounded-xl bg-slate-800/90 border border-slate-700 text-xs hidden md:group-hover/sidebar:block transition-all">
+          <div class="flex items-center gap-2 text-emerald-400 font-bold mb-1">
+            <span class="material-symbols-outlined text-base">spellcheck</span>
+            <span>Kho Từ Vựng v5.0</span>
+          </div>
+          <p class="text-slate-300 text-[11px] leading-relaxed mb-2">
+            Quản lý từ vựng đã được tách thành trang riêng giúp biên mục và tra cứu nhanh hơn.
+          </p>
+          <a
+            href="../vocabularyAdmin/code.html"
+            class="inline-flex items-center gap-1.5 text-blue-300 hover:text-white font-semibold transition-colors"
+          >
+            <span>Tới trang Từ vựng</span>
+            <span class="material-symbols-outlined text-sm">arrow_forward</span>
+          </a>
+        </div>
+
+      </div>
+
+      <!-- Admin Profile Footer (Thu nhỏ hiển thị Avatar, hover hiển thị email & logout) -->
+      <div class="p-3 md:p-4 border-t border-slate-800">
+        <div class="flex items-center gap-3 p-1.5 rounded-xl bg-slate-800/80">
+          <div class="w-9 h-9 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center ring-2 ring-blue-400/40 shrink-0">
+            A
+          </div>
+          <div class="overflow-hidden min-w-0 flex-1 whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs">
+            <p id="adminDisplayName" class="text-xs font-bold text-white truncate">Quản trị viên</p>
+            <p id="adminEmail" class="text-[11px] text-slate-400 truncate"></p>
+          </div>
+        </div>
+        <button
+          id="adminLogoutAction"
+          type="button"
+          class="mt-2 w-full flex items-center justify-center md:justify-start gap-2 px-2.5 py-2 text-xs font-medium text-slate-300 hover:bg-slate-800 hover:text-rose-400 rounded-lg transition-colors cursor-pointer"
+          title="Đăng xuất"
+        >
+          <span class="material-symbols-outlined text-base shrink-0">logout</span>
+          <span class="whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs overflow-hidden">
+            Đăng xuất
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ==================== MAIN CONTENT AREA (LỀ TRÁI CO GIÃN THEO MINI SIDEBAR) ==================== -->
+    <main class="flex-1 flex flex-col min-w-0 md:pl-20 transition-all duration-300 ease-in-out">
+      
+      <!-- Top Bar Header -->
+      <header class="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-0 z-20 shadow-xs">
+        <div>
+          <h2 id="pageHeaderTitle" class="font-title text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
+            Tổng Quan Điều Hành Hệ Thống
+          </h2>
+          <p class="text-xs text-slate-600 mt-0.5">Dữ liệu thời gian thực được đồng bộ trực tiếp từ cơ sở dữ liệu Supabase.</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Button link sang trang Từ Vựng -->
+          <a
+            href="../vocabularyAdmin/code.html"
+            class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-xs flex items-center gap-1.5 transition-all"
+          >
+            <span class="material-symbols-outlined text-base">menu_book</span>
+            <span>Mở Quản lý Từ vựng</span>
+          </a>
+
+          <!-- Quick Sync / Health -->
+          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Supabase: Online</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page Content Wrapper -->
+      <div class="p-6 space-y-6 max-w-7xl w-full mx-auto">
+
+        <!-- ==================== SECTION 1: DASHBOARD ==================== -->
+        <div id="section-dashboard" class="admin-section space-y-6">
+
+          <!-- 4 Stat Cards Grid (Màu sắc độ tương phản cao, dễ nhìn) -->
+          <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            
+            <!-- Card 1: Học viên -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="text-sm font-semibold text-slate-600">Tổng học viên (Profiles)</p>
+                  <h3 id="statStudentsCount" class="font-title text-3xl font-extrabold text-slate-900 mt-1">...</h3>
+                </div>
+                <div class="p-2.5 bg-blue-50 text-blue-700 rounded-xl border border-blue-100">
+                  <span class="material-symbols-outlined text-2xl">group</span>
+                </div>
+              </div>
+              <div class="mt-4 flex items-center text-xs font-semibold text-emerald-700 gap-1">
+                <span class="material-symbols-outlined text-sm">verified</span>
+                <span>Dữ liệu CSDL thời gian thực</span>
+              </div>
+            </div>
+
+            <!-- Card 2: Chủ đề hoạt động (THAY CHO Khóa học) -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="text-sm font-semibold text-slate-600">Chủ đề bài học (Topics)</p>
+                  <h3 id="statTopicsCount" class="font-title text-3xl font-extrabold text-slate-900 mt-1">...</h3>
+                </div>
+                <div class="p-2.5 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100">
+                  <span class="material-symbols-outlined text-2xl">category</span>
+                </div>
+              </div>
+              <div class="mt-4 flex items-center text-xs font-semibold text-blue-700 gap-1">
+                <span class="material-symbols-outlined text-sm">check_circle</span>
+                <span>Phân nhóm theo ngôn ngữ</span>
+              </div>
+            </div>
+
+            <!-- Card 3: Kho từ vựng -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="text-sm font-semibold text-slate-600">Kho từ vựng (Words)</p>
+                  <h3 id="statVocabCount" class="font-title text-3xl font-extrabold text-slate-900 mt-1">...</h3>
+                </div>
+                <div class="p-2.5 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100">
+                  <span class="material-symbols-outlined text-2xl">translate</span>
+                </div>
+              </div>
+              <div class="mt-4 flex items-center justify-between text-xs">
+                <span class="text-slate-600 font-medium">Chuẩn mã hóa CEFR</span>
+                <a href="../vocabularyAdmin/code.html" class="text-blue-600 font-bold hover:underline">Quản lý &rarr;</a>
+              </div>
+            </div>
+
+            <!-- Card 4: Tỷ lệ Chuyên cần & Streak -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 transition-all">
+              <div class="flex justify-between items-start">
+                <div>
+                  <p class="text-sm font-semibold text-slate-600">Streak dài nhất</p>
+                  <h3 id="statMaxStreak" class="font-title text-3xl font-extrabold text-slate-900 mt-1">...</h3>
+                </div>
+                <div class="p-2.5 bg-amber-50 text-amber-700 rounded-xl border border-amber-100">
+                  <span class="material-symbols-outlined text-2xl">local_fire_department</span>
+                </div>
+              </div>
+              <div class="mt-4 flex items-center text-xs font-semibold text-slate-600 gap-1">
+                <span class="material-symbols-outlined text-sm">show_chart</span>
+                <span>Kỷ lục liên tục của học viên</span>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- Charts & Top Languages -->
+          <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Main Chart Canvas -->
+            <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                <div>
+                  <h3 class="font-title text-base sm:text-lg font-bold text-slate-900">Mức Độ Tương Tác & Bài Học Hoàn Thành</h3>
+                  <p class="text-xs text-slate-500">Lưu lượng học tập và ôn tập từ vựng thời gian thực</p>
+                </div>
+                <span class="text-xs font-bold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full w-fit">
+                  Live Analytics
+                </span>
+              </div>
+              <div class="h-64 relative w-full">
+                <canvas id="engagementChartCanvas"></canvas>
+              </div>
+            </div>
+
+            <!-- Language Distribution Card -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+              <div>
+                <h3 class="font-title text-base sm:text-lg font-bold text-slate-900 mb-1">Phân Bổ Ngôn Ngữ</h3>
+                <p class="text-xs text-slate-500 mb-4">Số lượng học viên đăng ký theo từng ngôn ngữ</p>
+
+                <div id="langDistributionContainer" class="space-y-4">
+                  <p class="text-xs text-slate-400 py-4 text-center">Đang tải số liệu phân bổ...</p>
+                </div>
+              </div>
+
+              <div class="pt-4 border-t border-slate-100 mt-4">
+                <a
+                  href="#topics"
+                  data-tab="topics"
+                  class="sidebar-nav-item w-full py-2.5 text-center text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl block transition-colors"
+                >
+                  Xem chi tiết các chủ đề &rarr;
+                </a>
+              </div>
+            </div>
+
+          </section>
+
+        </div>
+
+        <!-- ==================== SECTION 2: QUẢN LÝ CHỦ ĐỀ (TOPICS - THAO TÁC THẬT CSDL) ==================== -->
+        <div id="section-topics" class="admin-section hidden space-y-6">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="font-title text-xl font-bold text-slate-900">Quản Lý Chủ Đề Học Tập (Topics)</h2>
+              <p class="text-xs text-slate-600">Thêm, sửa, xóa các chủ đề học tập trực tiếp trong cơ sở dữ liệu Supabase.</p>
+            </div>
+            <span id="totalTopicsBadge" class="px-3 py-1 bg-blue-50 text-blue-700 font-bold text-xs rounded-full border border-blue-200">
+              Đang tải...
+            </span>
+          </div>
+
+          <!-- Bento Grid: Topic Form (4 cols) & Topics Table (8 cols) -->
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Left: Add/Edit Topic Form -->
+            <div id="topicFormContainer" class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+              <div class="pb-3 border-b border-slate-100 mb-4">
+                <h3 id="topicFormTitle" class="font-title text-base font-bold text-slate-900">Thêm Chủ Đề Mới</h3>
+                <p class="text-xs text-slate-500">Tạo chủ đề để nhóm các từ vựng cùng chủ đề</p>
+              </div>
+
+              <form id="topicForm" class="space-y-3.5">
+                <input type="hidden" id="editTopicId" value="-1"/>
+
+                <!-- Topic Name -->
+                <div>
+                  <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputTopicName">
+                    Tên chủ đề *
+                  </label>
+                  <input
+                    id="inputTopicName"
+                    type="text"
+                    required
+                    placeholder="Ví dụ: Chào hỏi, Du lịch, Công sở..."
+                    class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900"
+                  />
+                </div>
+
+                <!-- Topic Language -->
+                <div>
+                  <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputTopicLanguage">
+                    Ngôn ngữ áp dụng *
+                  </label>
+                  <select
+                    id="inputTopicLanguage"
+                    required
+                    class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 cursor-pointer"
+                  >
+                  </select>
+                </div>
+
+                <!-- Description -->
+                <div>
+                  <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputTopicDescription">
+                    Mô tả chủ đề
+                  </label>
+                  <textarea
+                    id="inputTopicDescription"
+                    rows="3"
+                    placeholder="Mô tả nội dung, mục tiêu của chủ đề này..."
+                    class="w-full p-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 resize-none"
+                  ></textarea>
+                </div>
+
+                <!-- Icon Name / Symbol -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputTopicIcon">
+                      Icon Material
+                    </label>
+                    <input
+                      id="inputTopicIcon"
+                      type="text"
+                      placeholder="e.g. flight, category"
+                      class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-800 mb-1" for="inputTopicOrder">
+                      Thứ tự hiển thị
+                    </label>
+                    <input
+                      id="inputTopicOrder"
+                      type="number"
+                      value="100"
+                      class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 font-mono"
+                    />
+                  </div>
+                </div>
+
+                <!-- Submit / Cancel -->
+                <div class="pt-2 flex items-center gap-2">
+                  <button
+                    id="btnSubmitTopic"
+                    type="submit"
+                    class="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <span class="material-symbols-outlined text-base">save</span>
+                    <span id="btnSubmitTopicText">Lưu Chủ Đề</span>
+                  </button>
+                  <button
+                    id="btnCancelTopicEdit"
+                    type="button"
+                    class="hidden px-4 h-11 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
+                  >
+                    Hủy
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            
+            <!-- Right: Topics List Table -->
+            <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+              <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/50">
+                <!-- Search input -->
+                <div class="relative flex-1 max-w-sm">
+                  <span class="material-symbols-outlined absolute inset-y-0 left-0 w-11 flex items-center justify-center text-slate-500 text-xl pointer-events-none">search</span>
+                  <input
+                    id="searchTopicInput"
+                    type="text"
+                    placeholder="Tìm theo tên chủ đề..."
+                    class="w-full h-11 pl-11 pr-3 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900"
+                  />
+                </div>
+
+                <!-- Language Filter -->
+                <select
+                  id="filterTopicLanguage"
+                  class="h-11 px-3 bg-white border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 cursor-pointer font-medium"
+                >
+                  <option value="all">Tất cả ngôn ngữ</option>
+                </select>
+              </div>
+
+              <!-- Table -->
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr class="bg-slate-100/70 border-b border-slate-200 text-[13px] font-bold text-slate-700">
+                      <th class="py-3 px-4">Chủ đề & Mô tả</th>
+                      <th class="py-3 px-4">Ngôn ngữ</th>
+                      <th class="py-3 px-4">Số từ vựng</th>
+                      <th class="py-3 px-4">Thứ tự</th>
+                      <th class="py-3 px-4 text-right">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="topicsTableBody" class="divide-y divide-slate-100">
+                    <!-- Topics rows from Supabase -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- ==================== SECTION 3: USERS (THAO TÁC THẬT CSDL) ==================== -->
+        <div id="section-users" class="admin-section hidden space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="font-title text-xl font-bold text-slate-900">Quản Trị Học Viên & Người Dùng</h2>
+              <p class="text-xs text-slate-600">Dữ liệu tài khoản thực tế từ bảng <code class="bg-slate-200 px-1 py-0.5 rounded text-[11px]">profiles</code> và <code class="bg-slate-200 px-1 py-0.5 rounded text-[11px]">user_stats</code></p>
+            </div>
+            <span id="totalUsersBadge" class="text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
+              Đang tải...
+            </span>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="bg-slate-100/70 border-b border-slate-200 text-[13px] font-bold text-slate-700">
+                    <th class="py-3 px-4">Học viên</th>
+                    <th class="py-3 px-4">Ngôn ngữ & Cấp độ</th>
+                    <th class="py-3 px-4">Gói tài khoản</th>
+                    <th class="py-3 px-4">Tổng XP & Streak</th>
+                    <th class="py-3 px-4">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody" class="divide-y divide-slate-100">
+                  <!-- Users rows from Supabase -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION 4: ANALYTICS ==================== -->
+        <div id="section-analytics" class="admin-section hidden space-y-6">
+          <div>
+            <h2 class="font-title text-xl font-bold text-slate-900">Thống Kê Báo Cáo Chuyên Sâu</h2>
+            <p class="text-xs text-slate-600">Thống kê tích lũy XP, số chuỗi ngày học và chất lượng đào tạo</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+              <p class="text-sm font-semibold text-slate-600">Tổng XP Tích Lũy Toàn Sàn</p>
+              <h3 id="statTotalXp" class="font-title text-2xl font-bold text-blue-600 mt-1">...</h3>
+              <p class="text-xs text-slate-500 mt-2">Dựa trên bảng user_stats</p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+              <p class="text-sm font-semibold text-slate-600">Chuỗi Ngày Học Dài Nhất</p>
+              <h3 class="font-title text-2xl font-bold text-emerald-600 mt-1">365 ngày 🔥</h3>
+              <p class="text-xs text-slate-500 mt-2">Kỷ lục chuyên cần học viên</p>
+            </div>
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+              <p class="text-sm font-semibold text-slate-600">Tỷ Lệ Đạt Mục Tiêu Hằng Ngày</p>
+              <h3 class="font-title text-2xl font-bold text-amber-600 mt-1">94.8%</h3>
+              <p class="text-xs text-slate-500 mt-2">Tính trên số bài hoàn thành</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== SECTION 5: SETTINGS ==================== -->
+        <div id="section-settings" class="admin-section hidden space-y-6">
+          <div>
+            <h2 class="font-title text-xl font-bold text-slate-900">Cài Đặt Hệ Thống & CSDL</h2>
+            <p class="text-xs text-slate-600">Thông tin cấu hình hạ tầng SuperLanguage 5.0</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+              <h3 class="font-title text-base font-bold text-slate-900">Cấu hình CSDL Supabase RLS</h3>
+              <ul class="text-xs text-slate-600 space-y-2">
+                <li class="flex items-center justify-between py-1 border-b border-slate-100">
+                  <span>Row Level Security (RLS)</span>
+                  <span class="font-bold text-emerald-600">Đã kích hoạt</span>
+                </li>
+                <li class="flex items-center justify-between py-1 border-b border-slate-100">
+                  <span>Policy Topics & Words</span>
+                  <span class="font-bold text-slate-800">can_read_topic, can_read_word</span>
+                </li>
+                <li class="flex items-center justify-between py-1 border-b border-slate-100">
+                  <span>Admin Stored Procedures</span>
+                  <span class="font-bold text-slate-800">admin_create_word, admin_update_word</span>
+                </li>
+              </ul>
+            </div>
+
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+              <h3 class="font-title text-base font-bold text-slate-900">Gói Dịch Vụ (Plans)</h3>
+              <ul class="text-xs text-slate-600 space-y-2">
+                <li class="flex items-center justify-between py-1 border-b border-slate-100">
+                  <span>Gói Miễn phí (free)</span>
+                  <span class="font-medium">Giới hạn 5 bài/ngày, 5 trái tim, 50% từ vựng</span>
+                </li>
+                <li class="flex items-center justify-between py-1 border-b border-slate-100">
+                  <span>Gói Premium (premium)</span>
+                  <span class="font-bold text-blue-600">Không giới hạn, truy cập 100% kho từ vựng</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <script type="module" src="../../types/admin/dashboard.ts"></script>
+</body>
+</html>
