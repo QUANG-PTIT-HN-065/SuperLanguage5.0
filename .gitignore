@@ -50,8 +50,6 @@ firebase-debug.log
 .agents
 .freebuff
 .github
-
-
 .tsupgrader
 dist
 tests
