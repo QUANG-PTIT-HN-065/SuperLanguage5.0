@@ -841,22 +841,7 @@ form h1 {
   letter-spacing: 2px;
 }
 
-.btn-quick-fill {
-  background: var(--color-topaz);
-  color: var(--color-ocean-deep);
-  border: none;
-  border-radius: 8px;
-  padding: 5px 14px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: var(--transition);
-}
 
-.btn-quick-fill:hover {
-  background: #ffc72c;
-  transform: translateY(-1px);
-}
 
 /* 6-DIGIT OTP DIGITS CONTAINER */
 .otp-digits-container {
@@ -1141,22 +1126,38 @@ form h1 {
   gap: 20px;
 }
 
-.video-frame {
-  width: 300px;
-  max-width: 85vw;
-  border-radius: 22px;
-  overflow: hidden;
-  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65), 0 0 30px rgba(0, 180, 216, 0.4);
-  border: 2px solid rgba(0, 180, 216, 0.45);
-  background: #000;
-  line-height: 0;
-}
-
-.video-frame video {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: cover;
+.video-frame {
+
+  width: 300px;
+
+  max-width: 85vw;
+
+  border-radius: 22px;
+
+  overflow: hidden;
+
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65), 0 0 30px rgba(0, 180, 216, 0.4);
+
+  border: 2px solid rgba(0, 180, 216, 0.45);
+
+  background: #000;
+
+  line-height: 0;
+
+}
+
+
+
+.video-frame video {
+
+  width: 100%;
+
+  height: auto;
+
+  display: block;
+
+  object-fit: cover;
+
 }
 
 .loading-text-wrap {

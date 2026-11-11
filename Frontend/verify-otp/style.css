@@ -199,49 +199,6 @@ body {
   font-weight: 600;
 }
 
-/* ================= DEMO OTP BAR ================= */
-.demo-otp-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(255, 183, 3, 0.08);
-  border: 1px dashed rgba(255, 183, 3, 0.45);
-  padding: 10px 18px;
-  border-radius: 12px;
-  margin: 18px 0 24px 0;
-}
-
-.demo-text {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  color: #fff;
-}
-
-.demo-text strong {
-  color: var(--color-topaz);
-  letter-spacing: 2px;
-  font-size: 1.05rem;
-}
-
-.btn-quick-fill {
-  background: var(--color-topaz);
-  color: #061A28;
-  border: none;
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.84rem;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-quick-fill:hover {
-  background: #ffc933;
-  transform: translateY(-1px);
-}
-
 /* ================= 8-DIGIT OTP INPUTS ================= */
 .otp-digits-container {
   display: flex;

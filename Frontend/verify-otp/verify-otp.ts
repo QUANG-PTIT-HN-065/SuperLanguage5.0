@@ -6,6 +6,46 @@
  * ===================================================================
  */
 
+interface UserAccount {
+  fullName: string;
+  email: string;
+  password: string;
+  nativeLanguage?: string;
+  targetLanguage?: string;
+  xp?: number;
+  createdAt?: string;
+}
+
+const DEFAULT_USERS_DB: UserAccount[] = [
+  {
+    fullName: 'Vua Xứ Thanh',
+    email: 'quanquan@gmail.com',
+    password: '123456',
+    nativeLanguage: 'vi',
+    targetLanguage: 'ja',
+    xp: 0,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    fullName: 'Học viên Slanguage',
+    email: 'hocvien@slanguage.edu.vn',
+    password: '123456',
+    nativeLanguage: 'vi',
+    targetLanguage: 'en',
+    xp: 0,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  },
+  {
+    fullName: 'Nguyễn Văn A',
+    email: 'learner@gmail.com',
+    password: '123456',
+    nativeLanguage: 'vi',
+    targetLanguage: 'ja',
+    xp: 0,
+    createdAt: '2026-01-01T00:00:00.000Z'
+  }
+];
+
 type AppLanguage = 'vi' | 'en' | 'ja';
 
 interface LanguageDetail {
@@ -45,8 +85,6 @@ class VerifyOtpController {
   // DOM Elements
   private displayOtpEmail: HTMLElement | null = null;
   private displayLangPairTag: HTMLElement | null = null;
-  private demoOtpNumber: HTMLElement | null = null;
-  private btnAutoFillOtp: HTMLButtonElement | null = null;
   private otpBoxes: HTMLInputElement[] = [];
   private otpErrorNote: HTMLElement | null = null;
   private timerCountdownWrap: HTMLElement | null = null;
@@ -83,8 +121,6 @@ class VerifyOtpController {
     // 2. Cache DOM elements
     this.displayOtpEmail = document.getElementById('displayOtpEmail');
     this.displayLangPairTag = document.getElementById('displayLangPairTag');
-    this.demoOtpNumber = document.getElementById('demoOtpNumber');
-    this.btnAutoFillOtp = document.getElementById('btnAutoFillOtp') as HTMLButtonElement;
     this.otpBoxes = Array.from(document.querySelectorAll<HTMLInputElement>('.otp-box'));
     this.otpErrorNote = document.getElementById('otpErrorNote');
     this.timerCountdownWrap = document.getElementById('timerCountdownWrap');
@@ -115,13 +151,10 @@ class VerifyOtpController {
     if (this.displayLangPairTag) {
       this.displayLangPairTag.textContent = `${origin.name} ➔ ${target.title}`;
     }
-    if (this.demoOtpNumber) {
-      this.demoOtpNumber.textContent = this.currentOtpCode;
-    }
 
     this.bindEvents();
     this.startOtpCountdown();
-    this.showToast(`📬 Mã OTP đã gửi tới ${this.registeredEmail}: ${this.currentOtpCode}`);
+    this.showToast(`📬 Mã xác thực OTP 8 số đã gửi tới ${this.registeredEmail}`);
   }
 
   private bindEvents(): void {
@@ -196,21 +229,13 @@ class VerifyOtpController {
       });
     });
 
-    // 2. Demo Quick Fill Button
-    if (this.btnAutoFillOtp) {
-      this.btnAutoFillOtp.addEventListener('click', () => {
-        this.fillOtpCode(this.currentOtpCode);
-      });
-    }
-
     // 3. Resend OTP Button
     if (this.btnResendOtp) {
       this.btnResendOtp.addEventListener('click', () => {
         this.currentOtpCode = '86868686';
-        if (this.demoOtpNumber) this.demoOtpNumber.textContent = this.currentOtpCode;
         this.clearOtpInputs();
         this.startOtpCountdown();
-        this.showToast(`📬 Mã OTP mới đã gửi tới ${this.registeredEmail}: ${this.currentOtpCode}`);
+        this.showToast(`📬 Mã OTP mới đã gửi tới ${this.registeredEmail}`);
       });
     }
 
@@ -281,19 +306,26 @@ class VerifyOtpController {
     }, 1000);
   }
 
-  private fillOtpCode(code: string): void {
-    const chars = code.split('');
-    this.otpBoxes.forEach((b, i) => {
-      b.value = chars[i] || '';
-      if (chars[i]) b.classList.add('filled');
-      else b.classList.remove('filled');
-    });
-    if (this.otpBoxes.length > 0) {
-      this.otpBoxes[this.otpBoxes.length - 1].focus();
+  private getUsersDB(): UserAccount[] {
+    const raw = localStorage.getItem('slanguage_users_db');
+    if (!raw) {
+      localStorage.setItem('slanguage_users_db', JSON.stringify(DEFAULT_USERS_DB));
+      return [...DEFAULT_USERS_DB];
     }
-    if (code.length === 6) {
-      this.handleVerifyOtp();
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    } catch (e) {
+      console.error('Error parsing slanguage_users_db:', e);
     }
+    localStorage.setItem('slanguage_users_db', JSON.stringify(DEFAULT_USERS_DB));
+    return [...DEFAULT_USERS_DB];
+  }
+
+  private saveUsersDB(users: UserAccount[]): void {
+    localStorage.setItem('slanguage_users_db', JSON.stringify(users));
   }
 
   private clearOtpInputs(): void {
@@ -332,9 +364,30 @@ class VerifyOtpController {
       return;
     }
 
-    // SUCCESS: Save user session to localStorage (No bonus XP or coins for new users)
+    // SUCCESS: Save registered user to slanguage_users_db
+    const savedPass = sessionStorage.getItem('slanguage_reg_pass') || '123456';
+    const users = this.getUsersDB();
+    const existingIndex = users.findIndex(u => u.email.trim().toLowerCase() === this.registeredEmail.trim().toLowerCase());
+    const newUser: UserAccount = {
+      fullName: this.registeredFullName,
+      email: this.registeredEmail,
+      password: savedPass,
+      nativeLanguage: this.originLanguage,
+      targetLanguage: this.targetLanguage,
+      xp: 0,
+      createdAt: new Date().toISOString()
+    };
+    if (existingIndex >= 0) {
+      users[existingIndex] = newUser;
+    } else {
+      users.push(newUser);
+    }
+    this.saveUsersDB(users);
+
+    // Save user session to localStorage (No bonus XP or coins for new users)
     localStorage.setItem('slanguage_user_name', this.registeredFullName);
     localStorage.setItem('slanguage_user_email', this.registeredEmail);
+    localStorage.setItem('slanguage_user_password', savedPass);
     localStorage.setItem('slanguage_native_language', this.originLanguage);
     localStorage.setItem('slanguage_active_language', this.targetLanguage);
     localStorage.setItem('slanguage_user_xp', '0');
