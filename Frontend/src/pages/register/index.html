@@ -3,20 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Đăng Ký & Đăng Nhập Học Viên</title>
+  <title>Slanguage - Đăng Nhập & Đăng Ký Học Viên</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="../../css/login/style.css">
-  <link rel="stylesheet" href="../../css/shared/user-experience.css">
+  <link rel="stylesheet" href="./style.css">
 </head>
-<body class="slg-user-auth">
+<body>
 
   <!-- Toast Notification Container -->
   <div class="login-toast" id="loginToast"></div>
 
-  <!-- Radios must be siblings BEFORE .container for the ~ selectors to work (Sign Up checked by default here) -->
+  <!-- Radios must be siblings BEFORE .container for the ~ selectors to work -->
   <input type="radio" name="panel" id="showSignIn" class="panel-radio" aria-label="Hiện form đăng nhập" />
   <input type="radio" name="panel" id="showSignUp" class="panel-radio" checked aria-label="Hiện form đăng ký" />
 
@@ -167,15 +168,15 @@
         <!-- OVERLAY LEFT (Appears when Sign Up is shown, prompts user to Sign In) -->
         <div class="overlay-panel overlay-left">
           <div class="overlay-brand">
-            <img src="../../../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
-            <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
+            <img src="../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
+            <span class="overlay-brand-name">S<span class="brand-language">language</span>
           </div>
           <h2>Chào mừng trở lại!</h2>
           <p>Để tiếp tục lộ trình học tập và tích lũy XP, vui lòng đăng nhập tài khoản của bạn</p>
           <div class="overlay-lang-chips">
-            <span class="lang-pill">🇬🇧 Tiếng Anh</span>
-            <span class="lang-pill">🇯🇵 Tiếng Nhật</span>
-            <span class="lang-pill">🇻🇳 Tiếng Việt</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
           </div>
           <label for="showSignIn" class="btn ghost">Đăng Nhập Ngay</label>
         </div>
@@ -183,15 +184,15 @@
         <!-- OVERLAY RIGHT (Appears when Sign In is shown, prompts user to Sign Up) -->
         <div class="overlay-panel overlay-right">
           <div class="overlay-brand">
-            <img src="../../../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
-            <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
+            <img src="../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
+            <span class="overlay-brand-name">S<span class="brand-language">language</span>
           </div>
           <h2>Khám phá Slanguage!</h2>
           <p>Đăng nhập để khám phá nhiều hơn về khóa học của chúng tôi.</p>
           <div class="overlay-lang-chips">
-            <span class="lang-pill">🇬🇧 Tiếng Anh</span>
-            <span class="lang-pill">🇯🇵 Tiếng Nhật</span>
-            <span class="lang-pill">🇻🇳 Tiếng Việt</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
           </div>
           <label for="showSignUp" class="btn ghost">Đăng Ký Tài Khoản</label>
         </div>
@@ -199,11 +200,12 @@
     </div>
   </div>
 
+
   <!-- GLOBAL TRANSITION LOADING SCREEN -->
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" src="../../../assets/loading.mp4" autoplay loop playsinline></video>
+        <video id="loadingVideoPlayer" muted src="../assets/loading.mp4" loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>
@@ -211,6 +213,22 @@
     </div>
   </div>
 
-  <script type="module" src="../../types/login/login.ts"></script>
+    <!-- Logic TypeScript cho trang -->
+  <script type="module" src="./register.ts"></script>
+  <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
+  <script>
+    if (!window.registerApp) {
+      fetch('./register.ts')
+        .then(function(r) { return r.text(); })
+        .then(function(code) {
+          var js = Babel.transform(code, { filename: 'register.ts', presets: ['typescript'] }).code;
+          var s = document.createElement('script');
+          s.textContent = js;
+          document.body.appendChild(s);
+        })
+        .catch(function(err) { console.error('Error loading register.ts:', err); });
+    }
+  </script>
 </body>
 </html>

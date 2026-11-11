@@ -4,14 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Slanguage - Đăng Nhập & Đăng Ký Học Viên</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="../../css/login/style.css">
-  <link rel="stylesheet" href="../../css/shared/user-experience.css">
+  <link rel="stylesheet" href="./style.css">
 </head>
-<body class="slg-user-auth">
+<body>
 
   <!-- Toast Notification Container -->
   <div class="login-toast" id="loginToast"></div>
@@ -42,25 +43,6 @@
           <div class="error-text" id="nameError">Vui lòng nhập họ tên.</div>
         </div>
 
-        <div class="form-group">
-          <label class="language-field-label" for="regNativeLanguage">Ngôn ngữ mẹ đẻ *</label>
-          <select id="regNativeLanguage" class="form-input form-select" required>
-            <option value="vi" selected>Tiếng Việt</option>
-            <option value="en">Tiếng Anh</option>
-            <option value="ja">Tiếng Nhật</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="language-field-label" for="regTargetLanguage">Ngôn ngữ muốn học *</label>
-          <select id="regTargetLanguage" class="form-input form-select" required>
-            <option value="en" selected>Tiếng Anh</option>
-            <option value="ja">Tiếng Nhật</option>
-            <option value="vi">Tiếng Việt</option>
-          </select>
-          <div class="error-text" id="languageError">Ngôn ngữ mẹ đẻ và ngôn ngữ muốn học phải khác nhau.</div>
-        </div>
-
         <!-- Email -->
         <div class="form-group">
           <div class="input-wrapper">
@@ -73,7 +55,7 @@
         <!-- Password -->
         <div class="form-group">
           <div class="input-wrapper">
-            <input type="password" id="regPassword" class="form-input" placeholder="Mật khẩu (từ 8 ký tự) *" required>
+            <input type="password" id="regPassword" class="form-input" placeholder="Mật khẩu (từ 6 ký tự) *" required>
             <i class="fa-solid fa-lock input-icon"></i>
           </div>
           <div class="error-text" id="passError">Mật khẩu quá ngắn.</div>
@@ -125,7 +107,7 @@
               type="text" 
               id="emailOrUser" 
               class="form-input" 
-              placeholder="Địa chỉ email *"
+              placeholder="Email hoặc Tên đăng nhập *" 
               autocomplete="username"
               required
             >
@@ -186,15 +168,15 @@
         <!-- OVERLAY LEFT (Appears when Sign Up is shown, prompts user to Sign In) -->
         <div class="overlay-panel overlay-left">
           <div class="overlay-brand">
-            <img src="../../../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
+            <img src="../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
             <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
           </div>
           <h2>Chào mừng trở lại!</h2>
           <p>Để tiếp tục lộ trình học tập và tích lũy XP, vui lòng đăng nhập tài khoản của bạn</p>
           <div class="overlay-lang-chips">
-            <span class="lang-pill"><img src="../../../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
-            <span class="lang-pill"><img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
-            <span class="lang-pill"><img src="../../../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
           </div>
           <label for="showSignIn" class="btn ghost">Đăng Nhập Ngay</label>
         </div>
@@ -202,15 +184,15 @@
         <!-- OVERLAY RIGHT (Appears when Sign In is shown, prompts user to Sign Up) -->
         <div class="overlay-panel overlay-right">
           <div class="overlay-brand">
-            <img src="../../../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
+            <img src="../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
             <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
           </div>
           <h2>Khám phá Slanguage!</h2>
           <p>Đăng nhập để khám phá nhiều hơn về khóa học của chúng tôi.</p>
           <div class="overlay-lang-chips">
-            <span class="lang-pill"><img src="../../../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
-            <span class="lang-pill"><img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
-            <span class="lang-pill"><img src="../../../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
+            <span class="lang-pill"><img src="../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
           </div>
           <label for="showSignUp" class="btn ghost">Đăng Ký Tài Khoản</label>
         </div>
@@ -218,11 +200,12 @@
     </div>
   </div>
 
+
   <!-- GLOBAL TRANSITION LOADING SCREEN -->
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" src="../../../assets/loading.mp4" autoplay loop playsinline></video>
+        <video id="loadingVideoPlayer" muted src="../assets/loading.mp4" loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>
@@ -230,6 +213,22 @@
     </div>
   </div>
 
-  <script type="module" src="../../types/login/login.ts"></script>
+    <!-- Logic TypeScript cho trang -->
+  <script type="module" src="./login.ts"></script>
+  <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
+  <script>
+    if (!window.loginApp) {
+      fetch('./login.ts')
+        .then(function(r) { return r.text(); })
+        .then(function(code) {
+          var js = Babel.transform(code, { filename: 'login.ts', presets: ['typescript'] }).code;
+          var s = document.createElement('script');
+          s.textContent = js;
+          document.body.appendChild(s);
+        })
+        .catch(function(err) { console.error('Error loading login.ts:', err); });
+    }
+  </script>
 </body>
 </html>
