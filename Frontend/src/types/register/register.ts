@@ -1,3 +1,10 @@
+import {
+  clearAuthTokens,
+  saveAuthTokens,
+  saveLearnerIdentity,
+  slanguageApi,
+} from "../shared/api-client";
+
 /**
  * ===================================================================
  * SLANGUAGE - REGISTER CONTROLLER
@@ -7,48 +14,8 @@
  * ===================================================================
  */
 
-interface UserAccount {
-  fullName: string;
-  email: string;
-  password: string;
-  nativeLanguage?: string;
-  targetLanguage?: string;
-  xp?: number;
-  createdAt?: string;
-}
-
-const DEFAULT_USERS_DB: UserAccount[] = [
-  {
-    fullName: 'Vua Xứ Thanh',
-    email: 'quanquan@gmail.com',
-    password: '123456',
-    nativeLanguage: 'vi',
-    targetLanguage: 'ja',
-    xp: 0,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    fullName: 'Học viên Slanguage',
-    email: 'hocvien@slanguage.edu.vn',
-    password: '123456',
-    nativeLanguage: 'vi',
-    targetLanguage: 'en',
-    xp: 0,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    fullName: 'Nguyễn Văn A',
-    email: 'learner@gmail.com',
-    password: '123456',
-    nativeLanguage: 'vi',
-    targetLanguage: 'ja',
-    xp: 0,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  }
-];
-
 interface LoginCredentials {
-  emailOrUser: string;
+  email: string;
   password: string;
   remember: boolean;
 }
@@ -199,30 +166,8 @@ class SlanguageRegister {
     });
   }
 
-  private getUsersDB(): UserAccount[] {
-    const raw = localStorage.getItem('slanguage_users_db');
-    if (!raw) {
-      localStorage.setItem('slanguage_users_db', JSON.stringify(DEFAULT_USERS_DB));
-      return [...DEFAULT_USERS_DB];
-    }
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    } catch (e) {
-      console.error('Error parsing slanguage_users_db:', e);
-    }
-    localStorage.setItem('slanguage_users_db', JSON.stringify(DEFAULT_USERS_DB));
-    return [...DEFAULT_USERS_DB];
-  }
-
-  private saveUsersDB(users: UserAccount[]): void {
-    localStorage.setItem('slanguage_users_db', JSON.stringify(users));
-  }
-
   private checkExistingSession(): void {
-    const savedUser = localStorage.getItem('slanguage_user_email');
+    const savedUser = localStorage.getItem('slanguage_remembered_email');
     if (savedUser && this.emailInput && this.rememberCheckbox) {
       this.emailInput.value = savedUser;
       this.rememberCheckbox.checked = true;
@@ -243,9 +188,9 @@ class SlanguageRegister {
     const rememberVal = this.rememberCheckbox ? this.rememberCheckbox.checked : false;
 
     if (!emailVal) {
-      this.showError('emailError', 'Vui lòng nhập email hoặc tên đăng nhập của học viên.');
+      this.showError('emailError', 'Vui lòng nhập địa chỉ email.');
       isValid = false;
-    } else if (emailVal.includes('@') && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
       this.showError('emailError', 'Địa chỉ email không đúng định dạng.');
       isValid = false;
     }
@@ -253,73 +198,62 @@ class SlanguageRegister {
     if (!passVal) {
       this.showError('passwordError', 'Vui lòng nhập mật khẩu.');
       isValid = false;
-    } else if (passVal.length < 6) {
-      this.showError('passwordError', 'Mật khẩu phải chứa ít nhất 6 ký tự.');
-      isValid = false;
     }
 
     if (!isValid) return null;
 
     return {
-      emailOrUser: emailVal,
+      email: emailVal,
       password: passVal,
       remember: rememberVal
     };
   }
 
-  private handleLogin(): void {
+  private async handleLogin(): Promise<void> {
     const credentials = this.validateLogin();
     if (!credentials) return;
 
-    const users = this.getUsersDB();
-    const user = users.find(u => 
-      u.email.trim().toLowerCase() === credentials.emailOrUser.trim().toLowerCase() ||
-      u.fullName.trim().toLowerCase() === credentials.emailOrUser.trim().toLowerCase()
-    );
-
-    // 1. Validate if user exists in DB
-    if (!user) {
-      this.showError('emailError', 'Tài khoản hoặc email này chưa được đăng ký trong hệ thống.');
-      if (this.emailInput) {
-        this.emailInput.focus();
-        this.emailInput.classList.add('error');
-      }
-      return;
-    }
-
-    // 2. Validate password
-    if (user.password !== credentials.password) {
-      this.showError('passwordError', 'Mật khẩu không chính xác. Vui lòng kiểm tra lại!');
-      if (this.passwordInput) {
-        this.passwordInput.focus();
-        this.passwordInput.classList.add('error');
-      }
-      return;
-    }
-
     if (this.btnSubmitLogin) {
+      this.btnSubmitLogin.dataset.originalText = this.btnSubmitLogin.innerHTML;
       this.btnSubmitLogin.disabled = true;
       this.btnSubmitLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đăng nhập...';
     }
 
-    if (credentials.remember) {
-      localStorage.setItem('slanguage_remembered_email', user.email);
-      localStorage.setItem('slanguage_user_email', user.email);
-    } else {
-      localStorage.removeItem('slanguage_remembered_email');
+    clearAuthTokens();
+    localStorage.setItem('slanguage_is_logged_in', 'false');
+    localStorage.removeItem('slanguage_user_id');
+    try {
+      const response = await slanguageApi<{
+        access_token: string;
+        refresh_token: string;
+        user: { id: string; email: string; display_name: string | null };
+      }>('/api/v1/auth/login', {
+        method: 'POST',
+        body: { email: credentials.email, password: credentials.password },
+        anonymous: true
+      });
+      saveAuthTokens(response.data);
+      saveLearnerIdentity(response.data.user);
+
+      if (credentials.remember) {
+        localStorage.setItem('slanguage_remembered_email', response.data.user.email);
+      } else {
+        localStorage.removeItem('slanguage_remembered_email');
+      }
+
+      this.showToast(`Chào mừng ${response.data.user.display_name || response.data.user.email} trở lại!`);
+      this.triggerLoadingAndRedirect('../home/index.html', 1200);
+    } catch (error) {
+      this.showError(
+        'passwordError',
+        error instanceof Error ? error.message : 'Không thể đăng nhập lúc này. Vui lòng thử lại.'
+      );
+      if (this.passwordInput) this.passwordInput.focus();
+      if (this.btnSubmitLogin) {
+        this.btnSubmitLogin.disabled = false;
+        this.btnSubmitLogin.innerHTML = this.btnSubmitLogin.dataset.originalText || 'Đăng nhập';
+      }
     }
-
-    // Fully synchronize user profile to localStorage
-    localStorage.setItem('slanguage_is_logged_in', 'true');
-    localStorage.setItem('slanguage_user_name', user.fullName);
-    localStorage.setItem('slanguage_user_email', user.email);
-    localStorage.setItem('slanguage_user_password', user.password);
-    localStorage.setItem('slanguage_native_language', user.nativeLanguage || 'vi');
-    localStorage.setItem('slanguage_active_language', user.targetLanguage || 'ja');
-    localStorage.setItem('slanguage_user_xp', (user.xp !== undefined ? user.xp : 0).toString());
-
-    this.showToast(`Chào mừng ${user.fullName} trở lại! Đang chuyển hướng...`);
-    this.triggerLoadingAndRedirect('../home/index.html', 1200);
   }
 
   private handleRegister(): void {
@@ -342,21 +276,13 @@ class SlanguageRegister {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       this.showError('regEmailError', 'Địa chỉ email không hợp lệ.');
       isValid = false;
-    } else {
-      // VALIDATE IF EMAIL ALREADY EXISTS IN DATABASE
-      const users = this.getUsersDB();
-      const isTaken = users.some(u => u.email.trim().toLowerCase() === email.toLowerCase());
-      if (isTaken) {
-        this.showError('regEmailError', `Email "${email}" đã tồn tại trong hệ thống. Vui lòng đăng nhập hoặc dùng email khác!`);
-        isValid = false;
-      }
     }
 
     if (!password) {
       this.showError('passError', 'Vui lòng đặt mật khẩu.');
       isValid = false;
-    } else if (password.length < 6) {
-      this.showError('passError', 'Mật khẩu phải từ 6 ký tự trở lên.');
+    } else if (password.length < 8) {
+      this.showError('passError', 'Mật khẩu phải từ 8 ký tự trở lên.');
       isValid = false;
     }
 
@@ -372,14 +298,10 @@ class SlanguageRegister {
 
     if (!isValid) return;
 
-    // Save temporary registration draft to sessionStorage
+    // Keep the password only in this tab until registration is submitted after language selection.
     sessionStorage.setItem('slanguage_reg_name', fullName);
     sessionStorage.setItem('slanguage_reg_email', email);
     sessionStorage.setItem('slanguage_reg_pass', password);
-
-    // Also persist email to localStorage so verify-otp can always read it
-    localStorage.setItem('slanguage_user_name', fullName);
-    localStorage.setItem('slanguage_user_email', email);
 
     // NAVIGATE TO DEDICATED STAGE 2: LANGUAGE SELECTION PAGE
     window.location.href = '../select-language/index.html';
@@ -457,3 +379,5 @@ if (document.readyState === 'loading') {
 } else {
   initSlanguageRegister();
 }
+
+export {};

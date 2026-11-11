@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Xác Thực Mã OTP 8 Số</title>
+  <title>Slanguage - Xác Thực Mã OTP</title>
   <link rel="icon" type="image/png" href="../assets/logo.png">
   <link rel="apple-touch-icon" href="../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="../../css/verify-otp/style.css">
 </head>
 <body>
 
@@ -30,9 +30,9 @@
         <i class="fa-solid fa-shield-halved"></i>
       </div>
 
-      <h2>Xác Thực Mã OTP 8 Số</h2>
+      <h2>Xác Thực Email</h2>
       <p class="stage-subtitle-text">
-        Mã xác thực 8 chữ số bảo mật đã được gửi tới hòm thư của bạn:
+        Nhập mã xác thực trong email đăng ký tài khoản đã gửi tới:
       </p>
 
       <div class="otp-email-chip">
@@ -47,16 +47,14 @@
       </div>
     </div>
 
-    <!-- 8-Digit OTP Input Grid -->
-    <div class="otp-digits-container" id="otpDigitsContainer" role="group" aria-label="Nhập mã OTP 8 số">
+    <!-- 6-Digit OTP Input Grid -->
+    <div class="otp-digits-container" id="otpDigitsContainer" role="group" aria-label="Nhập mã OTP 6 số">
       <input type="text" maxlength="1" class="otp-box" data-index="0" inputmode="numeric" pattern="[0-9]*" autofocus autocomplete="one-time-code" aria-label="Số thứ 1">
       <input type="text" maxlength="1" class="otp-box" data-index="1" inputmode="numeric" pattern="[0-9]*" aria-label="Số thứ 2">
       <input type="text" maxlength="1" class="otp-box" data-index="2" inputmode="numeric" pattern="[0-9]*" aria-label="Số thứ 3">
       <input type="text" maxlength="1" class="otp-box" data-index="3" inputmode="numeric" pattern="[0-9]*" aria-label="Số thứ 4">
       <input type="text" maxlength="1" class="otp-box" data-index="4" inputmode="numeric" pattern="[0-9]*" aria-label="Số thứ 5">
       <input type="text" maxlength="1" class="otp-box" data-index="5" inputmode="numeric" pattern="[0-9]*" aria-label="Số thứ 6">
-      <input type="text" maxlength="1" class="otp-box" data-index="6" inputmode="numeric" pattern="[0-9]*" aria-label="Số thứ 7">
-      <input type="text" maxlength="1" class="otp-box" data-index="7" inputmode="numeric" pattern="[0-9]*" aria-label="Số thứ 8">
     </div>
 
     <!-- Error Banner -->
@@ -101,7 +99,7 @@
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay" aria-hidden="true">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" src="../assets/loading.mp4" loop playsinline muted preload="auto"></video>
+        <video id="loadingVideoPlayer" src="../../../assets/loading.mp4" loop playsinline muted preload="auto"></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang thiết lập lớp học, hãy đợi...</span>
@@ -110,21 +108,6 @@
   </div>
 
   <!-- Logic TypeScript cho trang -->
-  <script type="module" src="./verify-otp.ts"></script>
-  <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
-  <script>
-    if (!window.verifyOtpApp) {
-      fetch('./verify-otp.ts')
-        .then(function(r) { return r.text(); })
-        .then(function(code) {
-          var js = Babel.transform(code, { filename: 'verify-otp.ts', presets: ['typescript'] }).code;
-          var s = document.createElement('script');
-          s.textContent = js;
-          document.body.appendChild(s);
-        })
-        .catch(function(err) { console.error('Error loading verify-otp.ts:', err); });
-    }
-  </script>
+  <script type="module" src="../../types/verify-otp/verify-otp.ts"></script>
 </body>
 </html>

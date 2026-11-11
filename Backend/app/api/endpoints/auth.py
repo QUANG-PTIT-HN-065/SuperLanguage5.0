@@ -288,6 +288,26 @@ def send_otp(data: EmailRequest):
     }
 
 
+@router.post("/resend-signup-otp", response_model=BaseResponse[Dict[str, bool]])
+def resend_signup_otp(data: EmailRequest):
+    client = new_auth_client()
+    try:
+        client.auth.resend({"type": "signup", "email": str(data.email)})
+    except Exception as exc:
+        _raise_auth_error(
+            exc,
+            status.HTTP_502_BAD_GATEWAY,
+            "Không thể gửi lại mã xác thực lúc này. Vui lòng thử lại sau.",
+        )
+
+    return {
+        "status": "success",
+        "message": "Nếu tài khoản đang chờ xác thực, mã mới đã được gửi tới email.",
+        "data": {"sent": True},
+        "error": None,
+    }
+
+
 @router.post("/verify-otp", response_model=BaseResponse[Dict[str, Any]])
 def verify_signup_otp(body: OTPVerifyRequest):
     auth_client = new_auth_client()

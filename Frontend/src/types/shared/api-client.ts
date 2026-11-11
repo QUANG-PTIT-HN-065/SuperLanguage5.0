@@ -5,6 +5,11 @@ const API_BASE_URL = (
 const ACCESS_TOKEN_KEY = "slanguage_access_token";
 const REFRESH_TOKEN_KEY = "slanguage_refresh_token";
 
+export interface AuthTokens {
+  access_token: string;
+  refresh_token: string;
+}
+
 export interface ApiResponse<T = unknown> {
   status: string;
   message: string;
@@ -13,6 +18,7 @@ export interface ApiResponse<T = unknown> {
 
 interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
+  anonymous?: boolean;
 }
 
 function getErrorMessage(payload: unknown, status: number): string {
@@ -60,6 +66,30 @@ export function isLearnerAuthenticated(): boolean {
   return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
 }
 
+export function saveAuthTokens(tokens: AuthTokens): void {
+  if (!tokens.access_token || !tokens.refresh_token) {
+    throw new Error("Backend không trả về phiên đăng nhập hợp lệ.");
+  }
+  localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
+  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+}
+
+export function clearAuthTokens(): void {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+export function saveLearnerIdentity(user: {
+  id?: string;
+  email: string;
+  display_name?: string | null;
+}): void {
+  localStorage.setItem("slanguage_is_logged_in", "true");
+  if (user.id) localStorage.setItem("slanguage_user_id", user.id);
+  localStorage.setItem("slanguage_user_name", user.display_name || user.email);
+  localStorage.setItem("slanguage_user_email", user.email);
+}
+
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
   if (!refreshToken) {
@@ -79,8 +109,7 @@ async function refreshAccessToken(): Promise<string> {
   if (!result.data.access_token || !result.data.refresh_token) {
     throw new Error("Backend không trả về phiên đăng nhập mới.");
   }
-  localStorage.setItem(ACCESS_TOKEN_KEY, result.data.access_token);
-  localStorage.setItem(REFRESH_TOKEN_KEY, result.data.refresh_token);
+  saveAuthTokens(result.data);
   return result.data.access_token;
 }
 
@@ -89,24 +118,25 @@ export async function slanguageApi<T = unknown>(
   options: ApiRequestOptions = {},
   allowRefresh = true,
 ): Promise<ApiResponse<T>> {
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  const headers = new Headers(options.headers);
+  const { anonymous = false, ...requestOptions } = options;
+  const token = anonymous ? null : localStorage.getItem(ACCESS_TOKEN_KEY);
+  const headers = new Headers(requestOptions.headers);
   headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
+    ...requestOptions,
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: requestOptions.body === undefined ? undefined : JSON.stringify(requestOptions.body),
   });
 
-  if (response.status === 401 && allowRefresh && token) {
+  if (response.status === 401 && allowRefresh && token && !anonymous) {
     const refreshedToken = await refreshAccessToken();
     return slanguageApi<T>(
       path,
       {
-        ...options,
-        headers: { ...options.headers, Authorization: `Bearer ${refreshedToken}` },
+        ...requestOptions,
+        headers: { ...requestOptions.headers, Authorization: `Bearer ${refreshedToken}` },
       },
       false,
     );

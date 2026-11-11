@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="../../css/forgot-password/style.css">
 </head>
 <body>
 
@@ -189,12 +189,12 @@
   </div>
 
     <!-- Logic TypeScript cho trang -->
-  <script type="module" src="./forgot-password.ts"></script>
+  <script type="module" src="../../types/forgot-password/forgot-password.ts"></script>
   <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
   <script>
     if (!window.forgotPasswordApp) {
-      fetch('./forgot-password.ts')
+      fetch('../../types/forgot-password/forgot-password.ts')
         .then(function(r) { return r.text(); })
         .then(function(code) {
           var js = Babel.transform(code, { filename: 'forgot-password.ts', presets: ['typescript'] }).code;
