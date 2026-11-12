@@ -1,8 +1,10 @@
+import logging
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.deps import get_current_admin_profile
+from app.schemas.rag import RAGDocumentCreate, RAGDocumentResponse
 from app.schemas.vocabulary import (
     LearningPathCreate,
     LearningPathUpdate,
@@ -32,8 +34,60 @@ from app.services.vocabulary_service import (
     list_admin_words,
     update_word as update_word_record,
 )
+from app.services.rag_service import RAGError, reindex_learning_material, upsert_document
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+@router.post("/rag/reindex")
+def reindex_rag_documents(
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    """Đồng bộ chủ đề và từ vựng hiện có vào Supabase Vector DB."""
+    try:
+        stats = reindex_learning_material()
+    except RAGError as exc:
+        logger.exception("Could not reindex learning material for RAG.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể đồng bộ tri thức học tập vào Vector DB. Vui lòng thử lại.",
+        ) from exc
+    message = (
+        "Đã đồng bộ chủ đề và từ vựng vào Vector DB."
+        if stats["documents_indexed"]
+        else "Chưa có chủ đề hoặc từ vựng tiếng Anh/Nhật để lập chỉ mục. Hãy thêm tài liệu học tập hoặc kiểm tra ngôn ngữ dữ liệu."
+    )
+    return {"status": "success", "message": message, "data": stats}
+
+
+@router.post(
+    "/rag/documents",
+    status_code=status.HTTP_201_CREATED,
+    response_model=RAGDocumentResponse,
+)
+def add_rag_document(
+    body: RAGDocumentCreate,
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    """Thêm tài liệu học tập có nội dung chi tiết vào Vector DB."""
+    try:
+        chunks_indexed = upsert_document(
+            body.title,
+            body.language_code,
+            body.content,
+        )
+    except RAGError as exc:
+        logger.exception("Could not index an administrator-provided RAG document.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể thêm tài liệu vào Vector DB. Vui lòng thử lại.",
+        ) from exc
+    return RAGDocumentResponse(
+        title=body.title,
+        language_code=body.language_code,
+        chunks_indexed=chunks_indexed,
+    )
 
 
 @router.get("/stats")

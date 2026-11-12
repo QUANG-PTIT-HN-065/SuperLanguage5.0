@@ -5,10 +5,12 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from supabase import create_client, Client
+from starlette.concurrency import run_in_threadpool
 
 from app.core.deps import get_current_profile
 from app.core.config import settings
 from app.schemas.chat_ai import (
+    AudioTranscriptionResponse,
     AudioUploadResponse,
     ConversationCreate,
     ConversationMessageResponse,
@@ -18,6 +20,12 @@ from app.schemas.chat_ai import (
 )
 from app.schemas.reponse import BaseResponse
 from app.services.ai_service import AIService
+from app.services.speech_service import (
+    InvalidAudioError,
+    SpeechNotRecognizedError,
+    SpeechServiceUnavailableError,
+    transcribe_audio,
+)
 
 router = APIRouter(tags=["AI Chat Speaking"])
 logger = logging.getLogger(__name__)
@@ -41,7 +49,7 @@ _AUDIO_EXTENSIONS = {
 def _verify_audio_conversation(
     conversation_id: UUID,
     profile: Dict[str, Any],
-) -> None:
+) -> str:
     try:
         conversation = (
             supabase.table("conversations")
@@ -60,6 +68,7 @@ def _verify_audio_conversation(
 
     if not conversation.data:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy phòng trò chuyện.")
+    return conversation.data[0]["language_code"]
 
 
 @router.get("/conversations", response_model=BaseResponse[list[ConversationResponse]])
@@ -299,6 +308,71 @@ async def upload_audio(
     return response
 
 
+@router.post(
+    "/transcribe-audio",
+    response_model=BaseResponse[AudioTranscriptionResponse],
+)
+async def transcribe_chat_audio(
+    conversation_id: UUID = Form(...),
+    audio: UploadFile = File(...),
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[AudioTranscriptionResponse]:
+    """Transcribe a temporary audio recording and automatically detect its language."""
+    try:
+        _verify_audio_conversation(conversation_id, profile)
+    except Exception:
+        await audio.close()
+        raise
+    content_type = (audio.content_type or "").split(";", maxsplit=1)[0].strip().lower()
+    if content_type not in _AUDIO_EXTENSIONS:
+        await audio.close()
+        raise HTTPException(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "Định dạng âm thanh không được hỗ trợ.",
+        )
+
+    try:
+        audio_bytes = await audio.read(_MAX_AUDIO_BYTES + 1)
+    finally:
+        await audio.close()
+
+    if not audio_bytes:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "File ghi âm đang trống.")
+    if len(audio_bytes) > _MAX_AUDIO_BYTES:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            "File ghi âm vượt quá giới hạn 10 MB.",
+        )
+
+    try:
+        transcript = await run_in_threadpool(
+            transcribe_audio,
+            audio_bytes,
+        )
+    except InvalidAudioError as exc:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Không thể đọc file ghi âm. Hãy ghi âm lại rồi thử tiếp.",
+        ) from exc
+    except SpeechNotRecognizedError as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Chưa nhận diện rõ lời nói. Hãy nói gần micro và thử lại.",
+        ) from exc
+    except SpeechServiceUnavailableError as exc:
+        logger.warning("Whisper speech recognition service is unavailable.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Dịch vụ nhận diện giọng nói đang bận. Vui lòng thử lại sau.",
+        ) from exc
+
+    return BaseResponse(
+        status="success",
+        message="Đã chuyển giọng nói thành văn bản.",
+        data=AudioTranscriptionResponse(transcript=transcript),
+    )
+
+
 @router.post("/send-message", response_model=BaseResponse[MessageResponse])
 async def send_message(
     data: MessageSend,
@@ -326,7 +400,19 @@ async def send_message(
     lang = conv.data[0]["language_code"] # type: ignore
 
     try:
-        ai_reply, ai_feedback = await AIService.generate_chat_response(data.user_message, lang) # type: ignore
+        ai_reply, ai_feedback = await AIService.generate_chat_response(
+            data.user_message,
+            lang, # type: ignore[arg-type]
+            profile.get("current_level") or "A1",
+        )
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+            raise
+        logger.exception("AI chat response generation failed.")
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "AI chưa thể phản hồi lúc này. Tin nhắn của bạn chưa được lưu, vui lòng thử lại.",
+        ) from exc
     except Exception as exc:
         logger.exception("AI chat response generation failed.")
         raise HTTPException(

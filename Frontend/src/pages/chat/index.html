@@ -3,16 +3,13 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f5f7fb">
+    <meta name="theme-color" content="#183248">
     <title>AI Conversation | SuperLanguage</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../css/chat/style.css">
     <link rel="stylesheet" href="../../css/shared/learner-header.css">
     <link rel="stylesheet" href="../../css/shared/mobile-responsive.css">
+    <link rel="stylesheet" href="../../css/shared/learner-world.css">
     <script type="module" src="../../types/chat/chat.ts"></script>
   </head>
   <body>
@@ -80,7 +77,6 @@
 
       <main class="room-grid">
           <aside class="setup-card">
-            <div class="setup-icon" aria-hidden="true">✧</div>
             <div class="eyebrow">PERSONALIZE YOUR SESSION</div>
             <h2>Thiết lập buổi học</h2>
             <p>Tùy chỉnh phòng luyện tập để AI đồng hành đúng mục tiêu của bạn.</p>
@@ -93,12 +89,12 @@
               <label for="languageSelect">Ngôn ngữ luyện tập</label>
               <div class="select-wrap">
                 <select id="languageSelect" required>
-                  <option value="English">🇬🇧 &nbsp; Tiếng Anh</option>
-                  <option value="Japanese">🇯🇵 &nbsp; Tiếng Nhật</option>
+                  <option value="English">Tiếng Anh</option>
+                  <option value="Japanese">Tiếng Nhật</option>
                 </select>
-                <span aria-hidden="true">⌄</span>
+                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
               </div>
-              <label for="topicPreset">CHỌN CHỦ ĐỀ</label>
+              <label for="topicPreset">Chọn chủ đề</label>
               <div class="select-wrap">
                 <select id="topicPreset">
                   <option value="">Chọn chủ đề gợi ý</option>
@@ -109,9 +105,9 @@
                   <option value="Making new friends">Làm quen bạn mới</option>
                   <option value="Shopping">Mua sắm</option>
                 </select>
-                <span aria-hidden="true">⌄</span>
+                <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
               </div>
-              <label for="topicInput">HOẶC TỰ NHẬP CHỦ ĐỀ</label>
+              <label for="topicInput">Hoặc tự nhập chủ đề</label>
               <input id="topicInput" type="text" maxlength="100" placeholder="Ví dụ: Kể về sở thích">
               <button class="new-session-button" type="submit">Bắt đầu buổi luyện tập</button>
             </form>
@@ -122,7 +118,7 @@
                   <span class="section-kicker">ĐÃ LƯU</span>
                   <h2 id="historyTitle">Lịch sử hội thoại</h2>
                 </div>
-                <button class="history-refresh" id="refreshHistory" type="button" aria-label="Làm mới lịch sử" title="Làm mới lịch sử">⟳</button>
+                <button class="history-refresh" id="refreshHistory" type="button" aria-label="Làm mới lịch sử" title="Làm mới lịch sử"><i class="fa-solid fa-rotate" aria-hidden="true"></i></button>
               </div>
               <p class="history-status" id="historyStatus" role="status">Đang tải lịch sử...</p>
               <div class="history-list" id="conversationHistory" role="list"></div>
@@ -131,7 +127,7 @@
 
           <section class="practice-panel" aria-label="Cuộc trò chuyện với AI">
             <div class="conversation-heading">
-              <div class="tutor-avatar" aria-hidden="true">✦</div>
+              <div class="tutor-avatar" aria-hidden="true">AI</div>
               <div class="conversation-title">
                 <strong id="conversationTitle">Phòng luyện tập mới</strong>
                 <span id="conversationLanguage">Chọn ngôn ngữ và chủ đề để bắt đầu</span>
@@ -146,7 +142,6 @@
 
             <div class="messages" id="messages" aria-live="polite" aria-relevant="additions text">
               <div class="welcome-card" id="welcomeCard">
-                <div class="welcome-sparkle" aria-hidden="true">✦</div>
                 <h2>Sẵn sàng trò chuyện?</h2>
                 <p>Chọn ngôn ngữ và chủ đề ở bên trái để mở một buổi luyện tập mới.</p>
               </div>
@@ -160,17 +155,17 @@
               <form class="composer" id="messageForm">
                 <label class="sr-only" for="messageInput">Tin nhắn của bạn</label>
                 <textarea id="messageInput" rows="1" maxlength="4000" placeholder="Viết tin nhắn bằng ngôn ngữ bạn đang học..." disabled required></textarea>
-                <button class="voice-button" id="voiceButton" type="button" disabled aria-label="Bắt đầu nói với AI" aria-pressed="false">
+                <button class="voice-button" id="voiceButton" type="button" disabled aria-label="Giữ để nói với AI" aria-pressed="false" title="Giữ nút khi nói, thả để chèn nội dung">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"></rect><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8"></path></svg>
-                  <span>Nói với AI</span>
+                  <span>Giữ để nói</span>
                 </button>
                 <button class="send-button" id="sendButton" type="submit" disabled aria-label="Gửi tin nhắn">
-                  <span aria-hidden="true">↑</span>
+                  <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
                 </button>
               </form>
               <div class="composer-assist">
-                <span class="composer-hint">Enter để gửi <span>·</span> Shift + Enter để xuống dòng</span>
-                <span class="voice-status" id="voiceStatus" role="status" aria-live="polite">Nhấn “Nói với AI” rồi nói bằng ngôn ngữ đang luyện tập.</span>
+                <span class="composer-hint">Enter để gửi <span>·</span> Shift + Enter xuống dòng <span>·</span> Giữ Space để nói</span>
+                <span class="voice-status" id="voiceStatus" role="status" aria-live="polite">Giữ Space hoặc giữ nút mic khi nói; thả ra để hiện nội dung.</span>
               </div>
             </div>
           </section>

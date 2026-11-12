@@ -36,13 +36,20 @@ describe("AI chat page", () => {
     expect(styles).toMatch(/@media\s*\(max-width:\s*700px\)[\s\S]*?\.room-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   });
 
-  it("provides an accessible voice conversation control connected to chat", () => {
-    expect(page).toContain('aria-label="Bắt đầu nói với AI"');
+  it("shows a live transcript and sends the final multilingual Whisper transcript", () => {
+    expect(page).toContain('aria-label="Giữ để nói với AI"');
     expect(page).toContain('aria-pressed="false"');
     expect(page).toContain('id="voiceStatus" role="status" aria-live="polite"');
-    expect(script).toContain("window.SpeechRecognition || window.webkitSpeechRecognition");
-    expect(script).toContain('recognition.lang =');
+    expect(page).toContain("Giữ Space để nói");
+    expect(script).toContain("recognition.onresult");
+    expect(script).toContain('event.code !== "Space"');
+    expect(script).toContain('addEventListener("pointerdown"');
+    expect(script).toContain('addEventListener("pointerup"');
+    expect(script).toContain('"/api/v1/chat-ai/transcribe-audio"');
+    expect(script).toContain("messageInput.value = finalMessage");
+    expect(script).toContain("Đã nhận dạng xong; đang gửi tin nhắn...");
     expect(script).toContain("void sendMessage(undefined, true)");
+    expect(script).toContain("navigator.language");
     expect(styles).toContain(".voice-button.is-recording");
   });
 });

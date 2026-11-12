@@ -151,6 +151,30 @@ python scripts/create_admin.py --email admin@example.com --name "Admin"
 uvicorn app.main:app --reload --port 8000
 ```
 
+### Chat AI với Supabase Vector DB
+
+Chạy migration `Supebase/migrations/04_rag.sql` trong Supabase SQL Editor để tạo vector table và hàm tìm kiếm. Trong `Backend/.env`, cấu hình `RAG_EMBEDDING_API_KEYS` (hoặc dùng `GEMINI_API_KEYS` làm dự phòng); các embedding hiện dùng `gemini-embedding-001` với 768 chiều.
+
+Chat Gemini dùng model `gemini-3.5-flash-lite` mặc định. Có thể đặt `GEMINI_CHAT_MODEL` trong `Backend/.env` để chọn model khác còn được Google hỗ trợ. Không dùng `gemini-2.5-flash` cho dự án mới: Google đã đánh dấu model này deprecated và giới hạn API cho người dùng hiện hữu.
+
+Sau khi đăng nhập bằng tài khoản admin, gọi `POST /api/v1/admin/rag/reindex` để đưa các chủ đề và từ vựng Anh/Nhật hiện có vào Vector DB. Khi thêm nội dung bài học chi tiết, gửi `POST /api/v1/admin/rag/documents` với header `Authorization: Bearer <admin_access_token>` và JSON:
+
+```json
+{
+  "title": "Thì hiện tại hoàn thành",
+  "language_code": "English",
+  "content": "Nội dung bài học, cách dùng và ví dụ..."
+}
+```
+
+`language_code` nhận `English`, `Japanese` hoặc `all`. Reindex sau khi nội dung chủ đề/từ vựng thay đổi. Chat AI chỉ gọi LLM khi tìm thấy context phù hợp; lỗi vector store được trả về để thử lại, còn không có kết quả phù hợp thì AI từ chối câu hỏi ngoài phạm vi.
+
+### Nhận dạng giọng nói trong Chat AI
+
+Chat AI dùng OpenAI Whisper (`base`) để tự nhận dạng ngôn ngữ từ bản ghi âm. FFmpeg được đóng gói cùng `imageio-ffmpeg`; audio được xử lý tạm thời trên backend và không lưu vào Supabase. Lần đầu khởi chạy nhận dạng, Whisper tải model (khoảng 142 MB) vào cache; cài các thư viện bằng `pip install -r Backend/requirements.txt`.
+
+Trong lúc nói, trình duyệt hiển thị bản nhận dạng tạm thời nếu Web Speech API được hỗ trợ; khi dừng, backend Whisper tạo transcript cuối cùng và Chat AI tự gửi tin nhắn. Các câu hỏi dịch/giải nghĩa (ví dụ “Nice to meet you có nghĩa là gì?”) được coi là yêu cầu học ngôn ngữ và có thể trả lời dù Vector DB không có mục khớp.
+
 ### 3. Thiết lập Frontend (TypeScript + Vite)
 Mở terminal thứ hai tại thư mục gốc:
 ```powershell

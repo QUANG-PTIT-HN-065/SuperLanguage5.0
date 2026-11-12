@@ -59,3 +59,7 @@ class AudioUploadResponse(BaseModel):
     content_type: str
     size_bytes: int
     storage_path: str
+
+
+class AudioTranscriptionResponse(BaseModel):
+    transcript: str

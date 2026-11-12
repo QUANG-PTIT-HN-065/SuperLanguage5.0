@@ -1,12 +1,14 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class RAGDocumentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     title: str = Field(min_length=1, max_length=150)
     language_code: Literal["English", "Japanese", "all"]
-    content: str = Field(min_length=1, max_length=100_000)
+    content: str = Field(min_length=1, max_length=20_000)
 
     @field_validator("title", "content")
     @classmethod

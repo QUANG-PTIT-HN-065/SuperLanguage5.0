@@ -654,7 +654,7 @@ button { cursor: pointer; }
 .composer textarea { width: 100%; max-height: 120px; resize: none; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 12px; line-height: 1.6; }
 .composer textarea::placeholder { color: #b0b2c0; }
 .composer textarea:disabled { cursor: not-allowed; }
-.voice-button { display: flex; min-height: 38px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; padding: 0 11px; border: 1px solid #e8e4f5; border-radius: 10px; color: #6752c7; background: #fff; font-size: 11px; font-weight: 700; transition: background .2s, border-color .2s, opacity .2s; }
+.voice-button { display: flex; min-height: 38px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; padding: 0 11px; border: 1px solid #e8e4f5; border-radius: 10px; color: #6752c7; background: #fff; font-size: 11px; font-weight: 700; touch-action: none; user-select: none; -webkit-user-select: none; transition: background .2s, border-color .2s, opacity .2s; }
 .voice-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 .voice-button:not(:disabled):hover { border-color: #c9bcff; background: #f8f6ff; }
 .voice-button.is-recording { border-color: #f4c5c5; color: #c43c48; background: #fff5f5; }
@@ -905,7 +905,7 @@ button { cursor: pointer; }
   .setup-card { order: 0; }
   .practice-panel { order: 1; height: 72dvh; min-height: 480px; }
   .history-list { max-height: 180px; }
-  .voice-button { min-height: 38px; padding: 0 9px; }
+  .voice-button { width: 44px; min-width: 44px; min-height: 44px; padding: 0; }
   .voice-button span { display: none; }
 }
 @media (max-width: 420px) {

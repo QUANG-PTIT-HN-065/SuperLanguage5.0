@@ -42,12 +42,7 @@ interface SpeechRecognitionResult extends ArrayLike<SpeechRecognitionAlternative
 interface SpeechRecognitionResultList extends ArrayLike<SpeechRecognitionResult> {}
 
 interface SpeechRecognitionEvent extends Event {
-  readonly resultIndex: number;
   readonly results: SpeechRecognitionResultList;
-}
-
-interface SpeechRecognitionErrorEvent extends Event {
-  readonly error: string;
 }
 
 interface SpeechRecognition extends EventTarget {
@@ -55,7 +50,6 @@ interface SpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
   onend: (() => void) | null;
   start(): void;
   stop(): void;
@@ -100,7 +94,15 @@ let conversationHistory: Conversation[] = [];
 let isSendingMessage = false;
 let isLoadingConversation = false;
 let isVoiceRecording = false;
-let speechRecognition: SpeechRecognition | null = null;
+let isTranscribingVoice = false;
+let voicePressActive = false;
+let voicePointerGesture = false;
+let voiceKeyboardGesture = false;
+let mediaRecorder: MediaRecorder | null = null;
+let mediaStream: MediaStream | null = null;
+let liveSpeechRecognition: SpeechRecognition | null = null;
+let recordingTimeout = 0;
+let voiceClickResetTimer = 0;
 let toastTimer = 0;
 
 class ChatApiError extends Error {
@@ -188,6 +190,32 @@ async function apiRequest<T>(
       method: "POST",
       headers: retryHeaders,
       body: JSON.stringify(body),
+    });
+    return parseResponse<T>(retry);
+  }
+  return parseResponse<T>(response);
+}
+
+async function apiUpload<T>(
+  path: string,
+  body: FormData,
+  allowRefresh = true,
+): Promise<ApiResponse<T>> {
+  const accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const headers = new Headers();
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers,
+    body,
+  });
+
+  if (response.status === 401 && allowRefresh && accessToken) {
+    const refreshedToken = await refreshAccessToken();
+    const retry = await fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${refreshedToken}` },
+      body,
     });
     return parseResponse<T>(retry);
   }
@@ -298,115 +326,239 @@ function updateVoiceControls(recording: boolean, message: string): void {
   if (voiceButton instanceof HTMLButtonElement) {
     voiceButton.setAttribute("aria-pressed", String(recording));
     voiceButton.classList.toggle("is-recording", recording);
-    voiceButton.disabled = recording
-      ? false
-      : !activeConversation || isSendingMessage || isLoadingConversation;
+    voiceButton.disabled = isTranscribingVoice || (
+      !recording && (!activeConversation || isSendingMessage || isLoadingConversation)
+    );
     if (voiceButtonLabel) {
-      voiceButtonLabel.textContent = recording ? "Dừng nói" : "Nói với AI";
+      voiceButtonLabel.textContent = isTranscribingVoice
+        ? "Đang xử lý"
+        : recording
+          ? "Đang nghe"
+          : "Giữ để nói";
     }
     voiceButton.setAttribute(
       "aria-label",
-      recording ? "Dừng nhận giọng nói" : "Bắt đầu nói với AI",
+      isTranscribingVoice
+        ? "Đang chuyển giọng nói thành văn bản"
+        : recording
+          ? "Dừng ghi âm"
+          : "Giữ để bắt đầu ghi âm",
     );
   }
   if (voiceStatus instanceof HTMLElement) voiceStatus.textContent = message;
   if (messageInput instanceof HTMLTextAreaElement) {
-    messageInput.disabled = recording || !activeConversation;
+    messageInput.disabled = recording || isTranscribingVoice || !activeConversation;
   }
   if (sendButton instanceof HTMLButtonElement) {
-    sendButton.disabled = recording || !activeConversation || isSendingMessage;
+    sendButton.disabled =
+      recording ||
+      isTranscribingVoice ||
+      !activeConversation ||
+      isSendingMessage ||
+      !(messageInput instanceof HTMLTextAreaElement) ||
+      !messageInput.value.trim();
   }
 }
 
-function startVoiceConversation(): void {
-  if (isVoiceRecording) {
-    speechRecognition?.stop();
-    return;
+function startLiveTranscriptPreview(originalDraft: string): boolean {
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) return false;
+
+  const recognition = new Recognition();
+  liveSpeechRecognition = recognition;
+  recognition.lang =
+    navigator.language ||
+    (activeConversation?.language_code === "Japanese" ? "ja-JP" : "en-US");
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.onresult = (event) => {
+    const transcript = Array.from(
+      { length: event.results.length },
+      (_, index) => event.results[index]?.[0]?.transcript.trim() ?? "",
+    )
+      .filter(Boolean)
+      .join(" ");
+    if (messageInput instanceof HTMLTextAreaElement) {
+      messageInput.value = [originalDraft, transcript].filter(Boolean).join(" ");
+      messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    if (voiceStatus instanceof HTMLElement) {
+      voiceStatus.textContent = transcript
+        ? `Đang nghe: ${transcript}`
+        : "Đang nghe bạn nói...";
+    }
+  };
+  recognition.onend = () => {
+    if (liveSpeechRecognition === recognition) liveSpeechRecognition = null;
+  };
+  try {
+    recognition.start();
+    return true;
+  } catch {
+    liveSpeechRecognition = null;
+    return false;
   }
+}
+
+async function startVoiceConversation(): Promise<void> {
+  if (isVoiceRecording || isTranscribingVoice) return;
   if (!activeConversation) {
     showToast("Hãy bắt đầu hoặc mở một hội thoại trước khi nói với AI.");
     return;
   }
 
-  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!Recognition) {
-    showToast("Trình duyệt chưa hỗ trợ nhận diện giọng nói. Hãy dùng Chrome hoặc Edge mới nhất.");
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+    showToast("Trình duyệt không hỗ trợ ghi âm. Hãy dùng Chrome hoặc Edge mới nhất.");
     return;
   }
 
-  const recognition = new Recognition();
-  speechRecognition = recognition;
-  recognition.lang =
-    activeConversation.language_code === "Japanese" ||
-    activeConversation.language_code === "ja"
-      ? "ja-JP"
-      : "en-US";
-  recognition.continuous = false;
-  recognition.interimResults = true;
-
   const originalDraft =
     messageInput instanceof HTMLTextAreaElement ? messageInput.value.trim() : "";
-  let transcript = "";
-  let recognitionMessage = "Nhấn “Nói với AI” rồi nói bằng ngôn ngữ đang luyện tập.";
-  recognition.onresult = (event) => {
-    const finalText: string[] = [];
-    const interimText: string[] = [];
-    for (let index = 0; index < event.results.length; index += 1) {
-      const result = event.results[index];
-      if (!result) continue;
-      const text = result[0]?.transcript.trim();
-      if (!text) continue;
-      (result.isFinal ? finalText : interimText).push(text);
-    }
-    transcript = finalText.join(" ");
-
-    if (messageInput instanceof HTMLTextAreaElement) {
-      const currentTranscript = [...finalText, ...interimText].join(" ").trim();
-      messageInput.value = [originalDraft, currentTranscript].filter(Boolean).join(" ");
-    }
-    if (voiceStatus instanceof HTMLElement) {
-      const currentTranscript = [...finalText, ...interimText].join(" ");
-      voiceStatus.textContent = currentTranscript
-        ? `Đang nghe: ${currentTranscript}`
-        : "Đang nghe bạn nói...";
-    }
-  };
-  recognition.onerror = (event) => {
-    if (event.error === "aborted") return;
-    if (event.error === "no-speech") {
-      recognitionMessage = "Chưa nhận được giọng nói. Hãy thử nói lại.";
-      return;
-    }
-    const message =
-      event.error === "not-allowed" || event.error === "service-not-allowed"
-        ? "Bạn cần cấp quyền micro cho trình duyệt để nói với AI."
-        : `Không thể nhận diện giọng nói (${event.error}). Vui lòng thử lại.`;
-    recognitionMessage = message;
-    showToast(message);
-  };
-  recognition.onend = () => {
-    speechRecognition = null;
-    updateVoiceControls(
-      false,
-      transcript ? "Đã nhận dạng lời nói; đang gửi tới AI..." : recognitionMessage,
-    );
-    const finalMessage = [originalDraft, transcript].filter(Boolean).join(" ").trim();
-    if (transcript && messageInput instanceof HTMLTextAreaElement) {
-      messageInput.value = finalMessage;
-      void sendMessage(undefined, true);
-    } else if (messageInput instanceof HTMLTextAreaElement) {
-      messageInput.focus();
-    }
-  };
-
-  updateVoiceControls(true, "Đang nghe bạn nói...");
+  const conversationId = activeConversation.id;
+  voicePressActive = true;
+  updateVoiceControls(true, "Đang kết nối micro...");
   try {
-    recognition.start();
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const chunks: Blob[] = [];
+    const supportedMimeType = [
+      "audio/webm;codecs=opus",
+      "audio/mp4",
+      "audio/ogg;codecs=opus",
+    ].find((mimeType) => MediaRecorder.isTypeSupported(mimeType));
+    const recorder = new MediaRecorder(
+      mediaStream,
+      supportedMimeType ? { mimeType: supportedMimeType } : undefined,
+    );
+    mediaRecorder = recorder;
+    let recordingFailed = false;
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunks.push(event.data);
+    };
+    recorder.onerror = () => {
+      recordingFailed = true;
+      mediaStream?.getTracks().forEach((track) => track.stop());
+      mediaStream = null;
+      mediaRecorder = null;
+      window.clearTimeout(recordingTimeout);
+      voicePressActive = false;
+      updateVoiceControls(false, "Không thể ghi âm. Hãy kiểm tra quyền truy cập micro.");
+      showToast("Không thể ghi âm. Hãy kiểm tra quyền truy cập micro.");
+    };
+    recorder.onstop = () => {
+      mediaStream?.getTracks().forEach((track) => track.stop());
+      mediaStream = null;
+      mediaRecorder = null;
+      window.clearTimeout(recordingTimeout);
+      voicePressActive = false;
+      if (recordingFailed) return;
+      if (chunks.length === 0) {
+        updateVoiceControls(false, "Chưa nhận được âm thanh. Hãy thử nói lại.");
+        return;
+      }
+
+      isTranscribingVoice = true;
+      updateVoiceControls(false, "Đang chuyển giọng nói thành văn bản...");
+      void (async () => {
+        try {
+          const recording = new Blob(chunks, {
+            type: recorder.mimeType || "audio/webm",
+          });
+          const formData = new FormData();
+          formData.append("conversation_id", conversationId);
+          formData.append(
+            "audio",
+            recording,
+            recorder.mimeType.includes("mp4") ? "voice.m4a" : "voice.webm",
+          );
+          const result = await apiUpload<{ transcript: string }>(
+            "/api/v1/chat-ai/transcribe-audio",
+            formData,
+          );
+          const transcript = result.data.transcript.trim();
+          const finalMessage = [originalDraft, transcript].filter(Boolean).join(" ");
+          if (messageInput instanceof HTMLTextAreaElement) {
+            messageInput.value = finalMessage;
+            messageInput.dispatchEvent(new Event("input", { bubbles: true }));
+          }
+          isTranscribingVoice = false;
+          updateVoiceControls(
+            false,
+            "Đã nhận dạng xong; đang gửi tin nhắn...",
+          );
+          if (transcript && messageInput instanceof HTMLTextAreaElement) {
+            void sendMessage(undefined, true);
+          }
+        } catch (error) {
+          isTranscribingVoice = false;
+          const message =
+            error instanceof Error ? error.message : "Không thể chuyển giọng nói thành văn bản.";
+          updateVoiceControls(false, message);
+          showToast(message);
+        }
+      })();
+    };
+
+    recorder.start();
+    const hasLivePreview = startLiveTranscriptPreview(originalDraft);
+    updateVoiceControls(
+      true,
+      hasLivePreview
+        ? "Đang nghe bạn nói..."
+        : "Đang ghi âm; bản chép lời sẽ hiện sau khi dừng.",
+    );
+    if (!voicePressActive) recorder.stop();
+    recordingTimeout = window.setTimeout(() => {
+      if (recorder.state === "recording") {
+        voicePressActive = false;
+        updateVoiceControls(true, "Đã đạt giới hạn ghi âm 60 giây; đang chuyển thành chữ...");
+        recorder.stop();
+      }
+    }, 60_000);
   } catch (error) {
-    speechRecognition = null;
+    mediaStream?.getTracks().forEach((track) => track.stop());
+    mediaStream = null;
+    mediaRecorder = null;
+    voicePressActive = false;
+    isTranscribingVoice = false;
     updateVoiceControls(false, "Không thể bật micro. Hãy kiểm tra quyền truy cập rồi thử lại.");
-    showToast(error instanceof Error ? error.message : "Không thể bật micro.");
+    showToast(
+      error instanceof Error
+        ? error.name === "NotAllowedError"
+          ? "Bạn cần cấp quyền micro để ghi âm."
+          : error.message
+        : "Không thể bật micro.",
+    );
   }
+}
+
+function stopVoiceConversation(): void {
+  voicePressActive = false;
+  try {
+    liveSpeechRecognition?.stop();
+  } catch {
+    liveSpeechRecognition = null;
+  }
+  liveSpeechRecognition = null;
+  if (mediaRecorder?.state === "recording") {
+    mediaRecorder.stop();
+  }
+}
+
+function resetVoiceClickSuppression(): void {
+  window.clearTimeout(voiceClickResetTimer);
+  voiceClickResetTimer = window.setTimeout(() => {
+    voicePointerGesture = false;
+    voiceKeyboardGesture = false;
+  }, 500);
+}
+
+function isTextEntryTarget(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
 }
 
 function renderConversationHistory(): void {
@@ -548,9 +700,12 @@ async function openConversation(conversation: Conversation): Promise<void> {
 }
 
 function setComposerEnabled(enabled: boolean): void {
-  updateVoiceControls(false, "Nhấn “Nói với AI” rồi nói bằng ngôn ngữ đang luyện tập.");
+  updateVoiceControls(false, "Giữ Space hoặc giữ nút mic khi nói; thả ra để hiện nội dung.");
   if (messageInput instanceof HTMLTextAreaElement) messageInput.disabled = !enabled;
-  if (sendButton instanceof HTMLButtonElement) sendButton.disabled = !enabled;
+  if (sendButton instanceof HTMLButtonElement) {
+    sendButton.disabled = !enabled || !(messageInput instanceof HTMLTextAreaElement) ||
+      !messageInput.value.trim();
+  }
 }
 
 async function startConversation(event?: SubmitEvent): Promise<void> {
@@ -650,8 +805,10 @@ async function sendMessage(event?: SubmitEvent, speakResponse = false): Promise<
   } finally {
     isSendingMessage = false;
     if (assistantStatus) assistantStatus.hidden = true;
-    sendButton.disabled = !activeConversation;
-    if (voiceButton instanceof HTMLButtonElement) voiceButton.disabled = !activeConversation;
+    updateVoiceControls(
+      false,
+      "Nhấn giữ nút mic hoặc phím Space để nói; thả ra để hiện nội dung.",
+    );
     messageInput.focus();
   }
 }
@@ -682,12 +839,73 @@ function initialize(): void {
     }
   });
   document.getElementById("refreshHistory")?.addEventListener("click", () => void loadConversationHistory(true));
-  voiceButton?.addEventListener("click", startVoiceConversation);
+  voiceButton?.addEventListener("pointerdown", (event) => {
+    if (!(event instanceof PointerEvent) || !activeConversation || isTranscribingVoice) return;
+    event.preventDefault();
+    voicePointerGesture = true;
+    voiceButton.setPointerCapture(event.pointerId);
+    void startVoiceConversation();
+  });
+  voiceButton?.addEventListener("pointerup", (event) => {
+    if (!(event instanceof PointerEvent) || !voicePointerGesture) return;
+    event.preventDefault();
+    stopVoiceConversation();
+    resetVoiceClickSuppression();
+  });
+  voiceButton?.addEventListener("pointercancel", () => {
+    if (!voicePointerGesture) return;
+    stopVoiceConversation();
+    resetVoiceClickSuppression();
+  });
+  voiceButton?.addEventListener("lostpointercapture", () => {
+    if (!voicePointerGesture || !voicePressActive) return;
+    stopVoiceConversation();
+    resetVoiceClickSuppression();
+  });
+  voiceButton?.addEventListener("click", (event) => {
+    if (voicePointerGesture || voiceKeyboardGesture) {
+      event.preventDefault();
+      window.clearTimeout(voiceClickResetTimer);
+      voicePointerGesture = false;
+      voiceKeyboardGesture = false;
+      return;
+    }
+    if (isVoiceRecording) stopVoiceConversation();
+    else void startVoiceConversation();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (
+      !(event instanceof KeyboardEvent) ||
+      event.code !== "Space" ||
+      event.repeat ||
+      isTextEntryTarget(event.target) ||
+      (event.target instanceof HTMLElement &&
+        event.target !== voiceButton &&
+        event.target.closest("button, a, [role='button']"))
+    ) return;
+    event.preventDefault();
+    voiceKeyboardGesture = true;
+    void startVoiceConversation();
+  });
+  document.addEventListener("keyup", (event) => {
+    if (!(event instanceof KeyboardEvent) || event.code !== "Space" || !voiceKeyboardGesture) return;
+    event.preventDefault();
+    stopVoiceConversation();
+    resetVoiceClickSuppression();
+  });
   messageForm?.addEventListener("submit", (event) => void sendMessage(event));
   messageInput?.addEventListener("input", () => {
     if (messageInput instanceof HTMLTextAreaElement) {
       messageInput.style.height = "auto";
       messageInput.style.height = `${Math.min(messageInput.scrollHeight, 120)}px`;
+      if (sendButton instanceof HTMLButtonElement) {
+        sendButton.disabled =
+          !activeConversation ||
+          isSendingMessage ||
+          isVoiceRecording ||
+          isTranscribingVoice ||
+          !messageInput.value.trim();
+      }
     }
   });
   messageInput?.addEventListener("keydown", (event) => {
