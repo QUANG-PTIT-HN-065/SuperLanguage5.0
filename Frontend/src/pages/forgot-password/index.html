@@ -6,12 +6,12 @@
   <title>Slanguage - Khôi Phục Mật Khẩu & Xác Thực OTP</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../css/forgot-password/style.css">
-  <link rel="stylesheet" href="../../css/shared/user-experience.css">
+  <link rel="stylesheet" href="../../css/shared/mobile-responsive.css">
 </head>
-<body class="slg-user-recovery">
+<body>
 
   <!-- EMAIL OTP NOTIFICATION BANNER -->
   <div class="web-otp-toast" id="webOtpToast">
@@ -28,7 +28,7 @@
     <!-- Brand Header -->
     <div class="forgot-header">
       <a href="../home/index.html" class="brand-badge">
-        <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+        <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
         <span class="brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
       </a>
       <h2>Khôi Phục Mật Khẩu</h2>
@@ -181,7 +181,7 @@
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" src="../../../assets/loading.mp4" autoplay loop playsinline></video>
+        <video id="loadingVideoPlayer" src="../assets/loading.mp4" autoplay loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>
@@ -189,6 +189,22 @@
     </div>
   </div>
 
+    <!-- Logic TypeScript cho trang -->
   <script type="module" src="../../types/forgot-password/forgot-password.ts"></script>
+  <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
+  <script>
+    if (!window.forgotPasswordApp) {
+      fetch('../../types/forgot-password/forgot-password.ts')
+        .then(function(r) { return r.text(); })
+        .then(function(code) {
+          var js = Babel.transform(code, { filename: 'forgot-password.ts', presets: ['typescript'] }).code;
+          var s = document.createElement('script');
+          s.textContent = js;
+          document.body.appendChild(s);
+        })
+        .catch(function(err) { console.error('Error loading forgot-password.ts:', err); });
+    }
+  </script>
 </body>
 </html>

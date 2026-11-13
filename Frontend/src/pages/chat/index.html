@@ -1,162 +1,403 @@
-<!doctype html>
-<html lang="vi">
+<!DOCTYPE html>
+<html lang="vi" class="light">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#f5f3ff">
-    <title>AI Conversation | SuperLanguage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Luyện tập giao tiếp AI | SuperLanguage</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../styles/tokens.css">
+    <link rel="stylesheet" href="../../styles/components.css">
+    <link rel="stylesheet" href="../../styles/learner-shell.css">
+    <link rel="stylesheet" href="../../css/shared/learner-world.css">
+    <link rel="stylesheet" href="../../css/shared/mobile-responsive.css">
     <link rel="stylesheet" href="../../css/chat/style.css">
-    <link rel="stylesheet" href="../../css/shared/user-experience.css">
     <script type="module" src="../../types/chat/chat.ts"></script>
   </head>
-  <body class="slg-user-chat">
-    <main class="app-shell">
-      <section class="room-frame" aria-label="Phòng luyện nói cùng AI">
-        <header class="room-topbar">
-          <a class="brand" href="../../../index.html" aria-label="SLanguage trang chủ">
-            <span class="brand-mark">S</span>
-            <span>SLanguage</span>
-          </a>
-          <div class="room-meta">
-            <span class="room-number">Phòng AI · <strong id="conversationTitle">Chưa bắt đầu</strong></span>
-            <span class="meta-divider" aria-hidden="true"></span>
-            <span id="conversationLanguage">Daily English Coach</span>
+  <body class="user-guest" data-page-state="loading" data-mobile-step="setup">
+    <section class="workspace">
+      <!-- Header dùng chung đồng bộ với toàn hệ thống Slanguage -->
+      <div data-app-header></div>
+
+      <!-- Lỗi khởi động trang -->
+      <div class="page-startup-error" id="pageStartupError" role="alert" hidden></div>
+
+      <!-- Loading skeleton -->
+      <div class="page-loading-skeleton" data-loading role="status" aria-label="Đang tải phòng luyện tập AI">
+        <div class="page-loading-skeleton__title"></div>
+        <div class="page-loading-skeleton__line"></div>
+        <div class="page-loading-skeleton__line page-loading-skeleton__line--short"></div>
+        <div class="page-loading-skeleton__cards">
+          <div class="page-loading-skeleton__card"></div>
+          <div class="page-loading-skeleton__card"></div>
+        </div>
+      </div>
+
+      <!-- Main room layout -->
+      <main class="room-grid" data-content>
+        <!-- Cột trái / Màn hình 1 trên mobile: Sidebar thiết lập & lịch sử -->
+        <aside class="setup-card" id="setupCard" aria-label="Thiết lập buổi học">
+          <!-- Card trạng thái KHÁCH (Hiển thị khi chưa đăng nhập) -->
+          <div class="guest-card" id="guestCard">
+            <div class="guest-card-header">
+              <div class="guest-lock-icon" aria-hidden="true">
+                <i class="fa-solid fa-lock"></i>
+              </div>
+              <div class="guest-card-title">
+                <h3>Trải nghiệm trò chuyện AI</h3>
+                <span class="guest-badge" id="guestBadgeStatus">3 lượt thử miễn phí</span>
+              </div>
+            </div>
+            <ul class="guest-benefits">
+              <li><i class="fa-solid fa-comments"></i> Xem trước tối đa 3 lượt trò chuyện</li>
+              <li><i class="fa-solid fa-list"></i> Chọn chủ đề và thử giao diện luyện tập</li>
+              <li><i class="fa-solid fa-cloud-arrow-up"></i> Đăng nhập để dùng AI thật và lưu lịch sử</li>
+            </ul>
+            <div class="guest-actions">
+              <a href="../login/index.html?redirect=../chat/index.html" class="btn-guest-login">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i> Đăng nhập ngay
+              </a>
+              <a href="../register/index.html" class="btn-guest-register">
+                Tạo tài khoản mới
+              </a>
+            </div>
           </div>
-          <div class="account-controls">
-            <span class="connection-status"><i></i><span id="roomStatus">Chờ bắt đầu</span></span>
-            <a class="login-link" href="../home/index.html">Trang chủ</a>
-            <button class="account-avatar" id="profileAvatar" type="button" aria-label="Tài khoản">S</button>
-            <a class="login-link" id="chatLoginLink" href="../login/index.html?redirect=../chat/index.html">Đăng nhập</a>
-            <button class="icon-button" id="logoutButton" type="button" aria-label="Đăng xuất" title="Đăng xuất">↗</button>
+
+          <!-- Card trạng thái ĐÃ ĐĂNG NHẬP (Chỉ hiện khi có token) -->
+          <div class="learner-card" id="learnerCard" hidden>
+            <div class="learner-info-row">
+              <div class="learner-avatar" id="sidebarLearnerAvatar">AI</div>
+              <div class="learner-meta">
+                <span class="learner-greeting">Xin chào,</span>
+                <strong class="learner-name" id="sidebarLearnerName">Học viên</strong>
+              </div>
+              <div class="learner-streak-chip" title="Chuỗi ngày học liên tục">
+                <img src="../../../assets/streak-flame.gif?v=4" alt="" aria-hidden="true">
+                <span id="sidebarStreakVal">0 Ngày</span>
+              </div>
+            </div>
           </div>
-        </header>
 
-        <div class="room-grid">
-          <aside class="lesson-panel" aria-label="Thông tin bài luyện tập">
-            <div class="panel-heading">
-              <span class="section-kicker">LESSON INFO</span>
-              <span class="step-badge">Bắt đầu</span>
+          <!-- Form thiết lập buổi học 1 bước nhanh gọn -->
+          <form id="conversationForm" class="session-setup-form">
+            <div class="form-section-title">
+              <span class="section-badge">BƯỚC 1</span>
+              <h4>Chọn ngôn ngữ luyện tập</h4>
             </div>
-            <h1>Your learning goal</h1>
-            <p class="lesson-description">Tự tin giao tiếp qua những cuộc hội thoại gần gũi với gia sư AI.</p>
+            <div class="language-segmented-chips" role="radiogroup" aria-label="Ngôn ngữ luyện tập">
+              <button type="button" class="lang-chip is-active" data-lang="English" role="radio" aria-checked="true">
+                <img src="../../../assets/flags/flag-en.png" alt="" class="chip-flag" />
+                <span class="chip-label">Tiếng Anh</span>
+              </button>
+              <button type="button" class="lang-chip" data-lang="Japanese" role="radio" aria-checked="false">
+                <img src="../../../assets/flags/flag-jp.png" alt="" class="chip-flag" />
+                <span class="chip-label">Tiếng Nhật</span>
+              </button>
+            </div>
+            <!-- Hidden input để đồng bộ với logic backend cũ nếu cần -->
+            <input type="hidden" id="languageSelect" value="English">
 
-            <form id="conversationForm" class="lesson-form">
-              <label for="languageSelect">NGÔN NGỮ</label>
-              <div class="select-wrap">
-                <select id="languageSelect">
-                  <option value="English">🇬🇧 &nbsp; Tiếng Anh</option>
-                  <option value="Japanese">🇯🇵 &nbsp; Tiếng Nhật</option>
-                </select>
-                <span aria-hidden="true">⌄</span>
+            <div class="form-section-title">
+              <span class="section-badge">BƯỚC 2</span>
+              <h4>Chọn chủ đề hội thoại</h4>
+            </div>
+            <div class="topic-grid" id="topicGrid" role="radiogroup" aria-label="Chủ đề gợi ý">
+              <button type="button" class="topic-chip is-selected" data-topic="Giao tiếp hàng ngày" role="radio" aria-checked="true">
+                <span class="topic-icon">☕</span>
+                <span class="topic-text">Giao tiếp hàng ngày</span>
+              </button>
+              <button type="button" class="topic-chip" data-topic="Gọi món tại nhà hàng" role="radio" aria-checked="false">
+                <span class="topic-icon">🍜</span>
+                <span class="topic-text">Ở nhà hàng</span>
+              </button>
+              <button type="button" class="topic-chip" data-topic="Kể về sở thích" role="radio" aria-checked="false">
+                <span class="topic-icon">🎨</span>
+                <span class="topic-text">Kể về sở thích</span>
+              </button>
+              <button type="button" class="topic-chip" data-topic="Đi mua sắm & hỏi giá" role="radio" aria-checked="false">
+                <span class="topic-icon">🛍️</span>
+                <span class="topic-text">Đi mua sắm</span>
+              </button>
+              <button type="button" class="topic-chip" data-topic="Phỏng vấn xin việc" role="radio" aria-checked="false">
+                <span class="topic-icon">💼</span>
+                <span class="topic-text">Phỏng vấn xin việc</span>
+              </button>
+              <button type="button" class="topic-chip" data-topic="Du lịch & hỏi đường" role="radio" aria-checked="false">
+                <span class="topic-icon">✈️</span>
+                <span class="topic-text">Du lịch & hỏi đường</span>
+              </button>
+            </div>
+
+            <!-- Tự nhập chủ đề thu gọn mượt mà -->
+            <div class="custom-topic-wrap">
+              <button type="button" class="btn-toggle-custom-topic" id="btnToggleCustomTopic" aria-expanded="false">
+                <i class="fa-solid fa-plus"></i> <span>Chủ đề của riêng bạn...</span>
+              </button>
+              <div class="custom-topic-input-box" id="customTopicBox" hidden>
+                <input id="topicInput" type="text" maxlength="100" placeholder="VD: Thảo luận về phim hoạt hình Ghibli..." autocomplete="off">
               </div>
-              <label for="topicInput">CHỦ ĐỀ</label>
-              <input id="topicInput" type="text" maxlength="100" value="Daily Conversation" placeholder="Ví dụ: Gọi món ở nhà hàng">
-              <button class="new-session-button" type="submit">Bắt đầu buổi luyện tập</button>
-            </form>
-
-            <div class="lesson-section">
-              <span class="section-kicker">TARGET MILESTONES</span>
-              <ul class="milestone-list">
-                <li class="complete"><span>✓</span> Chào hỏi và làm quen</li>
-                <li class="current"><span>2</span> Hỏi và trả lời tự nhiên</li>
-                <li><span>3</span> Kết thúc cuộc trò chuyện</li>
-              </ul>
-            </div>
-            <div class="pronunciation-tip">
-              <strong>✧ Mẹo luyện nói</strong>
-              <p>Nói chậm, rõ ràng. Đừng ngại mắc lỗi — mỗi lượt trò chuyện là một cơ hội để tiến bộ.</p>
-            </div>
-            <div class="lesson-account">
-              <span class="profile-avatar-small">✓</span>
-              <span>Lịch sử được lưu vào tài khoản của bạn</span>
-            </div>
-          </aside>
-
-          <section class="practice-panel" aria-label="Cuộc trò chuyện với AI">
-            <div class="practice-heading">
-              <span class="live-pill"><i></i><span id="roomStatusBadge">Conversation ready</span></span>
-              <h2 id="practiceTitle">Let's practice!</h2>
-              <p id="practiceSubtitle">Bắt đầu buổi luyện tập để trò chuyện cùng AI.</p>
             </div>
 
-            <div class="messages" id="messages" aria-live="polite" aria-relevant="additions text">
-              <div class="welcome-card" id="welcomeCard">
-                <div class="welcome-sparkle">✦</div>
-                <h3>Sẵn sàng luyện nói?</h3>
-                <p>Chọn chủ đề ở bên trái để bắt đầu. Gia sư AI sẽ đồng hành cùng bạn.</p>
+            <!-- Nút bắt đầu nổi bật (trên mobile dính đáy bước 1) -->
+            <div class="start-session-footer">
+              <button class="new-session-button" id="startSessionBtn" type="submit">
+                <i class="fa-solid fa-comments"></i>
+                <span id="startSessionBtnText">Bắt đầu buổi luyện tập</span>
+              </button>
+              <p class="start-hint" id="startSessionHint">Bấm để kết nối trực tiếp với gia sư AI</p>
+            </div>
+          </form>
+
+          <!-- Khu vực lịch sử hội thoại nhóm theo ngày -->
+          <section class="history-section" aria-labelledby="historyTitle">
+            <div class="history-heading">
+              <div>
+                <span class="section-kicker">LỊCH SỬ</span>
+                <h4 id="historyTitle">Các buổi đã luyện</h4>
               </div>
+              <button class="history-refresh" id="refreshHistory" type="button" aria-label="Làm mới lịch sử" title="Tải lại lịch sử">
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+              </button>
             </div>
 
-            <div class="voice-stage" id="voiceStage" aria-live="polite">
-              <div class="voice-visualizer" id="voiceVisualizer" aria-hidden="true">
-                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-              </div>
-              <strong id="visualizerTitle">AI VOICE PRACTICE</strong>
-              <span id="visualizerHint">Nhấn micro để bắt đầu nói</span>
+            <div class="history-search-wrap">
+              <i class="fa-solid fa-magnifying-glass search-icon" aria-hidden="true"></i>
+              <input type="text" id="historySearchInput" placeholder="Tìm theo tên chủ đề..." aria-label="Tìm kiếm lịch sử">
             </div>
 
-            <div class="session-clock">
-              <strong id="recordingTimer" aria-live="polite">00:00</strong>
-              <span>THỜI GIAN GHI ÂM · TỐI ĐA 01:00</span>
-            </div>
-
-            <div class="chat-footer">
-              <form class="composer" id="messageForm">
-                <label class="sr-only" for="messageInput">Tin nhắn của bạn</label>
-                <textarea id="messageInput" rows="1" maxlength="4000" placeholder="Nhập câu trả lời hoặc nhấn micro để nói..." disabled></textarea>
-                <button class="send-button" id="sendButton" type="submit" disabled aria-label="Gửi tin nhắn"><span aria-hidden="true">↑</span></button>
-              </form>
-              <div class="voice-actions">
-                <button class="voice-button record-button" id="recordButton" type="button" disabled><span aria-hidden="true">●</span> Nói với AI</button>
-                <button class="voice-button stop-button" id="stopRecordingButton" type="button" disabled><span aria-hidden="true">■</span> Dừng</button>
-                <button class="voice-button upload-button" id="uploadAudioButton" type="button" disabled>Tải bản ghi lên</button>
-              </div>
-              <audio id="audioPreview" class="audio-preview" controls hidden></audio>
-              <p class="voice-status" id="recordingStatus" role="status">Cấp quyền micro khi trình duyệt hỏi để bắt đầu ghi âm.</p>
-            </div>
+            <p class="history-status" id="historyStatus" role="status">Đang tải lịch sử...</p>
+            <div class="history-list" id="conversationHistory" role="list"></div>
           </section>
+        </aside>
 
-          <aside class="reference-panel" aria-label="Từ vựng và bản ghi hội thoại">
-            <section class="word-bank">
-              <div class="panel-heading">
-                <span class="section-kicker">WORD BANK</span>
-                <span class="step-badge">4 từ</span>
-              </div>
-              <p class="reference-caption">Cụm từ hữu ích cho chủ đề</p>
-              <ul class="phrase-list" id="phraseList">
-                <li><strong>Hello</strong><span>Xin chào</span></li>
-                <li><strong>Nice to meet you</strong><span>Rất vui được gặp bạn</span></li>
-                <li><strong>How are you?</strong><span>Bạn khỏe không?</span></li>
-                <li><strong>Thank you</strong><span>Cảm ơn</span></li>
-              </ul>
-            </section>
-            <section class="transcript-panel">
-              <div class="panel-heading">
-                <span class="section-kicker">TRANSCRIPT</span>
-                <span class="sync-badge"><i></i> Live sync</span>
-              </div>
-              <p class="reference-caption">Tin nhắn trong buổi luyện tập sẽ hiện ở đây.</p>
-              <div class="transcript-messages" id="transcriptMessages" aria-live="polite">
-                <p class="transcript-empty">Bắt đầu buổi luyện tập để xem nội dung hội thoại.</p>
-              </div>
-              <div class="transcript-legend"><span>● Đang luyện tập</span><span>● Riêng tư</span></div>
-            </section>
-          </aside>
-        </div>
+        <!-- Cột phải / Màn hình 2 trên mobile: Khung chat AI chính -->
+        <section class="practice-panel" id="practicePanel" aria-label="Phòng trò chuyện với AI">
+          <!-- Chat Header -->
+          <header class="chat-header">
+            <!-- Nút back chỉ hiển thị trên mobile để quay lại bước 1 Thiết lập -->
+            <button type="button" class="mobile-step-back-btn" id="mobileStepBackBtn" aria-label="Quay lại thiết lập chủ đề">
+              <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+              <span>Thiết lập</span>
+            </button>
 
-        <div class="toast" id="toast" role="status" aria-live="polite"></div>
-        <div class="auth-overlay" id="authOverlay" hidden>
-          <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-            <div class="setup-icon" aria-hidden="true">🔒</div>
-            <h2 id="authTitle">Đăng nhập để trò chuyện với AI</h2>
-            <p>Bạn cần đăng nhập để tạo phòng chat, gửi tin nhắn và ghi âm giọng nói.</p>
-            <a href="../login/index.html?redirect=../chat/index.html">Đăng nhập hoặc tạo tài khoản</a>
+            <div class="chat-header-tutor">
+              <div class="tutor-avatar-wrap">
+                <div class="tutor-avatar-pulse"></div>
+                <div class="tutor-avatar" aria-hidden="true">AI</div>
+              </div>
+              <div class="conversation-title-meta">
+                <div class="title-with-flag">
+                  <img src="../../../assets/flags/flag-en.png" alt="" class="header-flag-icon" id="headerLanguageFlag" />
+                  <strong id="conversationTitle">Giao tiếp hàng ngày</strong>
+                </div>
+                <span id="conversationLanguage">Tiếng Anh · Phản xạ tự nhiên</span>
+              </div>
+            </div>
+
+            <div class="chat-header-actions">
+              <div class="session-timer-badge" id="sessionTimerBadge" title="Thời lượng buổi học">
+                <i class="fa-regular fa-clock" aria-hidden="true"></i>
+                <span id="sessionTimerVal">00:00</span>
+              </div>
+              <span class="live-pill" id="roomStatusBadge">
+                <i class="dot"></i>
+                <span class="status-txt">SẴN SÀNG</span>
+              </span>
+              <button type="button" class="btn-finish-session" id="finishSessionBtn" title="Kết thúc buổi học và xem tổng kết">
+                <i class="fa-solid fa-flag-checkered"></i>
+                <span class="btn-finish-text">Tổng kết</span>
+              </button>
+            </div>
+          </header>
+
+          <!-- Vùng tin nhắn hội thoại -->
+          <div class="messages" id="messages" aria-live="polite" aria-relevant="additions text">
+            <!-- Empty state có hồn khi chưa bắt đầu câu thoại nào -->
+            <div class="welcome-card" id="welcomeCard">
+              <div class="welcome-ai-avatar">
+                <div class="avatar-ring-outer"></div>
+                <div class="avatar-ring-inner"></div>
+                <div class="avatar-core">AI</div>
+              </div>
+              <h2 class="welcome-greeting" id="welcomeGreeting">Hello! Ready to speak English?</h2>
+              <p class="welcome-subtext" id="welcomeSubtext">
+                Chào mừng bạn! Tôi là gia sư AI của Slanguage. Chọn một chủ đề bắt đầu nhanh hoặc giữ phím mic để luyện phản xạ ngay nhé!
+              </p>
+
+              <!-- 4 thẻ Bắt đầu nhanh -->
+              <div class="quick-start-title">Bắt đầu nhanh với một chạm:</div>
+              <div class="quick-start-grid" id="quickStartGrid">
+                <button type="button" class="quick-card" data-topic="Giao tiếp hàng ngày" data-prompt="Hi! Let's talk about our daily routine.">
+                  <span class="q-icon">☕</span>
+                  <div class="q-content">
+                    <strong>Chào hỏi & Làm quen</strong>
+                    <span>Hỏi thăm ngày mới, công việc</span>
+                  </div>
+                  <i class="fa-solid fa-arrow-right q-arrow" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="quick-card" data-topic="Gọi món tại nhà hàng" data-prompt="Good evening! Welcome to our restaurant. May I see your menu?">
+                  <span class="q-icon">🍜</span>
+                  <div class="q-content">
+                    <strong>Ở nhà hàng</strong>
+                    <span>Gọi món, hỏi giá và đồ uống</span>
+                  </div>
+                  <i class="fa-solid fa-arrow-right q-arrow" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="quick-card" data-topic="Kể về sở thích" data-prompt="What do you enjoy doing in your free time?">
+                  <span class="q-icon">🎨</span>
+                  <div class="q-content">
+                    <strong>Nói về sở thích</strong>
+                    <span>Âm nhạc, phim ảnh và thể thao</span>
+                  </div>
+                  <i class="fa-solid fa-arrow-right q-arrow" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="quick-card" data-topic="Phỏng vấn xin việc" data-prompt="Hello! Could you please introduce yourself briefly?">
+                  <span class="q-icon">💼</span>
+                  <div class="q-content">
+                    <strong>Phỏng vấn xin việc</strong>
+                    <span>Giới thiệu bản thân, kỹ năng</span>
+                  </div>
+                  <i class="fa-solid fa-arrow-right q-arrow" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <!-- Phím tắt desktop -->
+              <div class="desktop-kbd-hint" aria-hidden="true">
+                <kbd>Space</kbd> <span>Giữ phím Space bất kỳ lúc nào để bắt đầu nói</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trạng thái AI đang suy nghĩ -->
+          <div class="assistant-status" id="assistantStatus" role="status" aria-live="polite" hidden>
+            <span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span>Gia sư AI đang soạn câu trả lời...</span>
+          </div>
+
+          <!-- Nút cuộn xuống tin mới -->
+          <button type="button" class="scroll-bottom-btn" id="scrollBottomBtn" hidden aria-label="Cuộn xuống tin nhắn mới nhất">
+            <i class="fa-solid fa-arrow-down" aria-hidden="true"></i>
+            <span>Tin mới</span>
+          </button>
+
+          <!-- Chat footer / Composer -->
+          <footer class="chat-footer">
+            <!-- Tooltip báo lỗi mic ngữ cảnh 3A -->
+            <div class="mic-error-tooltip" id="micErrorTooltip" role="alert" hidden>
+              <div class="tooltip-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+              <div class="tooltip-body">
+                <strong id="micErrorTitle">Microphone đang bị chặn</strong>
+                <p id="micErrorMsg">Hãy bấm vào biểu tượng ổ khóa cạnh thanh địa chỉ URL để cấp quyền Micro cho trang web.</p>
+              </div>
+              <button type="button" class="tooltip-close" id="tooltipCloseBtn" aria-label="Đóng thông báo">✕</button>
+            </div>
+
+            <!-- Thanh đếm lượt thử của khách 1A -->
+            <div class="guest-quota-bar" id="guestQuotaBar">
+              <span class="quota-pill"><i class="fa-solid fa-sparkles"></i> Chế độ thử</span>
+              <span class="quota-text" id="guestQuotaText">Còn 3/3 câu thoại trải nghiệm miễn phí</span>
+            </div>
+
+            <form class="composer" id="messageForm">
+              <!-- Nút tròn lớn màu teal 'Giữ để nói' -->
+              <div class="voice-button-container">
+                <button class="voice-button" id="voiceButton" type="button" aria-label="Giữ để nói với AI" aria-pressed="false" title="Giữ nút khi nói, thả để gửi">
+                  <div class="voice-ripple-ring" aria-hidden="true"></div>
+                  <i class="fa-solid fa-microphone voice-mic-icon" aria-hidden="true"></i>
+                  <span class="voice-btn-text">Giữ để nói</span>
+                </button>
+
+                <!-- Panel hiển thị sóng âm và đếm ngược mở rộng khi ghi âm -->
+                <div class="voice-record-panel" id="voiceRecordPanel" hidden>
+                  <div class="wave-visualizer-box">
+                    <canvas class="waveform-canvas" id="waveformCanvas" width="140" height="32"></canvas>
+                  </div>
+                  <div class="countdown-badge" id="countdownBadge">
+                    <span class="rec-dot"></span>
+                    <span id="countdownVal">01:00</span>
+                  </div>
+                </div>
+                <span class="sr-only" id="voiceStatus" role="status" aria-live="polite"></span>
+              </div>
+
+              <label class="sr-only" for="messageInput">Tin nhắn của bạn</label>
+              <textarea id="messageInput" rows="1" maxlength="4000" placeholder="Viết tin nhắn hoặc giữ nút nói..." required></textarea>
+
+              <button class="send-button" id="sendButton" type="submit" disabled aria-label="Gửi tin nhắn">
+                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+              </button>
+            </form>
+          </footer>
+        </section>
+      </main>
+
+      <!-- Toast thông báo -->
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+      <!-- Modal giới hạn lượt thử của Khách (1A) -->
+      <div class="modal-overlay" id="guestLimitModal" hidden role="dialog" aria-modal="true" aria-labelledby="guestModalTitle">
+        <div class="modal-card">
+          <div class="modal-icon-badge">
+            <i class="fa-solid fa-crown"></i>
+          </div>
+          <h3 id="guestModalTitle">Bạn đã hoàn thành 3 lượt thử!</h3>
+          <p class="modal-desc">
+            Trải nghiệm học ngoại ngữ với gia sư AI của Slanguage thật tuyệt phải không? Đăng nhập hoàn toàn miễn phí để mở khóa toàn bộ tính năng:
+          </p>
+          <ul class="modal-perks">
+            <li><i class="fa-solid fa-check"></i> Trò chuyện và luyện phát âm không giới hạn</li>
+            <li><i class="fa-solid fa-check"></i> Lưu và xem lại toàn bộ lịch sử các buổi học</li>
+            <li><i class="fa-solid fa-check"></i> Nhận xét chi tiết từng âm tiết chuẩn người bản xứ</li>
+          </ul>
+          <div class="modal-actions">
+            <a href="../login/index.html?redirect=../chat/index.html" class="btn-primary-modal">
+              <i class="fa-solid fa-arrow-right-to-bracket"></i> Đăng nhập ngay
+            </a>
+            <a href="../register/index.html" class="btn-secondary-modal">
+              Tạo tài khoản học viên mới
+            </a>
+            <button type="button" class="btn-link-modal" id="closeGuestModalBtn">
+              Ở lại xem lại đoạn chat vừa rồi
+            </button>
           </div>
         </div>
-      </section>
-    </main>
+      </div>
+
+      <!-- Modal Tổng kết buổi học -->
+      <div class="modal-overlay" id="sessionSummaryModal" hidden role="dialog" aria-modal="true" aria-labelledby="summaryModalTitle">
+        <div class="modal-card summary-card">
+          <div class="modal-icon-badge summary-badge">
+            <i class="fa-solid fa-award"></i>
+          </div>
+          <h3 id="summaryModalTitle">Tổng kết buổi luyện tập</h3>
+          <p class="modal-desc" id="summaryTopicName">Chủ đề: Giao tiếp hàng ngày</p>
+          <div class="summary-stats-grid">
+            <div class="stat-box">
+              <span class="stat-number" id="sumDuration">02:15</span>
+              <span class="stat-caption">Thời gian</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number" id="sumMessages">6</span>
+              <span class="stat-caption">Câu thoại</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number score-num" id="sumPronunciation">88%</span>
+              <span class="stat-caption">Phát âm TB</span>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn-primary-modal" id="btnContinuePractice">
+              <i class="fa-solid fa-rotate-right"></i> Luyện tập buổi mới
+            </button>
+            <button type="button" class="btn-secondary-modal" id="btnCloseSummaryModal">
+              Đóng xem lại
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </section>
   </body>
 </html>

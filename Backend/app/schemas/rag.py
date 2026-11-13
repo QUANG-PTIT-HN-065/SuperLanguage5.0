@@ -1,12 +1,14 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class RAGDocumentCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     title: str = Field(min_length=1, max_length=150)
     language_code: Literal["English", "Japanese", "all"]
-    content: str = Field(min_length=1, max_length=100_000)
+    content: str = Field(min_length=1, max_length=20_000)
 
     @field_validator("title", "content")
     @classmethod
@@ -21,3 +23,12 @@ class RAGDocumentResponse(BaseModel):
     title: str
     language_code: str
     chunks_indexed: int
+
+
+class RAGDocumentSummary(BaseModel):
+    document_key: str
+    title: str
+    language_code: str
+    content: str
+    chunks_count: int
+    created_at: str | None = None

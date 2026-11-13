@@ -10,7 +10,7 @@
  * Không tạo số liệu, cấp độ hay mục tiêu nếu API không trả về.
  */
 
-import { slanguageApi } from "../shared/api-client";
+import { slanguageApi, slanguageApiOrMock } from "../shared/api-client";
 
 export const XP_PER_LEVEL = 100;
 
@@ -33,6 +33,8 @@ export interface LearnerProfileSummary {
   currentLevel: string;
   targetLevel: string;
   dailyGoalXp: number;
+  dailyGoalMinutes: number;
+  dailyGoalLessons: number;
   planId: string;
 }
 
@@ -42,6 +44,7 @@ export interface LearnerOverview {
   level: number;
   xpIntoLevel: number;
   needsOnboarding: boolean;
+  dailyActivity: DailyActivityRow[];
 }
 
 export interface CachedProgress {
@@ -105,13 +108,11 @@ export function languageLabel(code: string): string {
 }
 
 /**
- * Gọi /api/v1/me và chuẩn hoá payload thật của backend.
+ * Chuẩn hoá payload thật của GET /api/v1/me.
  * Không dùng giá trị mặc định mang tính "thành tích" (2450 XP, 14 ngày...).
  */
-export async function fetchLearnerOverview(): Promise<LearnerOverview> {
-  const payload = asRecord(
-    await slanguageApi("/api/v1/me", { method: "GET" })
-  );
+export function parseLearnerOverview(value: unknown): LearnerOverview {
+  const payload = asRecord(value);
   const profile = asRecord(payload.profile);
   const stats = asRecord(payload.stats);
 
@@ -131,6 +132,8 @@ export async function fetchLearnerOverview(): Promise<LearnerOverview> {
       currentLevel: toText(profile.current_level),
       targetLevel: toText(profile.target_level),
       dailyGoalXp: toInt(profile.daily_goal_xp),
+      dailyGoalMinutes: toInt(profile.daily_goal_minutes),
+      dailyGoalLessons: toInt(profile.daily_goal_lessons),
       planId: toText(profile.plan_id),
     },
     stats: {
@@ -146,7 +149,19 @@ export async function fetchLearnerOverview(): Promise<LearnerOverview> {
     level: levelFromXp(xpTotal),
     xpIntoLevel: xpTotal % XP_PER_LEVEL,
     needsOnboarding: payload.needs_onboarding === true,
+    dailyActivity: parseDailyActivity(payload.daily_activity),
   };
+}
+
+/**
+ * GET /api/v1/me. `allowMock` chỉ bật ở chế độ xem thử (backend chưa chạy);
+ * lỗi HTTP/xác thực vẫn được ném ra để trang hiện trạng thái lỗi + Thử lại.
+ */
+export async function fetchLearnerOverview(allowMock = false): Promise<LearnerOverview> {
+  const payload = allowMock
+    ? await slanguageApiOrMock<unknown>("/api/v1/me", "me.json")
+    : (await slanguageApi("/api/v1/me", { method: "GET" })).data;
+  return parseLearnerOverview(payload);
 }
 
 /**
@@ -190,6 +205,188 @@ export function clearProgressCache(): void {
   localStorage.removeItem("slanguage_user_streak");
   localStorage.removeItem("slanguage_stats_synced");
   localStorage.removeItem("slanguage_stats_synced_at");
+}
+
+/** Một dòng của bảng daily_activity (ERD). Backend chưa có endpoint riêng. */
+export interface DailyActivityRow {
+  activityDate: string;
+  xpEarned: number;
+  lessonsCompleted: number;
+  goalMet: boolean;
+}
+
+export interface LevelProgress {
+  level: number;
+  nextLevel: number;
+  xpIntoLevel: number;
+  xpPerLevel: number;
+  xpToNext: number;
+  percent: number;
+}
+
+export interface DailyGoalProgress {
+  xpToday: number;
+  goalXp: number;
+  percent: number;
+  remaining: number;
+  met: boolean;
+}
+
+export interface StreakDay {
+  date: string;
+  label: string;
+  dayNumber: number;
+  studied: boolean;
+  isToday: boolean;
+  isFuture: boolean;
+}
+
+const WEEKDAY_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const DAY_IN_MS = 86_400_000;
+const DAILY_XP_KEY = "slanguage_daily_xp";
+
+export function toDateKey(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+export function levelProgress(xpTotal: number): LevelProgress {
+  const xp = Math.max(0, Math.trunc(xpTotal));
+  const level = levelFromXp(xp);
+  const xpIntoLevel = xp % XP_PER_LEVEL;
+  return {
+    level,
+    nextLevel: level + 1,
+    xpIntoLevel,
+    xpPerLevel: XP_PER_LEVEL,
+    xpToNext: XP_PER_LEVEL - xpIntoLevel,
+    percent: Math.round((xpIntoLevel / XP_PER_LEVEL) * 100),
+  };
+}
+
+export function dailyGoalProgress(xpToday: number, goalXp: number): DailyGoalProgress {
+  const goal = Math.max(1, Math.trunc(goalXp));
+  const earned = Math.max(0, Math.trunc(xpToday));
+  return {
+    xpToday: earned,
+    goalXp: goal,
+    percent: Math.min(100, Math.round((earned / goal) * 100)),
+    remaining: Math.max(0, goal - earned),
+    met: earned >= goal,
+  };
+}
+
+/** stroke-dashoffset cho vòng tròn tiến độ, quay theo chiều kim đồng hồ từ đỉnh 12h. */
+export function ringOffset(percent: number, radius: number): number {
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.min(100, Math.max(0, percent));
+  return circumference * (1 - clamped / 100);
+}
+
+export function parseDailyActivity(value: unknown): DailyActivityRow[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry) => asRecord(entry))
+    .filter((row) => typeof row.activity_date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(row.activity_date))
+    .map((row) => ({
+      activityDate: String(row.activity_date),
+      xpEarned: Math.max(0, toInt(row.xp_earned)),
+      lessonsCompleted: Math.max(0, toInt(row.lessons_completed)),
+      goalMet: toBool(row.goal_met),
+    }))
+    .sort((a, b) => a.activityDate.localeCompare(b.activityDate));
+}
+
+/** Dời cửa sổ dữ liệu mẫu để ngày mới nhất trùng hôm nay (chỉ dùng cho mock). */
+export function shiftActivityToToday(rows: DailyActivityRow[], today: Date): DailyActivityRow[] {
+  if (!rows.length) return rows;
+  const newest = new Date(`${rows[rows.length - 1].activityDate}T00:00:00`);
+  const delta = Math.round((today.getTime() - newest.getTime()) / DAY_IN_MS);
+  if (!delta) return rows;
+  return rows.map((row) => {
+    const shifted = new Date(`${row.activityDate}T00:00:00`);
+    shifted.setDate(shifted.getDate() + delta);
+    return { ...row, activityDate: toDateKey(shifted) };
+  });
+}
+
+/**
+ * Bảy ngày của tuần hiện tại (Thứ Hai → Chủ Nhật).
+ * Có daily_activity thì đọc trực tiếp; không thì suy ra từ cửa sổ streak.
+ */
+export function buildStreakWeek(
+  rows: DailyActivityRow[],
+  stats: LearnerStats,
+  today: Date,
+): StreakDay[] {
+  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const todayKey = toDateKey(today);
+  const byDate = new Map(rows.map((row) => [row.activityDate, row]));
+
+  let streakStartKey = "";
+  let streakEndKey = "";
+  if (stats.currentStreak > 0 && stats.lastActivityDate) {
+    const end = new Date(`${stats.lastActivityDate}T00:00:00`);
+    const start = new Date(end.getTime());
+    start.setDate(start.getDate() - (stats.currentStreak - 1));
+    streakStartKey = toDateKey(start);
+    streakEndKey = toDateKey(end);
+  }
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday.getTime());
+    date.setDate(monday.getDate() + index);
+    const key = toDateKey(date);
+    const row = byDate.get(key);
+    const studied = row
+      ? row.xpEarned > 0 || row.lessonsCompleted > 0
+      : Boolean(streakStartKey) && key >= streakStartKey && key <= streakEndKey;
+    return {
+      date: key,
+      label: WEEKDAY_LABELS[date.getDay()],
+      dayNumber: date.getDate(),
+      studied,
+      isToday: key === todayKey,
+      isFuture: key > todayKey,
+    };
+  });
+}
+
+/** XP hôm nay: ưu tiên daily_activity, sau đó bộ đếm cục bộ của thiết bị. */
+export function resolveTodayXp(
+  rows: DailyActivityRow[],
+  today: Date,
+  localXp: number,
+): number {
+  const key = toDateKey(today);
+  const row = rows.find((entry) => entry.activityDate === key);
+  return row ? row.xpEarned : Math.max(0, localXp);
+}
+
+export function readLocalDailyXp(today: Date): number {
+  try {
+    const raw = localStorage.getItem(DAILY_XP_KEY);
+    if (!raw) return 0;
+    const parsed = asRecord(JSON.parse(raw));
+    return parsed.date === toDateKey(today) ? Math.max(0, toInt(parsed.xp)) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function addLocalDailyXp(amount: number, today: Date): number {
+  const next = readLocalDailyXp(today) + Math.max(0, Math.trunc(amount));
+  localStorage.setItem(DAILY_XP_KEY, JSON.stringify({ date: toDateKey(today), xp: next }));
+  return next;
+}
+
+/** Trung bình tiến độ các chủ đề — dùng cho thanh tiến độ trên card lộ trình. */
+export function pathProgressPercent(topics: Array<{ progress_percent: number }>): number {
+  if (!topics.length) return 0;
+  const total = topics.reduce((sum, topic) => sum + Math.min(100, Math.max(0, topic.progress_percent)), 0);
+  return Math.round(total / topics.length);
 }
 
 /** Represent a vocabulary topic returned by GET /api/v1/vocabulary/topics */
@@ -267,10 +464,11 @@ export async function fetchVocabularyTopics(
   limit = 50,
   offset = 0,
 ): Promise<PaginatedVocabulary<VocabularyTopic>> {
-  const payload = (await slanguageApi(
+  const response = await slanguageApi(
     `/api/v1/vocabulary/topics?limit=${limit}&offset=${offset}`,
     { method: "GET" },
-  )) as Record<string, unknown>;
+  );
+  const payload = asRecord(response.data);
 
   const items = Array.isArray(payload.items) ? payload.items : [];
   return {
@@ -294,10 +492,11 @@ export async function fetchVocabularyWords(
   const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) });
   if (topicId !== undefined) qs.set("topic_id", String(topicId));
 
-  const payload = (await slanguageApi(
+  const response = await slanguageApi(
     `/api/v1/vocabulary/words?${qs.toString()}`,
     { method: "GET" },
-  )) as Record<string, unknown>;
+  );
+  const payload = asRecord(response.data);
 
   const items = Array.isArray(payload.items) ? payload.items : [];
   return {

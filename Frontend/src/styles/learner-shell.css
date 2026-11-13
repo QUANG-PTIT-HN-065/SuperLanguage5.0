@@ -1,0 +1,115 @@
+.app-header,
+.tabbar {
+  --font-display: "Be Vietnam Pro", sans-serif;
+}
+
+.app-header .nav-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-header :focus-visible,
+.tabbar :focus-visible {
+  outline: 3px solid var(--teal-300);
+  outline-offset: 3px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+[data-loading] {
+  display: none !important;
+}
+
+[data-page-state="loading"] [data-loading] {
+  display: grid !important;
+}
+
+[data-page-state="loading"] [data-content] {
+  display: none !important;
+}
+
+.page-loading-skeleton {
+  display: grid;
+  gap: var(--s-4);
+  width: min(100% - 32px, var(--container));
+  margin: 0 auto;
+  padding-block: var(--s-8) var(--s-12);
+}
+
+.page-loading-skeleton__title,
+.page-loading-skeleton__line,
+.page-loading-skeleton__card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  background: rgb(24 50 72 / 9%);
+}
+
+.page-loading-skeleton__title::after,
+.page-loading-skeleton__line::after,
+.page-loading-skeleton__card::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 68%), transparent);
+  content: "";
+  transform: translateX(-100%);
+  animation: learner-skeleton-shimmer 1.35s var(--ease-out) infinite;
+}
+
+.page-loading-skeleton__title {
+  width: min(360px, 72%);
+  height: 34px;
+}
+
+.page-loading-skeleton__line {
+  width: min(620px, 88%);
+  height: 12px;
+}
+
+.page-loading-skeleton__line--short {
+  width: min(420px, 64%);
+}
+
+.page-loading-skeleton__cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-4);
+  margin-top: var(--s-6);
+}
+
+.page-loading-skeleton__card {
+  min-height: 144px;
+}
+
+.page-startup-error {
+  width: min(100% - 32px, var(--container));
+  margin: var(--s-4) auto;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid #be3838;
+  border-radius: 4px;
+  background: #fff4f1;
+  color: #842d2d;
+}
+
+@keyframes learner-skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .page-loading-skeleton__cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-loading-skeleton__title::after,
+  .page-loading-skeleton__line::after,
+  .page-loading-skeleton__card::after {
+    animation: none;
+  }
+}

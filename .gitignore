@@ -50,3 +50,11 @@ firebase-debug.log
 .agents
 .freebuff
 .github
+.tsupgrader
+dist
+tests
+Backend\Test
+.impeccable
+.codex
+PRODUCT
+skills-lock

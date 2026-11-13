@@ -1,12 +1,3 @@
-/**
- * slanguage-api-client.ts
- * Learner API client — tái sử dụng pattern từ login.ts và chat.ts.
- * - Dùng localStorage token (slanguage_access_token / slanguage_refresh_token)
- * - Gửi Authorization: Bearer cho các API cần đăng nhập
- * - Tự động refresh token khi nhận 401
- * - Không tạo endpoint mới; chỉ gọi endpoint đã có trong backend
- */
-
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
 ).replace(/\/+$/, "");
@@ -14,71 +5,95 @@ const API_BASE_URL = (
 const ACCESS_TOKEN_KEY = "slanguage_access_token";
 const REFRESH_TOKEN_KEY = "slanguage_refresh_token";
 
-export interface SlanguageApiErrorOptions {
+export interface AuthTokens {
+  access_token: string;
+  refresh_token: string;
+}
+
+export interface ApiResponse<T = unknown> {
+  status: string;
   message: string;
-  status: number;
+  data: T;
 }
 
-export class SlanguageApiError extends Error {
-  public readonly status: number;
-
-  constructor({ message, status }: SlanguageApiErrorOptions) {
-    super(message);
-    this.name = "SlanguageApiError";
-    this.status = status;
-  }
-}
-
-export interface ApiRequestOptions {
-  method?: "GET" | "POST" | "PUT" | "DELETE";
+interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
-  requiresAuth?: boolean;
-  allowRefresh?: boolean;
+  anonymous?: boolean;
 }
 
-export interface LearnerProfile {
-  id: string | null;
-  email: string | null;
-  name: string | null;
-  isLoggedIn: boolean;
-  activeLanguage: string;
-  dailyGoal: number;
-  xp: number;
+function getErrorMessage(payload: unknown, status: number): string {
+  if (typeof payload === "object" && payload !== null && "detail" in payload) {
+    const detail = payload.detail;
+    if (typeof detail === "string" && detail.trim()) return detail.trim();
+    if (Array.isArray(detail)) {
+      const messages = detail
+        .map((item) =>
+          typeof item === "object" && item !== null && "msg" in item
+            ? String(item.msg)
+            : String(item),
+        )
+        .filter(Boolean);
+      if (messages.length) return messages.join("; ");
+    }
+  }
+  return `Backend trả về lỗi HTTP ${status}.`;
 }
 
-async function parseJson(response: Response): Promise<unknown> {
+async function parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
-    payload = null;
+    throw new Error(`Backend trả về phản hồi không hợp lệ (HTTP ${response.status}).`);
   }
+
   if (!response.ok) {
-    const detail =
-      payload && typeof payload === "object" && "detail" in payload
-        ? (payload as { detail: unknown }).detail
-        : `Backend trả về lỗi HTTP ${response.status}.`;
-    throw new SlanguageApiError({
-      message:
-        typeof detail === "string"
-          ? detail
-          : `Backend trả về lỗi HTTP ${response.status}.`,
-      status: response.status,
-    });
+    throw new Error(getErrorMessage(payload, response.status));
   }
-  return payload;
+  if (
+    typeof payload !== "object" ||
+    payload === null ||
+    !("data" in payload) ||
+    !("status" in payload) ||
+    typeof payload.status !== "string"
+  ) {
+    throw new Error("Backend trả về dữ liệu không đúng định dạng.");
+  }
+  return payload as ApiResponse<T>;
+}
+
+export function isLearnerAuthenticated(): boolean {
+  return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
+}
+
+export function saveAuthTokens(tokens: AuthTokens): void {
+  if (!tokens.access_token || !tokens.refresh_token) {
+    throw new Error("Backend không trả về phiên đăng nhập hợp lệ.");
+  }
+  localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
+  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+}
+
+export function clearAuthTokens(): void {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+export function saveLearnerIdentity(user: {
+  id?: string;
+  email: string;
+  display_name?: string | null;
+}): void {
+  localStorage.setItem("slanguage_is_logged_in", "true");
+  if (user.id) localStorage.setItem("slanguage_user_id", user.id);
+  localStorage.setItem("slanguage_user_name", user.display_name || user.email);
+  localStorage.setItem("slanguage_user_email", user.email);
 }
 
 async function refreshAccessToken(): Promise<string> {
   const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
   if (!refreshToken) {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem("slanguage_is_logged_in");
-    throw new SlanguageApiError({
-      message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
-      status: 401,
-    });
+    throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
   }
 
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
@@ -86,133 +101,93 @@ async function refreshAccessToken(): Promise<string> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
+  const result = await parseResponse<{
+    access_token: string;
+    refresh_token: string;
+  }>(response);
 
-  if (response.status === 401) {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem("slanguage_is_logged_in");
-    throw new SlanguageApiError({
-      message: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
-      status: 401,
-    });
+  if (!result.data.access_token || !result.data.refresh_token) {
+    throw new Error("Backend không trả về phiên đăng nhập mới.");
   }
-
-  const result = (await parseJson(response)) as {
-    data?: { access_token?: string; refresh_token?: string };
-  };
-  if (!result.data || !result.data.access_token) {
-    throw new SlanguageApiError({
-      message: "Backend không trả về phiên đăng nhập mới.",
-      status: 401,
-    });
-  }
-
-  localStorage.setItem(ACCESS_TOKEN_KEY, result.data.access_token);
-  if (result.data.refresh_token) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, result.data.refresh_token);
-  }
+  saveAuthTokens(result.data);
   return result.data.access_token;
 }
 
-/**
- * Gọi API cho người học (learner).
- * options.method: GET | POST | PUT | DELETE
- * options.body: dữ liệu JSON (được serialize tự động)
- * options.requiresAuth: mặc định true
- */
-export async function slanguageApi(
+const MOCK_BASE_URL = "/mock";
+
+/** Đọc một file mock có cùng dạng BaseResponse của backend. */
+export async function readMockData<T = unknown>(
+  file: string,
+  select?: (data: unknown) => unknown,
+): Promise<T> {
+  const response = await fetch(`${MOCK_BASE_URL}/${file}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error("Không tải được dữ liệu mẫu của trang học tập.");
+  }
+  const payload = (await response.json()) as ApiResponse<unknown>;
+  if (typeof payload?.status !== "string" || !("data" in payload)) {
+    throw new Error("Dữ liệu mẫu không đúng định dạng BaseResponse.");
+  }
+  return (select ? select(payload.data) : payload.data) as T;
+}
+
+/** Gọi API thật; chỉ rơi về mock khi backend không reachable (lỗi mạng). */
+export async function slanguageApiOrMock<T = unknown>(
   path: string,
-  options: ApiRequestOptions = {}
-): Promise<unknown> {
-  const { method = "GET", body, requiresAuth = true, allowRefresh = true } =
-    options;
-
-  const headers = new Headers();
-  if (body !== undefined) headers.set("Content-Type", "application/json");
-
-  let accessToken: string | null = null;
-  if (requiresAuth) {
-    accessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-    if (!accessToken) {
-      throw new SlanguageApiError({
-        message: "Vui lòng đăng nhập để sử dụng chức năng này.",
-        status: 401,
-      });
-    }
-    headers.set("Authorization", `Bearer ${accessToken}`);
+  file: string,
+  options: ApiRequestOptions & { onFallback?: () => void } = {},
+  select?: (data: unknown) => unknown,
+): Promise<T> {
+  const { onFallback, ...requestOptions } = options;
+  try {
+    const response = await slanguageApi<T>(path, requestOptions);
+    return response.data;
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    onFallback?.();
+    return readMockData<T>(file, select);
   }
-
-  const send = (token: string | null) => {
-    const h = new Headers(headers);
-    if (token) h.set("Authorization", `Bearer ${token}`);
-    return fetch(`${API_BASE_URL}${path}`, {
-      method,
-      headers: h,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  };
-
-  let response = await send(accessToken);
-
-  if (response.status === 401 && allowRefresh && accessToken) {
-    try {
-      const refreshed = await refreshAccessToken();
-      response = await send(refreshed);
-    } catch (err) {
-      throw err;
-    }
-  }
-
-  if (response.status === 401 || response.status === 403) {
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem("slanguage_is_logged_in");
-    throw new SlanguageApiError({
-      message: "Bạn không có quyền truy cập chức năng này.",
-      status: response.status,
-    });
-  }
-
-  return parseJson(response);
 }
 
-/**
- * Kiểm tra người học đã đăng nhập hay chưa (dựa trên localStorage)
- */
-export function isLearnerAuthenticated(): boolean {
-  return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
+function isFormData(value: unknown): value is FormData {
+  return typeof FormData !== "undefined" && value instanceof FormData;
 }
 
-/**
- * Lấy thông tin người học từ localStorage (đã lưu khi đăng ký/đăng nhập)
- */
-export function getLearnerProfile(): LearnerProfile {
-  return {
-    id: localStorage.getItem("slanguage_user_id") || null,
-    email: localStorage.getItem("slanguage_user_email") || null,
-    name: localStorage.getItem("slanguage_user_name") || null,
-    isLoggedIn: localStorage.getItem("slanguage_is_logged_in") === "true",
-    activeLanguage: localStorage.getItem("slanguage_active_language") || "en",
-    dailyGoal: parseInt(
-      localStorage.getItem("slanguage_daily_goal") || "30",
-      10
-    ),
-    xp: parseInt(localStorage.getItem("slanguage_user_xp") || "0", 10),
-  };
-}
+export async function slanguageApi<T = unknown>(
+  path: string,
+  options: ApiRequestOptions = {},
+  allowRefresh = true,
+): Promise<ApiResponse<T>> {
+  const { anonymous = false, ...requestOptions } = options;
+  const token = anonymous ? null : localStorage.getItem(ACCESS_TOKEN_KEY);
+  const headers = new Headers(requestOptions.headers);
+  if (isFormData(requestOptions.body)) headers.delete("Content-Type");
+  else headers.set("Content-Type", "application/json");
+  if (token) headers.set("Authorization", `Bearer ${token}`);
 
-/**
- * Đăng xuất người học
- */
-export async function logoutLearner(): Promise<void> {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-  localStorage.removeItem("slanguage_is_logged_in");
-  localStorage.removeItem("slanguage_user_id");
-  localStorage.removeItem("slanguage_user_email");
-  localStorage.removeItem("slanguage_user_name");
-  localStorage.removeItem("slanguage_active_language");
-  localStorage.removeItem("slanguage_daily_goal");
-  localStorage.removeItem("slanguage_user_xp");
-  window.location.assign("../../login/index.html");
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...requestOptions,
+    headers,
+    body:
+      requestOptions.body === undefined
+        ? undefined
+        : isFormData(requestOptions.body)
+          ? requestOptions.body
+          : JSON.stringify(requestOptions.body),
+  });
+
+  if (response.status === 401 && allowRefresh && token && !anonymous) {
+    const refreshedToken = await refreshAccessToken();
+    return slanguageApi<T>(
+      path,
+      {
+        ...requestOptions,
+        headers: { ...requestOptions.headers, Authorization: `Bearer ${refreshedToken}` },
+      },
+      false,
+    );
+  }
+  return parseResponse<T>(response);
 }

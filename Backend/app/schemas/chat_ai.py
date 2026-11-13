@@ -23,6 +23,16 @@ class ConversationResponse(BaseModel):
     title: str
     language_code: str
     created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class ConversationMessageResponse(BaseModel):
+    id: UUID
+    conversation_id: UUID
+    sender_type: Literal["user", "ai"]
+    content: str
+    ai_feedback: Optional[str] = None
+    created_at: Optional[datetime] = None
 
 class MessageSend(BaseModel):
     conversation_id: UUID
@@ -49,3 +59,7 @@ class AudioUploadResponse(BaseModel):
     content_type: str
     size_bytes: int
     storage_path: str
+
+
+class AudioTranscriptionResponse(BaseModel):
+    transcript: str

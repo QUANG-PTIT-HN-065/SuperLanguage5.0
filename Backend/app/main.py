@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.supabase import supabase_admin
 
-from app.api.endpoints import admin, auth, users, vocabulary, chat_ai
+from app.api.endpoints import admin, auth, users, vocabulary, chat_ai, lessons
 
 
 
@@ -35,6 +35,11 @@ app.include_router(
     vocabulary.router,
     prefix=f"{settings.API_V1_STR}/vocabulary",
     tags=["vocabulary"],
+)
+app.include_router(
+    lessons.router,
+    prefix=f"{settings.API_V1_STR}/lessons",
+    tags=["lessons"],
 )
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
 

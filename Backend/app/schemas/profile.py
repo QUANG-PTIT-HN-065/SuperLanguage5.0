@@ -47,12 +47,30 @@ class ProfileUpdate(BaseModel):
     target_level: Optional[Level] = None
     learning_goal: Optional[Goal] = None
     daily_goal_xp: Optional[int] = Field(default=None, ge=10, le=500)
+    daily_goal_minutes: Optional[int] = Field(default=None, ge=5, le=240)
+    daily_goal_lessons: Optional[int] = Field(default=None, ge=1, le=20)
     reminder_time: Optional[time] = None
     marketing_opt_in: Optional[bool] = None
     show_on_leaderboard: Optional[bool] = None
 
     _tz = field_validator("timezone")(_check_timezone)
     _country = field_validator("country_code")(_normalize_country)
+
+    @model_validator(mode="after")
+    def check_related_fields(self) -> "ProfileUpdate":
+        if (
+            self.native_language
+            and self.target_language
+            and self.native_language == self.target_language
+        ):
+            raise ValueError("Ngôn ngữ mẹ đẻ và ngôn ngữ muốn học phải khác nhau.")
+        if (
+            self.current_level
+            and self.target_level
+            and LEVEL_ORDER.index(self.target_level) < LEVEL_ORDER.index(self.current_level)
+        ):
+            raise ValueError("Trình độ mục tiêu không được thấp hơn trình độ hiện tại.")
+        return self
 
 
 class OnboardingRequest(BaseModel):
@@ -66,6 +84,8 @@ class OnboardingRequest(BaseModel):
     target_level: Level
     learning_goal: Goal
     daily_goal_xp: int = Field(default=20, ge=10, le=500)
+    daily_goal_minutes: int = Field(default=15, ge=5, le=240)
+    daily_goal_lessons: int = Field(default=1, ge=1, le=20)
     timezone: str = "Asia/Ho_Chi_Minh"
     country_code: Optional[str] = None
     reminder_time: Optional[time] = None

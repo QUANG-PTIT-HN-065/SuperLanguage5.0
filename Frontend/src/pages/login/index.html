@@ -4,14 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Slanguage - Đăng Nhập & Đăng Ký Học Viên</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../css/login/style.css">
-  <link rel="stylesheet" href="../../css/shared/user-experience.css">
+  <link rel="stylesheet" href="../../css/shared/mobile-responsive.css">
 </head>
-<body class="slg-user-auth">
+<body>
 
   <!-- Toast Notification Container -->
   <div class="login-toast" id="loginToast"></div>
@@ -42,25 +44,6 @@
           <div class="error-text" id="nameError">Vui lòng nhập họ tên.</div>
         </div>
 
-        <div class="form-group">
-          <label class="language-field-label" for="regNativeLanguage">Ngôn ngữ mẹ đẻ *</label>
-          <select id="regNativeLanguage" class="form-input form-select" required>
-            <option value="vi" selected>Tiếng Việt</option>
-            <option value="en">Tiếng Anh</option>
-            <option value="ja">Tiếng Nhật</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="language-field-label" for="regTargetLanguage">Ngôn ngữ muốn học *</label>
-          <select id="regTargetLanguage" class="form-input form-select" required>
-            <option value="en" selected>Tiếng Anh</option>
-            <option value="ja">Tiếng Nhật</option>
-            <option value="vi">Tiếng Việt</option>
-          </select>
-          <div class="error-text" id="languageError">Ngôn ngữ mẹ đẻ và ngôn ngữ muốn học phải khác nhau.</div>
-        </div>
-
         <!-- Email -->
         <div class="form-group">
           <div class="input-wrapper">
@@ -76,7 +59,7 @@
             <input type="password" id="regPassword" class="form-input" placeholder="Mật khẩu (từ 8 ký tự) *" required>
             <i class="fa-solid fa-lock input-icon"></i>
           </div>
-          <div class="error-text" id="passError">Mật khẩu quá ngắn.</div>
+          <div class="error-text" id="passError">Mật khẩu phải có ít nhất 8 ký tự.</div>
         </div>
 
         <!-- Confirm Password -->
@@ -118,7 +101,7 @@
         <h1>Chào mừng trở lại!</h1>
         <span class="form-subtitle">Vui lòng đăng nhập với tài khoản học viên của bạn</span>
 
-        <!-- Email/Username -->
+        <!-- Email -->
         <div class="form-group">
           <div class="input-wrapper">
             <input 
@@ -218,11 +201,12 @@
     </div>
   </div>
 
+
   <!-- GLOBAL TRANSITION LOADING SCREEN -->
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" src="../../../assets/loading.mp4" autoplay loop playsinline></video>
+        <video id="loadingVideoPlayer" muted src="../assets/loading.mp4" loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>
@@ -230,6 +214,7 @@
     </div>
   </div>
 
+  <!-- Logic TypeScript cho trang (được Vite biên dịch) -->
   <script type="module" src="../../types/login/login.ts"></script>
 </body>
 </html>

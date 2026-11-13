@@ -3,125 +3,324 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Từ vựng</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <title>Slanguage - Tra cứu từ vựng & Luyện nhớ SRS</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../css/home/style.css">
   <link rel="stylesheet" href="../../css/shared/user-experience.css">
   <link rel="stylesheet" href="../../css/study/style.css">
+  <link rel="stylesheet" href="../../css/shared/mobile-responsive.css">
+  <link rel="stylesheet" href="../../css/shared/learner-world.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/components.css">
+  <link rel="stylesheet" href="../../styles/learner-shell.css">
 </head>
-<body class="slg-study-page user-guest">
-  <header class="navbar">
-    <div class="navbar-container">
-      <div class="nav-left">
-        <a href="../home/index.html" class="brand-logo">
-          <img src="../../../assets/logo.png" alt="Slanguage" class="brand-logo-img">
-          <span class="brand-name">S<span class="brand-language">language</span></span>
-        </a>
-        <nav aria-label="Điều hướng chính">
-          <ul class="nav-links">
-            <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="../learning/index.html">Học tập</a></li>
-            <li><a href="./index.html" class="active" aria-current="page">Từ vựng</a></li>
-            <li><a href="../chat/index.html">Luyện tập AI</a></li>
-          </ul>
-        </nav>
+<body class="slg-study-page vocabulary-page user-guest" data-page-state="loading">
+  <div data-app-header></div>
+  <div class="page-startup-error" id="pageStartupError" role="alert" hidden></div>
+
+  <!-- Skeleton Shimmer Loading Screen -->
+  <div class="page-loading-skeleton" data-loading role="status" aria-label="Đang tải kho từ vựng">
+    <div class="vocab-skeleton-header">
+      <div class="vocab-skeleton-bar vocab-skeleton-bar--title"></div>
+      <div class="vocab-skeleton-bar vocab-skeleton-bar--sub"></div>
+    </div>
+    <div class="vocab-skeleton-search"></div>
+    <div class="page-loading-skeleton__cards">
+      <div class="page-loading-skeleton__card"></div>
+      <div class="page-loading-skeleton__card"></div>
+      <div class="page-loading-skeleton__card"></div>
+    </div>
+  </div>
+
+  <main class="study-main vocabulary-main" data-content>
+    <!-- Hero / Header Section -->
+    <section class="study-hero vocabulary-hero">
+      <div class="hero-content">
+        <span class="study-kicker"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> HỆ THỐNG TỪ VỰNG THÔNG MINH</span>
+        <h1>Kho từ vựng &amp; Ôn tập SRS</h1>
+        <p>Tra cứu ngữ cảnh tức thì, quản lý chủ đề quan tâm và kích hoạt thuật toán lặp lại ngắt quãng để ghi nhớ vĩnh viễn.</p>
       </div>
-      <div class="nav-right">
-        <div class="study-user auth-only">
-          <span class="stat-chip xp"><i class="fa-solid fa-star" aria-hidden="true"></i><span id="vocabularyXp">0 XP</span></span>
-          <a class="nav-auth-login" href="../home/index.html" id="vocabularyLogout">Đăng xuất</a>
+      <div class="hero-stat-badge">
+        <span class="hero-stat-icon"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></span>
+        <div class="hero-stat-info">
+          <span class="hero-stat-label">Phương pháp</span>
+          <span class="hero-stat-val">Spaced Repetition (SRS)</span>
         </div>
-        <div class="guest-nav-auth guest-only">
-          <a class="nav-auth-login" href="../login/index.html?redirect=../vocabulary/index.html">Đăng nhập</a>
-          <a class="nav-auth-register" href="../login/index.html?mode=signup">Đăng ký</a>
+      </div>
+    </section>
+
+    <!-- Global Notice / Alert Banner -->
+    <div class="study-notice" id="vocabularyNotice" role="status" aria-live="polite"></div>
+
+    <section id="vocabularyWorkspace" hidden>
+      <!-- Quick Search & Discovery Box with 250ms Debounce -->
+      <div class="vocabulary-discovery-panel">
+        <div class="discovery-search-wrapper">
+          <div class="vocabulary-discovery-search">
+            <span class="search-icon-prefix"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></span>
+            <label class="sr-only" for="wordSearch">Tra cứu từ vựng hoặc nghĩa tiếng Việt</label>
+            <input id="wordSearch" type="search" placeholder="Gõ từ tiếng Anh, phát âm hoặc nghĩa tiếng Việt..." autocomplete="off">
+            <button type="button" class="study-primary-button" id="searchWords" aria-label="Tra cứu ngay">
+              Tìm kiếm
+            </button>
+          </div>
+          <div class="search-quick-tags">
+            <span class="quick-tag-label"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Gợi ý:</span>
+            <button type="button" class="quick-tag-chip" data-search-tag="meeting">Meeting</button>
+            <button type="button" class="quick-tag-chip" data-search-tag="deadline">Deadline</button>
+            <button type="button" class="quick-tag-chip" data-search-tag="presentation">Presentation</button>
+            <button type="button" class="quick-tag-chip" data-search-tag="interview">Interview</button>
+          </div>
+        </div>
+
+        <!-- Add Topic Compact Bar -->
+        <div class="topic-picker-bar">
+          <div class="topic-picker-info">
+            <label for="addTopicSelect"><i class="fa-solid fa-folder-plus" aria-hidden="true"></i> Thêm chủ đề muốn học</label>
+            <span class="topic-picker-sub">Tự động đồng bộ trên trình duyệt của bạn</span>
+          </div>
+          <div class="topic-picker-controls">
+            <select id="addTopicSelect" aria-label="Chọn chủ đề để thêm vào danh sách">
+              <option value="">Chọn chủ đề học tập...</option>
+            </select>
+            <button type="button" class="study-primary-button" id="addTopicButton">
+              <i class="fa-solid fa-plus" aria-hidden="true"></i> Thêm chủ đề
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saved Topics Catalog Section -->
+      <section class="catalog-panel" id="topicCatalogSection" aria-labelledby="myTopicsTitle">
+        <div class="catalog-heading">
+          <div>
+            <span class="study-kicker"><i class="fa-solid fa-bookmark" aria-hidden="true"></i> BỘ CHỦ ĐỀ CỦA BẠN</span>
+            <h2 id="myTopicsTitle">Chủ đề đã lưu</h2>
+          </div>
+          <span class="catalog-count" id="topicCount">0 chủ đề</span>
+        </div>
+        <div class="topic-grid" id="topicGrid"></div>
+        <div class="word-empty-state" id="topicEmpty" hidden>
+          <div class="empty-state-icon"><i class="fa-solid fa-folder-open" aria-hidden="true"></i></div>
+          <h3>Chưa lưu chủ đề nào</h3>
+          <p>Chọn một chủ đề trong danh sách thả xuống ở phía trên để thêm vào bộ sưu tập học tập của bạn.</p>
+        </div>
+      </section>
+
+      <!-- Search Results / Selected Topic Word List Section -->
+      <div class="vocabulary-toolbar" id="wordToolbar">
+        <div class="vocabulary-count" id="wordCount" aria-live="polite"></div>
+        <div class="vocabulary-toolbar-actions">
+          <button type="button" class="study-secondary-button" id="refreshWords">
+            <i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Xóa tra cứu
+          </button>
+          <button type="button" class="study-primary-button" id="startPageReview" hidden>
+            <i class="fa-solid fa-play" aria-hidden="true"></i> Học chủ đề này
+          </button>
+        </div>
+      </div>
+
+      <section id="wordListSection" class="catalog-panel" aria-label="Kết quả tra cứu từ vựng" hidden>
+        <div class="catalog-heading">
+          <div>
+            <span class="study-kicker" id="wordListKicker">KHO TỪ VỰNG</span>
+            <h2 id="selectedTopicTitle">Danh sách từ vựng</h2>
+          </div>
+        </div>
+        <div class="word-grid" id="wordGrid"></div>
+        <div class="word-empty-state" id="wordEmpty" hidden>
+          <div class="empty-state-icon"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></div>
+          <h3>Không tìm thấy từ phù hợp</h3>
+          <p>Hãy thử tìm bằng từ khóa khác hoặc bấm nút "Xóa tra cứu" để quay lại danh mục đầy đủ.</p>
+        </div>
+        <div class="word-pagination">
+          <button type="button" class="study-secondary-button" id="previousPage">
+            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i> Trang trước
+          </button>
+          <span id="pageLabel" class="page-indicator">Trang 1/1</span>
+          <button type="button" class="study-secondary-button" id="nextPage">
+            Trang sau <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      </section>
+
+      <p class="learning-data-note">
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+        Dữ liệu học tập và danh sách chủ đề được lưu trên trình duyệt hiện tại. Thuật toán SRS tự động lên lịch ôn theo mức độ ghi nhớ của bạn.
+      </p>
+    </section>
+
+    <!-- Guest Notice Card -->
+    <section class="learning-guest-card" id="vocabularyGuest" hidden>
+      <div class="guest-card-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></div>
+      <h2>Đăng nhập để mở toàn bộ kho từ vựng</h2>
+      <p>Học viên Slanguage có thể theo dõi tiến độ nhớ từ, cá nhân hoá danh sách ôn tập và đồng bộ chuỗi học tập (Streak) mỗi ngày.</p>
+      <a class="study-primary-button" href="../login/index.html?redirect=../vocabulary/index.html">
+        <i class="fa-solid fa-arrow-right-to-bracket" aria-hidden="true"></i> Đăng nhập ngay
+      </a>
+    </section>
+  </main>
+
+  <!-- Focus Mode: Flashcard SRS Modal / Overlay (Hướng A) -->
+  <div class="focus-mode-backdrop" id="focusModeBackdrop" hidden aria-hidden="true">
+    <div class="focus-mode-dialog" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+      <div class="focus-dialog-header">
+        <div class="focus-dialog-title-group">
+          <span class="focus-kicker"><i class="fa-solid fa-fire" aria-hidden="true"></i> PHIÊN LUYỆN TẬP SRS TẬP TRUNG</span>
+          <h2 id="reviewTitle">Ôn tập từ vựng</h2>
+        </div>
+        <!-- SRS Stats Chips: Ôn n · Đang học n · Mới n -->
+        <div class="srs-stats-summary" id="srsStatsSummary">
+          <span class="srs-chip srs-chip--due"><i class="fa-solid fa-clock"></i> Ôn 0</span>
+          <span class="srs-chip srs-chip--learning"><i class="fa-solid fa-brain"></i> Đang học 0</span>
+          <span class="srs-chip srs-chip--new"><i class="fa-solid fa-sparkles"></i> Mới 0</span>
+        </div>
+        <button type="button" class="focus-close-btn" id="cancelReview" aria-label="Đóng phiên ôn tập">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="focus-progress-container">
+        <div class="focus-progress-meta">
+          <span class="focus-progress-counter" id="reviewProgressText">Còn 0 từ cần ôn · 1 / 1</span>
+          <span class="focus-shortcut-hint"><kbd>Space</kbd> lật · <kbd>1</kbd> Lại · <kbd>2</kbd> Khó · <kbd>3</kbd> Tốt · <kbd>4</kbd> Dễ</span>
+        </div>
+        <div class="review-progress-track">
+          <span id="reviewProgressFill" class="review-progress-fill"></span>
+        </div>
+      </div>
+
+      <!-- 3D Flip Flashcard (Task 54) -->
+      <div class="flashcard-stage-container">
+        <article class="flashcard-stage" id="flashcardStage" tabindex="0" role="region" aria-label="Thẻ ghi nhớ từ vựng">
+          <div class="flashcard-flipper" id="flashcardFlipper">
+            <!-- Mặt trước: Từ + Phiên âm + Loại từ + Nút Loa -->
+            <div class="flashcard-face flashcard-front">
+              <div class="face-badge-row">
+                <div class="face-badges-left">
+                  <span class="vocab-level" id="reviewLevel">B2</span>
+                  <span class="vocab-pos-badge" id="reviewPartOfSpeech">danh từ</span>
+                </div>
+                <span class="card-hint-badge"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> Bấm để lật nghĩa</span>
+              </div>
+              <div class="face-word-body">
+                <h3 class="face-word-term" id="reviewWord">Vocabulary</h3>
+                <div class="face-audio-row">
+                  <p class="vocab-phonetic" id="reviewPhonetic">/vəˈkæbjəleri/</p>
+                  <button type="button" class="audio-speaker-btn" id="reviewAudioBtn" aria-label="Phát âm từ vựng">
+                    <i class="fa-solid fa-volume-high" aria-hidden="true"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="face-tap-prompt">
+                <i class="fa-regular fa-hand-pointer" aria-hidden="true"></i> Chạm hoặc bấm phím Cách để lật mặt sau
+              </div>
+            </div>
+
+            <!-- Mặt sau: Nghĩa + Câu ví dụ -->
+            <div class="flashcard-face flashcard-back">
+              <div class="face-badge-row">
+                <span class="face-back-tag"><i class="fa-solid fa-check" aria-hidden="true"></i> Ý NGHĨA &amp; VÍ DỤ NGỮ CẢNH</span>
+                <button type="button" class="flip-back-btn" id="flipBackBtn" aria-label="Lật lại mặt trước">
+                  <i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i> Mặt trước
+                </button>
+              </div>
+              <div class="face-meaning-body" id="reviewMeaning">
+                <strong class="face-meaning-headline" id="reviewMeaningText">Từ vựng, tập hợp các từ ngữ</strong>
+                <div class="face-example-box">
+                  <span class="example-label">Ví dụ ngữ cảnh:</span>
+                  <p class="face-example-sentence" id="reviewExample">Reading helps expand your vocabulary.</p>
+                  <p class="face-example-translation" id="reviewExampleMeaning">Đọc sách giúp mở rộng vốn từ của bạn.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Action buttons: 4 nút Đánh giá [Lại / Khó / Tốt / Dễ] -->
+      <div class="focus-dialog-footer">
+        <button type="button" class="study-secondary-button reveal-meaning-btn" id="revealMeaning" aria-expanded="false">
+          <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> Lật thẻ xem nghĩa
+        </button>
+
+        <div class="review-choice-group review-choice-group--4" id="reviewChoices">
+          <!-- 1. Lại -->
+          <button type="button" class="rating-btn rating-btn--again" data-review-rating="Lại" title="Chưa nhớ từ này, ôn lại ngay">
+            <span class="rating-icon"><i class="fa-solid fa-arrow-rotate-left" aria-hidden="true"></i></span>
+            <div class="rating-text">
+              <strong>Lại</strong>
+              <span>&lt; 10 phút</span>
+            </div>
+            <kbd class="rating-key">1</kbd>
+          </button>
+          <!-- 2. Khó -->
+          <button type="button" class="rating-btn rating-btn--hard" data-review-rating="Khó" title="Nhớ chưa vững, lặp lại sau 1 ngày">
+            <span class="rating-icon"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></span>
+            <div class="rating-text">
+              <strong>Khó</strong>
+              <span>1 ngày</span>
+            </div>
+            <kbd class="rating-key">2</kbd>
+          </button>
+          <!-- 3. Tốt -->
+          <button type="button" class="rating-btn rating-btn--good" data-review-rating="Tốt" title="Nhớ tốt, ôn lại sau 3 ngày">
+            <span class="rating-icon"><i class="fa-solid fa-check" aria-hidden="true"></i></span>
+            <div class="rating-text">
+              <strong>Tốt</strong>
+              <span>3 ngày</span>
+            </div>
+            <kbd class="rating-key">3</kbd>
+          </button>
+          <!-- 4. Dễ -->
+          <button type="button" class="rating-btn rating-btn--easy" data-review-rating="Dễ" title="Nhớ xuất sắc, ôn lại sau 7 ngày">
+            <span class="rating-icon"><i class="fa-solid fa-bolt" aria-hidden="true"></i></span>
+            <div class="rating-text">
+              <strong>Dễ</strong>
+              <span>7 ngày</span>
+            </div>
+            <kbd class="rating-key">4</kbd>
+          </button>
+        </div>
+
+        <div class="review-completion" id="reviewCompletion" hidden>
+          <div class="completion-reward-badge">
+            <i class="fa-solid fa-trophy" aria-hidden="true"></i>
+          </div>
+          <p id="reviewCompletionText" class="completion-summary"></p>
+          <div class="completion-actions">
+            <button type="button" class="study-primary-button" id="saveReview">
+              <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i> Lưu kết quả &amp; Nhận XP
+            </button>
+            <button type="button" class="study-secondary-button" id="retrySaveReview" hidden>
+              <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Thử lưu lại
+            </button>
+          </div>
         </div>
       </div>
     </div>
-  </header>
+  </div>
 
-  <main class="study-main vocabulary-main">
-    <section class="study-hero vocabulary-hero">
-      <span class="study-kicker"><i class="fa-solid fa-clone" aria-hidden="true"></i> KHO TỪ VỰNG</span>
-      <h1>Học từ vựng theo chủ đề</h1>
-      <p>Từ và chủ đề được đồng bộ trực tiếp từ nội dung Admin quản lý cho ngôn ngữ bạn đang học.</p>
-    </section>
-
-    <div class="study-notice" id="vocabularyNotice" role="status" aria-live="polite">Đang tải kho từ vựng...</div>
-    <section id="vocabularyWorkspace" hidden>
-      <div class="vocabulary-toolbar">
-        <label class="vocabulary-filter">
-          <span>Chủ đề</span>
-          <select id="topicFilter" aria-label="Lọc từ theo chủ đề">
-            <option value="">Tất cả chủ đề</option>
-          </select>
-        </label>
-        <label class="vocabulary-filter vocabulary-search">
-          <span>Tìm từ trên trang hiện tại</span>
-          <input id="wordSearch" type="search" placeholder="Nhập từ hoặc nghĩa...">
-        </label>
-        <div class="vocabulary-count" id="wordCount" aria-live="polite"></div>
-        <div class="vocabulary-toolbar-actions">
-          <button type="button" class="study-secondary-button" id="refreshWords"><i class="fa-solid fa-rotate" aria-hidden="true"></i> Làm mới</button>
-          <button type="button" class="study-primary-button" id="startPageReview"><i class="fa-solid fa-play" aria-hidden="true"></i> Ôn trang này</button>
-        </div>
+  <!-- Clear Search Confirmation Dialog -->
+  <div class="slg-modal-overlay" id="clearSearchModal" hidden aria-hidden="true">
+    <div class="slg-modal-box" role="dialog" aria-modal="true" aria-labelledby="clearModalTitle">
+      <div class="slg-modal-header">
+        <div class="modal-danger-icon"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></div>
+        <h3 id="clearModalTitle">Xác nhận xóa tra cứu</h3>
       </div>
+      <p class="slg-modal-body">Thao tác này sẽ đặt lại từ khóa tìm kiếm và đưa bạn quay về danh mục chủ đề học tập ban đầu.</p>
+      <div class="slg-modal-actions">
+        <button type="button" class="study-secondary-button" id="cancelClearSearch">Hủy</button>
+        <button type="button" class="study-danger-button" id="confirmClearSearch">Xác nhận xóa</button>
+      </div>
+    </div>
+  </div>
 
-      <section class="review-session" id="reviewSession" aria-labelledby="reviewTitle" hidden>
-        <div class="review-session-heading">
-          <div>
-            <span class="study-kicker">PHIÊN ÔN TẬP</span>
-            <h2 id="reviewTitle">Ôn từ vựng</h2>
-          </div>
-          <button type="button" class="study-text-button" id="cancelReview">Quay lại danh sách</button>
-        </div>
-        <div class="review-progress">
-          <span id="reviewProgressText">Từ 1/1</span>
-          <div class="review-progress-track"><span id="reviewProgressFill"></span></div>
-        </div>
-        <article class="review-card" id="reviewCard">
-          <span class="vocab-level" id="reviewLevel"></span>
-          <h3 id="reviewWord"></h3>
-          <p class="vocab-phonetic" id="reviewPhonetic"></p>
-          <button type="button" class="study-secondary-button" id="revealMeaning" aria-expanded="false">Hiện nghĩa</button>
-          <div class="review-meaning" id="reviewMeaning" hidden>
-            <strong id="reviewMeaningText"></strong>
-            <p id="reviewExample"></p>
-            <p class="review-example-meaning" id="reviewExampleMeaning"></p>
-          </div>
-          <div class="review-choice-group" id="reviewChoices">
-            <button type="button" class="study-secondary-button" id="markAgain"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Cần ôn lại</button>
-            <button type="button" class="study-primary-button" id="markKnown"><i class="fa-solid fa-check" aria-hidden="true"></i> Đã nhớ</button>
-          </div>
-          <div class="review-completion" id="reviewCompletion" hidden>
-            <p id="reviewCompletionText"></p>
-            <button type="button" class="study-primary-button" id="saveReview">Lưu phiên và nhận XP</button>
-            <button type="button" class="study-secondary-button" id="retrySaveReview" hidden>Thử lưu lại</button>
-          </div>
-        </article>
-      </section>
-
-      <section id="wordListSection" aria-label="Danh sách từ vựng">
-        <div class="word-grid" id="wordGrid"></div>
-        <div class="word-empty-state" id="wordEmpty" hidden>Không tìm thấy từ vựng phù hợp trong chủ đề này.</div>
-        <div class="word-pagination">
-          <button type="button" class="study-secondary-button" id="previousPage">Trang trước</button>
-          <span id="pageLabel"></span>
-          <button type="button" class="study-secondary-button" id="nextPage">Trang sau</button>
-        </div>
-      </section>
-      <p class="learning-data-note">Mỗi phiên ôn ghi nhận một hoạt động học. Mỗi từ đã nhớ được thưởng 15 XP; gửi lại một phiên lỗi mạng không cộng trùng điểm.</p>
-    </section>
-
-    <section class="learning-guest-card" id="vocabularyGuest" hidden>
-      <span class="learning-action-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></span>
-      <h2>Đăng nhập để mở kho từ vựng</h2>
-      <p>Danh sách từ được lọc theo ngôn ngữ học và quyền truy cập của tài khoản.</p>
-      <a class="study-primary-button" href="../login/index.html?redirect=../vocabulary/index.html">Đăng nhập</a>
-    </section>
-  </main>
+  <!-- 5-Second Undo Toast for Topic Deletion -->
+  <div class="undo-toast-container" id="undoToastContainer" aria-live="polite"></div>
 
   <script type="module" src="../../types/home/vocabulary.ts"></script>
 </body>

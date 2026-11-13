@@ -31,7 +31,14 @@ class Settings(BaseSettings):
     SUPABASE_JWKS_URL: str = ""
     RESEND_API_KEY: str = ""  
     GEMINI_API_KEYS: str = ""
+    GEMINI_CHAT_MODEL: str = "gemini-3.5-flash-lite"
+    OPENAI_API_KEYS: str = ""
+    OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
     DEEPSEEK_API_KEYS: str = ""
+    RAG_EMBEDDING_API_KEYS: str = ""
+    RAG_SIMILARITY_THRESHOLD:  float = 0.45
+    RAG_TOP_K: int = 4
+    RAG_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
 
 settings = Settings()  # type: ignore[call-arg]

@@ -3,20 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Đăng Ký & Đăng Nhập Học Viên</title>
+  <title>Slanguage - Đăng Nhập & Đăng Ký Học Viên</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Comic+Neue:wght@300;400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="../../css/login/style.css">
-  <link rel="stylesheet" href="../../css/shared/user-experience.css">
+  <link rel="stylesheet" href="../../css/register/style.css">
+  <link rel="stylesheet" href="../../css/shared/mobile-responsive.css">
 </head>
-<body class="slg-user-auth">
+<body>
 
   <!-- Toast Notification Container -->
   <div class="login-toast" id="loginToast"></div>
 
-  <!-- Radios must be siblings BEFORE .container for the ~ selectors to work (Sign Up checked by default here) -->
+  <!-- Radios must be siblings BEFORE .container for the ~ selectors to work -->
   <input type="radio" name="panel" id="showSignIn" class="panel-radio" aria-label="Hiện form đăng nhập" />
   <input type="radio" name="panel" id="showSignUp" class="panel-radio" checked aria-label="Hiện form đăng ký" />
 
@@ -54,10 +56,10 @@
         <!-- Password -->
         <div class="form-group">
           <div class="input-wrapper">
-            <input type="password" id="regPassword" class="form-input" placeholder="Mật khẩu (từ 6 ký tự) *" required>
+            <input type="password" id="regPassword" class="form-input" placeholder="Mật khẩu (từ 8 ký tự) *" required>
             <i class="fa-solid fa-lock input-icon"></i>
           </div>
-          <div class="error-text" id="passError">Mật khẩu quá ngắn.</div>
+          <div class="error-text" id="passError">Mật khẩu phải có ít nhất 8 ký tự.</div>
         </div>
 
         <!-- Confirm Password -->
@@ -99,14 +101,14 @@
         <h1>Chào mừng trở lại!</h1>
         <span class="form-subtitle">Vui lòng đăng nhập với tài khoản học viên của bạn</span>
 
-        <!-- Email/Username -->
+        <!-- Email -->
         <div class="form-group">
           <div class="input-wrapper">
             <input 
               type="text" 
               id="emailOrUser" 
               class="form-input" 
-              placeholder="Email hoặc Tên đăng nhập *" 
+              placeholder="Địa chỉ email *"
               autocomplete="username"
               required
             >
@@ -168,14 +170,14 @@
         <div class="overlay-panel overlay-left">
           <div class="overlay-brand">
             <img src="../../../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
-            <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
+            <span class="overlay-brand-name">S<span class="brand-language">language</span>
           </div>
           <h2>Chào mừng trở lại!</h2>
           <p>Để tiếp tục lộ trình học tập và tích lũy XP, vui lòng đăng nhập tài khoản của bạn</p>
           <div class="overlay-lang-chips">
-            <span class="lang-pill">🇬🇧 Tiếng Anh</span>
-            <span class="lang-pill">🇯🇵 Tiếng Nhật</span>
-            <span class="lang-pill">🇻🇳 Tiếng Việt</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
           </div>
           <label for="showSignIn" class="btn ghost">Đăng Nhập Ngay</label>
         </div>
@@ -184,14 +186,14 @@
         <div class="overlay-panel overlay-right">
           <div class="overlay-brand">
             <img src="../../../assets/logo.png" alt="Slanguage Logo" class="overlay-brand-logo">
-            <span class="overlay-brand-name">S<span class="brand-language">language</span><span class="brand-dot">.</span></span>
+            <span class="overlay-brand-name">S<span class="brand-language">language</span>
           </div>
           <h2>Khám phá Slanguage!</h2>
           <p>Đăng nhập để khám phá nhiều hơn về khóa học của chúng tôi.</p>
           <div class="overlay-lang-chips">
-            <span class="lang-pill">🇬🇧 Tiếng Anh</span>
-            <span class="lang-pill">🇯🇵 Tiếng Nhật</span>
-            <span class="lang-pill">🇻🇳 Tiếng Việt</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-en.png" alt="English" class="flag-icon"> Tiếng Anh</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon"> Tiếng Nhật</span>
+            <span class="lang-pill"><img src="../../../assets/flags/flag-vn.png" alt="Tiếng Việt" class="flag-icon"> Tiếng Việt</span>
           </div>
           <label for="showSignUp" class="btn ghost">Đăng Ký Tài Khoản</label>
         </div>
@@ -199,11 +201,12 @@
     </div>
   </div>
 
+
   <!-- GLOBAL TRANSITION LOADING SCREEN -->
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" src="../../../assets/loading.mp4" autoplay loop playsinline></video>
+        <video id="loadingVideoPlayer" muted src="../assets/loading.mp4" loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>
@@ -211,6 +214,7 @@
     </div>
   </div>
 
-  <script type="module" src="../../types/login/login.ts"></script>
+  <!-- Logic TypeScript cho trang (được Vite biên dịch) -->
+  <script type="module" src="../../types/register/register.ts"></script>
 </body>
 </html>

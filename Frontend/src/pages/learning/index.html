@@ -4,110 +4,287 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Slanguage - Học tập</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <meta name="description" content="Chọn lộ trình học, theo dõi cấp độ, chuỗi ngày và mục tiêu XP mỗi ngày.">
+  <link rel="icon" href="../../../assets/logo.png">
   <link rel="stylesheet" href="../../css/home/style.css">
   <link rel="stylesheet" href="../../css/shared/user-experience.css">
   <link rel="stylesheet" href="../../css/study/style.css">
+  <link rel="stylesheet" href="../../css/shared/learner-world.css">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/components.css">
+  <link rel="stylesheet" href="../../styles/learner-shell.css">
+  <link rel="stylesheet" href="../../css/study/learning-page.css">
+  <link rel="stylesheet" href="../../css/shared/mobile-responsive.css">
 </head>
-<body class="slg-study-page user-guest">
-  <header class="navbar">
-    <div class="navbar-container">
-      <div class="nav-left">
-        <a href="../home/index.html" class="brand-logo">
-          <img src="../../../assets/logo.png" alt="Slanguage" class="brand-logo-img">
-          <span class="brand-name">S<span class="brand-language">language</span></span>
-        </a>
-        <nav aria-label="Điều hướng chính">
-          <ul class="nav-links">
-            <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="./index.html" class="active" aria-current="page">Học tập</a></li>
-            <li><a href="../vocabulary/index.html">Từ vựng</a></li>
-            <li><a href="../chat/index.html">Luyện tập AI</a></li>
-          </ul>
-        </nav>
-      </div>
-      <div class="nav-right">
-        <div class="study-user auth-only">
-          <span class="stat-chip xp"><i class="fa-solid fa-star" aria-hidden="true"></i><span id="studyXp">0 XP</span></span>
-          <a class="nav-auth-login" href="../home/index.html" id="studyLogout">Đăng xuất</a>
-        </div>
-        <div class="guest-nav-auth guest-only">
-          <a class="nav-auth-login" href="../login/index.html?redirect=../learning/index.html">Đăng nhập</a>
-          <a class="nav-auth-register" href="../login/index.html?mode=signup">Đăng ký</a>
-        </div>
-      </div>
+<body class="slg-study-page learning-path-page user-guest" data-page-state="loading">
+  <a class="learning-skip" href="#pathCatalogSection">Bỏ qua tới danh sách lộ trình</a>
+  <div data-app-header></div>
+  <div class="page-startup-error" id="pageStartupError" role="alert" hidden></div>
+  <div class="page-loading-skeleton" data-loading role="status" aria-label="Đang tải lộ trình học">
+    <div class="page-loading-skeleton__title"></div>
+    <div class="page-loading-skeleton__line"></div>
+    <div class="page-loading-skeleton__line page-loading-skeleton__line--short"></div>
+    <div class="page-loading-skeleton__cards">
+      <div class="page-loading-skeleton__card"></div>
+      <div class="page-loading-skeleton__card"></div>
+      <div class="page-loading-skeleton__card"></div>
     </div>
-  </header>
+  </div>
 
-  <main class="study-main learning-main">
-    <section class="study-hero">
-      <span class="study-kicker"><i class="fa-solid fa-book-open" aria-hidden="true"></i> KHÔNG GIAN HỌC TẬP</span>
-      <h1>Lộ trình học của bạn</h1>
-      <p>Theo dõi trình độ hiện tại và chọn hoạt động phù hợp để tiếp tục tiến bộ mỗi ngày.</p>
+  <main class="study-main learning-main" data-content>
+    <section class="learning-hero" aria-labelledby="overviewTitle">
+      <svg class="learning-hero__routes" viewBox="0 0 600 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+        <path d="M-20 210 C 90 210 110 96 210 96 S 330 190 430 150 S 560 40 640 62" />
+        <path d="M-20 244 C 110 244 140 140 250 140 S 380 226 470 190 S 580 96 640 108" />
+        <circle cx="210" cy="96" r="5" />
+        <circle cx="430" cy="150" r="5" />
+        <circle cx="250" cy="140" r="4" />
+      </svg>
+      <div class="learning-hero__body">
+        <p class="learning-hero__eyebrow">Không gian học tập</p>
+        <h1 class="learning-hero__title" id="overviewTitle">Xin chào, <span id="learnerName">học viên</span></h1>
+        <p class="learning-hero__lede">Mỗi ngày một chủ đề. Chọn lộ trình bên dưới để giữ chuỗi ngày học và tiến gần hơn tới mục tiêu của bạn.</p>
+        <div class="learning-hero__chips">
+          <span class="hero-chip" id="heroLanguageChip">
+            <img class="hero-chip__flag" id="heroLanguageFlag" src="../../../assets/flags/flag-jp.png" alt="" width="22" height="16">
+            <span id="targetLanguage">Đang tải…</span>
+          </span>
+          <span class="hero-chip hero-chip--quiet" id="heroLevelChip" hidden></span>
+        </div>
+      </div>
+      <div class="learning-hero__aside">
+        <a class="learning-hero__cta" id="heroContinue" href="#pathCatalogSection">
+          <span>Tiếp tục học</span>
+          <svg class="learning-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+        <p class="learning-hero__hint" id="heroHint">Đang tải tiến độ của bạn…</p>
+      </div>
     </section>
 
-    <div class="study-notice" id="learningNotice" role="status" hidden></div>
-
-    <section class="learning-overview" id="learningOverview" aria-labelledby="overviewTitle" hidden>
-      <div class="learning-overview-heading">
-        <div>
-          <span class="study-kicker">HỒ SƠ HỌC TẬP</span>
-          <h2 id="overviewTitle">Xin chào, <span id="learnerName">học viên</span></h2>
+    <section class="learning-stats" aria-label="Thống kê học tập hôm nay">
+      <article class="stat-card stat-card--level">
+        <header class="stat-card__head">
+          <span class="stat-card__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.4l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.5l5.8-.8Z"/></svg>
+          </span>
+          <h2 class="stat-card__label">Cấp độ</h2>
+        </header>
+        <p class="stat-card__figure">
+          <span class="stat-card__number" id="statLevel">1</span>
+          <span class="stat-card__suffix">cấp hiện tại</span>
+        </p>
+        <div class="xp-meter">
+          <div class="xp-meter__track" id="xpTrack" role="progressbar" aria-label="XP trong cấp hiện tại" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span class="xp-meter__fill" id="xpFill"></span>
+          </div>
+          <p class="xp-meter__caption">
+            <span class="stat-card__mono" id="xpIntoLevel">0</span>/<span class="stat-card__mono">100</span> XP
+            · còn <span class="stat-card__mono" id="xpToNext">100</span> XP lên cấp <span id="nextLevel">2</span>
+          </p>
         </div>
-        <span class="learning-language-pill"><i class="fa-solid fa-globe" aria-hidden="true"></i><span id="targetLanguage">Đang tải...</span></span>
-      </div>
+      </article>
 
-      <div class="learning-stat-grid">
-        <article class="learning-stat">
-          <span>Trình độ hiện tại</span>
-          <strong id="currentLevel">—</strong>
+      <article class="stat-card stat-card--streak">
+        <header class="stat-card__head">
+          <span class="stat-card__icon stat-card__icon--flame" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1.6 3.1.6 5-.6 6.6-1.3 1.8-2.9 3.3-2.9 5.9A5.5 5.5 0 0 0 14 20.4c3.4-.7 5.5-3.6 5.5-7.1 0-4.6-3.4-7.6-5.4-9.3.3 1.9-.4 3.1-1.4 3.7.4-2.2-.6-4.4-2.7-5.7Zm-2.2 12c-.4.7-.6 1.4-.6 2.2a2.9 2.9 0 0 0 5.8.1c0-1.4-.8-2.2-1.5-3-.6.9-1.6 1.2-2.6.9-.7-.2-1-.6-1.1-.2Z"/></svg>
+          </span>
+          <h2 class="stat-card__label">Chuỗi ngày</h2>
+        </header>
+        <p class="stat-card__figure">
+          <span class="stat-card__number" id="statStreak">0</span>
+          <span class="stat-card__suffix">ngày liên tiếp</span>
+        </p>
+        <ul class="streak-week" id="streakWeek" aria-label="Bảy ngày trong tuần hiện tại"></ul>
+        <p class="stat-card__note" id="streakHint">Học hôm nay để giữ chuỗi ngày.</p>
+      </article>
+
+      <article class="stat-card stat-card--goal">
+        <header class="stat-card__head">
+          <span class="stat-card__icon stat-card__icon--goal" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="4.2"/><circle cx="12" cy="12" r="1"/></svg>
+          </span>
+          <h2 class="stat-card__label">Mục tiêu hôm nay</h2>
+        </header>
+        <div class="goal-ring">
+          <svg class="goal-ring__svg" viewBox="0 0 120 120" role="img" aria-labelledby="goalRingTitle">
+            <title id="goalRingTitle">Tiến độ mục tiêu XP hôm nay</title>
+            <circle class="goal-ring__track" cx="60" cy="60" r="52" />
+            <circle class="goal-ring__value" id="goalRingValue" cx="60" cy="60" r="52" />
+          </svg>
+          <p class="goal-ring__center">
+            <span class="goal-ring__percent" id="goalPercent">0%</span>
+            <span class="goal-ring__caption">hoàn thành</span>
+          </p>
+        </div>
+        <p class="stat-card__note">
+          <span class="stat-card__mono" id="goalXpToday">0</span>/<span class="stat-card__mono" id="goalXpTarget">20</span> XP
+          · <span id="goalHint">còn 20 XP</span>
+        </p>
+      </article>
+    </section>
+
+    <p class="learning-demo-note" id="learningDemoNote" role="status" hidden>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.6v.4"/></svg>
+      <span>Đang xem dữ liệu mẫu. <a href="../login/index.html?redirect=../learning/index.html">Đăng nhập</a> để lưu tiến độ thật của bạn.</span>
+    </p>
+
+    <div class="study-notice" id="learningNotice" role="status" aria-live="polite" hidden></div>
+
+    <section class="learning-overview" id="learningOverview" aria-labelledby="pathCatalogTitle" hidden>
+      <section class="path-discovery" id="pathCatalogSection" aria-labelledby="pathCatalogTitle">
+        <div class="catalog-heading">
+          <div>
+            <h2 id="pathCatalogTitle">Chọn lộ trình để bắt đầu</h2>
+            <p class="catalog-subtitle">Học lần lượt từng chủ đề. Chủ đề sau mở khoá khi bạn đạt 4/4 ở chủ đề trước.</p>
+          </div>
+          <span class="catalog-count" id="pathCount" aria-live="polite"></span>
+        </div>
+
+        <div class="path-search-row">
+          <label class="sr-only" for="pathSearch">Tìm kiếm lộ trình học</label>
+          <span class="path-search-field">
+            <svg class="path-search-field__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.6"/><path d="m16 16 4.2 4.2"/></svg>
+            <input id="pathSearch" type="search" placeholder="Tìm lộ trình hoặc chủ đề…" autocomplete="off" spellcheck="false" aria-describedby="pathSearchHint">
+            <button type="button" class="path-search-clear" id="clearPathSearch" aria-label="Xoá từ khoá tìm kiếm" hidden>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12"/><path d="M18 6 6 18"/></svg>
+            </button>
+          </span>
+          <button type="button" class="study-primary-button path-search-submit" id="searchLearningPaths">Tìm</button>
+        </div>
+        <p class="sr-only" id="pathSearchHint">Kết quả được lọc ngay khi bạn gõ, không cần bấm Tìm.</p>
+
+        <div class="path-filter-chips" aria-label="Bộ lọc đang áp dụng">
+          <span class="path-filter-chip is-active" id="pathLanguageChip">Ngôn ngữ đang học</span>
+          <span class="path-filter-chip" id="pathLevelChip" hidden></span>
+        </div>
+
+        <div class="path-card-grid" id="learningPathGrid" aria-busy="false"></div>
+
+        <div class="word-empty-state path-empty" id="pathEmpty" hidden>
+          <svg class="path-empty__art" width="132" height="104" viewBox="0 0 132 104" fill="none" aria-hidden="true">
+            <rect x="14" y="20" width="46" height="62" rx="5" fill="#e3eeea" stroke="#9cb8b4" stroke-width="2"/>
+            <rect x="72" y="20" width="46" height="62" rx="5" fill="#fbf9f2" stroke="#d7d9d2" stroke-width="2"/>
+            <path d="M24 36h26M24 48h26M24 60h16" stroke="#117e83" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M82 36h26M82 48h26M82 60h16" stroke="#d7d9d2" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="97" cy="72" r="17" fill="#fbf9f2" stroke="#9e402c" stroke-width="2.4"/>
+            <path d="m109 84 9 9" stroke="#9e402c" stroke-width="2.8" stroke-linecap="round"/>
+            <path d="M91 72h12" stroke="#9e402c" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+          <h3 class="path-empty__title" id="pathEmptyTitle">Chưa có lộ trình phù hợp</h3>
+          <p class="path-empty__text" id="pathEmptyText">Thử một từ khoá ngắn hơn, hoặc xoá bộ lọc để xem toàn bộ lộ trình.</p>
+          <button type="button" class="study-secondary-button path-empty__action" id="pathEmptyAction">Xoá từ khoá</button>
+        </div>
+
+        <div class="path-error" id="pathError" role="alert" hidden>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 4.5 2.8 20h18.4Z"/><path d="M12 10v4"/><path d="M12 17v.4"/></svg>
+          <div>
+            <h3>Không tải được lộ trình</h3>
+            <p id="pathErrorText">Máy chủ chưa phản hồi. Kiểm tra kết nối rồi thử lại.</p>
+          </div>
+          <button type="button" class="study-primary-button" id="retryLearningPaths">Thử lại</button>
+        </div>
+      </section>
+
+      <section class="path-detail" id="pathDetailSection" hidden aria-labelledby="pathDetailTitle">
+        <button type="button" class="study-text-button path-back-button" id="backToPaths">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H6"/><path d="m12 19-7-7 7-7"/></svg>
+          Quay lại lộ trình
+        </button>
+        <header class="path-detail-hero">
+          <div class="path-detail-actions">
+            <span class="path-language-pill" id="pathDetailLanguage"></span>
+          </div>
+          <h2 id="pathDetailTitle"></h2>
+          <p id="pathDetailDescription"></p>
+          <span class="path-topic-count" id="pathDetailTopicCount"></span>
+        </header>
+        <div class="catalog-heading">
+          <div><h2>Các chủ đề trong lộ trình</h2></div>
+        </div>
+        <div class="path-topic-list" id="pathTopicList"></div>
+      </section>
+
+      <section class="lesson-workspace" id="lessonWorkspace" hidden aria-labelledby="lessonTitle">
+        <div class="lesson-toolbar">
+          <button type="button" class="study-text-button" id="exitLesson">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H6"/><path d="m12 19-7-7 7-7"/></svg>
+            Thoát bài học
+          </button>
+          <span id="lessonProgressText">Câu 1/1</span>
+        </div>
+        <div
+          class="lesson-progress-track"
+          id="lessonProgressTrack"
+          role="progressbar"
+          aria-label="Tiến độ bài học"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          aria-valuenow="0"
+        ><span id="lessonProgressFill"></span></div>
+        <article class="lesson-question" id="lessonQuestion">
+          <p class="lesson-question-count" id="lessonQuestionCount"></p>
+          <h2 id="lessonTitle"></h2>
+          <p class="lesson-question-type" id="lessonQuestionType"></p>
+          <p class="lesson-prompt" id="lessonPrompt"></p>
+          <div class="lesson-options" id="lessonOptions" role="group" aria-label="Chọn một đáp án"></div>
+          <p class="lesson-feedback" id="lessonFeedback" role="status" aria-live="polite"></p>
+          <div class="lesson-actions">
+            <button type="button" class="study-primary-button" id="checkLessonAnswer" disabled>
+              Kiểm tra đáp án
+            </button>
+            <button type="button" class="study-primary-button" id="nextLessonQuestion" hidden>
+              Câu tiếp theo
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </div>
         </article>
-        <article class="learning-stat">
-          <span>Mục tiêu</span>
-          <strong id="targetLevel">—</strong>
-        </article>
-        <article class="learning-stat">
-          <span>Ngày học liên tục</span>
-          <strong id="learningStreak">0 ngày</strong>
-        </article>
-        <article class="learning-stat">
-          <span>Bài học đã hoàn thành</span>
-          <strong id="completedLessons">0</strong>
-        </article>
-      </div>
+        <section class="lesson-result" id="lessonResult" hidden aria-live="polite">
+          <h2 id="lessonResultTitle">Hoàn thành bài học</h2>
+          <p id="lessonResultText"></p>
+          <button type="button" class="study-primary-button" id="retryLesson" hidden>
+            Thử lại 4 câu
+          </button>
+          <button type="button" class="study-primary-button" id="returnToTopics">
+            Quay lại chủ đề
+          </button>
+        </section>
+        <div class="lesson-notice" id="lessonNotice" role="alert" hidden></div>
+      </section>
 
       <div class="learning-actions-grid">
         <a href="../vocabulary/index.html" class="learning-action-card">
-          <span class="learning-action-icon"><i class="fa-solid fa-clone" aria-hidden="true"></i></span>
-          <span class="learning-action-copy">
-            <strong>Ôn từ vựng</strong>
-            <span>Học từ và chủ đề được cập nhật từ kho nội dung.</span>
+          <span class="learning-action-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.6"/><path d="m16 16 4.2 4.2"/></svg>
           </span>
-          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          <span class="learning-action-copy">
+            <strong>Tra cứu từ vựng</strong>
+            <span>Tìm nghĩa, phiên âm và ví dụ của từ nằm ngoài lộ trình.</span>
+          </span>
+          <svg class="learning-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m12 5 7 7-7 7"/></svg>
         </a>
         <a href="../chat/index.html" class="learning-action-card">
-          <span class="learning-action-icon ai"><i class="fa-solid fa-comments" aria-hidden="true"></i></span>
+          <span class="learning-action-icon ai" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-5.2A8 8 0 1 1 21 12Z"/><path d="M9 11h6"/></svg>
+          </span>
           <span class="learning-action-copy">
             <strong>Luyện tập với AI</strong>
-            <span>Thực hành hội thoại theo ngôn ngữ bạn đang học.</span>
+            <span>Thực hành hội thoại theo đúng ngôn ngữ bạn đang học.</span>
           </span>
-          <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+          <svg class="learning-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m12 5 7 7-7 7"/></svg>
         </a>
       </div>
-      <p class="learning-data-note">Thông tin trình độ và tiến độ được tải từ hồ sơ học viên. Nội dung từ vựng được quản lý riêng trong trang Admin.</p>
+      <p class="learning-data-note">Lộ trình và thứ tự chủ đề do Admin quản lý. Tiến độ từng chủ đề cập nhật ngay sau khi bạn hoàn thành bài trắc nghiệm.</p>
     </section>
 
     <section class="learning-guest-card" id="learningGuest" hidden>
-      <span class="learning-action-icon"><i class="fa-solid fa-lock" aria-hidden="true"></i></span>
-      <h2>Đăng nhập để xem lộ trình học</h2>
-      <p>Tiến độ và trình độ học tập được lưu theo tài khoản của bạn.</p>
+      <h2>Đăng nhập để lưu tiến độ học</h2>
+      <p>Bạn vẫn xem được lộ trình mẫu. Đăng nhập để cấp độ, chuỗi ngày và mục tiêu XP được lưu theo tài khoản.</p>
       <a class="study-primary-button" href="../login/index.html?redirect=../learning/index.html">Đăng nhập</a>
     </section>
   </main>
 
   <script type="module" src="../../types/home/learning.ts"></script>
+  <script type="module" src="../../types/home/lesson-quiz.ts"></script>
 </body>
 </html>
