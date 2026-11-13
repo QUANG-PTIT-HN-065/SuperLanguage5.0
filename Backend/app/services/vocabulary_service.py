@@ -68,6 +68,46 @@ def list_topics(
             query = query.gte("id", topic_floor)
         topics = query.order("id").range(offset, end - 1).execute().data
 
+    if topics and profile.get("id"):
+        topic_ids = [topic["id"] for topic in topics]
+        word_links = (
+            supabase_admin.table("word_topics")
+            .select("topic_id,word_id")
+            .in_("topic_id", topic_ids)
+            .execute()
+            .data
+            or []
+        )
+        words_by_topic: Dict[int, set[int]] = {}
+        all_word_ids: set[int] = set()
+        for link in word_links:
+            words_by_topic.setdefault(link["topic_id"], set()).add(link["word_id"])
+            all_word_ids.add(link["word_id"])
+
+        mastered_word_ids: set[int] = set()
+        if all_word_ids:
+            mastered_rows = (
+                supabase_admin.table("user_words")
+                .select("word_id")
+                .eq("user_id", profile["id"])
+                .eq("mastery_level", 5)
+                .in_("word_id", list(all_word_ids))
+                .execute()
+                .data
+                or []
+            )
+            mastered_word_ids = {row["word_id"] for row in mastered_rows}
+
+        for topic in topics:
+            topic_word_ids = words_by_topic.get(topic["id"], set())
+            mastered_count = len(topic_word_ids & mastered_word_ids)
+            word_count = len(topic_word_ids)
+            topic["word_count"] = word_count
+            topic["mastered_word_count"] = mastered_count
+            topic["progress_percent"] = (
+                round(mastered_count * 100 / word_count) if word_count else 0
+            )
+
     return {
         "items": topics,
         "total": total,

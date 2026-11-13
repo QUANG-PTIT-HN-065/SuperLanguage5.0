@@ -511,7 +511,7 @@ begin
     p_word ->> 'phonetic',
     p_word ->> 'meaning',
     p_word ->> 'part_of_speech',
-    p_word ->> 'audio_url',+0+
+    p_word ->> 'audio_url',
     p_word ->> 'example_sentence',
     p_word ->> 'example_meaning',
     coalesce(p_word ->> 'level', 'A1')::public.cefr_level

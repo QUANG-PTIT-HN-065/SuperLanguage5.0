@@ -14,6 +14,7 @@ from app.services.profile_service import (
 )
 
 router = APIRouter()
+XP_PER_LEVEL = 100
 
 
 def _me_payload(profile: Dict[str, Any]) -> BaseResponse[Dict[str, Any]]:
@@ -34,6 +35,24 @@ def _me_payload(profile: Dict[str, Any]) -> BaseResponse[Dict[str, Any]]:
 def get_me(profile: Dict[str, Any] = Depends(get_current_profile)):
     """Hồ sơ + thống kê (XP, chuỗi ngày) + gói hiện tại của người dùng đang đăng nhập."""
     return _me_payload(profile)
+
+
+@router.get("/progress", response_model=BaseResponse[Dict[str, Any]])
+def get_progress(profile: Dict[str, Any] = Depends(get_current_profile)):
+    stats = with_effective_streak(get_stats(profile["id"]), profile["timezone"])
+    xp_total = max(0, int(stats.get("xp_total") or 0))
+    return BaseResponse(
+        status="success",
+        message="Đã tải tiến độ học tập.",
+        data={
+            "xp_total": xp_total,
+            "level": xp_total // XP_PER_LEVEL + 1,
+            "xp_into_level": xp_total % XP_PER_LEVEL,
+            "xp_per_level": XP_PER_LEVEL,
+            "lessons_completed": int(stats.get("lessons_completed") or 0),
+            "current_streak": int(stats.get("current_streak") or 0),
+        },
+    )
 
 
 @router.patch("", response_model=BaseResponse[Dict[str, Any]])

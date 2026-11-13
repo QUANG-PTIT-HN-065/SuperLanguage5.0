@@ -1,7 +1,7 @@
 import logging
 from datetime import date, datetime, timezone
 from typing import Any, Dict, NoReturn, Optional
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import HTTPException, status
 
@@ -132,8 +132,12 @@ def get_plan(plan_id: str) -> Optional[Dict[str, Any]]:
 def user_today(tz_name: str) -> date:
     try:
         tz = ZoneInfo(tz_name)
-    except Exception:
-        tz = ZoneInfo("UTC")
+    except (TypeError, ValueError, ZoneInfoNotFoundError):
+        logger.warning(
+            "Timezone %r is unavailable; using UTC for streak calculation.",
+            tz_name,
+        )
+        tz = timezone.utc
     return datetime.now(tz).date()
 
 

@@ -173,6 +173,7 @@ class AIService:
         user_message: str,
         language: str,
         current_level: str = "A1",
+        conversation_history: list[dict[str, str]] | None = None,
     ) -> tuple[str, str]:
         translation_request = _is_translation_request(user_message)
         if translation_request:
@@ -195,6 +196,11 @@ class AIService:
 
         context_str = "\n\n".join(context)
         system_instruction = _system_instruction(language, context_str, current_level or "A1")
+        history_messages = [
+            {"role": turn["role"], "content": turn["content"]}
+            for turn in conversation_history or []
+            if turn.get("role") in {"user", "assistant"} and turn.get("content", "").strip()
+        ]
         full_text = ""
         provider_failures: Counter[str] = Counter()
         gemini_keys = [key.strip() for key in settings.GEMINI_API_KEYS.split(",") if key.strip()]
@@ -207,9 +213,24 @@ class AIService:
         for key_index, key in enumerate(gemini_keys, start=1):
             try:
                 client = genai.Client(api_key=key)
+                contents: str | list[types.Content] = user_message
+                if history_messages:
+                    contents = [
+                        types.Content(
+                            role="model" if turn["role"] == "assistant" else "user",
+                            parts=[types.Part.from_text(text=turn["content"])],
+                        )
+                        for turn in history_messages
+                    ]
+                    contents.append(
+                        types.Content(
+                            role="user",
+                            parts=[types.Part.from_text(text=user_message)],
+                        )
+                    )
                 response = client.models.generate_content(
                     model=gemini_chat_model,
-                    contents=user_message,
+                    contents=contents,
                     config=types.GenerateContentConfig(
                         system_instruction=system_instruction,
                     ),
@@ -230,6 +251,7 @@ class AIService:
                         model=settings.OPENAI_CHAT_MODEL,
                         messages=[
                             {"role": "system", "content": system_instruction},
+                            *history_messages,
                             {"role": "user", "content": user_message},
                         ],
                         stream=False,
@@ -249,6 +271,7 @@ class AIService:
                         model="deepseek-chat",
                         messages=[
                             {"role": "system", "content": system_instruction},
+                            *history_messages,
                             {"role": "user", "content": user_message},
                         ],
                         stream=False,

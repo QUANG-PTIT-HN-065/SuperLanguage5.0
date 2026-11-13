@@ -54,6 +54,7 @@ interface OverviewStats {
 const languagesMap = new Map<string, string>();
 let topicsList: TopicItem[] = [];
 let learningPaths: LearningPathItem[] = [];
+let selectedLearningPathTopicIds: number[] = [];
 let usersList: UserItem[] = [];
 let activeTab = "dashboard";
 let currentTopicFilterLang = "all";
@@ -208,20 +209,94 @@ async function loadLearningPaths(): Promise<void> {
     }
   }
 
-function renderLearningPathTopicOptions(selectedIds: number[] = []): void {
+function renderLearningPathTopicOptions(selectedIds?: number[]): void {
     const languageCode = getFieldValue("learningPathLanguage");
-    const select = getElement<HTMLSelectElement>("learningPathTopics");
-    if (!select) return;
-    const options = topicsList
+    const container = getElement<HTMLDivElement>("learningPathTopics");
+    const help = getElement("learningPathTopicHelp");
+    if (!container) return;
+    const topics = topicsList
       .filter((topic) => topic.language_code === languageCode)
-      .map((topic) => {
-        const option = document.createElement("option");
-        option.value = String(topic.id);
-        option.textContent = topic.name;
-        option.selected = selectedIds.includes(topic.id);
-        return option;
+      .sort((left, right) => left.sort_order - right.sort_order || left.id - right.id);
+    if (selectedIds) {
+      selectedLearningPathTopicIds = Array.from(new Set(selectedIds))
+        .filter((id) => topics.some((topic) => topic.id === id));
+    } else {
+      selectedLearningPathTopicIds = selectedLearningPathTopicIds
+        .filter((id) => topics.some((topic) => topic.id === id));
+    }
+
+    if (!topics.length) {
+      const empty = document.createElement("p");
+      empty.className = "p-3 text-xs text-slate-600";
+      empty.textContent = "Chưa có chủ đề cho ngôn ngữ này. Hãy tạo chủ đề trước.";
+      container.replaceChildren(empty);
+      if (help) help.textContent = "Chọn một ngôn ngữ có chủ đề để bắt đầu.";
+      return;
+    }
+
+    const rows = topics.map((topic) => {
+      const row = document.createElement("div");
+      row.className = "flex items-center gap-3 border-b border-slate-100 px-3 py-2 last:border-b-0";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.id = `learningPathTopic-${topic.id}`;
+      checkbox.checked = selectedLearningPathTopicIds.includes(topic.id);
+      checkbox.className = "h-4 w-4 accent-blue-700";
+      const label = document.createElement("label");
+      label.htmlFor = checkbox.id;
+      label.className = "min-w-0 flex-1 cursor-pointer text-sm text-slate-800";
+      label.textContent = topic.name;
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          if (selectedLearningPathTopicIds.length >= 100) {
+            checkbox.checked = false;
+            showToast("Mỗi lộ trình có thể có tối đa 100 chủ đề.", "error");
+            return;
+          }
+          selectedLearningPathTopicIds.push(topic.id);
+        } else {
+          selectedLearningPathTopicIds = selectedLearningPathTopicIds
+            .filter((id) => id !== topic.id);
+        }
+        renderLearningPathTopicOptions();
       });
-    select.replaceChildren(...options);
+      row.append(checkbox, label);
+
+      const selectedIndex = selectedLearningPathTopicIds.indexOf(topic.id);
+      if (selectedIndex >= 0) {
+        const order = document.createElement("span");
+        order.className = "w-6 text-center text-xs font-semibold text-slate-600";
+        order.textContent = String(selectedIndex + 1);
+        row.append(order);
+        for (const [labelText, direction] of [["Lên", -1], ["Xuống", 1]] as const) {
+          const move = document.createElement("button");
+          move.type = "button";
+          move.className = "rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40";
+          move.textContent = labelText;
+          move.setAttribute("aria-label", `${labelText} ${topic.name} trong thứ tự học`);
+          move.disabled = selectedIndex + direction < 0 ||
+            selectedIndex + direction >= selectedLearningPathTopicIds.length;
+          move.addEventListener("click", () => {
+            const nextIndex = selectedIndex + direction;
+            const reordered = [...selectedLearningPathTopicIds];
+            [reordered[selectedIndex], reordered[nextIndex]] =
+              [reordered[nextIndex], reordered[selectedIndex]];
+            selectedLearningPathTopicIds = reordered;
+            renderLearningPathTopicOptions();
+          });
+          row.append(move);
+        }
+      } else {
+        row.append(document.createElement("span"));
+      }
+      return row;
+    });
+    container.replaceChildren(...rows);
+    if (help) {
+      help.textContent = selectedLearningPathTopicIds.length
+        ? `${selectedLearningPathTopicIds.length} chủ đề đã chọn. Chủ đề đầu mở trước; các chủ đề sau mở khi đạt 4/4.`
+        : "Chọn các chủ đề cùng ngôn ngữ; dùng nút Lên và Xuống để đặt thứ tự mở khóa.";
+    }
   }
 
 function renderLearningPaths(): void {
@@ -256,7 +331,10 @@ function renderLearningPaths(): void {
 
       const topics = document.createElement("td");
       topics.className = "p-3 text-xs text-slate-600";
-      topics.textContent = `${path.topics.length} chủ đề`;
+      topics.textContent = path.topics.length
+        ? path.topics.map((topic, index) => `${index + 1}. ${topic.name}`).join(" → ")
+        : "Chưa có chủ đề";
+      topics.title = topics.textContent;
 
       const actions = document.createElement("td");
       actions.className = "p-3 text-right whitespace-nowrap";
@@ -291,7 +369,8 @@ function editLearningPath(path: LearningPathItem): void {
 function resetLearningPathForm(): void {
     getElement<HTMLFormElement>("learningPathForm")?.reset();
     getElement<HTMLInputElement>("editLearningPathId")!.value = "";
-    renderLearningPathTopicOptions();
+    selectedLearningPathTopicIds = [];
+    renderLearningPathTopicOptions([]);
     getElement<HTMLButtonElement>("cancelLearningPathEdit")?.setAttribute("hidden", "");
   }
 
@@ -767,10 +846,7 @@ function setupEventListeners(): void {
   getElement("learningPathForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const languageCode = getFieldValue("learningPathLanguage");
-    const topicSelect = getElement<HTMLSelectElement>("learningPathTopics");
-    const topicIds = topicSelect
-      ? Array.from(topicSelect.selectedOptions, (option) => Number(option.value))
-      : [];
+    const topicIds = [...selectedLearningPathTopicIds];
     if (!topicIds.length) {
       showToast("Hãy chọn ít nhất một chủ đề cho lộ trình.", "error");
       return;

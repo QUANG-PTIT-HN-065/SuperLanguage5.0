@@ -50,8 +50,12 @@ function updateLanguageDisplay(languageCode: string): void {
     currentFlag.src = language.flag;
     currentFlag.alt = label;
   }
-  document.querySelectorAll<HTMLButtonElement>(".lang-dropdown-item").forEach((item) => {
-    item.classList.toggle("active", item.dataset.lang === languageCode);
+  document.querySelectorAll<HTMLButtonElement>(".lang-dropdown-item, .menu-item[data-lang]").forEach((item) => {
+    const selected = item.dataset.lang === languageCode;
+    item.classList.toggle("active", selected);
+    item.classList.toggle("is-selected", selected);
+    if (selected) item.setAttribute("aria-current", "true");
+    else item.removeAttribute("aria-current");
   });
 }
 
@@ -74,9 +78,15 @@ export function renderLearnerHeader(payload: unknown): void {
   const xpElement = document.getElementById("headerXPVal")
     || document.getElementById("studyXp")
     || document.getElementById("vocabularyXp");
-  if (xpElement) xpElement.textContent = `${xp.toLocaleString("vi-VN")} XP`;
+  if (xpElement) {
+    xpElement.textContent = xpElement.closest(".hud-chip--xp")
+      ? xp.toLocaleString("vi-VN")
+      : `${xp.toLocaleString("vi-VN")} XP`;
+  }
   document.querySelectorAll<HTMLElement>("[data-learner-streak], .stat-chip.streak span").forEach((element) => {
-    element.textContent = `${streak} Ngày`;
+    element.textContent = element.closest(".hud-chip--streak")
+      ? String(streak)
+      : `${streak} Ngày`;
   });
 
   const avatar = document.getElementById("headerAvatar");
@@ -141,26 +151,31 @@ function bindHeaderControls(): void {
   const userDropdown = document.getElementById("userDropdown");
   const userButton = document.getElementById("userDropdownBtn");
 
+  const setOpen = (dropdown: HTMLElement | null, open: boolean): void => {
+    dropdown?.classList.toggle("open", open);
+    dropdown?.classList.toggle("is-open", open);
+  };
+
   const closeDropdowns = (): void => {
-    languageDropdown?.classList.remove("open");
-    userDropdown?.classList.remove("open");
+    setOpen(languageDropdown, false);
+    setOpen(userDropdown, false);
     languageButton?.setAttribute("aria-expanded", "false");
     userButton?.setAttribute("aria-expanded", "false");
   };
 
   languageButton?.addEventListener("click", (event) => {
     event.stopPropagation();
-    const open = !languageDropdown?.classList.contains("open");
+    const open = !languageDropdown?.classList.contains("is-open");
     closeDropdowns();
-    languageDropdown?.classList.toggle("open", open);
+    setOpen(languageDropdown, open);
     languageButton.setAttribute("aria-expanded", String(open));
   });
 
   userButton?.addEventListener("click", (event) => {
     event.stopPropagation();
-    const open = !userDropdown?.classList.contains("open");
+    const open = !userDropdown?.classList.contains("is-open");
     closeDropdowns();
-    userDropdown?.classList.toggle("open", open);
+    setOpen(userDropdown, open);
     userButton.setAttribute("aria-expanded", String(open));
   });
 
@@ -171,7 +186,7 @@ function bindHeaderControls(): void {
     }
   });
 
-  document.querySelectorAll<HTMLButtonElement>(".lang-dropdown-item").forEach((button) => {
+  document.querySelectorAll<HTMLButtonElement>(".lang-dropdown-item, .menu-item[data-lang]").forEach((button) => {
     button.addEventListener("click", () => {
       const code = button.dataset.lang;
       if (code && !button.classList.contains("active")) {
@@ -191,6 +206,7 @@ export async function initializeLearnerHeader(options: LearnerHeaderOptions = {}
   const authenticated = isLearnerAuthenticated();
   document.body.classList.toggle("user-authenticated", authenticated);
   document.body.classList.toggle("user-guest", !authenticated);
+  updateLanguageDisplay(localStorage.getItem("slanguage_active_language") || "ja");
 
   if (options.bindControls !== false) bindHeaderControls();
   if (!authenticated || options.loadProfile === false) return;

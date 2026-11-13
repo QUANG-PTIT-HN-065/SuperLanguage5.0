@@ -113,6 +113,48 @@ async function refreshAccessToken(): Promise<string> {
   return result.data.access_token;
 }
 
+const MOCK_BASE_URL = "/mock";
+
+/** Đọc một file mock có cùng dạng BaseResponse của backend. */
+export async function readMockData<T = unknown>(
+  file: string,
+  select?: (data: unknown) => unknown,
+): Promise<T> {
+  const response = await fetch(`${MOCK_BASE_URL}/${file}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error("Không tải được dữ liệu mẫu của trang học tập.");
+  }
+  const payload = (await response.json()) as ApiResponse<unknown>;
+  if (typeof payload?.status !== "string" || !("data" in payload)) {
+    throw new Error("Dữ liệu mẫu không đúng định dạng BaseResponse.");
+  }
+  return (select ? select(payload.data) : payload.data) as T;
+}
+
+/** Gọi API thật; chỉ rơi về mock khi backend không reachable (lỗi mạng). */
+export async function slanguageApiOrMock<T = unknown>(
+  path: string,
+  file: string,
+  options: ApiRequestOptions & { onFallback?: () => void } = {},
+  select?: (data: unknown) => unknown,
+): Promise<T> {
+  const { onFallback, ...requestOptions } = options;
+  try {
+    const response = await slanguageApi<T>(path, requestOptions);
+    return response.data;
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    onFallback?.();
+    return readMockData<T>(file, select);
+  }
+}
+
+function isFormData(value: unknown): value is FormData {
+  return typeof FormData !== "undefined" && value instanceof FormData;
+}
+
 export async function slanguageApi<T = unknown>(
   path: string,
   options: ApiRequestOptions = {},
@@ -121,13 +163,19 @@ export async function slanguageApi<T = unknown>(
   const { anonymous = false, ...requestOptions } = options;
   const token = anonymous ? null : localStorage.getItem(ACCESS_TOKEN_KEY);
   const headers = new Headers(requestOptions.headers);
-  headers.set("Content-Type", "application/json");
+  if (isFormData(requestOptions.body)) headers.delete("Content-Type");
+  else headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...requestOptions,
     headers,
-    body: requestOptions.body === undefined ? undefined : JSON.stringify(requestOptions.body),
+    body:
+      requestOptions.body === undefined
+        ? undefined
+        : isFormData(requestOptions.body)
+          ? requestOptions.body
+          : JSON.stringify(requestOptions.body),
   });
 
   if (response.status === 401 && allowRefresh && token && !anonymous) {

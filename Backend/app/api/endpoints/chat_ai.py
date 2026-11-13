@@ -29,6 +29,13 @@ from app.services.speech_service import (
 
 router = APIRouter(tags=["AI Chat Speaking"])
 logger = logging.getLogger(__name__)
+_CHAT_CONTEXT_MESSAGE_LIMIT = 10
+_CHAT_LANGUAGE_NAMES = {
+    "en": "English",
+    "English": "English",
+    "ja": "Japanese",
+    "Japanese": "Japanese",
+}
 
 
 # Khởi tạo Supabase client từ cấu hình chung trong config.py
@@ -397,13 +404,46 @@ async def send_message(
 
     if not conv.data:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy phòng trò chuyện.")
-    lang = conv.data[0]["language_code"] # type: ignore
+    language_code = conv.data[0].get("language_code")
+    if not isinstance(language_code, str) or language_code not in _CHAT_LANGUAGE_NAMES:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Hội thoại này dùng ngôn ngữ không còn được hỗ trợ.",
+        )
+
+    try:
+        previous_messages = (
+            supabase.table("messages")
+            .select("sender_type,content")
+            .eq("conversation_id", str(data.conversation_id))
+            .order("created_at", desc=True)
+            .limit(_CHAT_CONTEXT_MESSAGE_LIMIT)
+            .execute()
+        )
+    except Exception as exc:
+        logger.exception("Could not load previous AI chat messages.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải ngữ cảnh hội thoại lúc này. Vui lòng thử lại.",
+        ) from exc
+
+    conversation_history = [
+        {
+            "role": "assistant" if row.get("sender_type") == "ai" else "user",
+            "content": row["content"],
+        }
+        for row in reversed(previous_messages.data or [])
+        if row.get("sender_type") in {"user", "ai"}
+        and isinstance(row.get("content"), str)
+        and row["content"].strip()
+    ]
 
     try:
         ai_reply, ai_feedback = await AIService.generate_chat_response(
             data.user_message,
-            lang, # type: ignore[arg-type]
+            _CHAT_LANGUAGE_NAMES[language_code],
             profile.get("current_level") or "A1",
+            conversation_history=conversation_history,
         )
     except HTTPException as exc:
         if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:

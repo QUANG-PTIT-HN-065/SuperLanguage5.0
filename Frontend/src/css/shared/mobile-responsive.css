@@ -334,10 +334,218 @@ table {
   }
 }
 
+/* ============================================================
+   Trang Học tập — mọi breakpoint của learning-path-page gom tại đây
+   ============================================================ */
+@media (max-width: 1023.98px) {
+  .learning-path-page .path-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .learning-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .learning-path-page .stat-card--goal {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    text-align: left;
+  }
+
+  .learning-path-page .stat-card--goal .stat-card__head {
+    align-self: center;
+  }
+
+  .learning-path-page .stat-card--goal .goal-ring {
+    width: 92px;
+    margin: 0;
+  }
+
+  .learning-path-page .stat-card--goal .stat-card__note {
+    margin: 0;
+    padding: 0;
+    text-align: right;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .app-header .brand {
+    min-width: 44px;
+    justify-content: center;
+  }
+
+  .learning-path-page .study-main {
+    width: calc(100% - 28px);
+    margin-top: 18px;
+    margin-bottom: calc(var(--tabbar-h, 62px) + 32px);
+  }
+
+  .learning-hero {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 18px;
+    padding: 22px 20px;
+    border-radius: 12px;
+  }
+
+  .learning-hero__aside {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .learning-hero__cta {
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .learning-hero__hint {
+    max-width: none;
+    text-align: left;
+  }
+
+  .learning-stats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .learning-path-page .stat-card--goal {
+    grid-column: auto;
+  }
+
+  .learning-path-page .catalog-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .learning-path-page .path-search-row {
+    flex-wrap: wrap;
+  }
+
+  .learning-path-page .path-search-submit {
+    flex: 1 0 100%;
+  }
+
+  .learning-path-page .path-card-grid,
+  .learning-path-page .learning-actions-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .learning-path-page .path-card {
+    min-height: 0;
+  }
+
+  .path-error {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .path-error .study-primary-button {
+    flex: 1 0 100%;
+    min-height: 44px;
+  }
+
+  .learning-path-page .path-search-clear {
+    width: 40px;
+    height: 40px;
+    right: 4px;
+  }
+
+  .learning-path-page .path-search-field input {
+    padding-right: 48px;
+  }
+
+  .roadmap-label {
+    font-size: 0.74rem;
+  }
+
+  .roadmap__hint {
+    font-size: 0.74rem;
+  }
+
+  .roadmap-legend {
+    gap: 6px 14px;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .learning-path-page .study-main {
+    width: calc(100% - 20px);
+  }
+
+  .learning-hero {
+    padding: 20px 16px;
+  }
+
+  .learning-path-page .learning-hero__title {
+    font-size: clamp(1.45rem, 7vw, 1.8rem);
+  }
+
+  .stat-card {
+    padding: 16px 14px;
+  }
+
+  .learning-path-page .stat-card--goal {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .learning-path-page .stat-card--goal .stat-card__head {
+    align-self: flex-start;
+  }
+
+  .learning-path-page .stat-card--goal .stat-card__note {
+    text-align: center;
+  }
+
+  .streak-week {
+    gap: 3px;
+  }
+
+  .streak-day__label {
+    font-size: 0.62rem;
+  }
+
+  .learning-path-page .path-card,
+  .learning-path-page .learning-action-card {
+    padding: 16px 14px;
+  }
+
+  .learning-demo-note {
+    align-items: flex-start;
+    font-size: 0.8rem;
+  }
+
+  .roadmap-label {
+    font-size: 0.7rem;
+  }
+
+  .roadmap__board,
+  .roadmap__scroller {
+    border-radius: 12px;
+  }
+
+  .roadmap-sheet {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     scroll-behavior: auto !important;
+  }
+
+  .roadmap-sheet,
+  .roadmap-scrim {
+    transition-duration: 0.01ms !important;
   }
 }

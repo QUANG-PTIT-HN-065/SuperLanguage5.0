@@ -1,3 +1,4 @@
+from collections import Counter
 from typing import Any, Dict, List
 
 from fastapi import HTTPException, status
@@ -25,6 +26,20 @@ def _validate_topic_ids(language_code: str, topic_ids: List[int]) -> None:
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Mọi chủ đề trong lộ trình phải thuộc cùng một ngôn ngữ.",
         )
+    word_links = (
+        supabase_admin.table("word_topics")
+        .select("topic_id,word_id")
+        .in_("topic_id", topic_ids)
+        .execute()
+        .data
+        or []
+    )
+    word_counts = Counter(link["topic_id"] for link in word_links)
+    if any(word_counts[topic_id] < 4 for topic_id in topic_ids):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Mỗi chủ đề trong lộ trình cần ít nhất 4 từ vựng được liên kết.",
+        )
 
 
 def list_learning_paths(language_code: str) -> List[Dict[str, Any]]:
@@ -47,6 +62,7 @@ def list_learning_paths(language_code: str) -> List[Dict[str, Any]]:
                 .select("learning_path_id,topic_id,sort_order")
                 .in_("learning_path_id", path_ids)
                 .order("sort_order")
+                .order("topic_id")
                 .execute()
                 .data
                 or []

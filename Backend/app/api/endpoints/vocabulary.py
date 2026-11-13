@@ -1,12 +1,13 @@
 import logging
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import ValidationError
 
 from app.core.deps import get_current_profile
 from app.db.supabase import supabase_admin
 from app.schemas.reponse import BaseResponse
+from app.schemas.learning import VocabularyWordReview, VocabularyWordReviewResult
 from app.schemas.vocabulary import (
     LearningPathCreate,
     LearningPathUpdate,
@@ -19,6 +20,7 @@ from app.services.learning_path_service import (
     list_learning_paths,
     update_learning_path,
 )
+from app.services.learning_service import get_path_topic_states, review_vocabulary_word
 from app.services.vocabulary_service import list_topics, list_words
 
 router = APIRouter()
@@ -52,6 +54,23 @@ def get_words(
         status="success",
         message="Đã tải danh sách từ vựng.",
         data=list_words(profile, limit, offset, topic_id, q),
+    )
+
+
+@router.post(
+    "/words/{word_id}/review",
+    response_model=BaseResponse[VocabularyWordReviewResult],
+)
+def review_word(
+    data: VocabularyWordReview,
+    word_id: int = Path(ge=1),
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[VocabularyWordReviewResult]:
+    result = review_vocabulary_word(profile, word_id, data.review_id, data.rating)
+    return BaseResponse(
+        status="success",
+        message="Đã cập nhật lịch ôn tập từ vựng.",
+        data=result,
     )
 
 
@@ -119,8 +138,23 @@ def get_learning_path(
     for topic in path["topics"]:
         if topic["id"] not in accessible_topics:
             continue
-        page = list_words(profile, limit=1, offset=0, topic_id=topic["id"])
-        topics.append({**topic, "word_count": page["available"]})
+        progress = accessible_topics[topic["id"]]
+        topics.append({
+            **topic,
+            "word_count": progress["word_count"],
+            "mastered_word_count": progress["mastered_word_count"],
+            "progress_percent": progress["progress_percent"],
+        })
+    topic_states = get_path_topic_states(path_id, profile["id"], topics)
+    topics = [
+        {**topic, **topic_states.get(topic["id"], {
+            "is_locked": False,
+            "is_completed": False,
+            "quiz_score": None,
+            "quiz_question_count": None,
+        })}
+        for topic in topics
+    ]
     return BaseResponse(
         status="success",
         message="Đã tải nội dung lộ trình.",
