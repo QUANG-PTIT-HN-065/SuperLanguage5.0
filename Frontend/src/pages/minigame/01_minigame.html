@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SuperLanguage — Tháp Giải Mã Ngữ Nghĩa (16-Bit Pixel Edition)</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Pixel Retro Headers + Clean Vietnamese UI Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Be Vietnam Pro"', 'sans-serif'],
+            pixel: ['"Press Start 2P"', 'monospace'],
+            vt: ['"VT323"', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    /* =========================================================================
+       16-BIT PIXEL ART & RETRO FANTASY UI STYLES
+       ========================================================================= */
+    :root {
+      --bg-deep: #130f26;
+      --panel-bg: rgba(24, 19, 48, 0.92);
+      --panel-border: #433878;
+      --pixel-gold: #ffd541;
+      --pixel-pink: #ff7eb6;
+      --pixel-cyan: #5ce1e6;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-deep);
+      background-image:
+        radial-gradient(circle at 20% 10%, rgba(121, 140, 232, 0.16) 0%, transparent 45%),
+        radial-gradient(circle at 80% 90%, rgba(247, 197, 216, 0.12) 0%, transparent 45%);
+      color: #f4f1ff;
+      font-family: 'Be Vietnam Pro', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* Crisp Pixel Art Rendering — Zero Blur on Any Screen DPI */
+    canvas#pixel-arena {
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-crisp-edges;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+    }
+
+    /* Retro Pixel Bevel Borders & Tactile Buttons */
+    .pixel-box {
+      background: var(--panel-bg);
+      border: 2px solid #4e418a;
+      box-shadow:
+        inset 0 2px 0 rgba(255, 255, 255, 0.08),
+        0 6px 0 #0b0818;
+    }
+
+    .pixel-btn {
+      position: relative;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.15s ease;
+      box-shadow: 0 4px 0 rgba(10, 7, 22, 0.85);
+    }
+
+    .pixel-btn:hover:not(:disabled) {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+      box-shadow: 0 5px 0 rgba(10, 7, 22, 0.85);
+    }
+
+    .pixel-btn:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 rgba(10, 7, 22, 0.85);
+    }
+
+    /* Vocabulary Card Styling (Balatro-inspired tactile lift) */
+    .vocab-card {
+      transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.15s ease, box-shadow 0.18s ease;
+      box-shadow: 0 4px 0 #0c091a;
+    }
+
+    .vocab-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .vocab-card.selected {
+      transform: translateY(-8px) scale(1.02);
+      border-color: #ffd541 !important;
+      box-shadow:
+        0 8px 0 #78350f,
+        0 0 18px rgba(255, 213, 65, 0.42);
+    }
+
+    /* Elemental Glows */
+    .card-fire {
+      background: linear-gradient(165deg, #3b1725 0%, #241226 100%);
+      border-color: #f97316;
+    }
+
+    .card-ice {
+      background: linear-gradient(165deg, #132e47 0%, #171836 100%);
+      border-color: #38bdf8;
+    }
+
+    .card-neutral {
+      background: linear-gradient(165deg, #251e4a 0%, #191433 100%);
+      border-color: #6355a6;
+    }
+
+    @keyframes pulseBomb {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .bomb-badge {
+      animation: pulseBomb 0.9s infinite ease-in-out;
+    }
+
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #130f26;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #433878;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-amber-400 selection:text-slate-950">
+  <!-- Loading indicator (hidden by default) -->
+  <div id="loading-indicator" class="fixed inset-0 flex items-center justify-center bg-black/60 text-white text-xl font-pixel" style="display:none; z-index:1000;">
+    Đang tải thẻ bài từ CSDL…
+  </div>
+  <!-- Error toast (hidden by default) -->
+  <div id="error-toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-rose-700 text-white px-4 py-2 rounded shadow-md" style="display:none; z-index:1000;">
+    <span id="error-message"></span>
+  </div>
+
+  <!-- =========================================================================
+       TOP COMPACT GAME HUD BAR
+       ========================================================================= -->
+  <header class="w-full max-w-5xl mx-auto px-3 pt-2.5 pb-1.5 flex flex-wrap items-center justify-between gap-2">
+    <!-- Brand & Tower Floor Badge -->
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center text-slate-950 font-pixel text-xs shadow-md border-2 border-amber-200">
+        🐱
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-pixel text-[11px] sm:text-xs text-amber-300 tracking-wide">
+            THÁP GIẢI MÃ
+          </h1>
+          <span id="hud-floor" class="px-2 py-0.5 rounded-md bg-indigo-600/80 border border-indigo-400/50 font-pixel text-[10px] text-white">
+            TẦNG 1
+          </span>
+        </div>
+        <p class="text-[11px] text-indigo-200/80 hidden sm:block">
+          SuperLanguage Roguelike • Mèo Pháp Sư Ngôn Ngữ
+        </p>
+      </div>
+    </div>
+
+    <!-- Language Toggle + Hearts + XP + Audio -->
+    <div class="flex items-center gap-1.5 sm:gap-2.5">
+      <!-- Language Mode Switcher (EN / JA) -->
+      <div class="flex items-center bg-slate-950/80 p-1 rounded-xl border border-indigo-500/40">
+        <button id="lang-en-btn" onclick="switchLanguage('en')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow">
+          🇺🇸 EN
+        </button>
+        <button id="lang-ja-btn" onclick="switchLanguage('ja')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition-all text-indigo-300 hover:text-white">
+          🇯🇵 JA
+        </button>
+      </div>
+
+      <!-- Hearts Display -->
+      <div id="hud-hearts" class="flex items-center gap-0.5 px-2.5 py-1.5 rounded-xl bg-rose-950/70 border border-rose-500/40 text-xs sm:text-sm" title="Sinh lực (Hearts)">
+        ❤️❤️❤️❤️❤️
+      </div>
+
+      <!-- XP Counter -->
+      <div class="px-2.5 py-1.5 rounded-xl bg-amber-950/70 border border-amber-500/40 flex items-center gap-1">
+        <span class="text-amber-400 text-xs">★</span>
+        <span id="hud-xp" class="font-vt text-lg sm:text-xl leading-none text-amber-300 font-bold">0 XP</span>
+      </div>
+
+      <!-- Sound Toggle -->
+      <button id="btn-sound" onclick="toggleSound()" class="pixel-btn w-9 h-9 rounded-xl bg-slate-800/90 border border-indigo-400/40 flex items-center justify-center text-sm" title="Bật/Tắt âm thanh 16-bit">
+        🔊
+      </button>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       MAIN GAME CONTAINER (TOP: PIXEL BATTLE ARENA | BOTTOM: ROGUELIKE DECK)
+       ========================================================================= -->
+  <main class="w-full max-w-5xl mx-auto px-3 pb-4 flex-1 flex flex-col gap-2.5">
+
+    <!-- =====================================================================
+         1. 16-BIT PIXEL ART FLOATING WATERFALL ISLAND ARENA
+         ===================================================================== -->
+    <section class="relative w-full rounded-2xl overflow-hidden border-2 border-indigo-400/60 shadow-[0_8px_30px_rgba(0,0,0,0.6)] bg-[#8fa0ee]">
+      <!-- Aspect-Locked 360x185 Pixel Canvas -->
+      <div class="relative w-full aspect-[360/185] max-h-[290px] sm:max-h-[325px] mx-auto">
+        <canvas id="pixel-arena" width="360" height="185" class="w-full h-full"></canvas>
+
+        <!-- TOP-LEFT HUD: Hero Status & Cat Skin Switcher -->
+        <div class="absolute top-2 left-2 flex flex-col gap-1.5 z-10 max-w-[48%]">
+          <div class="flex items-center gap-1.5 bg-slate-950/75 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-amber-300/50">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span id="hero-skin-label" class="font-vt text-sm sm:text-base text-amber-200 leading-none truncate">
+              Mèo Cam Pháp Sư
+            </span>
+            <button onclick="cycleCatSkin()" class="ml-1 px-1.5 py-0.5 rounded bg-amber-400/20 hover:bg-amber-400/40 border border-amber-300/60 text-[10px] font-bold text-amber-200 transition" title="Đổi trang phục Mèo">
+              👕 Đổi
+            </button>
+          </div>
+
+          <!-- Active Roguelike Buff Pills -->
+          <div id="active-buffs-bar" class="flex flex-wrap gap-1"></div>
+        </div>
+
+        <!-- TOP-RIGHT HUD: Grammar Guardian Boss HP Bar -->
+        <div class="absolute top-2 right-2 z-10 w-[46%] sm:w-64 bg-slate-950/80 backdrop-blur-xs px-2.5 py-1.5 rounded-lg border border-rose-400/50">
+          <div class="flex items-center justify-between gap-1 mb-1">
+            <span id="boss-name" class="font-vt text-sm sm:text-base text-rose-200 leading-none truncate">
+              Slime Thì Quá Khứ
+            </span>
+            <span id="boss-hp-text" class="font-vt text-sm text-amber-300 leading-none shrink-0">
+              120/120
+            </span>
+          </div>
+          <!-- Pixel Segmented Health Bar -->
+          <div class="w-full h-2.5 bg-slate-900 rounded-sm overflow-hidden border border-slate-700 p-[1px]">
+            <div id="boss-hp-bar" class="h-full bg-gradient-to-r from-rose-600 via-rose-500 to-amber-400 transition-all duration-300" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <!-- BOTTOM-CENTER ARENA SUBTITLE: Cat Action State Indicator -->
+        <div class="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <div id="arena-state-banner" class="px-3 py-0.5 rounded-full bg-slate-950/70 border border-white/20 font-vt text-sm sm:text-base text-cyan-200 tracking-wide whitespace-nowrap">
+            ✨ Chọn thẻ từ vựng để Mèo tụ phép!
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         2. FLOOR RULE, MUTATOR BANNER & TURN COUNTDOWN BAR
+         ===================================================================== -->
+    <section class="pixel-box rounded-2xl p-3 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+      <!-- Grammar / Culture Rule from Knowledge Base -->
+      <div class="flex-1 flex items-start gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-indigo-600/30 border border-indigo-400/50 flex items-center justify-center text-lg shrink-0 mt-0.5">
+          📜
+        </div>
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span id="rule-category-tag" class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-200 border border-indigo-400/40">
+              RAG • Ngữ Pháp
+            </span>
+            <h2 id="rule-title" class="text-xs sm:text-sm font-extrabold text-amber-300">
+              Thì Quá Khứ Đơn (Past Simple)
+            </h2>
+          </div>
+          <p id="rule-desc" class="text-xs text-slate-200/90 mt-0.5 leading-relaxed">
+            Đặt câu diễn tả hành động đã xảy ra trong quá khứ (dùng động từ V2/ed hoặc từ chỉ thời gian như yesterday, ago, last...).
+          </p>
+        </div>
+      </div>
+
+      <!-- Dynamic Mutator Pill + Countdown Timer -->
+      <div class="flex items-center justify-between md:justify-end gap-2 shrink-0 border-t md:border-t-0 border-indigo-500/20 pt-2 md:pt-0">
+        <!-- Mutator Alert -->
+        <div id="mutator-box" class="px-2.5 py-1.5 rounded-xl bg-purple-950/80 border border-purple-400/40 text-xs">
+          <div class="text-[10px] uppercase font-bold text-purple-300">Biến cố tầng</div>
+          <div id="mutator-text" class="font-bold text-white">Không có (Tầng khởi đầu)</div>
+        </div>
+
+        <!-- Turn Timer -->
+        <div id="timer-box" class="px-3 py-1.5 rounded-xl bg-slate-950 border border-cyan-400/50 text-center min-w-[74px]">
+          <div class="text-[10px] uppercase font-bold text-cyan-300">Thời gian</div>
+          <div id="timer-display" class="font-vt text-2xl leading-none text-cyan-200 font-bold">45s</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         3. ROGUELIKE VOCABULARY HAND (6 CARDS WITH SYNERGY TAGS)
+         ===================================================================== -->
+    <section class="space-y-2">
+      <div class="flex flex-wrap items-center justify-between gap-2 px-0.5">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="font-extrabold text-indigo-200">🃏 Bộ Thẻ Từ Vựng (Chọn 1–4 thẻ để ghép câu):</span>
+          <span class="hidden sm:inline text-[11px] text-slate-400">
+            🔥 Từ mới ×2 ST | ❄️ Tính/Trạng từ +5s | ⚡ Cùng chủ đề +50%
+          </span>
+        </div>
+
+        <!-- Reroll Button -->
+        <button id="btn-reroll" onclick="rerollUnselectedCards()" class="pixel-btn px-2.5 py-1 rounded-lg bg-indigo-800/80 border border-indigo-400/50 text-xs font-bold text-indigo-100 flex items-center gap-1">
+          🔄 Đổi bài (<span id="reroll-count">2</span>)
+        </button>
+      </div>
+
+      <!-- 6 Cards Responsive Grid -->
+      <div id="cards-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        <!-- Cards injected dynamically by JS -->
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         4. SENTENCE COMPOSER, SYNERGY PREVIEW & AI JUDGE FEEDBACK
+         ===================================================================== -->
+    <section class="pixel-box rounded-2xl p-3 space-y-2.5">
+      <!-- Live Combo & Damage Calculation Preview Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-950/70 px-3 py-1.5 rounded-xl border border-indigo-500/30">
+        <div id="synergy-preview" class="flex flex-wrap items-center gap-1.5 text-slate-300">
+          <span>Chưa chọn thẻ bài nào. Hãy chạm vào thẻ từ vựng phía trên!</span>
+        </div>
+
+        <!-- All-In Risk Toggle -->
+        <label class="flex items-center gap-1.5 cursor-pointer select-none px-2 py-0.5 rounded-lg bg-amber-500/15 border border-amber-400/40 hover:bg-amber-500/25 transition">
+          <input id="toggle-all-in" type="checkbox" onchange="updateSynergyPreview()" class="accent-amber-400 w-3.5 h-3.5" />
+          <span class="font-extrabold text-amber-300 text-[11px]">🎲 Cược Tất Tay (+50% ST / ×2 XP)</span>
+        </label>
+      </div>
+
+      <!-- Japanese Quick Particle & Ending Helper Chips (Visible only in JA mode) -->
+      <div id="ja-helper-bar" class="hidden flex-wrap items-center gap-1.5">
+        <span class="text-[11px] font-bold text-pink-300 mr-1">Trợ từ &amp; Đuôi câu nhanh:</span>
+        <!-- Chips populated by JS -->
+      </div>
+
+      <!-- Sentence Input & Cast Attack Button -->
+      <form onsubmit="handleCastAttack(event)" class="flex flex-col sm:flex-row gap-2">
+        <input
+          id="sentence-input"
+          type="text"
+          autocomplete="off"
+          placeholder="Nhập câu tiếng Anh của bạn kết hợp các thẻ từ đã chọn..."
+          class="flex-1 px-3.5 py-2.5 rounded-xl bg-slate-950/90 border-2 border-indigo-400/50 focus:border-amber-400 focus:outline-none text-sm sm:text-base text-white placeholder-slate-400 font-medium"
+        />
+        <button
+          type="submit"
+          id="btn-attack"
+          class="pixel-btn px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-slate-950 font-extrabold text-sm sm:text-base flex items-center justify-center gap-2 shrink-0"
+        >
+          <span>⚡</span>
+          <span>TUNG CHIÊU PHÉP!</span>
+        </button>
+      </form>
+
+      <!-- AI Judge Evaluation Feedback Panel -->
+      <div id="ai-feedback-panel" class="hidden rounded-xl p-3 border text-xs sm:text-sm space-y-1.5 transition-all">
+        <!-- Dynamic evaluation result injected here -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =========================================================================
+       MODAL 1: ROGUELIKE PASSIVE BUFF SELECTION (AFTER DEFEATING A BOSS)
+       ========================================================================= -->
+  <div id="buff-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm">
+    <div class="pixel-box max-w-2xl w-full rounded-3xl p-5 sm:p-6 text-center space-y-4 border-2 border-amber-400">
+      <div class="inline-block px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300 text-amber-300 font-pixel text-[10px]">
+        CHIẾN THẮNG TẦNG!
+      </div>
+      <h2 class="text-xl sm:text-2xl font-extrabold text-white">
+        🎉 Hộ Vệ Đã Bị Đánh Bại! Chọn 1 Bùa Lợi Cổ Ngữ
+      </h2>
+      <p class="text-xs sm:text-sm text-indigo-200">
+        Bùa lợi sẽ cường hóa vĩnh viễn sức mạnh phép thuật của Mèo trong suốt chuyến leo tháp này.
+      </p>
+
+      <div id="buff-choices" class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-left">
+        <!-- 3 random buff cards injected here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       MODAL 2: GAME OVER SUMMARY & RESTART
+       ========================================================================= -->
+  <div id="gameover-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm">
+    <div class="pixel-box max-w-md w-full rounded-3xl p-6 text-center space-y-4 border-2 border-rose-500">
+      <div class="text-4xl">😿</div>
+      <h2 class="font-pixel text-base sm:text-lg text-rose-400">HẾT SINH LỰC!</h2>
+      <p id="gameover-reason" class="text-xs sm:text-sm text-slate-300">
+        Mèo Pháp Sư đã kiệt sức trước Hộ Vệ Ngữ Pháp.
+      </p>
+
+      <div class="grid grid-cols-3 gap-2 bg-slate-950/80 p-3 rounded-2xl border border-indigo-500/30">
+        <div>
+          <div class="text-[10px] text-slate-400 uppercase font-bold">Tầng cao nhất</div>
+          <div id="stat-final-floor" class="font-vt text-2xl text-amber-300 font-bold">1</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400 uppercase font-bold">Tổng XP</div>
+          <div id="stat-final-xp" class="font-vt text-2xl text-emerald-400 font-bold">0</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400 uppercase font-bold">Từ đã luyện</div>
+          <div id="stat-final-words" class="font-vt text-2xl text-cyan-300 font-bold">0</div>
+        </div>
+      </div>
+
+      <button onclick="restartGame()" class="pixel-btn w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-extrabold text-sm">
+        🔄 Leo Tháp Lại Từ Đầu
+      </button>
+    </div>
+  </div>
+
+
+  <!-- Engine 16-bit Pixel Roguelike & kết nối CSDL Supabase -->
+  <script type="module" src="./minigame.ts"></script>
+</body>
+</html>

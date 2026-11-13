@@ -108,11 +108,17 @@ export async function adminApi<T>(
 
   const send = (token: string): Promise<Response> => {
     const headers = new Headers({ Authorization: `Bearer ${token}` });
-    if (options.body !== undefined) headers.set("Content-Type", "application/json");
+    if (options.body !== undefined && !(options.body instanceof FormData)) {
+      headers.set("Content-Type", "application/json");
+    }
     return fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? "GET",
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body instanceof FormData
+        ? options.body
+        : options.body === undefined
+          ? undefined
+          : JSON.stringify(options.body),
     });
   };
 
