@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Cây Lộ Trình Học Tập Phân Nhánh</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <!-- ================= TOP NAVBAR ================= -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="nav-left">
+        <a href="../home/index.html" class="brand-logo">
+          <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </a>
+
+        <nav>
+          <ul class="nav-links">
+            <li><a href="../home/index.html">Trang chủ</a></li>
+            <li><a href="./index.html" class="active">Học tập</a></li>
+            <li><a href="../vocabulary/index.html">Luyện từ vựng</a></li>
+            <li><a href="../ai-practice/index.html">Luyện tập với AI</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="nav-right">
+        <div class="stat-chip streak" title="Chuỗi ngày học liên tục">
+          <img src="../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <span>14 Ngày</span>
+        </div>
+        <div class="stat-chip xp" title="Điểm kinh nghiệm tích lũy">
+          <i class="fa-solid fa-star"></i>
+          <span id="navXPVal">2,450 XP</span>
+        </div>
+        <div class="stat-chip hearts" title="Năng lượng làm bài (Sinh Mệnh Dungeon)">
+          <i class="fa-solid fa-heart" id="navHeartIcon"></i>
+          <span id="navHeartsVal">5/5</span>
+        </div>
+
+        <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
+        <div class="lang-dropdown" id="langDropdown">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
+            <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
+            <i class="fa-solid fa-chevron-down lang-chevron"></i>
+          </button>
+          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
+            <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
+              <img src="../assets/flags/flag-jp.png" alt="JP" class="flag-icon">
+              <span class="lang-name">Tiếng Nhật (日本語)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
+              <img src="../assets/flags/flag-en.png" alt="EN" class="flag-icon">
+              <span class="lang-name">English (Tiếng Anh)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
+              <img src="../assets/flags/flag-vn.png" alt="VN" class="flag-icon">
+              <span class="lang-name">Tiếng Việt (Vietnamese)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- User Account Dropdown -->
+        <div class="user-dropdown" id="userDropdown">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini">
+            <div class="user-info-text">
+              <div class="name">Nhật Anh</div>
+              <div class="role">Học viên</div>
+            </div>
+            <i class="fa-solid fa-chevron-down user-chevron"></i>
+          </button>
+          <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Thông tin cá nhân</span>
+                <span class="sub">Hồ sơ & cài đặt tài khoản</span>
+              </div>
+            </a>
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Tiến độ học tập</span>
+                <span class="sub">Thống kê XP & chuỗi ngày</span>
+              </div>
+            </a>
+            <div class="user-dropdown-divider"></div>
+            <a href="../login/index.html" class="user-dropdown-item logout-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Đăng xuất</span>
+                <span class="sub">Thoát khỏi phiên học</span>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN ROADMAP WRAPPER ================= -->
+  <main class="roadmap-main">
+    
+    <!-- TREE HERO & DASHBOARD CONTROLS -->
+    <section class="tree-hero-card">
+      <!-- ACTIVE LESSON PILL & CHANGE BUTTON -->
+      <div class="active-lesson-bar" id="activeLessonBar">
+        <div class="active-lesson-info">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <span>Buổi học đang chọn: <strong id="activeLessonTitle">Session 01 - Bảng Chữ Cái & Phát Âm Căn Bản</strong></span>
+        </div>
+        <a href="../select-lesson/index.html" class="btn-change-lesson" title="Chọn buổi học khác">
+          <i class="fa-solid fa-arrows-rotate"></i> Đổi buổi học
+        </a>
+      </div>
+
+      <div class="tree-hero-header">
+        <div class="hero-text-wrap">
+          <div class="tree-badge">
+            <i class="fa-solid fa-torii-gate"></i> TỔNG QUAN TIẾNG NHẬT (日本語 - NIHONGO)
+          </div>
+          <h1 class="tree-title" id="treeMainTitle">Khám Phá Tiếng Nhật: Hành Trình Chinh Phục Ngôn Ngữ Xứ Phù Tang</h1>
+          <div class="tree-intro-content" id="treeMainSubtitle">
+            <p class="intro-lead">
+              Tiếng Nhật là một ngôn ngữ giàu cảm xúc và tinh tế, kết hợp hài hòa giữa 3 hệ chữ viết: <strong>Hiragana</strong> (chữ mềm thuần Nhật), <strong>Katakana</strong> (chữ cứng cho từ mượn quốc tế) và <strong>Kanji</strong> (Hán tự biểu ý thâm sâu). Với trật tự câu SOV linh hoạt, hệ thống trợ từ chặt chẽ cùng các cấp bậc kính ngữ chuẩn mực, tiếng Nhật phản ánh đậm nét văn hóa khiêm nhường và trọng lễ nghi của xứ sở mặt trời mọc.
+            </p>
+            <div class="intro-pillars-grid">
+              <div class="pillar-item">
+                <i class="fa-solid fa-pen-nib"></i>
+                <div>
+                  <strong>3 Hệ Chữ Viết</strong>
+                  <span>Hiragana mềm mại, Katakana dứt khoát & Kanji biểu ý</span>
+                </div>
+              </div>
+              <div class="pillar-item">
+                <i class="fa-solid fa-shapes"></i>
+                <div>
+                  <strong>Cấu Trúc SOV</strong>
+                  <span>Động từ ở cuối câu, kết nối chặt chẽ bằng trợ từ</span>
+                </div>
+              </div>
+              <div class="pillar-item">
+                <i class="fa-solid fa-award"></i>
+                <div>
+                  <strong>5 Tầng Chinh Phục</strong>
+                  <span>Từ sơ cấp N5 đến đàm thoại thực chiến lưu loát</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tree-summary-stats">
+          <div class="tree-stat-item">
+            <span class="tree-stat-label">Tiến độ mở cây</span>
+            <div class="tree-stat-value" id="treeProgressPercent">62%</div>
+            <div class="tree-stat-sub" id="treeNodesRatio">8 / 13 Nút đã mở</div>
+          </div>
+          <div class="tree-stat-item">
+            <span class="tree-stat-label">Cấp độ kỹ năng</span>
+            <div class="tree-stat-value" style="color: var(--color-topaz);">Level 4</div>
+            <div class="tree-stat-sub">Thám Hiểm Ngôn Ngữ</div>
+          </div>
+          <div class="tree-stat-item">
+            <span class="tree-stat-label">XP Tích Lũy</span>
+            <div class="tree-stat-value" style="color: var(--color-crimson);" id="treeTotalXP">2,450 XP</div>
+            <div class="tree-stat-sub">+150 XP tuần này</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tree Progress Bar -->
+      <div class="tree-progress-wrap">
+        <div class="tree-progress-bar">
+          <div class="tree-progress-fill" id="treeProgressFill" style="width: 62%;"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TREE VIEW CONTAINER (INTERACTIVE CANVAS) -->
+    <section class="tree-viewport-section">
+      <div class="tree-controls-bar">
+        <div class="tree-helper-text">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Nhấn vào từng ải theo đường dẫn để khiêu chiến câu hỏi • Thắng nhận XP, thua bị trừ Máu
+        </div>
+      </div>
+
+      <!-- DYNAMIC TREE CONTAINER -->
+      <div class="tree-canvas" id="treeCanvas">
+        <!-- SVG Connections Layer will be generated/aligned dynamically -->
+        <svg class="tree-svg-canvas" id="treeSvgCanvas" xmlns="http://www.w3.org/2000/svg">
+          <!-- Connection lines dynamically generated by TypeScript -->
+        </svg>
+
+        <!-- TREE CONTENT WRAPPER -->
+        <div class="tree-nodes-flow" id="treeNodesFlow">
+          <!-- Nodes injected dynamically by roadmap.ts -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= NODE LESSON DETAILS MODAL ================= -->
+  <div class="node-modal-overlay" id="nodeModalOverlay">
+    <div class="node-modal-box">
+      <button class="node-modal-close" id="btnCloseNodeModal" title="Đóng cửa sổ">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="node-modal-header">
+        <div class="node-modal-badge" id="modalNodeBadge">
+          <i class="fa-solid fa-dungeon"></i>
+        </div>
+        <div class="node-modal-info">
+          <div class="node-modal-tier" id="modalNodeTier">MỐC CHỦ ĐỀ 1</div>
+          <h2 class="node-modal-title" id="modalNodeTitle">Tên ải thám hiểm</h2>
+          <div class="node-modal-tags">
+            <span class="node-tag status-tag" id="modalNodeStatus">Sẵn sàng khiêu chiến</span>
+          </div>
+          <div class="node-stakes-bar" id="modalNodeXP">
+            <!-- Difficulty & Rewards/Penalties injected here -->
+          </div>
+        </div>
+      </div>
+
+      <div class="node-modal-body">
+        <h4 class="section-heading">Mục tiêu bài học đạt được:</h4>
+        <ul class="node-objectives-list" id="modalNodeObjectives">
+          <!-- Objectives injected here -->
+        </ul>
+
+        <div class="node-skill-preview" id="modalNodePreview">
+          <!-- Key phrases / examples preview -->
+        </div>
+
+        <!-- HUB READING PASSAGE BOX (Displayed only for Milestone Hub cards) -->
+        <div class="hub-reading-box" id="modalHubReadingBox" style="display: none;">
+          <div class="reading-article-header">
+            <div class="reading-article-badge"><i class="fa-solid fa-book-open"></i> BÀI ĐỌC TỔNG QUAN CHỦ ĐỀ</div>
+            <h3 class="reading-article-title" id="readingArticleTitle">Tiêu đề bài đọc</h3>
+          </div>
+          <div class="reading-article-content" id="readingArticleContent">
+            <!-- Formatted reading article paragraphs and insights injected here -->
+          </div>
+        </div>
+
+        <!-- DUNGEON TRIAL CHALLENGE BOX -->
+        <div class="dungeon-trial-box" id="modalTrialBox">
+          <div class="trial-title-wrap">
+            <i class="fa-solid fa-shield-halved" style="color: #4ADE80;"></i>
+            <span>Thử Thách Giải Mã Dungeon (Chọn đáp án đúng):</span>
+            <span class="trial-step-badge" id="modalTrialStepBadge">Câu 1/3</span>
+          </div>
+          <div class="trial-progress-track" id="modalTrialProgressTrack">
+            <div class="trial-progress-fill" id="modalTrialProgressFill" style="width: 33%;"></div>
+          </div>
+          <div class="trial-prompt" id="modalTrialPrompt">
+            <!-- Question prompt injected here -->
+          </div>
+          <div class="trial-choices-grid" id="modalTrialChoices">
+            <!-- Choices injected here -->
+          </div>
+          <div class="modal-trial-result" id="modalTrialResult" style="display: none;"></div>
+        </div>
+      </div>
+
+      <div class="node-modal-footer">
+        <button class="btn-trial-action check-action" id="btnExecuteTrial" disabled>
+          <i class="fa-solid fa-magnifying-glass"></i> Kiểm tra
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="roadmap-toast" id="roadmapToast"></div>
+
+  <!-- ================= FOOTER ================= -->
+    <footer class="footer">
+    <div class="footer-container">
+      <!-- Cột 1: Giới thiệu thương hiệu -->
+      <div class="footer-col">
+        <div class="brand-logo" style="margin-bottom: 14px;">
+          <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </div>
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
+        </p>
+      </div>
+
+      <!-- Cột 2: Chương trình học -->
+      <div class="footer-col">
+        <h4>Chương trình học</h4>
+        <ul>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
+        </ul>
+      </div>
+
+      <!-- Cột 3: Thông tin liên hệ -->
+      <div class="footer-col">
+        <h4>Thông tin liên hệ</h4>
+        <ul class="footer-contact-list">
+          <li>
+            <i class="fa-solid fa-phone"></i>
+            <div>
+              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <a href="tel:19006868" class="contact-val">1900 6868</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-envelope"></i>
+            <div>
+              <span class="contact-label">Email học vụ:</span>
+              <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-location-dot"></i>
+            <div>
+              <span class="contact-label">Trụ sở học thuật:</span>
+              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-clock"></i>
+            <div>
+              <span class="contact-label">Thời gian làm việc:</span>
+              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Cột 4: Cam kết chất lượng -->
+      <div class="footer-col">
+        <h4>Cam kết chất lượng</h4>
+        <ul class="footer-commit-list">
+          <li>
+            <i class="fa-solid fa-shield-halved"></i>
+            <div>
+              <strong>Chuẩn đầu ra quốc tế</strong>
+              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-rotate-left"></i>
+            <div>
+              <strong>Cam kết hoàn học phí</strong>
+              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-user-graduate"></i>
+            <div>
+              <strong>Đồng hành 1-1 chuyên sâu</strong>
+              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-infinity"></i>
+            <div>
+              <strong>Quyền lợi học trọn đời</strong>
+              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.</div>
+      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
+    </div>
+  </footer>
+
+  <!-- GLOBAL TRANSITION LOADING SCREEN -->
+  <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
+    <div class="loading-content-box">
+      <div class="video-frame">
+        <video id="loadingVideoPlayer" muted src="../assets/loading.mp4" loop playsinline></video>
+      </div>
+      <div class="loading-text-wrap">
+        <span class="loading-title">Đang tải, hãy đợi...</span>
+      </div>
+    </div>
+  </div>
+
+    <!-- Logic TypeScript cho trang -->
+  <script type="module" src="./roadmap.ts"></script>
+  <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
+  <script>
+    if (!window.roadmapApp) {
+      fetch('./roadmap.ts')
+        .then(function(r) { return r.text(); })
+        .then(function(code) {
+          var js = Babel.transform(code, { filename: 'roadmap.ts', presets: ['typescript'] }).code;
+          var s = document.createElement('script');
+          s.textContent = js;
+          document.body.appendChild(s);
+        })
+        .catch(function(err) { console.error('Error loading roadmap.ts:', err); });
+    }
+  </script>
+</body>
+</html>

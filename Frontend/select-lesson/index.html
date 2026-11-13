@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Lựa Chọn Buổi Học (Session)</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <!-- ================= TOP NAVBAR ================= -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="nav-left">
+        <a href="../home/index.html" class="brand-logo">
+          <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </a>
+
+        <nav>
+          <ul class="nav-links">
+            <li><a href="../home/index.html">Trang chủ</a></li>
+            <li><a href="./index.html" class="active">Học tập</a></li>
+            <li><a href="../vocabulary/index.html">Luyện từ vựng</a></li>
+            <li><a href="../ai-practice/index.html">Luyện tập với AI</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="nav-right">
+        <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
+          <img src="../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <span id="headerStreakVal">14 Ngày</span>
+        </div>
+        <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
+          <i class="fa-solid fa-star"></i>
+          <span id="headerXPVal">2,450 XP</span>
+        </div>
+        <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
+          <i class="fa-solid fa-heart"></i>
+          <span id="headerHeartsVal">5/5</span>
+        </div>
+
+        <!-- 3-Language Dropdown Selector -->
+        <div class="lang-dropdown auth-only" id="langDropdown">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
+            <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
+            <i class="fa-solid fa-chevron-down lang-chevron"></i>
+          </button>
+          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
+            <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
+              <img src="../assets/flags/flag-jp.png" alt="JP" class="flag-icon">
+              <span class="lang-name">Tiếng Nhật (日本語)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
+              <img src="../assets/flags/flag-en.png" alt="EN" class="flag-icon">
+              <span class="lang-name">English (Tiếng Anh)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
+              <img src="../assets/flags/flag-vn.png" alt="VN" class="flag-icon">
+              <span class="lang-name">Tiếng Việt (Vietnamese)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- User Account Dropdown -->
+        <div class="user-dropdown auth-only" id="userDropdown">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini" id="headerAvatar">
+            <div class="user-info-text">
+              <div class="name" id="headerUserName">Vua Xứ Thanh</div>
+              <div class="role">Học viên</div>
+            </div>
+            <i class="fa-solid fa-chevron-down user-chevron"></i>
+          </button>
+          <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Thông tin cá nhân</span>
+                <span class="sub">Hồ sơ & cài đặt tài khoản</span>
+              </div>
+            </a>
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Tiến độ học tập</span>
+                <span class="sub">Thống kê XP & chuỗi ngày</span>
+              </div>
+            </a>
+            <div class="user-dropdown-divider"></div>
+            <a href="../login/index.html" class="user-dropdown-item logout-item" id="navLogoutItem" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Đăng xuất</span>
+                <span class="sub">Thoát khỏi phiên học</span>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="select-lesson-main">
+
+    <!-- HERO HEADER CARD -->
+    <section class="lesson-hero-card">
+      <div class="hero-content">
+        <div class="hero-badge-row">
+          <span class="hero-chip-pill"><i class="fa-solid fa-layer-group"></i> LỰA CHỌN BUỔI HỌC (SESSION)</span>
+          <span class="hero-chip-pill gold" id="targetLangChip"><i class="fa-solid fa-language"></i> Mục tiêu: Tiếng Nhật</span>
+          <span class="hero-chip-pill red"><i class="fa-solid fa-lock"></i> BẮT BUỘC CHỌN TRƯỚC KHI VÀO HỌC</span>
+        </div>
+        <h1 class="hero-title">
+          Danh Sách <span class="title-highlight">16 Buổi Học (Session)</span> Chuyên Sâu
+        </h1>
+        <p class="hero-desc">
+          Vui lòng lựa chọn 1 buổi học bên dưới để mở khóa bản đồ hầm ngục và nội dung bài tập tương ứng. 
+          Hệ thống sẽ dẫn bạn đến trang học tập với lộ trình được tối ưu riêng biệt.
+        </p>
+      </div>
+
+      <!-- STATUS & ACTIVE SELECTION CALLOUT -->
+      <div class="selection-status-card" id="selectionStatusCard">
+        <div class="status-indicator-box">
+          <div class="status-icon" id="statusIcon">
+            <i class="fa-solid fa-circle-exclamation"></i>
+          </div>
+          <div class="status-info">
+            <span class="status-label">Trạng thái lựa chọn</span>
+            <div class="status-text" id="statusLessonText">Chưa chọn buổi học nào</div>
+          </div>
+        </div>
+
+        <button type="button" class="btn-proceed-roadmap" id="btnProceedRoadmap" disabled title="Chọn 1 buổi học bên dưới để kích hoạt">
+          <span>Vào Trang Học Tập</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </section>
+
+    <!-- WORKSPACE CONTROLS: FILTERS & SEARCH -->
+    <section class="lesson-controls-bar">
+      <div class="filter-tabs" id="filterTabs">
+        <button class="filter-btn active" data-filter="all">Tất cả (16)</button>
+        <button class="filter-btn" data-filter="basic">Cơ bản (1 - 4)</button>
+        <button class="filter-btn" data-filter="intermediate">Giao tiếp (5 - 8)</button>
+        <button class="filter-btn" data-filter="advanced">Nâng cao (9 - 12)</button>
+        <button class="filter-btn" data-filter="master">Chuyên sâu (13 - 16)</button>
+      </div>
+
+      <div class="search-box-wrap">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="lessonSearchInput" class="search-input" placeholder="Tìm kiếm buổi học, chủ đề, từ khóa...">
+      </div>
+    </section>
+
+    <!-- ================= 4x4 SESSIONS GRID (16 CARDS) ================= -->
+    <section class="sessions-grid-section">
+      <div class="sessions-grid-4x4" id="sessionsGrid">
+        <!-- 16 session cards injected / managed by TypeScript -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= LOADING SCREEN OVERLAY ================= -->
+  <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
+    <div class="loading-content-box">
+      <div class="video-frame">
+        <video id="loadingVideoPlayer" muted src="../assets/loading.mp4" loop playsinline></video>
+      </div>
+      <div class="loading-text-wrap">
+        <span class="loading-title" id="loadingOverlayTitle">Đang chuẩn bị buổi học...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TOAST NOTIFICATION ================= -->
+  <div class="session-toast" id="sessionToast" style="display: none;">
+    <i class="fa-solid fa-circle-check toast-icon" id="toastIcon"></i>
+    <span class="toast-text" id="toastText">Đã chọn bài học!</span>
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-col brand-col">
+        <div class="brand-logo" style="margin-bottom: 14px;">
+          <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </div>
+        <p style="color: #94a3b8; font-size: 0.92rem; line-height: 1.6; margin-bottom: 16px;">
+          Hệ thống học ngôn ngữ trực tuyến phân nhánh chuyên sâu 3 trong 1: Tiếng Anh, Tiếng Nhật & Tiếng Việt.
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h4>Khóa Học</h4>
+        <ul>
+          <li><a href="./index.html">Danh Sách Buổi Học</a></li>
+          <li><a href="../roadmap/index.html">Bản Đồ Hầm Ngục</a></li>
+          <li><a href="../vocabulary/index.html">Sổ Tay Từ Vựng</a></li>
+          <li><a href="../ai-practice/index.html">Luyện Tập Với AI</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Tính Năng Học Tập</h4>
+        <ul>
+          <li><a href="./index.html">Lộ Trình 16 Buổi</a></li>
+          <li><a href="../roadmap/index.html">Thử Thách Đấu Boss</a></li>
+          <li><a href="../profile/index.html">Theo Dõi Tiến Độ</a></li>
+          <li><a href="../profile/index.html">Bảng Vàng Xếp Hạng</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Hỗ Trợ & Điều Khoản</h4>
+        <ul>
+          <li><a href="../terms/index.html">Điều khoản người dùng</a></li>
+          <li><a href="../terms/index.html">Chính sách bảo mật</a></li>
+          <li><a href="../home/index.html">Trung tâm trợ giúp</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2026 Slanguage Inc. Toàn bộ bản quyền được bảo lưu. Thiết kế & phát triển cho Học viên.</p>
+    </div>
+  </footer>
+
+
+  <!-- ================= LOGIC JAVASCRIPT / CÁC SESSION MẪU TƯƠNG TÁC ================= -->
+  <script>
+  (function() {
+    'use strict';
+
+    // 16 Session mẫu đa dạng phân chia thành 4 Tiers (Cơ bản, Giao tiếp, Nâng cao, Chuyên sâu)
+    var SAMPLE_SESSIONS = [
+      {
+        id: 1,
+        numStr: '01',
+        tier: 'basic',
+        tierLabel: 'Cơ bản',
+        icon: 'fa-pen-nib',
+        title: {
+          ja: 'Bảng Chữ Cái & Phát Âm Căn Bản',
+          en: 'Alphabet & Phonics Essentials',
+          vi: 'Bảng Chữ Cái & 6 Dấu Thanh Điệu'
+        },
+        desc: {
+          ja: 'Làm quen Hiragana, Katakana & quy tắc phát âm trường âm, âm ngắt.',
+          en: 'Master phonics, vowels, consonants, and phonetic building blocks.',
+          vi: 'Nắm vững 29 chữ cái, phụ âm ghép và 6 dấu thanh điệu tiếng Việt.'
+        },
+        vocabCount: 25,
+        grammarCount: 3,
+        xpReward: 50
+      },
+      {
+        id: 2,
+        numStr: '02',
+        tier: 'basic',
+        tierLabel: 'Cơ bản',
+        icon: 'fa-handshake',
+        title: {
+          ja: 'Chào Hỏi & Tự Giới Thiệu',
+          en: 'Greetings & Self-Introductions',
+          vi: 'Chào Hỏi & Tự Giới Thiệu Bản Thân'
+        },
+        desc: {
+          ja: 'Chào theo buổi trong ngày, giới thiệu tên, quê quán & nghề nghiệp.',
+          en: 'Everyday greetings, breaking the ice, stating name and background.',
+          vi: 'Lời chào thân mật, phép tắc xưng hô và chia sẻ thông tin cá nhân.'
+        },
+        vocabCount: 30,
+        grammarCount: 4,
+        xpReward: 60
+      },
+      {
+        id: 3,
+        numStr: '03',
+        tier: 'basic',
+        tierLabel: 'Cơ bản',
+        icon: 'fa-clock',
+        title: {
+          ja: 'Số Đếm, Thời Gian & Ngày Tháng',
+          en: 'Numbers, Time & Daily Calendar',
+          vi: 'Số Đếm, Giờ Giấc & Lịch Trình'
+        },
+        desc: {
+          ja: 'Đếm số, hỏi giờ, các ngày trong tuần và lịch hẹn thường nhật.',
+          en: 'Telling time, dates, ordinal numbers, and scheduling daily routines.',
+          vi: 'Cách đọc giờ, thứ ngày tháng năm và sắp xếp lịch làm việc.'
+        },
+        vocabCount: 35,
+        grammarCount: 3,
+        xpReward: 70
+      },
+      {
+        id: 4,
+        numStr: '04',
+        tier: 'basic',
+        tierLabel: 'Cơ bản',
+        icon: 'fa-people-roof',
+        title: {
+          ja: 'Gia Đình & Đại Từ Xưng Hô',
+          en: 'Family Members & Personal Pronouns',
+          vi: 'Gia Đình & Thứ Bậc Xưng Hô'
+        },
+        desc: {
+          ja: 'Gọi tên thành viên gia đình mình vs gia đình người khác lịch sự.',
+          en: 'Kinship terms, relational pronouns, and talking about relatives.',
+          vi: 'Hệ thống đại từ xưng hô tôn trọng theo vai vế gia đình Việt.'
+        },
+        vocabCount: 28,
+        grammarCount: 4,
+        xpReward: 80
+      },
+      {
+        id: 5,
+        numStr: '05',
+        tier: 'intermediate',
+        tierLabel: 'Giao tiếp',
+        icon: 'fa-cart-shopping',
+        title: {
+          ja: 'Mua Sắm, Tiền Tệ & Mặc Cả',
+          en: 'Shopping, Currency & Bargaining',
+          vi: 'Mua Sắm, Giá Cả & Thanh Toán'
+        },
+        desc: {
+          ja: 'Hỏi giá tiền Yên, phương thức thanh toán & hỏi mua đồ tại siêu thị.',
+          en: 'Asking prices, paying via card/cash, discounts, and store dialogue.',
+          vi: 'Hỏi giá, đổi trả hàng, thanh toán tiền mặt và chuyển khoản.'
+        },
+        vocabCount: 32,
+        grammarCount: 4,
+        xpReward: 90
+      },
+      {
+        id: 6,
+        numStr: '06',
+        tier: 'intermediate',
+        tierLabel: 'Giao tiếp',
+        icon: 'fa-utensils',
+        title: {
+          ja: 'Ẩm Thực, Nhà Hàng & Gọi Món',
+          en: 'Food, Dining Out & Ordering',
+          vi: 'Ẩm Thực, Quán Ăn & Kỹ Năng Gọi Món'
+        },
+        desc: {
+          ja: 'Văn hóa Itadakimasu, gọi món ăn Nhật, hỏi thực đơn & tính tiền.',
+          en: 'Restaurant etiquette, dietary preferences, ordering courses and bill.',
+          vi: 'Khám phá món ăn vùng miền, dặn dò khẩu vị và thanh toán hóa đơn.'
+        },
+        vocabCount: 36,
+        grammarCount: 4,
+        xpReward: 100
+      },
+      {
+        id: 7,
+        numStr: '07',
+        tier: 'intermediate',
+        tierLabel: 'Giao tiếp',
+        icon: 'fa-map-location-dot',
+        title: {
+          ja: 'Phương Tiện & Hỏi Đường Đi',
+          en: 'Transportation & Asking Directions',
+          vi: 'Phương Tiện, Đi Lại & Hỏi Đường'
+        },
+        desc: {
+          ja: 'Đi tàu điện ngầm Shinkansen, xe buýt và chỉ dẫn phương hướng.',
+          en: 'Navigating subway/bus systems, asking directions, catching a cab.',
+          vi: 'Bắt xe công nghệ, hỏi đường phố, ngõ ngách và khoảng cách di chuyển.'
+        },
+        vocabCount: 30,
+        grammarCount: 3,
+        xpReward: 110
+      },
+      {
+        id: 8,
+        numStr: '08',
+        tier: 'intermediate',
+        tierLabel: 'Giao tiếp',
+        icon: 'fa-icons',
+        title: {
+          ja: 'Sở Thích, Giải Trí & Cuối Tuần',
+          en: 'Hobbies, Entertainment & Weekends',
+          vi: 'Sở Thích, Thể Thao & Cuối Tuần'
+        },
+        desc: {
+          ja: 'Chia sẻ sở thích âm nhạc, anime, thể thao & kế hoạch nghỉ ngơi.',
+          en: 'Discussing pastimes, favorite movies, outdoor adventures, leisure.',
+          vi: 'Trò chuyện về sở thích cá nhân, dã ngoại và hoạt động thư giãn.'
+        },
+        vocabCount: 34,
+        grammarCount: 4,
+        xpReward: 120
+      },
+      {
+        id: 9,
+        numStr: '09',
+        tier: 'advanced',
+        tierLabel: 'Nâng cao',
+        icon: 'fa-briefcase',
+        title: {
+          ja: 'Công Sở & Đàm Thoại Văn Phòng',
+          en: 'Office Workplace & Business Talk',
+          vi: 'Môi Trường Công Sở & Đàm Thoại IT'
+        },
+        desc: {
+          ja: 'Kính ngữ Keigo văn phòng, trao đổi công việc và văn hóa báo cáo.',
+          en: 'Professional workplace communication, project updates, meetings.',
+          vi: 'Trao đổi công việc chuyên nghiệp, họp nhóm và cộng tác dự án.'
+        },
+        vocabCount: 38,
+        grammarCount: 5,
+        xpReward: 130
+      },
+      {
+        id: 10,
+        numStr: '10',
+        tier: 'advanced',
+        tierLabel: 'Nâng cao',
+        icon: 'fa-cloud-sun',
+        title: {
+          ja: 'Thời Tiết, Khí Hậu & Bốn Mùa',
+          en: 'Weather, Climate & Four Seasons',
+          vi: 'Thời Tiết, Khí Hậu & Bốn Mùa'
+        },
+        desc: {
+          ja: 'Miêu tả mùa hoa anh đào, lá đỏ thu, bão tuyết & dự báo thời tiết.',
+          en: 'Describing forecasts, climate changes, weather phenomena, seasons.',
+          vi: 'Khí hậu nhiệt đới 4 mùa, mùa mưa nắng và cảnh sắc thiên nhiên.'
+        },
+        vocabCount: 28,
+        grammarCount: 3,
+        xpReward: 140
+      },
+      {
+        id: 11,
+        numStr: '11',
+        tier: 'advanced',
+        tierLabel: 'Nâng cao',
+        icon: 'fa-face-smile-beam',
+        title: {
+          ja: 'Cảm Xúc & Miêu Tả Ngoại Hình',
+          en: 'Feelings, Moods & Appearance',
+          vi: 'Cảm Xúc, Tâm Trạng & Miêu Tả Người'
+        },
+        desc: {
+          ja: 'Diễn tả cảm xúc vui buồn, bất ngờ và tính từ miêu tả tính cách.',
+          en: 'Expressing nuance, personality traits, physical descriptions.',
+          vi: 'Từ láy tượng thanh, tượng hình biểu cảm tâm trạng sâu sắc.'
+        },
+        vocabCount: 32,
+        grammarCount: 4,
+        xpReward: 150
+      },
+      {
+        id: 12,
+        numStr: '12',
+        tier: 'advanced',
+        tierLabel: 'Nâng cao',
+        icon: 'fa-heart-pulse',
+        title: {
+          ja: 'Sức Khỏe, Bệnh Viện & Thăm Khám',
+          en: 'Healthcare, Symptoms & Pharmacy',
+          vi: 'Sức Khỏe, Nhà Thuốc & Bệnh Viện'
+        },
+        desc: {
+          ja: 'Nêu triệu chứng cảm sốt, mua thuốc tại hiệu và bảo hiểm y tế.',
+          en: 'Describing aches, visiting a doctor, prescriptions and wellness.',
+          vi: 'Mô tả triệu chứng bệnh, mua thuốc và lối sống lành mạnh.'
+        },
+        vocabCount: 30,
+        grammarCount: 3,
+        xpReward: 160
+      },
+      {
+        id: 13,
+        numStr: '13',
+        tier: 'master',
+        tierLabel: 'Chuyên sâu',
+        icon: 'fa-envelope-open-text',
+        title: {
+          ja: 'Điện Thoại, Email & Thư Từ',
+          en: 'Phone Calls, Formal Emails & Notes',
+          vi: 'Điện Thoại, Soạn Email & Văn Bản'
+        },
+        desc: {
+          ja: 'Mẫu thư tín trang trọng, cấu trúc email Nhật chuẩn mực mở đầu/kết.',
+          en: 'Drafting polite emails, professional call etiquette, follow-ups.',
+          vi: 'Soạn thảo thư điện tử công việc, lời chúc và phản hồi tin nhắn.'
+        },
+        vocabCount: 35,
+        grammarCount: 5,
+        xpReward: 170
+      },
+      {
+        id: 14,
+        numStr: '14',
+        tier: 'master',
+        tierLabel: 'Chuyên sâu',
+        icon: 'fa-torii-gate',
+        title: {
+          ja: 'Lễ Hội Truyền Thống & Văn Hóa',
+          en: 'Cultural Festivals & Traditions',
+          vi: 'Lễ Hội Truyền Thống & Phong Tục'
+        },
+        desc: {
+          ja: 'Lễ hội Matsuri, phong tục Tết Oshougatsu & ứng xử chuẩn mực.',
+          en: 'Holidays, traditions, cultural heritage, cross-cultural etiquette.',
+          vi: 'Tết cổ truyền, lễ hội dân gian và nét đẹp phong tục người Việt.'
+        },
+        vocabCount: 36,
+        grammarCount: 4,
+        xpReward: 180
+      },
+      {
+        id: 15,
+        numStr: '15',
+        tier: 'master',
+        tierLabel: 'Chuyên sâu',
+        icon: 'fa-fire',
+        title: {
+          ja: 'Thành Ngữ, Từ Lóng & Đàm Thoại Nhanh',
+          en: 'Idioms, Slang & Fluent Reflexes',
+          vi: 'Thành Ngữ, Ca Dao & Phản Xạ Nhanh'
+        },
+        desc: {
+          ja: 'Yojijukugo (Thành ngữ 4 chữ), tiếng lóng giới trẻ Tokyo thực chiến.',
+          en: 'Common idioms, natural phrasal verbs, fluent native expressions.',
+          vi: 'Kho tàng thành ngữ dân gian, cách nói ẩn dụ và biến tấu hiện đại.'
+        },
+        vocabCount: 40,
+        grammarCount: 4,
+        xpReward: 190
+      },
+      {
+        id: 16,
+        numStr: '16',
+        tier: 'master',
+        tierLabel: 'Chuyên sâu',
+        icon: 'fa-crown',
+        title: {
+          ja: 'Tổng Kết Cấp Độ & Đấu Trường Boss',
+          en: 'Final Level Mastery & Boss Arena',
+          vi: 'Tổng Kết Toàn Diện & Đấu Trường Master'
+        },
+        desc: {
+          ja: 'Tổng duyệt toàn bộ kiến thức N5/N4, sẵn sàng chinh phục đấu trường.',
+          en: 'Comprehensive milestone test, testing all 4 core language pillars.',
+          vi: 'Đánh giá tổng thể trình độ, tổng kết từ vựng và cấp chứng nhận.'
+        },
+        vocabCount: 50,
+        grammarCount: 6,
+        xpReward: 250
+      }
+    ];
+
+    var langMetadata = {
+      ja: { code: 'ja', name: 'Tiếng Nhật', flag: '../assets/flags/flag-jp.png' },
+      en: { code: 'en', name: 'English', flag: '../assets/flags/flag-en.png' },
+      vi: { code: 'vi', name: 'Tiếng Việt', flag: '../assets/flags/flag-vn.png' }
+    };
+
+    var currentLang = 'ja';
+    var selectedLessonId = null;
+    var currentFilter = 'all';
+    var searchQuery = '';
+
+    // Cache DOM
+    var sessionsGrid = document.getElementById('sessionsGrid');
+    var statusLessonText = document.getElementById('statusLessonText');
+    var selectionStatusCard = document.getElementById('selectionStatusCard');
+    var statusIcon = document.getElementById('statusIcon');
+    var btnProceedRoadmap = document.getElementById('btnProceedRoadmap');
+    var filterTabs = document.getElementById('filterTabs');
+    var searchInput = document.getElementById('lessonSearchInput');
+    var currentLangLabel = document.getElementById('currentLangLabel');
+    var currentLangFlag = document.getElementById('currentLangFlag');
+    var targetLangChip = document.getElementById('targetLangChip');
+    var langDropdownBtn = document.getElementById('langDropdownBtn');
+    var langDropdown = document.getElementById('langDropdown');
+    var userDropdownBtn = document.getElementById('userDropdownBtn');
+    var userDropdown = document.getElementById('userDropdown');
+    var loadingOverlay = document.getElementById('slanguageLoadingOverlay');
+    var loadingVideo = document.getElementById('loadingVideoPlayer');
+    var toast = document.getElementById('sessionToast');
+    var toastText = document.getElementById('toastText');
+
+    function init() {
+      loadStorage();
+      bindEvents();
+      applyLanguage();
+      renderSessions();
+      updateStatusCard();
+    }
+
+    function loadStorage() {
+      var savedLang = localStorage.getItem('slanguage_current_lang');
+      if (savedLang && langMetadata[savedLang]) {
+        currentLang = savedLang;
+      }
+      var rawLesson = localStorage.getItem('slanguage_selected_lesson');
+      if (rawLesson) {
+        try {
+          var parsed = JSON.parse(rawLesson);
+          if (parsed && typeof parsed.id === 'number') {
+            selectedLessonId = parsed.id;
+          }
+        } catch (e) {}
+      }
+    }
+
+    function showToast(msg) {
+      if (!toast || !toastText) return;
+      toastText.textContent = msg;
+      toast.style.display = 'flex';
+      setTimeout(function() {
+        toast.style.display = 'none';
+      }, 2500);
+    }
+
+    function applyLanguage() {
+      var meta = langMetadata[currentLang] || langMetadata.ja;
+      if (currentLangFlag) {
+        currentLangFlag.src = meta.flag;
+        currentLangFlag.alt = meta.name;
+      }
+      if (currentLangLabel) currentLangLabel.textContent = meta.name;
+      if (targetLangChip) {
+        targetLangChip.innerHTML = '<i class="fa-solid fa-language"></i> Mục tiêu: ' + meta.name;
+      }
+      document.querySelectorAll('.lang-dropdown-item').forEach(function(item) {
+        item.classList.toggle('active', item.getAttribute('data-lang') === currentLang);
+      });
+    }
+
+    function updateStatusCard() {
+      if (selectedLessonId !== null) {
+        var found = SAMPLE_SESSIONS.find(function(s) { return s.id === selectedLessonId; });
+        if (found) {
+          var title = found.title[currentLang] || found.title.ja;
+          if (statusLessonText) statusLessonText.textContent = 'Session ' + found.numStr + ': ' + title;
+          if (selectionStatusCard) selectionStatusCard.classList.add('active');
+          if (statusIcon) statusIcon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+          if (btnProceedRoadmap) {
+            btnProceedRoadmap.disabled = false;
+            btnProceedRoadmap.title = 'Bấm để vào trang lộ trình bài học ' + found.numStr;
+          }
+          return;
+        }
+      }
+      if (statusLessonText) statusLessonText.textContent = 'Chưa chọn buổi học nào';
+      if (selectionStatusCard) selectionStatusCard.classList.remove('active');
+      if (statusIcon) statusIcon.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
+      if (btnProceedRoadmap) {
+        btnProceedRoadmap.disabled = true;
+        btnProceedRoadmap.title = 'Chọn 1 buổi học bên dưới để kích hoạt';
+      }
+    }
+
+    function selectSession(session) {
+      selectedLessonId = session.id;
+      var title = session.title[currentLang] || session.title.ja;
+      var payload = {
+        id: session.id,
+        numStr: session.numStr,
+        tier: session.tier,
+        tierLabel: session.tierLabel,
+        title: title,
+        lang: currentLang,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('slanguage_selected_lesson', JSON.stringify(payload));
+      renderSessions();
+      updateStatusCard();
+      showToast('Đã chọn Session ' + session.numStr + ': ' + title);
+    }
+
+    function renderSessions() {
+      if (!sessionsGrid) return;
+      sessionsGrid.innerHTML = '';
+
+      var filtered = SAMPLE_SESSIONS.filter(function(s) {
+        if (currentFilter !== 'all' && s.tier !== currentFilter) return false;
+        if (searchQuery) {
+          var t = (s.title[currentLang] || '').toLowerCase();
+          var d = (s.desc[currentLang] || '').toLowerCase();
+          var n = s.numStr.toLowerCase();
+          return t.indexOf(searchQuery) !== -1 || d.indexOf(searchQuery) !== -1 || n.indexOf(searchQuery) !== -1;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        sessionsGrid.innerHTML = [
+          '<div style="grid-column: 1 / -1; text-align: center; padding: 48px 20px; background: rgba(12, 26, 41, 0.7); border-radius: 20px; border: 1px dashed rgba(255,255,255,0.15);">',
+          '  <i class="fa-solid fa-magnifying-glass" style="font-size: 2.2rem; color: #64748b; margin-bottom: 12px; display: block;"></i>',
+          '  <h3 style="color: #fff; font-size: 1.2rem; margin-bottom: 6px;">Không tìm thấy buổi học phù hợp</h3>',
+          '  <p style="color: #94a3b8; font-size: 0.9rem;">Vui lòng thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc.</p>',
+          '</div>'
+        ].join('');
+        return;
+      }
+
+      filtered.forEach(function(session) {
+        var isSelected = (selectedLessonId === session.id);
+        var card = document.createElement('div');
+        card.className = 'session-card' + (isSelected ? ' selected' : '');
+        card.setAttribute('data-id', session.id);
+
+        var title = session.title[currentLang] || session.title.ja;
+        var desc = session.desc[currentLang] || session.desc.ja;
+
+        card.innerHTML = [
+          '<div class="card-header-row">',
+          '  <span class="session-num-pill">SESSION ' + session.numStr + '</span>',
+          '  <span class="session-tier-tag ' + session.tier + '">' + session.tierLabel + '</span>',
+          '</div>',
+          '<div class="card-main-content">',
+          '  <div class="card-icon-title-wrap">',
+          '    <div class="card-icon-box"><i class="fa-solid ' + session.icon + '"></i></div>',
+          '    <div class="card-titles">',
+          '      <h3 class="card-title">' + title + '</h3>',
+          '      <p class="card-subtitle">' + desc + '</p>',
+          '    </div>',
+          '  </div>',
+          '  <div class="card-meta-pills">',
+          '    <span class="meta-pill"><i class="fa-solid fa-book-open"></i> ' + session.vocabCount + ' Từ vựng</span>',
+          '    <span class="meta-pill"><i class="fa-solid fa-spell-check"></i> ' + session.grammarCount + ' Ngữ pháp</span>',
+          '    <span class="meta-pill xp"><i class="fa-solid fa-star"></i> +' + session.xpReward + ' XP</span>',
+          '  </div>',
+          '</div>',
+          '<div class="card-action-bar">',
+          '  <button type="button" class="btn-card-select">',
+               (isSelected ? '<i class="fa-solid fa-circle-check"></i> Đang Chọn' : '<i class="fa-solid fa-arrow-pointer"></i> Chọn Buổi Này'),
+          '  </button>',
+          '</div>'
+        ].join('');
+
+        card.addEventListener('click', function() {
+          selectSession(session);
+        });
+
+        sessionsGrid.appendChild(card);
+      });
+    }
+
+    function navigateToRoadmap() {
+      if (!selectedLessonId) return;
+      if (loadingOverlay) {
+        loadingOverlay.classList.add('active');
+        if (loadingVideo) {
+          loadingVideo.muted = true;
+          loadingVideo.play().catch(function() {});
+        }
+      }
+      setTimeout(function() {
+        window.location.href = '../roadmap/index.html';
+      }, 700);
+    }
+
+    function bindEvents() {
+      // Language dropdown
+      if (langDropdownBtn && langDropdown) {
+        langDropdownBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          langDropdown.classList.toggle('open'); langDropdown.classList.toggle('show');
+        });
+      }
+
+      document.querySelectorAll('.lang-dropdown-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+          var lang = item.getAttribute('data-lang');
+          if (lang && langMetadata[lang]) {
+            currentLang = lang;
+            localStorage.setItem('slanguage_current_lang', lang);
+            applyLanguage();
+            renderSessions();
+            updateStatusCard();
+            if (langDropdown) langDropdown.classList.remove('open'); langDropdown.classList.remove('show');
+            showToast('Đã chuyển mục tiêu sang ' + langMetadata[lang].name);
+          }
+        });
+      });
+
+      // User account dropdown
+      if (userDropdownBtn && userDropdown) {
+        userDropdownBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          userDropdown.classList.toggle('open'); userDropdown.classList.toggle('show');
+        });
+      }
+
+      // Close dropdowns on window click
+      window.addEventListener('click', function() {
+        if (langDropdown) langDropdown.classList.remove('open'); langDropdown.classList.remove('show');
+        if (userDropdown) userDropdown.classList.remove('open'); userDropdown.classList.remove('show');
+      });
+
+      // Filter tabs
+      if (filterTabs) {
+        filterTabs.querySelectorAll('.filter-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            filterTabs.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            currentFilter = btn.getAttribute('data-filter') || 'all';
+            renderSessions();
+          });
+        });
+      }
+
+      // Search input
+      if (searchInput) {
+        searchInput.addEventListener('input', function() {
+          searchQuery = searchInput.value.trim().toLowerCase();
+          renderSessions();
+        });
+      }
+
+      // Proceed CTA
+      if (btnProceedRoadmap) {
+        btnProceedRoadmap.addEventListener('click', function() {
+          navigateToRoadmap();
+        });
+      }
+    }
+
+    // Khởi chạy khi DOM sẵn sàng
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+
+    // Expose đối tượng để tiện debug console
+    window.slanguageSelectLessonApp = {
+      sessions: SAMPLE_SESSIONS,
+      getSelectedId: function() { return selectedLessonId; },
+      selectSessionById: function(id) {
+        var s = SAMPLE_SESSIONS.find(function(x) { return x.id === id; });
+        if (s) selectSession(s);
+      }
+    };
+  })();
+  </script>
+</body>
+</html>
