@@ -426,14 +426,164 @@
   .menu { min-width: min(248px, calc(100vw - 24px)); }
 }
 
-/* Tablet: nav rút gọn khoảng cách */
+/* Tablet: giữ thương hiệu và công cụ ở hàng đầu, dành trọn hàng kế tiếp cho nav */
 @media (min-width: 768px) and (max-width: 1023.98px) {
-  .nav-link { padding: 0 var(--s-2); }
-  .hud-chip { padding: 0 var(--s-2); }
+  .header-inner {
+    grid-template-areas:
+      "brand tools"
+      "navigation navigation";
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0 var(--s-4);
+    padding-block: var(--s-2);
+  }
+
+  .brand { grid-area: brand; }
+
+  .main-nav {
+    grid-area: navigation;
+    justify-self: stretch;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .main-nav::-webkit-scrollbar { display: none; }
+
+  .nav-links {
+    width: max-content;
+    margin-inline: auto;
+  }
+
+  .nav-link { padding-inline: var(--s-2); }
+
+  .header-tools {
+    grid-area: tools;
+    min-height: var(--touch);
+  }
+
+  .hud-chip { padding-inline: var(--s-2); }
 }
 
 /* Thu hẹp desktop: ẩn chữ ngôn ngữ, giữ cờ */
 @media (max-width: 1119.98px) {
   .lang-label { display: none; }
   .dropdown--lang .trigger { padding: var(--s-1) var(--s-2); }
+}
+
+/* ---------- Shared learner toast stack ---------- */
+.slg-toast-region {
+  position: fixed;
+  z-index: 1500;
+  top: max(16px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  display: grid;
+  width: min(390px, calc(100vw - 32px));
+  gap: var(--s-2);
+  pointer-events: none;
+}
+
+.slg-toast {
+  --toast-swipe-x: 0px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  overflow: hidden;
+  padding: 8px 8px 10px 16px;
+  border: 1px solid var(--learner-rule, #d7d9d2);
+  border-radius: 6px;
+  color: var(--learner-ink, #183248);
+  background: var(--learner-paper, #fbf9f2);
+  box-shadow: 0 8px 24px rgb(24 50 72 / 16%);
+  pointer-events: auto;
+  touch-action: pan-y;
+  transform: translateX(var(--toast-swipe-x));
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.slg-toast--success { border-color: #8db9aa; }
+.slg-toast--error { border-color: #c98778; }
+.slg-toast--info { border-color: #91b9b6; }
+
+.slg-toast__marker {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--learner-teal, #117e83);
+}
+.slg-toast--error .slg-toast__marker { background: var(--learner-signal, #9e402c); }
+.slg-toast--info .slg-toast__marker { background: #537783; }
+
+.slg-toast__message {
+  margin: 0;
+  color: var(--learner-ink, #183248);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.slg-toast__close {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 4px;
+  color: var(--learner-muted, #5c7078);
+  cursor: pointer;
+}
+.slg-toast__close:hover { color: var(--learner-ink, #183248); background: var(--learner-teal-soft, #e3eeea); }
+.slg-toast__close:focus-visible { outline: 3px solid var(--learner-teal, #117e83); outline-offset: -2px; }
+.slg-toast__close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+.slg-toast__progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--learner-teal, #117e83);
+  transform: scaleX(1);
+  transform-origin: left center;
+  animation: slg-toast-countdown var(--toast-duration, 3000ms) linear forwards;
+  animation-play-state: var(--toast-play-state, running);
+}
+.slg-toast--error .slg-toast__progress { background: var(--learner-signal, #9e402c); }
+.slg-toast.is-closing { opacity: 0; transform: translate3d(24px, -4px, 0); }
+
+@keyframes slg-toast-countdown {
+  to { transform: scaleX(0); }
+}
+
+.slg-confetti {
+  position: fixed;
+  z-index: 1490;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+@media (max-width: 767.98px) {
+  .slg-toast-region {
+    top: auto;
+    right: 12px;
+    bottom: calc(var(--tabbar-h, 0px) + 12px + env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    width: auto;
+  }
+
+  .slg-toast {
+    grid-template-columns: 10px minmax(0, 1fr) 44px;
+    min-height: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slg-toast,
+  .slg-toast.is-closing {
+    transition-duration: 0.01ms;
+  }
 }

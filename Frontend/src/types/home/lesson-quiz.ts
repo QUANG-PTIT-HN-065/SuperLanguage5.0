@@ -1,5 +1,7 @@
 import { isLearnerAuthenticated, readMockData, slanguageApi } from "../shared/api-client";
 import { XP_PER_LEVEL, levelFromXp } from "./learner-progress";
+import { launchConfetti } from "../../ts/ui/confetti";
+import { showToast } from "../../ts/ui/toast";
 
 interface LessonOption {
   id: string;
@@ -37,6 +39,15 @@ interface LessonCompletion {
   xp_total: number;
   level: number;
   xp_into_level: number;
+  current_streak: number;
+  already_completed: boolean;
+}
+
+interface AnswerReview {
+  prompt: string;
+  selected: string;
+  correct: string;
+  explanation: string | null;
 }
 
 /** Khoá đáp án chỉ có trong mock/lesson-questions.json, dùng khi backend chưa chạy. */
@@ -49,7 +60,7 @@ const DEMO_XP_PER_LESSON = 20;
 
 const workspace = document.getElementById("lessonWorkspace");
 const questionPanel = document.getElementById("lessonQuestion");
-const resultPanel = document.getElementById("lessonResult");
+const resultPanel = document.getElementById("lessonResult") as HTMLDialogElement | null;
 const lessonNotice = document.getElementById("lessonNotice");
 const title = document.getElementById("lessonTitle");
 const prompt = document.getElementById("lessonPrompt");
@@ -69,6 +80,8 @@ let lastXpAwarded = 0;
 let lastXpTotal = 0;
 let lastLessonId = 0;
 let lastTopicId = 0;
+let intentionalDialogClose = false;
+const answerReviews: AnswerReview[] = [];
 const demoAnswerKeys = new Map<number, DemoAnswerKey>();
 
 function isDemoMode(): boolean {
@@ -169,6 +182,7 @@ async function requestCompletion(content: LessonContent, score: number): Promise
     const xpAwarded = passed ? DEMO_XP_PER_LESSON : 0;
     const previousXp = nonNegativeInt(localStorage.getItem("slanguage_user_xp"));
     const xpTotal = (previousXp < 0 ? 0 : previousXp) + xpAwarded;
+    const previousStreak = nonNegativeInt(localStorage.getItem("slanguage_user_streak"));
     return {
       score,
       question_count: questionCount,
@@ -177,6 +191,8 @@ async function requestCompletion(content: LessonContent, score: number): Promise
       xp_total: xpTotal,
       level: levelFromXp(xpTotal),
       xp_into_level: xpTotal % XP_PER_LEVEL,
+      current_streak: previousStreak < 0 ? 0 : previousStreak,
+      already_completed: false,
     };
   }
   const response = await slanguageApi(`/api/v1/lessons/${content.lesson.id}/complete`, {
@@ -190,6 +206,7 @@ async function requestCompletion(content: LessonContent, score: number): Promise
   const xpTotal = nonNegativeInt(result.xp_total);
   const level = positiveInt(result.level);
   const xpIntoLevel = nonNegativeInt(result.xp_into_level);
+  const currentStreak = nonNegativeInt(result.current_streak);
   if (
     parsedScore < 0 ||
     !count ||
@@ -197,7 +214,9 @@ async function requestCompletion(content: LessonContent, score: number): Promise
     xpAwarded < 0 ||
     xpTotal < 0 ||
     !level ||
-    xpIntoLevel < 0
+    xpIntoLevel < 0 ||
+    currentStreak < 0 ||
+    typeof result.already_completed !== "boolean"
   ) {
     throw new Error("Máy chủ chưa trả về kết quả hoàn thành hợp lệ.");
   }
@@ -209,6 +228,8 @@ async function requestCompletion(content: LessonContent, score: number): Promise
     xp_total: xpTotal,
     level,
     xp_into_level: xpIntoLevel,
+    current_streak: currentStreak,
+    already_completed: result.already_completed,
   };
 }
 
@@ -332,10 +353,13 @@ function renderQuestion(): void {
 async function openLesson(lessonId: number, pushHistory: boolean): Promise<void> {
   if ((!isLearnerAuthenticated() && !isDemoMode()) || !workspace) return;
   if (activeRequest) return;
+  closeResultDialog();
+  if (resultPanel) resultPanel.hidden = true;
   activeRequest = true;
   completed = false;
   lesson = null;
   demoScore = 0;
+  answerReviews.length = 0;
   lastLessonId = lessonId;
   lastTopicId = topicIdOfLesson(lessonId);
   if (pushHistory) {
@@ -402,6 +426,18 @@ async function checkAnswer(): Promise<void> {
     const correct = answer.correct_option_id;
     checkedAnswer = answer;
     if (answer.is_correct) demoScore += 1;
+    else {
+      const selectedText = question.question_type === "fill_in"
+        ? answer.selected_option_id
+        : question.options.find((option) => option.id === selected)?.text ?? selected;
+      const correctText = question.options.find((option) => option.id === correct)?.text ?? correct;
+      answerReviews.push({
+        prompt: question.prompt,
+        selected: selectedText,
+        correct: correctText,
+        explanation: answer.explanation,
+      });
+    }
 
     for (const button of optionsContainer?.querySelectorAll<HTMLButtonElement>("[data-option-id]") || []) {
       button.disabled = true;
@@ -434,10 +470,210 @@ async function checkAnswer(): Promise<void> {
     }
   } catch (error) {
     checkButton.disabled = false;
-    setNotice(error instanceof Error ? error.message : "Không thể kiểm tra đáp án.", true);
+    const message = error instanceof Error ? error.message : "Không thể kiểm tra đáp án.";
+    setNotice(message, true);
+    showToast({ type: "error", message });
   } finally {
     activeRequest = false;
     if (exitButton) exitButton.disabled = false;
+  }
+}
+
+function formatScore(score: number, count: number): string {
+  return `${score}/${count}`;
+}
+
+function renderAnswerReviews(): void {
+  const trigger = document.getElementById("toggleIncorrectAnswers") as HTMLButtonElement | null;
+  const label = document.getElementById("incorrectAnswersLabel");
+  const accordion = document.getElementById("incorrectAnswers");
+  const list = document.getElementById("incorrectAnswerList");
+  if (!trigger || !label || !accordion || !list) return;
+
+  const incorrect = answerReviews;
+  trigger.hidden = incorrect.length === 0;
+  trigger.setAttribute("aria-expanded", "false");
+  label.textContent = `Câu làm sai · ${incorrect.length}`;
+  accordion.classList.remove("is-open");
+  accordion.setAttribute("aria-hidden", "true");
+  accordion.setAttribute("inert", "");
+  list.replaceChildren();
+
+  for (const [index, answer] of incorrect.entries()) {
+    const item = document.createElement("article");
+    item.className = "lesson-result__incorrect-item";
+    const question = document.createElement("h3");
+    question.textContent = `${index + 1}. ${answer.prompt}`;
+    const selected = document.createElement("p");
+    selected.className = "lesson-result__answer lesson-result__answer--wrong";
+    const selectedLabel = document.createElement("strong");
+    selectedLabel.textContent = "Bạn chọn";
+    selected.append(selectedLabel, document.createTextNode(answer.selected));
+    const correct = document.createElement("p");
+    correct.className = "lesson-result__answer lesson-result__answer--correct";
+    const correctLabel = document.createElement("strong");
+    correctLabel.textContent = "Đáp án đúng";
+    correct.append(correctLabel, document.createTextNode(answer.correct));
+    item.append(question, selected, correct);
+    if (answer.explanation) {
+      const explanation = document.createElement("p");
+      explanation.className = "lesson-result__explanation";
+      explanation.textContent = answer.explanation;
+      item.append(explanation);
+    }
+    list.append(item);
+  }
+}
+
+function animateScore(score: number, count: number): void {
+  const scoreValue = document.getElementById("lessonScoreValue");
+  const announcement = document.getElementById("lessonScoreAnnouncement");
+  const ring = document.getElementById("lessonScoreRing") as SVGCircleElement | null;
+  const ringLabel = document.querySelector<HTMLElement>(".lesson-result__score-ring");
+  if (!scoreValue || !ring) return;
+
+  const radius = Number(ring.getAttribute("r")) || 56;
+  const circumference = 2 * Math.PI * radius;
+  ring.style.strokeDasharray = `${circumference}`;
+  ring.style.strokeDashoffset = `${circumference}`;
+  ringLabel?.setAttribute("aria-label", `Kết quả: ${formatScore(score, count)} câu đúng`);
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const duration = reducedMotion ? 0 : 1000;
+  const startedAt = performance.now();
+  const draw = (now: number): void => {
+    const progress = duration === 0 ? 1 : Math.min(1, (now - startedAt) / duration);
+    const eased = 1 - (1 - progress) ** 3;
+    const currentScore = Math.round(score * eased);
+    scoreValue.textContent = formatScore(currentScore, count);
+    ring.style.strokeDashoffset = `${circumference * (1 - (score / count) * eased)}`;
+    if (progress < 1) window.requestAnimationFrame(draw);
+    else if (announcement) announcement.textContent = `Bạn đạt ${formatScore(score, count)} câu đúng.`;
+  };
+  window.requestAnimationFrame(draw);
+}
+
+function animateXp(amount: number): void {
+  const element = document.getElementById("lessonResultXp");
+  if (!element) return;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const duration = reducedMotion ? 0 : 800;
+  const startedAt = performance.now();
+  const draw = (now: number): void => {
+    const progress = duration === 0 ? 1 : Math.min(1, (now - startedAt) / duration);
+    const current = Math.round(amount * (1 - (1 - progress) ** 3));
+    element.textContent = `+${current} XP`;
+    if (progress < 1) window.requestAnimationFrame(draw);
+  };
+  window.requestAnimationFrame(draw);
+}
+
+function renderScoreDelta(score: number, lessonId: number): void {
+  const element = document.getElementById("lessonScoreDelta");
+  if (!element) return;
+  const key = `slanguage_lesson_last_score_${lessonId}`;
+  const storedScore = localStorage.getItem(key);
+  const previous = storedScore === null ? -1 : nonNegativeInt(storedScore);
+  element.hidden = false;
+  element.classList.remove("is-better", "is-lower", "is-same");
+  if (previous < 0) {
+    element.textContent = "Lần đầu bạn hoàn thành bài này.";
+    element.classList.add("is-same");
+  } else {
+    const difference = score - previous;
+    element.classList.add(difference > 0 ? "is-better" : difference < 0 ? "is-lower" : "is-same");
+    element.textContent = difference > 0
+      ? `+${difference} câu đúng so với lần trước`
+      : difference < 0
+        ? `${difference} câu đúng so với lần trước`
+        : "Điểm số không đổi so với lần trước";
+  }
+  localStorage.setItem(key, String(score));
+}
+
+function hasNextTopic(): boolean {
+  if (!lastTopicId) return false;
+  const topicIds = [...document.querySelectorAll<SVGGElement>(".roadmap-node[data-topic-id]")]
+    .map((node) => positiveInt(node.dataset.topicId))
+    .filter(Boolean);
+  const currentIndex = topicIds.indexOf(lastTopicId);
+  return currentIndex >= 0 && currentIndex < topicIds.length - 1;
+}
+
+function closeResultDialog(): void {
+  if (resultPanel?.open) {
+    intentionalDialogClose = true;
+    resultPanel.close();
+  }
+}
+
+function renderResult(result: LessonCompletion, lessonId: number): void {
+  if (!resultPanel || !lesson) return;
+  const { score, question_count: count, passed, xp_awarded: xpAwarded, current_streak: streak } = result;
+  const xpReceived = result.already_completed ? 0 : xpAwarded;
+  const headline = document.getElementById("lessonResultHeadline");
+  const titleElement = document.getElementById("lessonResultTitle");
+  const textElement = document.getElementById("lessonResultText");
+  const eyebrow = document.getElementById("lessonResultEyebrow");
+  const rule = document.getElementById("lessonPassRule");
+  const unlock = document.getElementById("lessonUnlockNotice");
+  const retryButton = document.getElementById("retryLesson") as HTMLButtonElement | null;
+  const continueButton = document.getElementById("continueToPath") as HTMLButtonElement | null;
+  const returnButton = document.getElementById("returnToTopics") as HTMLButtonElement | null;
+  const streakElement = document.getElementById("lessonResultStreak");
+
+  completed = passed;
+  lastXpTotal = result.xp_total;
+  headline?.setAttribute("data-state", passed ? "passed" : "failed");
+  if (eyebrow) eyebrow.textContent = passed ? "Một bước tiến mới" : "Thêm một lượt luyện nữa";
+  if (titleElement) titleElement.textContent = passed ? "Quá đã! Bạn làm được rồi" : "Chưa đủ 4/4 lần này";
+  if (textElement) {
+    textElement.textContent = passed
+      ? result.already_completed
+        ? `${formatScore(score, count)} câu đúng · Kết quả này đã được ghi nhận trước đó.`
+        : `${formatScore(score, count)} câu đúng · Bạn vừa tiến thêm một bước trên lộ trình.`
+      : `${formatScore(score, count)} câu đúng — vài từ đang chơi trốn tìm thôi. Mình xem lại rồi thử thêm lượt nữa nhé!`;
+  }
+  if (unlock) {
+    unlock.hidden = !passed;
+    const message = unlock.querySelector("span");
+    if (message) {
+      message.textContent = hasNextTopic()
+        ? "Đã mở khóa chủ đề tiếp theo"
+        : "Bạn đã hoàn thành bài học 4/4";
+    }
+  }
+  if (rule) {
+    rule.hidden = passed;
+    rule.textContent = `Cần đạt ${count}/${count} để mở khóa chủ đề tiếp theo.`;
+  }
+  if (retryButton) retryButton.hidden = passed;
+  if (continueButton) continueButton.hidden = !passed;
+  if (returnButton) returnButton.textContent = "Để sau";
+  if (returnButton) returnButton.hidden = passed;
+  if (streakElement) streakElement.textContent = `${streak} ngày`;
+
+  renderAnswerReviews();
+  renderScoreDelta(score, lessonId);
+  animateScore(score, count);
+  animateXp(xpReceived);
+
+  localStorage.setItem("slanguage_user_xp", String(result.xp_total));
+  localStorage.setItem("slanguage_user_streak", String(streak));
+  const headerXp = document.getElementById("headerXPVal");
+  if (headerXp) headerXp.textContent = `${result.xp_total.toLocaleString("vi-VN")} XP`;
+  const headerStreak = document.getElementById("headerStreakVal");
+  if (headerStreak) headerStreak.textContent = String(streak);
+  lastXpAwarded = xpReceived;
+
+  resultPanel.hidden = false;
+  resultPanel.showModal();
+  window.requestAnimationFrame(() => {
+    (passed ? continueButton : retryButton)?.focus();
+  });
+
+  if (passed && !result.already_completed) {
+    launchConfetti(resultPanel);
   }
 }
 
@@ -449,29 +685,12 @@ async function finishLesson(): Promise<void> {
   setNotice("");
   try {
     const result = await requestCompletion(lesson, demoScore);
-    const { score, question_count: count, passed, xp_awarded: xpAwarded, xp_total: xpTotal, level, xp_into_level: xpIntoLevel } = result;
-    completed = passed;
-    lastXpAwarded = xpAwarded;
-    lastXpTotal = xpTotal;
     if (questionPanel) questionPanel.hidden = true;
-    if (resultPanel) resultPanel.hidden = false;
-    const resultTitle = document.getElementById("lessonResultTitle");
-    if (resultTitle) resultTitle.textContent = passed ? "Đã hoàn thành" : "Chưa đạt 4/4";
-    const resultText = document.getElementById("lessonResultText");
-    if (resultText) {
-      resultText.textContent = passed
-        ? `${score}/${count} câu đúng · +${xpAwarded} XP · Cấp ${level} (${xpIntoLevel}/100 XP)`
-        : `${score}/${count} câu đúng. Cần đạt 4/4 để mở khóa chủ đề tiếp theo. Hãy thử lại.`;
-    }
-    const retryButton = document.getElementById("retryLesson");
-    if (retryButton) retryButton.hidden = passed;
-    const returnButton = document.getElementById("returnToTopics");
-    if (returnButton) returnButton.textContent = passed ? "Quay lại chủ đề" : "Để sau";
-    localStorage.setItem("slanguage_user_xp", String(xpTotal));
-    const headerXp = document.getElementById("headerXPVal");
-    if (headerXp) headerXp.textContent = `${xpTotal.toLocaleString("vi-VN")} XP`;
+    renderResult(result, lesson.lesson.id);
   } catch (error) {
-    setNotice(error instanceof Error ? error.message : "Không thể lưu kết quả bài học.", true);
+    const message = error instanceof Error ? error.message : "Không thể lưu kết quả bài học.";
+    setNotice(message, true);
+    showToast({ type: "error", message });
   } finally {
     activeRequest = false;
     if (nextButton) nextButton.disabled = false;
@@ -496,11 +715,16 @@ function leaveLesson(confirmExit = true): void {
   )) {
     return;
   }
+  closeResultDialog();
+  if (resultPanel) resultPanel.hidden = true;
   if (workspace) workspace.hidden = true;
   const pathId = positiveInt(new URLSearchParams(window.location.search).get("path_id"));
   document.getElementById("pathCatalogSection")?.toggleAttribute("hidden", pathId > 0);
   document.getElementById("pathDetailSection")?.toggleAttribute("hidden", pathId === 0);
   document.querySelector(".learning-actions-grid")?.toggleAttribute("hidden", false);
+  window.requestAnimationFrame(() => {
+    document.getElementById(pathId > 0 ? "pathDetailTitle" : "pathCatalogTitle")?.focus();
+  });
   const url = new URL(window.location.href);
   url.searchParams.delete("lesson_id");
   window.history.replaceState({}, "", url);
@@ -515,6 +739,11 @@ function leaveLesson(confirmExit = true): void {
         topic_id: lastTopicId,
       },
     }));
+    if (lastXpAwarded > 0) {
+      const streak = document.getElementById("headerStreakVal")?.textContent ?? "0";
+      showToast({ type: "success", message: `Bạn nhận được +${lastXpAwarded} XP. Chuỗi học hiện tại: ${streak} ngày.` });
+    }
+    completed = false;
   }
 }
 
@@ -543,6 +772,30 @@ document.getElementById("exitLesson")?.addEventListener("click", () => leaveLess
 document.getElementById("returnToTopics")?.addEventListener("click", () => leaveLesson(false));
 document.getElementById("retryLesson")?.addEventListener("click", () => {
   if (lesson) void openLesson(lesson.lesson.id, false);
+});
+document.getElementById("continueToPath")?.addEventListener("click", () => leaveLesson(false));
+document.getElementById("closeLessonResult")?.addEventListener("click", () => leaveLesson(false));
+resultPanel?.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  leaveLesson(false);
+});
+resultPanel?.addEventListener("close", () => {
+  resultPanel.hidden = true;
+  if (intentionalDialogClose) {
+    intentionalDialogClose = false;
+    return;
+  }
+  leaveLesson(false);
+});
+document.getElementById("toggleIncorrectAnswers")?.addEventListener("click", (event) => {
+  const trigger = event.currentTarget as HTMLButtonElement;
+  const expanded = trigger.getAttribute("aria-expanded") !== "true";
+  const accordion = document.getElementById("incorrectAnswers");
+  trigger.setAttribute("aria-expanded", String(expanded));
+  accordion?.classList.toggle("is-open", expanded);
+  accordion?.setAttribute("aria-hidden", String(!expanded));
+  if (accordion) accordion.inert = !expanded;
 });
 
 window.addEventListener("popstate", () => {
