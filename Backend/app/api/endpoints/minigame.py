@@ -7,6 +7,14 @@ from pydantic import BaseModel, Field
 from app.core.deps import get_current_profile
 from app.db.supabase import supabase_admin
 from app.services.minigame_service import get_minigame_state
+from app.schemas.minigame import (
+    MiniGameEvaluationRequest,
+    MiniGameEvaluationResponse,
+)
+from app.services.minigame_ai_service import (
+    MiniGameAIError,
+    evaluate_minigame_answer,
+)
 
 router = APIRouter()
 
@@ -14,6 +22,23 @@ router = APIRouter()
 class MiniGameProgress(BaseModel):
     xp: int = Field(default=0, ge=0, le=5000)
     word_ids: list[int] = Field(default_factory=list, max_length=120)
+
+
+@router.post("/evaluate", response_model=dict)
+def evaluate_answer(
+    payload: MiniGameEvaluationRequest,
+    profile: Dict[str, Any] = Depends(get_current_profile),
+):
+    """Evaluate one attack with a dedicated, strict mini-game AI prompt."""
+    del profile
+    try:
+        evaluation: MiniGameEvaluationResponse = evaluate_minigame_answer(payload)
+        return {"status": "success", "data": evaluation.model_dump()}
+    except MiniGameAIError as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Bộ chấm AI mini game hiện không khả dụng. Chưa ghi nhận lượt đánh.",
+        ) from exc
 
 
 @router.get("/state")
