@@ -124,7 +124,20 @@
             </span>
           </a>
 
-          <!-- 3. Quản lý Từ vựng (ĐÃ TÁCH RA TRANG RIÊNG) -->
+          <!-- 3. Quản lý Tài liệu RAG -->
+          <a
+            href="#documents"
+            data-tab="documents"
+            class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all group/item"
+            title="Quản lý Tài liệu AI"
+          >
+            <span class="material-symbols-outlined text-xl shrink-0 w-6 text-center">description</span>
+            <span class="whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs overflow-hidden">
+              Quản lý Tài liệu AI
+            </span>
+          </a>
+
+          <!-- 4. Quản lý Từ vựng (ĐÃ TÁCH RA TRANG RIÊNG) -->
           <a
             href="../vocabularyAdmin/code.html"
             class="flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all group/item"
@@ -136,12 +149,9 @@
                 Quản lý Từ vựng
               </span>
             </div>
-            <span class="hidden md:group-hover/sidebar:inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">
-              Trang riêng
-            </span>
           </a>
 
-          <!-- 4. Học viên & Người dùng -->
+          <!-- 5. Học viên & Người dùng -->
           <a
             href="#users"
             data-tab="users"
@@ -154,7 +164,7 @@
             </span>
           </a>
 
-          <!-- 5. Thống kê Báo cáo -->
+          <!-- 6. Thống kê Báo cáo -->
           <a
             href="#analytics"
             data-tab="analytics"
@@ -167,7 +177,7 @@
             </span>
           </a>
 
-          <!-- 6. Cài đặt Hệ thống -->
+          <!-- 7. Cài đặt Hệ thống -->
           <a
             href="#settings"
             data-tab="settings"
@@ -181,23 +191,6 @@
           </a>
         </nav>
 
-        <!-- Quick Access Card to Vocab Page (chỉ hiển thị khi hover) -->
-        <div class="m-3 p-3 rounded-xl bg-slate-800/90 border border-slate-700 text-xs hidden md:group-hover/sidebar:block transition-all">
-          <div class="flex items-center gap-2 text-emerald-400 font-bold mb-1">
-            <span class="material-symbols-outlined text-base">spellcheck</span>
-            <span>Kho Từ Vựng v5.0</span>
-          </div>
-          <p class="text-slate-300 text-[11px] leading-relaxed mb-2">
-            Quản lý từ vựng đã được tách thành trang riêng giúp biên mục và tra cứu nhanh hơn.
-          </p>
-          <a
-            href="../vocabularyAdmin/code.html"
-            class="inline-flex items-center gap-1.5 text-blue-300 hover:text-white font-semibold transition-colors"
-          >
-            <span>Tới trang Từ vựng</span>
-            <span class="material-symbols-outlined text-sm">arrow_forward</span>
-          </a>
-        </div>
 
       </div>
 
@@ -541,7 +534,7 @@
 
         </div>
 
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <!-- <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
             <div class="p-5 border-b border-slate-200">
               <h3 class="font-title text-base font-bold text-slate-900">Lộ trình học</h3>
               <p class="mt-1 text-xs text-slate-500">Tạo lộ trình và sắp xếp các chủ đề theo thứ tự học.</p>
@@ -572,9 +565,106 @@
                 </table>
               </div>
             </div>
+          </div> -->
+
+          <!-- ==================== SECTION 3: QUẢN LÝ TÀI LIỆU RAG ==================== -->
+          <div id="section-documents" class="admin-section hidden space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 class="font-title text-xl font-bold text-slate-900">Quản Lý Tài Liệu AI</h2>
+                <p class="text-xs text-slate-600">Quản lý nội dung được lập chỉ mục để trợ lý AI tra cứu theo ngôn ngữ.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="totalDocumentsBadge" class="px-3 py-1 bg-blue-50 text-blue-700 font-bold text-xs rounded-full border border-blue-200">Đang tải...</span>
+                <button id="btnReindexDocuments" type="button" class="px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-base">sync</span> Đồng bộ dữ liệu học tập
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div class="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+                <div class="pb-3 border-b border-slate-100 mb-4">
+                  <h3 class="font-title text-base font-bold text-slate-900">Thêm tài liệu mới</h3>
+                  <p class="text-xs text-slate-500">Nội dung sẽ được chia nhỏ và tạo vector tự động.</p>
+                </div>
+                <form id="documentForm" class="space-y-3.5">
+                  <div>
+                    <label for="inputDocumentTitle" class="block text-sm font-semibold text-slate-800 mb-1">Tiêu đề *</label>
+                    <input id="inputDocumentTitle" type="text" required maxlength="150" placeholder="Ví dụ: Quy tắc thì hiện tại đơn" class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-sm text-slate-900">
+                  </div>
+                  <div>
+                    <label for="inputDocumentLanguage" class="block text-sm font-semibold text-slate-800 mb-1">Ngôn ngữ *</label>
+                    <select id="inputDocumentLanguage" required class="w-full h-11 px-3 bg-white border border-slate-300 rounded-xl text-sm text-slate-900">
+                      <option value="English">English</option>
+                      <option value="Japanese">Japanese</option>
+                      <option value="all">Tất cả ngôn ngữ</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="inputDocumentContent" class="block text-sm font-semibold text-slate-800 mb-1">Nội dung tổng quát</label>
+                    <textarea id="inputDocumentContent" maxlength="20000" rows="5" placeholder="Ghi chú khái quát về tài liệu, ví dụ: Quy tắc dùng thì hiện tại đơn trong giao tiếp hằng ngày..." class="w-full p-3 bg-white border border-slate-300 rounded-xl text-sm text-slate-900 resize-y"></textarea>
+                    <p class="mt-1 text-[11px] text-slate-500">Không bắt buộc khi bạn chọn file. Chỉ nhập nội dung ngắn gọn, không cần dán toàn bộ tài liệu.</p>
+                  </div>
+                  <div class="rounded-xl border border-dashed border-blue-300 bg-blue-50/50 p-3">
+                    <label for="inputDocumentFile" class="block text-sm font-semibold text-slate-800 mb-1">Hoặc tải file trực tiếp</label>
+                    <input id="inputDocumentFile" type="file" accept=".txt,.md,.csv,.json,.jsonl,text/plain,text/markdown,text/csv,application/json,application/x-ndjson" class="block w-full text-xs text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-blue-700">
+                    <p class="mt-1 text-[11px] text-slate-500">Hỗ trợ .txt, .md, .csv, .json, .jsonl (UTF-8), tối đa 10 MB. Chọn file sẽ được ưu tiên hơn nội dung nhập tay.</p>
+                  </div>
+                  <button id="btnSubmitDocument" type="submit" class="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50">
+                    <span class="material-symbols-outlined text-base">upload_file</span> Lập chỉ mục tài liệu
+                  </button>
+                </form>
+              </div>
+
+              <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+                <div class="p-4 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                  <div>
+                    <h3 class="font-title text-base font-bold text-slate-900">Tài liệu đã lập chỉ mục</h3>
+                    <p class="text-xs text-slate-500">Mỗi dòng là một tài liệu, không phải một đoạn vector.</p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <select id="filterDocumentLanguage" class="h-9 px-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-700" aria-label="Lọc tài liệu theo ngôn ngữ">
+                      <option value="all">Tất cả ngôn ngữ</option>
+                      <option value="English">English</option>
+                      <option value="Japanese">Japanese</option>
+                      <option value="all-language">Tài liệu dùng chung</option>
+                    </select>
+                    <button id="btnRefreshDocuments" type="button" class="p-2 text-slate-500 hover:text-blue-600 rounded-lg" title="Tải lại">
+                      <span class="material-symbols-outlined">refresh</span>
+                    </button>
+                  </div>
+                </div>
+                <div class="overflow-x-auto">
+                  <table class="w-full min-w-[760px] table-fixed text-left text-sm">
+                    <colgroup>
+                      <col class="w-[30%]">
+                      <col class="w-[14%]">
+                      <col class="w-[10%]">
+                      <col class="w-[34%]">
+                      <col class="w-[12%]">
+                    </colgroup>
+                    <thead><tr class="bg-slate-100/70 border-b border-slate-200 text-xs font-bold text-slate-700">
+                      <th class="py-3 px-4">Tài liệu</th><th class="py-3 px-4">Ngôn ngữ</th><th class="py-3 px-4">Đoạn</th><th class="py-3 px-4">Nội dung</th><th class="py-3 px-4 text-right">Thao tác</th>
+                    </tr></thead>
+                    <tbody id="documentsTableBody" class="divide-y divide-slate-100">
+                      <tr><td colspan="5" class="py-10 text-center text-slate-400">Đang tải danh sách tài liệu...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="p-3 border-t border-slate-200 bg-slate-50/70 flex items-center justify-between gap-3 text-xs text-slate-600">
+                  <span id="documentPaginationInfo">Đang tải...</span>
+                  <div class="flex items-center gap-1.5">
+                    <button id="prevDocumentPage" type="button" disabled class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-40">Trang trước</button>
+                    <span id="documentPageNumber" class="px-3 py-1 font-bold bg-blue-50 text-blue-700 border border-blue-200 rounded-lg">1</span>
+                    <button id="nextDocumentPage" type="button" disabled class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-40">Trang sau</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-        <!-- ==================== SECTION 3: USERS (THAO TÁC THẬT CSDL) ==================== -->
+          <!-- ==================== SECTION 3: USERS (THAO TÁC THẬT CSDL) ==================== -->
         <div id="section-users" class="admin-section hidden space-y-6">
           <div class="flex items-center justify-between">
             <div>

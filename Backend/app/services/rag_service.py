@@ -12,6 +12,7 @@ from app.db.supabase import supabase_admin
 
 logger = logging.getLogger(__name__)
 _EMBEDDING_DIMENSIONS = 768
+_EMBEDDING_BATCH_SIZE = 32
 _CHUNK_SIZE = 1200
 _CHUNK_OVERLAP = 180
 _MAX_MATCH_COUNT = 10
@@ -66,30 +67,39 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
             "RAG requires RAG_EMBEDDING_API_KEYS or GEMINI_API_KEYS in the backend environment."
         )
 
-    for key in keys:
-        try:
-            client = genai.Client(api_key=key)
-            response = client.models.embed_content(
-                model=settings.RAG_EMBEDDING_MODEL,
-                contents=texts,
-                config=types.EmbedContentConfig(
-                    output_dimensionality=_EMBEDDING_DIMENSIONS,
-                ),
-            )
-            embeddings = response.embeddings or []
-            vectors = [
-                [float(value) for value in embedding.values or []]
-                for embedding in embeddings
-            ]
-            if len(vectors) != len(texts) or any(
-                len(vector) != _EMBEDDING_DIMENSIONS for vector in vectors
-            ):
-                raise ValueError("Embedding provider returned unexpected vectors.")
-            return vectors
-        except Exception as exc:
-            logger.warning("Embedding provider failed with %s.", type(exc).__name__)
+    vectors: list[list[float]] = []
+    for batch_start in range(0, len(texts), _EMBEDDING_BATCH_SIZE):
+        batch = texts[batch_start : batch_start + _EMBEDDING_BATCH_SIZE]
+        batch_vectors: list[list[float]] | None = None
+        for key in keys:
+            try:
+                client = genai.Client(api_key=key)
+                response = client.models.embed_content(
+                    model=settings.RAG_EMBEDDING_MODEL,
+                    contents=batch,
+                    config=types.EmbedContentConfig(
+                        output_dimensionality=_EMBEDDING_DIMENSIONS,
+                    ),
+                )
+                embeddings = response.embeddings or []
+                candidate_vectors = [
+                    [float(value) for value in embedding.values or []]
+                    for embedding in embeddings
+                ]
+                if len(candidate_vectors) != len(batch) or any(
+                    len(vector) != _EMBEDDING_DIMENSIONS
+                    for vector in candidate_vectors
+                ):
+                    raise ValueError("Embedding provider returned unexpected vectors.")
+                batch_vectors = candidate_vectors
+                break
+            except Exception as exc:
+                logger.warning("Embedding provider failed with %s.", type(exc).__name__)
+        if batch_vectors is None:
+            raise RAGError("All configured embedding API keys failed.")
+        vectors.extend(batch_vectors)
 
-    raise RAGError("All configured embedding API keys failed.")
+    return vectors
 
 
 def _embed_text(text: str) -> list[float]:
@@ -138,7 +148,7 @@ def _fetch_rows(
                 raise TypeError(f"Supabase returned invalid rows for {table}.")
             if any(not isinstance(row, Mapping) for row in page):
                 raise TypeError(f"Supabase returned invalid rows for {table}.")
-            rows.extend(dict(row) for row in page)
+            rows.extend(dict(row) for row in page) # type: ignore
             if len(page) < _DATABASE_PAGE_SIZE:
                 return rows
             offset += _DATABASE_PAGE_SIZE
@@ -393,3 +403,52 @@ def upsert_document(
         logger.exception("RAG document indexing failed.")
         raise RAGError("Could not store learning material in the vector store.") from exc
     return len(indexed_chunks)
+
+
+def list_documents() -> list[dict[str, Any]]:
+    """Return one summary row for each indexed RAG document."""
+    rows = _fetch_rows(
+        "rag_chunks",
+        "document_key,title,language_code,content,chunk_index,created_at",
+        ("document_key", "chunk_index"),
+    )
+    documents: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        key = row.get("document_key")
+        if not isinstance(key, str) or not key:
+            continue
+        document = documents.setdefault(
+            key,
+            {
+                "document_key": key,
+                "title": str(row.get("title") or ""),
+                "language_code": str(row.get("language_code") or ""),
+                "content": "",
+                "chunks_count": 0,
+                "created_at": row.get("created_at"),
+            },
+        )
+        document["content"] += (
+            f"{' ' if document['content'] else ''}{str(row.get('content') or '')}"
+        )
+        document["chunks_count"] += 1
+    return list(documents.values())
+
+
+def delete_document(document_key: str) -> None:
+    """Delete an indexed RAG document by its stable document key."""
+    if not document_key.strip():
+        raise ValueError("Document key must not be empty.")
+    try:
+        result = (
+            supabase_admin.table("rag_chunks")
+            .delete()
+            .eq("document_key", document_key)
+            .select("document_key")
+            .execute()
+        )
+    except Exception as exc:
+        logger.exception("Could not delete RAG document.")
+        raise RAGError("Could not delete the document from the vector store.") from exc
+    if not result.data:
+        raise KeyError(document_key)
