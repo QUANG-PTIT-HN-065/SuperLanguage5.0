@@ -11,6 +11,100 @@ export interface TopicItem {
   word_count?: number;
 }
 
+async function loadDocuments(): Promise<void> {
+  try {
+    documentsList = await adminApi<RagDocument[]>("/api/v1/admin/rag/documents");
+    renderDocumentsTable();
+  } catch (error) {
+    showApiError(error);
+  }
+}
+
+function renderDocumentsTable(): void {
+  const tbody = getElement("documentsTableBody");
+  const badge = getElement("totalDocumentsBadge");
+  const languageFilter = getFieldValue("filterDocumentLanguage") || "all";
+  const filteredDocuments = documentsList.filter((item) => (
+    languageFilter === "all"
+      || (languageFilter === "all-language" && item.language_code === "all")
+      || item.language_code === languageFilter
+  ));
+  const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / DOCUMENT_PAGE_SIZE));
+  documentPage = Math.min(documentPage, totalPages);
+  const start = (documentPage - 1) * DOCUMENT_PAGE_SIZE;
+  const visibleDocuments = filteredDocuments.slice(start, start + DOCUMENT_PAGE_SIZE);
+  if (badge) badge.textContent = `${filteredDocuments.length}/${documentsList.length} tài liệu`;
+  if (!tbody) return;
+  if (!filteredDocuments.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-slate-400">Chưa có tài liệu nào được lập chỉ mục.</td></tr>';
+  } else {
+    tbody.replaceChildren(...visibleDocuments.map((item) => {
+      const row = window.document.createElement("tr");
+      row.className = "hover:bg-slate-50 border-b border-slate-100";
+
+      const title = window.document.createElement("td");
+      title.className = "py-3 px-4 max-w-xs";
+      const titleText = window.document.createElement("p");
+      titleText.className = "font-bold text-slate-900 truncate";
+      titleText.textContent = item.title;
+      const keyText = window.document.createElement("p");
+      keyText.className = "text-[11px] text-slate-400 font-mono truncate";
+      keyText.textContent = item.document_key;
+      title.append(titleText, keyText);
+
+      const language = window.document.createElement("td");
+      language.className = "py-3 px-4 whitespace-nowrap";
+      language.textContent = item.language_code;
+
+      const chunks = window.document.createElement("td");
+      chunks.className = "py-3 px-4 text-center font-semibold";
+      chunks.textContent = String(item.chunks_count);
+
+      const content = window.document.createElement("td");
+      content.className = "py-3 px-4 max-w-sm";
+      content.textContent = item.content;
+      content.title = item.content;
+      content.classList.add("truncate", "text-slate-600");
+
+      const actions = window.document.createElement("td");
+      actions.className = "py-3 px-4 text-right";
+      const remove = window.document.createElement("button");
+      remove.type = "button";
+      remove.className = "text-rose-600 hover:text-rose-800 text-xs font-semibold";
+      remove.textContent = "Xóa";
+      remove.addEventListener("click", () => void removeDocument(item));
+      actions.append(remove);
+
+      row.append(title, language, chunks, content, actions);
+      return row;
+    }));
+  }
+
+  const info = getElement("documentPaginationInfo");
+  if (info) {
+    info.textContent = filteredDocuments.length
+      ? `Hiển thị ${start + 1}-${Math.min(start + DOCUMENT_PAGE_SIZE, filteredDocuments.length)} / ${filteredDocuments.length} tài liệu`
+      : "Không có tài liệu phù hợp";
+  }
+  const pageNumber = getElement("documentPageNumber");
+  if (pageNumber) pageNumber.textContent = `${documentPage}/${totalPages}`;
+  const previous = getElement<HTMLButtonElement>("prevDocumentPage");
+  const next = getElement<HTMLButtonElement>("nextDocumentPage");
+  if (previous) previous.disabled = documentPage <= 1;
+  if (next) next.disabled = documentPage >= totalPages;
+}
+
+async function removeDocument(document: RagDocument): Promise<void> {
+  if (!window.confirm(`Xóa tài liệu "${document.title}" khỏi Vector DB?`)) return;
+  try {
+    await adminApi(`/api/v1/admin/rag/documents/${encodeURIComponent(document.document_key)}`, { method: "DELETE" });
+    showToast("Đã xóa tài liệu khỏi Vector DB.", "success");
+    await loadDocuments();
+  } catch (error) {
+    showApiError(error);
+  }
+}
+
 interface LearningPathItem {
   id: number;
   language_code: string;
@@ -51,11 +145,23 @@ interface OverviewStats {
   language_distribution: Record<string, number>;
 }
 
+interface RagDocument {
+  document_key: string;
+  title: string;
+  language_code: string;
+  content: string;
+  chunks_count: number;
+  created_at: string | null;
+}
+
 const languagesMap = new Map<string, string>();
 let topicsList: TopicItem[] = [];
 let learningPaths: LearningPathItem[] = [];
 let selectedLearningPathTopicIds: number[] = [];
 let usersList: UserItem[] = [];
+let documentsList: RagDocument[] = [];
+let documentPage = 1;
+const DOCUMENT_PAGE_SIZE = 5;
 let activeTab = "dashboard";
 let currentTopicFilterLang = "all";
 let chartInstance: Chart | null = null;
@@ -94,6 +200,7 @@ export async function initDashboard(): Promise<void> {
       loadTopics(),
       loadUsers(),
       loadLearningPaths(),
+      loadDocuments(),
     ]);
   } catch (error) {
     if (error instanceof ForbiddenError) {
@@ -694,6 +801,7 @@ function setupNavigation(): void {
       const titles: Record<string, string> = {
         dashboard: "Tổng Quan Điều Hành Hệ Thống",
         topics: "Quản Lý Chủ Đề Học Tập (Topics)",
+        documents: "Quản Lý Tài Liệu AI",
         users: "Quản Trị Học Viên & Người Dùng",
         analytics: "Thống Kê Báo Cáo Chuyên Sâu",
         settings: "Cài Đặt Hệ Thống & Phân Quyền",
@@ -720,7 +828,7 @@ function setupNavigation(): void {
   });
 
   const hash = window.location.hash.replace("#", "");
-  if (hash && ["dashboard", "topics", "users", "analytics", "settings"].includes(hash)) {
+  if (hash && ["dashboard", "topics", "documents", "users", "analytics", "settings"].includes(hash)) {
     switchTab(hash);
   }
 }
@@ -796,6 +904,86 @@ function initEngagementChart(): void {
 }
 
 function setupEventListeners(): void {
+  getElement("documentForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const title = getFieldValue("inputDocumentTitle");
+    const languageCode = getFieldValue("inputDocumentLanguage");
+    const content = getFieldValue("inputDocumentContent");
+    const fileInput = getElement<HTMLInputElement>("inputDocumentFile");
+    const file = fileInput?.files?.[0];
+    if (!languageCode || (!content && !file)) {
+      showToast("Vui lòng nhập nội dung hoặc chọn một file để tải lên.", "error");
+      return;
+    }
+
+    const submit = getElement<HTMLButtonElement>("btnSubmitDocument");
+    if (submit) submit.disabled = true;
+    try {
+      let result: { chunks_indexed: number };
+      if (file) {
+        const formData = new FormData();
+        formData.append("language_code", languageCode);
+        formData.append("file", file);
+        result = await adminApi<{ chunks_indexed: number }>("/api/v1/admin/rag/documents/upload", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        if (!title) {
+          showToast("Vui lòng nhập tiêu đề khi nhập nội dung thủ công.", "error");
+          return;
+        }
+        result = await adminApi<{ chunks_indexed: number }>("/api/v1/admin/rag/documents", {
+          method: "POST",
+          body: { title, language_code: languageCode, content },
+        });
+      }
+      getElement<HTMLFormElement>("documentForm")?.reset();
+      showToast(`Đã lập chỉ mục tài liệu (${result.chunks_indexed} đoạn).`, "success");
+      await loadDocuments();
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
+
+  getElement("btnRefreshDocuments")?.addEventListener("click", () => void loadDocuments());
+  getElement("filterDocumentLanguage")?.addEventListener("change", () => {
+    documentPage = 1;
+    renderDocumentsTable();
+  });
+  getElement("prevDocumentPage")?.addEventListener("click", () => {
+    if (documentPage > 1) {
+      documentPage -= 1;
+      renderDocumentsTable();
+    }
+  });
+  getElement("nextDocumentPage")?.addEventListener("click", () => {
+    const filter = getFieldValue("filterDocumentLanguage") || "all";
+    const totalPages = Math.max(1, Math.ceil(
+      documentsList.filter((item) => filter === "all" || item.language_code === filter || (filter === "all-language" && item.language_code === "all")).length
+      / DOCUMENT_PAGE_SIZE,
+    ));
+    if (documentPage < totalPages) {
+      documentPage += 1;
+      renderDocumentsTable();
+    }
+  });
+  getElement("btnReindexDocuments")?.addEventListener("click", async () => {
+    const button = getElement<HTMLButtonElement>("btnReindexDocuments");
+    if (button) button.disabled = true;
+    try {
+      const result = await adminApi<{ message: string; data: { documents_indexed: number } }>("/api/v1/admin/rag/reindex", { method: "POST" });
+      showToast(`${result.message} (${result.data.documents_indexed} tài liệu).`, "success");
+      await loadDocuments();
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  });
+
   // Submit Topic Form (POST hoặc PUT thật vào CSDL)
   getElement("topicForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();

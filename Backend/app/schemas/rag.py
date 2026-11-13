@@ -23,3 +23,12 @@ class RAGDocumentResponse(BaseModel):
     title: str
     language_code: str
     chunks_indexed: int
+
+
+class RAGDocumentSummary(BaseModel):
+    document_key: str
+    title: str
+    language_code: str
+    content: str
+    chunks_count: int
+    created_at: str | None = None
