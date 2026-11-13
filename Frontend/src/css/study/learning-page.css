@@ -1,0 +1,1767 @@
+/* ============================================================
+   Slanguage · Trang Học tập
+   Nạp cuối cùng, chỉ áp dụng cho .learning-path-page.
+   Bảng màu / font / bo góc lấy từ learner-world.css + DESIGN.md.
+   Mọi media query nằm trong css/shared/mobile-responsive.css.
+   ============================================================ */
+
+.learning-path-page {
+  --lp-hero-from: #16324a;
+  --lp-hero-mid: #17454f;
+  --lp-hero-to: #0c696e;
+  --lp-hero-text: #fbf9f2;
+  --lp-hero-lede: #dfe9e8;
+  --lp-lift: 0 10px 24px rgb(24 50 72 / 10%);
+  --lp-ring: 326.726;
+}
+
+.learning-path-page .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.learning-skip {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 200;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 4px;
+  color: #fff;
+  background: var(--learner-teal, #117e83);
+  font-weight: 600;
+  transform: translateY(-160%);
+  transition: transform 160ms var(--learner-ease, ease);
+}
+.learning-skip:focus-visible {
+  transform: translateY(0);
+  outline: 3px solid var(--learner-highlight, #e8d28b);
+  outline-offset: 2px;
+}
+
+.learning-path-page .study-main {
+  width: min(1120px, calc(100% - 40px));
+  margin: 26px auto 80px;
+}
+
+.learning-path-page :focus-visible {
+  outline: 3px solid var(--learner-teal, #117e83);
+  outline-offset: 3px;
+}
+
+/* ---------- Thanh cuộn theo bảng màu dự án ---------- */
+.learning-path-page {
+  scrollbar-width: thin;
+  scrollbar-color: #9cb8b4 var(--learner-ground, #f3f0e5);
+}
+.learning-path-page ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.learning-path-page ::-webkit-scrollbar-track {
+  background: var(--learner-ground, #f3f0e5);
+}
+.learning-path-page ::-webkit-scrollbar-thumb {
+  border: 2px solid var(--learner-ground, #f3f0e5);
+  border-radius: 6px;
+  background: #9cb8b4;
+}
+.learning-path-page ::-webkit-scrollbar-thumb:hover {
+  background: var(--learner-teal, #117e83);
+}
+
+/* ============================================================
+   HERO — navy → teal, chữ trắng đọc rõ
+   ============================================================ */
+.learning-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: clamp(18px, 3vw, 40px);
+  overflow: hidden;
+  padding: clamp(24px, 3.4vw, 38px);
+  border-radius: 16px;
+  color: var(--lp-hero-text);
+  background: linear-gradient(115deg, var(--lp-hero-from) 0%, var(--lp-hero-mid) 46%, var(--lp-hero-to) 100%);
+  box-shadow: 0 12px 30px rgb(24 50 72 / 16%);
+  isolation: isolate;
+}
+
+.learning-hero::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: radial-gradient(rgb(255 255 255 / 22%) 0.6px, transparent 0.6px);
+  background-size: 4px 4px;
+  opacity: 0.35;
+  content: "";
+  pointer-events: none;
+}
+
+.learning-hero__routes {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.learning-hero__routes path {
+  fill: none;
+  stroke: var(--learner-highlight, #e8d28b);
+  stroke-width: 1.6;
+  stroke-dasharray: 7 9;
+  opacity: 0.42;
+}
+.learning-hero__routes circle {
+  fill: var(--learner-highlight, #e8d28b);
+  opacity: 0.6;
+}
+
+.learning-hero__body {
+  min-width: 0;
+}
+
+.learning-hero__eyebrow {
+  margin: 0;
+  color: var(--learner-highlight, #e8d28b);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.learning-path-page .learning-hero__title {
+  margin: 10px 0 0;
+  color: var(--lp-hero-text);
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: clamp(1.7rem, 3.4vw, 2.45rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.16;
+  overflow-wrap: anywhere;
+}
+.learning-hero__title span {
+  color: var(--learner-highlight, #e8d28b);
+}
+
+.learning-path-page .learning-hero__lede {
+  max-width: 56ch;
+  margin: 12px 0 0;
+  color: var(--lp-hero-lede);
+  font-size: clamp(0.9rem, 1.4vw, 0.98rem);
+  line-height: 1.65;
+}
+
+.learning-hero__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.hero-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid rgb(251 249 242 / 34%);
+  border-radius: 999px;
+  color: var(--lp-hero-text);
+  background: rgb(251 249 242 / 12%);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.hero-chip--quiet {
+  border-style: dashed;
+  color: var(--lp-hero-lede);
+  background: transparent;
+  font-family: "DM Mono", monospace;
+  font-weight: 500;
+}
+.hero-chip__flag {
+  width: 22px;
+  height: 16px;
+  flex: none;
+  border-radius: 2px;
+  object-fit: cover;
+}
+
+.learning-hero__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.learning-hero__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 0 20px;
+  border-radius: 999px;
+  color: #12303a;
+  background: var(--learner-highlight, #e8d28b);
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform 180ms var(--learner-ease, ease), background-color 180ms var(--learner-ease, ease);
+}
+.learning-hero__cta:hover {
+  background: #f2e0a6;
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+.learning-hero__cta:active {
+  transform: translateY(0) scale(0.98);
+}
+.learning-hero__cta:focus-visible {
+  outline: 3px solid var(--lp-hero-text);
+  outline-offset: 3px;
+}
+
+.learning-hero__hint {
+  max-width: 30ch;
+  margin: 0;
+  color: var(--lp-hero-lede);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.learning-arrow {
+  flex: none;
+  transition: transform 200ms var(--learner-ease, ease);
+}
+.learning-hero__cta:hover .learning-arrow,
+.learning-hero__cta:focus-visible .learning-arrow {
+  transform: translateX(4px);
+}
+
+/* ============================================================
+   BA WIDGET THỐNG KÊ
+   ============================================================ */
+.learning-stats {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--learner-rule, #d7d9d2);
+  border-radius: 6px;
+  background: var(--learner-paper, #fbf9f2);
+}
+
+.stat-card__head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.stat-card__icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--learner-teal, #117e83);
+  background: var(--learner-teal-soft, #e3eeea);
+}
+.stat-card__icon--flame {
+  color: var(--learner-signal, #9e402c);
+  background: var(--learner-signal-soft, #f5e4db);
+}
+.stat-card__icon--goal {
+  color: #7a5c14;
+  background: #f6ecd2;
+}
+
+.learning-path-page .stat-card__label {
+  margin: 0;
+  color: var(--learner-muted, #5c7078);
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.stat-card__figure {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.stat-card__number {
+  color: var(--learner-ink, #183248);
+  font-family: "DM Mono", monospace;
+  font-size: clamp(1.9rem, 3.2vw, 2.4rem);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.stat-card__suffix {
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.875rem;
+}
+
+.stat-card__mono {
+  font-family: "DM Mono", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-card__note {
+  margin: auto 0 0;
+  padding-top: 12px;
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* ---------- XP meter ---------- */
+.xp-meter {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.xp-meter__track {
+  position: relative;
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e4e6dd;
+}
+
+.xp-meter__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--learner-teal, #117e83), #2ba39a);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 900ms var(--learner-ease, ease);
+}
+
+.xp-meter__caption {
+  margin: 9px 0 0;
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.xp-meter__caption .stat-card__mono {
+  color: var(--learner-ink, #183248);
+  font-weight: 500;
+}
+
+/* ---------- Streak 7 ngày ---------- */
+.streak-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.streak-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.streak-day__label {
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.streak-day__dot {
+  display: grid;
+  width: 100%;
+  max-width: 34px;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1.5px solid var(--learner-rule, #d7d9d2);
+  border-radius: 999px;
+  color: transparent;
+  background: transparent;
+  transition: background-color 220ms var(--learner-ease, ease), border-color 220ms var(--learner-ease, ease), color 220ms var(--learner-ease, ease);
+}
+.streak-day__dot svg {
+  width: 55%;
+  height: 55%;
+}
+
+.streak-day.is-studied .streak-day__dot {
+  border-color: var(--learner-teal, #117e83);
+  color: #fff;
+  background: var(--learner-teal, #117e83);
+}
+.streak-day.is-missed .streak-day__dot {
+  border-color: #cfd3c9;
+  background: #eceee6;
+}
+.streak-day.is-future .streak-day__dot {
+  border-style: dashed;
+  border-color: #d3d7cd;
+}
+.streak-day.is-today .streak-day__label {
+  color: var(--learner-ink, #183248);
+}
+.streak-day.is-today .streak-day__dot {
+  box-shadow: 0 0 0 3px rgb(232 210 139 / 65%);
+}
+.streak-day.is-today.is-studied .streak-day__dot {
+  border-color: var(--learner-highlight, #e8d28b);
+}
+
+/* ---------- Vòng mục tiêu ---------- */
+.stat-card--goal {
+  align-items: center;
+  text-align: center;
+}
+.stat-card--goal .stat-card__head {
+  align-self: flex-start;
+}
+
+.goal-ring {
+  position: relative;
+  width: clamp(104px, 12vw, 126px);
+  margin: 14px auto 0;
+  aspect-ratio: 1;
+}
+
+.goal-ring__svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.goal-ring__track,
+.goal-ring__value {
+  fill: none;
+  stroke-width: 10;
+}
+.goal-ring__track {
+  stroke: #e4e6dd;
+}
+.goal-ring__value {
+  stroke: var(--learner-teal, #117e83);
+  stroke-linecap: round;
+  stroke-dasharray: var(--lp-ring);
+  stroke-dashoffset: var(--lp-ring);
+  transition: stroke-dashoffset 1000ms var(--learner-ease, ease), stroke 260ms var(--learner-ease, ease);
+}
+.goal-ring.is-met .goal-ring__value {
+  stroke: #b8912f;
+}
+
+.goal-ring__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin: 0;
+}
+
+.goal-ring__percent {
+  color: var(--learner-ink, #183248);
+  font-family: "DM Mono", monospace;
+  font-size: 1.45rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.goal-ring__caption {
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.7rem;
+}
+
+.stat-card--goal .stat-card__note {
+  margin-top: 12px;
+  padding-top: 0;
+}
+
+/* ============================================================
+   GHI CHÚ DỮ LIỆU MẪU + THÔNG BÁO
+   ============================================================ */
+.learning-demo-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  border: 1px solid #e0d3a8;
+  border-radius: 6px;
+  color: #6d5417;
+  background: #f8f1dc;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.learning-demo-note svg {
+  flex: none;
+}
+.learning-demo-note a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: #6d5417;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.learning-path-page .study-notice {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--learner-rule, #d7d9d2);
+  border-radius: 6px;
+  color: var(--learner-text, #314a57);
+  background: var(--learner-paper, #fbf9f2);
+  font-size: 0.9rem;
+}
+.learning-path-page .study-notice[data-state="error"] {
+  border-color: #d9a493;
+  color: #8a3520;
+  background: var(--learner-signal-soft, #f5e4db);
+}
+
+.learning-path-page .learning-overview {
+  margin-top: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+/* ============================================================
+   DANH SÁCH LỘ TRÌNH
+   ============================================================ */
+.learning-path-page .catalog-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 16px;
+}
+
+.learning-path-page .catalog-heading h2 {
+  margin: 0;
+  color: var(--learner-ink, #183248);
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.catalog-subtitle {
+  max-width: 62ch;
+  margin: 6px 0 0;
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.learning-path-page .catalog-count {
+  flex: none;
+  padding-bottom: 3px;
+  color: var(--learner-muted, #5c7078);
+  font-family: "DM Mono", monospace;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------- Ô tìm kiếm ---------- */
+.learning-path-page .path-search-row {
+  display: flex;
+  width: 100%;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.path-search-field {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+}
+
+.path-search-field__icon {
+  position: absolute;
+  left: 14px;
+  color: var(--learner-muted, #5c7078);
+  pointer-events: none;
+}
+
+.learning-path-page .path-search-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 46px 10px 42px;
+  border: 1px solid #bac6c4;
+  border-radius: 6px;
+  outline: 0;
+  color: var(--learner-ink, #183248);
+  background: var(--learner-paper, #fbf9f2);
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 0.94rem;
+  transition: border-color 160ms var(--learner-ease, ease), box-shadow 160ms var(--learner-ease, ease);
+}
+.learning-path-page .path-search-field input::placeholder {
+  color: var(--learner-muted, #5c7078);
+}
+.learning-path-page .path-search-field input:focus-visible {
+  border-color: var(--learner-teal, #117e83);
+  box-shadow: 0 0 0 3px rgb(17 126 131 / 18%);
+  outline: 0;
+}
+.learning-path-page .path-search-field input::-webkit-search-cancel-button,
+.learning-path-page .path-search-field input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.path-search-clear {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: var(--learner-muted, #5c7078);
+  background: transparent;
+  cursor: pointer;
+  transition: color 150ms var(--learner-ease, ease), background-color 150ms var(--learner-ease, ease);
+}
+.path-search-clear:hover {
+  color: var(--learner-signal, #9e402c);
+  background: var(--learner-signal-soft, #f5e4db);
+}
+
+.learning-path-page .path-search-submit {
+  flex: none;
+  min-width: 76px;
+  min-height: 48px;
+}
+
+.learning-path-page .path-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 0 0 20px;
+}
+
+/* ---------- Lưới card ---------- */
+.learning-path-page .path-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  border: 0;
+}
+.learning-path-page .path-card-grid[aria-busy="true"] {
+  opacity: 0.55;
+}
+
+.learning-path-page .path-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 214px;
+  padding: 18px;
+  border: 1px solid var(--learner-rule, #d7d9d2);
+  border-radius: 6px;
+  color: var(--learner-ink, #183248);
+  background: var(--learner-paper, #fbf9f2);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 200ms var(--learner-ease, ease),
+    border-color 200ms var(--learner-ease, ease),
+    box-shadow 200ms var(--learner-ease, ease);
+}
+
+.learning-path-page .path-card::before {
+  position: absolute;
+  top: 0;
+  left: 18px;
+  width: 34px;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--learner-teal, #117e83);
+  content: "";
+  opacity: 0;
+  transform: scaleX(0.4);
+  transform-origin: left center;
+  transition: opacity 200ms var(--learner-ease, ease), transform 200ms var(--learner-ease, ease);
+}
+
+.learning-path-page .path-card:hover,
+.learning-path-page .path-card:focus-visible {
+  border-color: #9cb8b4;
+  box-shadow: var(--lp-lift);
+  transform: translateY(-3px);
+}
+.learning-path-page .path-card:hover::before,
+.learning-path-page .path-card:focus-visible::before {
+  opacity: 1;
+  transform: scaleX(1);
+}
+.learning-path-page .path-card:active {
+  transform: translateY(-1px);
+}
+
+.path-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.learning-path-page .path-card__title {
+  display: block;
+  margin: 0;
+  color: var(--learner-ink, #183248);
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.path-card__arrow {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--learner-teal, #117e83);
+  background: var(--learner-teal-soft, #e3eeea);
+  transition: transform 220ms var(--learner-ease, ease), background-color 220ms var(--learner-ease, ease);
+}
+.learning-path-page .path-card:hover .path-card__arrow,
+.learning-path-page .path-card:focus-visible .path-card__arrow {
+  background: #d3e5e0;
+  transform: translateX(4px);
+}
+
+.learning-path-page .path-card__desc {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 8px 0 0;
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.path-card__progress {
+  margin-top: auto;
+  padding-top: 16px;
+}
+
+.path-card__progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.path-card__progress-label {
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.path-card__progress-value {
+  color: var(--learner-ink, #183248);
+  font-family: "DM Mono", monospace;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.path-card__track {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e4e6dd;
+}
+
+.path-card__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--learner-teal, #117e83), #2ba39a);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 760ms var(--learner-ease, ease);
+}
+.path-card.is-complete .path-card__fill {
+  background: linear-gradient(90deg, #b8912f, var(--learner-highlight, #e8d28b));
+}
+
+.learning-path-page .path-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--learner-rule, #d7d9d2);
+}
+
+.learning-path-page .path-card-footer,
+.learning-path-page .path-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: #516873;
+  font-size: 0.875rem;
+}
+.learning-path-page .path-card-footer svg,
+.learning-path-page .path-author svg {
+  flex: none;
+  color: var(--learner-teal, #117e83);
+}
+.learning-path-page .path-author {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.path-card mark {
+  padding: 0 1px;
+  border-radius: 2px;
+  color: #6d5417;
+  background: var(--learner-highlight, #e8d28b);
+}
+
+/* ---------- Trạng thái rỗng / lỗi ---------- */
+.learning-path-page .path-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 40px 20px;
+  border: 1px dashed #c3cdc9;
+  border-radius: 6px;
+  background: var(--learner-paper, #fbf9f2);
+  text-align: center;
+}
+.path-empty__art {
+  margin-bottom: 8px;
+}
+.learning-path-page .path-empty__title {
+  margin: 0;
+  color: var(--learner-ink, #183248);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.learning-path-page .path-empty__text {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+.path-empty__action {
+  margin-top: 12px;
+}
+
+.path-error {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #d9a493;
+  border-radius: 6px;
+  color: #8a3520;
+  background: var(--learner-signal-soft, #f5e4db);
+}
+.path-error > svg {
+  flex: none;
+}
+.path-error > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.path-error h3 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+.path-error p {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.path-error .study-primary-button {
+  flex: none;
+}
+
+/* ============================================================
+   CHUYỂN CẢNH SANG BẢN ĐỒ LỘ TRÌNH
+   ============================================================ */
+.learning-path-page .path-detail,
+.learning-path-page .path-discovery {
+  animation: lp-fade-in 260ms var(--learner-ease, ease) both;
+}
+
+@keyframes lp-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.learning-path-page .path-back-button {
+  margin-bottom: 14px;
+}
+
+/* ============================================================
+   HAI CARD NHANH
+   ============================================================ */
+.learning-path-page .learning-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 30px;
+}
+
+.learning-path-page .learning-action-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--learner-rule, #d7d9d2);
+  border-radius: 6px;
+  color: var(--learner-ink, #183248);
+  background: var(--learner-paper, #fbf9f2);
+  text-decoration: none;
+  transition:
+    transform 200ms var(--learner-ease, ease),
+    border-color 200ms var(--learner-ease, ease),
+    box-shadow 200ms var(--learner-ease, ease);
+}
+.learning-path-page .learning-action-card:hover,
+.learning-path-page .learning-action-card:focus-visible {
+  border-color: #9cb8b4;
+  box-shadow: var(--lp-lift);
+  transform: translateY(-3px);
+  text-decoration: none;
+}
+.learning-path-page .learning-action-card:hover .learning-arrow,
+.learning-path-page .learning-action-card:focus-visible .learning-arrow {
+  transform: translateX(5px);
+}
+
+.learning-path-page .learning-action-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--learner-teal, #117e83);
+  background: var(--learner-teal-soft, #e3eeea);
+}
+.learning-path-page .learning-action-icon.ai {
+  color: var(--learner-signal, #9e402c);
+  background: var(--learner-signal-soft, #f5e4db);
+}
+
+.learning-path-page .learning-action-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.learning-path-page .learning-action-copy strong {
+  color: var(--learner-ink, #183248);
+  font-size: 0.96rem;
+  font-weight: 600;
+}
+.learning-path-page .learning-action-copy span {
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+.learning-path-page .learning-action-card > .learning-arrow {
+  color: var(--learner-teal, #117e83);
+}
+
+.learning-path-page .learning-data-note {
+  margin-top: 18px;
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   KHÁCH
+   ============================================================ */
+.learning-path-page .learning-guest-card {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid var(--learner-rule, #d7d9d2);
+  border-radius: 6px;
+  background: var(--learner-paper, #fbf9f2);
+  text-align: left;
+}
+.learning-path-page .learning-guest-card h2 {
+  margin: 0;
+  color: var(--learner-ink, #183248);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.learning-path-page .learning-guest-card p {
+  max-width: 62ch;
+  margin: 8px 0 16px;
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   BẢN ĐỒ LỘ TRÌNH KIỂU GAME — zigzag, đèn dẫn đường, thẻ chủ đề
+   ============================================================ */
+.learning-path-page .roadmap {
+  --rm-line: #23404c;
+  --rm-guide: #40606c;
+  --rm-trail: #45c4b8;
+  --rm-label: #e8eef0;
+  --rm-label-dim: #9db0b9;
+  position: relative;
+  min-width: 0;
+  margin: 0;
+}
+
+.roadmap__scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: #2f5a63 #10262e;
+}
+.roadmap.is-vertical .roadmap__scroller {
+  overflow: visible;
+}
+.roadmap__scroller::-webkit-scrollbar {
+  height: 10px;
+}
+.roadmap__scroller::-webkit-scrollbar-track {
+  border-radius: 0 0 16px 16px;
+  background: #10262e;
+}
+.roadmap__scroller::-webkit-scrollbar-thumb {
+  border: 2px solid #10262e;
+  border-radius: 6px;
+  background: #2f5a63;
+}
+.roadmap__scroller::-webkit-scrollbar-thumb:hover {
+  background: #35b0a6;
+}
+
+.roadmap__board {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--rm-line);
+  border-radius: 16px;
+  background-color: #0d222c;
+  background-image:
+    linear-gradient(160deg, rgb(10 25 34 / 84%) 0%, rgb(12 32 40 / 92%) 100%),
+    url("../../../assets/dungeon-bg.png");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  box-shadow: 0 12px 30px rgb(24 50 72 / 16%);
+}
+
+.roadmap__svg {
+  display: block;
+}
+
+.roadmap__guide,
+.roadmap__trail {
+  fill: none;
+  stroke-linecap: round;
+}
+.roadmap__guide {
+  stroke: var(--rm-guide);
+  stroke-width: 3;
+  stroke-dasharray: 3 9;
+  opacity: 0.85;
+}
+.roadmap__trail {
+  stroke: var(--rm-trail);
+  stroke-width: 4;
+}
+
+/* ---------- Node chủ đề ---------- */
+.roadmap-node {
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 320ms var(--learner-ease, ease);
+}
+.roadmap-node.is-on {
+  opacity: 1;
+}
+.roadmap-node:focus-visible {
+  outline: 3px solid var(--learner-highlight, #e8d28b);
+  outline-offset: 4px;
+}
+.roadmap-node[data-state="locked"] {
+  cursor: not-allowed;
+}
+.roadmap-node--end {
+  cursor: default;
+}
+
+.roadmap-node__halo {
+  fill: rgb(53 176 166 / 0%);
+  transform-box: fill-box;
+  transform-origin: center;
+  pointer-events: none;
+}
+.roadmap-node__ring {
+  fill: none;
+  stroke-width: 3;
+  transition: stroke 220ms var(--learner-ease, ease);
+}
+.roadmap-node__core {
+  transition: fill 220ms var(--learner-ease, ease);
+}
+.roadmap-node__sheen {
+  pointer-events: none;
+}
+.roadmap-node__icon {
+  transition: opacity 200ms var(--learner-ease, ease);
+}
+.roadmap-node__unlock-icon {
+  color: var(--learner-highlight, #e8d28b);
+  opacity: 0;
+  pointer-events: none;
+}
+.roadmap-node__burst {
+  stroke: var(--learner-highlight, #e8d28b);
+  stroke-width: 3;
+  stroke-linecap: round;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  pointer-events: none;
+}
+.roadmap-node__badge {
+  fill: var(--learner-paper, #fbf9f2);
+  stroke: rgb(13 34 44 / 45%);
+  stroke-width: 1.5;
+}
+.roadmap-node__index {
+  fill: var(--learner-ink, #183248);
+  font-family: "DM Mono", monospace;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.roadmap-node[data-state="done"] .roadmap-node__core {
+  fill: #2e6b52;
+}
+.roadmap-node[data-state="done"] .roadmap-node__ring {
+  stroke: #7fd0a8;
+}
+.roadmap-node[data-state="done"] .roadmap-node__icon {
+  color: #eafff3;
+}
+
+.roadmap-node[data-state="current"] .roadmap-node__core {
+  fill: var(--learner-teal-deep, #0c696e);
+}
+.roadmap-node[data-state="current"] .roadmap-node__ring {
+  stroke: #35b0a6;
+}
+.roadmap-node[data-state="current"] .roadmap-node__icon {
+  color: #f2fbf9;
+}
+.roadmap-node[data-state="current"] .roadmap-node__halo {
+  fill: rgb(53 176 166 / 26%);
+  animation: rm-halo 2.2s var(--learner-ease, ease) infinite;
+}
+
+.roadmap-node[data-state="locked"] .roadmap-node__core {
+  fill: #22333c;
+}
+.roadmap-node[data-state="locked"] .roadmap-node__ring {
+  stroke: #465862;
+}
+.roadmap-node[data-state="locked"] .roadmap-node__icon {
+  color: #8fa3ad;
+}
+
+.roadmap-node--end .roadmap-node__core {
+  fill: #4a3a12;
+}
+.roadmap-node--end .roadmap-node__ring {
+  stroke: #b8912f;
+}
+.roadmap-node--end .roadmap-node__icon {
+  color: var(--learner-highlight, #e8d28b);
+}
+
+.roadmap-node:focus-visible .roadmap-node__ring {
+  stroke: var(--learner-highlight, #e8d28b);
+}
+
+.roadmap-node.is-shaking .roadmap-node__body {
+  animation: rm-shake 300ms var(--learner-ease, ease);
+}
+.roadmap-node.is-unlocking .roadmap-node__burst {
+  animation: rm-burst 900ms var(--learner-ease, ease) forwards;
+}
+.roadmap-node.is-unlocking .roadmap-node__icon {
+  opacity: 0;
+}
+.roadmap-node.is-unlocking .roadmap-node__unlock-icon {
+  animation: rm-unlock-fade 1.2s var(--learner-ease, ease);
+}
+.roadmap-node.is-unlocking .roadmap-node__ring {
+  animation: rm-ring-flash 1.2s var(--learner-ease, ease);
+}
+
+/* ---------- Đèn dẫn đường ---------- */
+.roadmap__runner {
+  pointer-events: none;
+}
+.roadmap__runner-bob {
+  animation: rm-bob 1.8s ease-in-out infinite;
+}
+.roadmap__runner.is-idle .roadmap__runner-bob {
+  animation-duration: 2.6s;
+}
+.roadmap__runner-glow {
+  fill: rgb(232 210 139 / 30%);
+}
+.roadmap__runner-core {
+  fill: var(--learner-highlight, #e8d28b);
+}
+.roadmap__runner-spark {
+  fill: #fffbe8;
+}
+
+/* ---------- Đốm sáng nền ---------- */
+.roadmap__embers {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.roadmap__ember {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgb(232 210 139 / 75%);
+  box-shadow: 0 0 8px 2px rgb(232 210 139 / 35%);
+  opacity: 0;
+  animation: rm-ember 6s ease-in-out infinite;
+}
+
+/* ---------- Nhãn chủ đề ---------- */
+.roadmap-label {
+  position: absolute;
+  z-index: 2;
+  width: 144px;
+  margin: 0;
+  color: var(--rm-label);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  text-shadow: 0 1px 4px rgb(8 20 26 / 80%);
+  overflow-wrap: anywhere;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 320ms var(--learner-ease, ease),
+    transform 320ms var(--learner-ease, ease);
+  pointer-events: none;
+}
+.roadmap-label.is-on {
+  opacity: 1;
+  transform: translateY(0);
+}
+.roadmap-label[data-state="locked"] {
+  color: var(--rm-label-dim);
+  font-weight: 500;
+}
+.roadmap-label--end {
+  color: var(--learner-highlight, #e8d28b);
+}
+
+.roadmap__hint {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  left: 16px;
+  z-index: 2;
+  margin: 0;
+  color: #b9cdc9;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  text-align: center;
+  text-shadow: 0 1px 4px rgb(8 20 26 / 70%);
+  pointer-events: none;
+}
+
+.roadmap__empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: min(320px, calc(100% - 32px));
+  margin: 0;
+  color: var(--rm-label);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+/* ---------- Thẻ chủ đề (popover) ---------- */
+.roadmap__popover {
+  position: absolute;
+  z-index: 40;
+  width: 288px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--learner-rule, #d7d9d2);
+  border-radius: 12px;
+  background: var(--learner-paper, #fbf9f2);
+  box-shadow: 0 18px 40px rgb(10 25 34 / 35%);
+  opacity: 0;
+  transform: scale(0.92);
+  transition:
+    opacity 180ms var(--learner-ease, ease),
+    transform 180ms var(--learner-ease, ease);
+}
+.roadmap__popover[hidden] {
+  display: none;
+}
+.roadmap__popover.is-measuring {
+  visibility: hidden;
+  transition: none;
+}
+.roadmap__popover.is-open {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.roadmap-popover__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.roadmap-popover__state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.roadmap-popover__state[data-state="done"] {
+  color: #1f5c40;
+  background: #ddefe2;
+}
+.roadmap-popover__state[data-state="current"] {
+  color: var(--learner-teal-deep, #0c696e);
+  background: var(--learner-teal-soft, #e3eeea);
+}
+.roadmap-popover__close {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  margin: -8px -10px -8px 0;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: var(--learner-muted, #5c7078);
+  background: transparent;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 150ms var(--learner-ease, ease),
+    background-color 150ms var(--learner-ease, ease);
+}
+.roadmap-popover__close:hover {
+  color: var(--learner-signal, #9e402c);
+  background: var(--learner-signal-soft, #f5e4db);
+}
+.roadmap-popover__title {
+  margin: 6px 0 0;
+  color: var(--learner-ink, #183248);
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.roadmap-popover__desc {
+  margin: 6px 0 0;
+  color: var(--learner-text, #314a57);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+.roadmap-popover__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin: 8px 0 0;
+  color: var(--learner-muted, #5c7078);
+  font-family: "DM Mono", monospace;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.roadmap__popover .topic-lesson-list,
+.roadmap-sheet .topic-lesson-list {
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  list-style: none;
+}
+.roadmap__popover .topic-lesson-row,
+.roadmap-sheet .topic-lesson-row {
+  display: block;
+  padding: 0;
+  border: 0;
+}
+.roadmap__popover .topic-start-button,
+.roadmap-sheet .topic-start-button {
+  width: 100%;
+  min-height: 46px;
+}
+.roadmap__popover .topic-start-button:disabled,
+.roadmap-sheet .topic-start-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.roadmap__popover .topic-lesson-empty,
+.roadmap-sheet .topic-lesson-empty {
+  display: block;
+  padding: 10px 0 2px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.roadmap-popover__review {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: 1px solid var(--learner-rule, #d7d9d2);
+  border-radius: 4px;
+  color: var(--learner-ink, #183248);
+  background: transparent;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    border-color 160ms var(--learner-ease, ease),
+    background-color 160ms var(--learner-ease, ease),
+    color 160ms var(--learner-ease, ease);
+}
+.roadmap-popover__review:hover {
+  border-color: #9cb8b4;
+  color: var(--learner-teal-deep, #0c696e);
+  background: var(--learner-teal-soft, #e3eeea);
+  text-decoration: none;
+}
+
+/* ---------- Tooltip node khoá ---------- */
+.roadmap__tooltip {
+  position: absolute;
+  z-index: 35;
+  width: 232px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--learner-paper, #fbf9f2);
+  background: var(--learner-ink, #183248);
+  box-shadow: 0 10px 24px rgb(8 20 26 / 45%);
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity 180ms var(--learner-ease, ease),
+    transform 180ms var(--learner-ease, ease);
+  pointer-events: none;
+}
+.roadmap__tooltip[hidden] {
+  display: none;
+}
+.roadmap__tooltip.is-open {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- Chú giải ---------- */
+.roadmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.roadmap-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--learner-muted, #5c7078);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+.roadmap-legend__item.is-done {
+  color: #2e6b52;
+}
+.roadmap-legend__item.is-current {
+  color: var(--learner-teal, #117e83);
+}
+
+/* ---------- Bottom sheet + scrim (mobile) ---------- */
+.roadmap-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgb(12 26 32 / 55%);
+  opacity: 0;
+  transition: opacity 220ms var(--learner-ease, ease);
+}
+.roadmap-scrim[hidden] {
+  display: none;
+}
+.roadmap-scrim.is-open {
+  opacity: 1;
+}
+
+.roadmap-sheet {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1200;
+  max-height: 78dvh;
+  overflow-y: auto;
+  padding: 10px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+  border-radius: 16px 16px 0 0;
+  background: var(--learner-paper, #fbf9f2);
+  box-shadow: 0 -14px 40px rgb(10 25 34 / 35%);
+  transform: translateY(105%);
+  transition: transform 260ms var(--learner-ease, ease);
+  scrollbar-width: thin;
+  scrollbar-color: #9cb8b4 var(--learner-paper, #fbf9f2);
+}
+.roadmap-sheet[hidden] {
+  display: none;
+}
+.roadmap-sheet.is-open {
+  transform: translateY(0);
+}
+.roadmap-sheet::-webkit-scrollbar {
+  width: 8px;
+}
+.roadmap-sheet::-webkit-scrollbar-track {
+  background: var(--learner-paper, #fbf9f2);
+}
+.roadmap-sheet::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background: #9cb8b4;
+}
+.roadmap-sheet::-webkit-scrollbar-thumb:hover {
+  background: var(--learner-teal, #117e83);
+}
+.roadmap-sheet__handle {
+  width: 44px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: var(--learner-rule, #d7d9d2);
+}
+
+body.roadmap-sheet-open {
+  overflow: hidden;
+}
+
+/* ---------- Chuyển động bản đồ ---------- */
+@keyframes rm-halo {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.86);
+  }
+  50% {
+    opacity: 0.16;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes rm-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+@keyframes rm-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  22% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+@keyframes rm-unlock-fade {
+  0% {
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes rm-ring-flash {
+  0%,
+  100% {
+    stroke: #35b0a6;
+  }
+  30% {
+    stroke: #e8d28b;
+  }
+}
+
+@keyframes rm-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes rm-ember {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.7);
+  }
+  30% {
+    opacity: 0.8;
+  }
+  70% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(1.05);
+  }
+}
+
+/* ============================================================
+   GIẢM CHUYỂN ĐỘNG
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .learning-path-page *,
+  .learning-path-page *::before,
+  .learning-path-page *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .learning-path-page .path-card:hover,
+  .learning-path-page .learning-action-card:hover,
+  .learning-hero__cta:hover {
+    transform: none;
+  }
+}

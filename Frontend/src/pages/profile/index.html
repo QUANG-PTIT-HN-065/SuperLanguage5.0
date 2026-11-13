@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Hồ sơ của tôi</title>
+  <link rel="icon" type="image/png" href="../../../assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../../css/home/style.css">
+  <link rel="stylesheet" href="../../css/shared/user-experience.css">
+  <link rel="stylesheet" href="../../css/study/style.css">
+  <link rel="stylesheet" href="../../css/shared/learner-header.css">
+  <link rel="stylesheet" href="../../css/profile/profile.css">
+  <link rel="stylesheet" href="../../css/shared/mobile-responsive.css">
+  <link rel="stylesheet" href="../../styles/tokens.css">
+  <link rel="stylesheet" href="../../styles/components.css">
+</head>
+<body class="slg-study-page profile-page user-guest">
+  <div data-app-header></div>
+
+  <main class="profile-main">
+    <!-- Top Hero Card: Avatar lớn, XP, Streak, Level, Email có icon khóa -->
+    <section class="profile-hero-card">
+      <div class="profile-hero-avatar-area" id="avatarUploadContainer">
+        <!-- Avatar Uploader mount point -->
+      </div>
+      <div class="profile-hero-details">
+        <div class="profile-hero-meta-row">
+          <span class="user-level-badge" id="profileLevelBadge">Cấp độ 1</span>
+          <span class="profile-stat-chip streak" title="Chuỗi học tập liên tục">
+            <i class="fa-solid fa-fire" aria-hidden="true"></i>
+            <span id="profileStreak">0 Ngày</span>
+          </span>
+          <span class="profile-stat-chip xp" title="Tổng điểm kinh nghiệm">
+            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+            <span id="profileXp">0 XP</span>
+          </span>
+        </div>
+        <h1 class="profile-hero-name" id="profileDisplayName">Đang tải...</h1>
+        <div class="profile-hero-email-row">
+          <span class="profile-email-label" id="profileEmail">email@example.com</span>
+          <span class="profile-readonly-badge" title="Email định danh bảo mật"><i class="fa-solid fa-lock" aria-hidden="true"></i> Chỉ xem</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Global Notice -->
+    <div class="profile-notice" id="profileNotice" role="status" aria-live="polite">
+      Đang tải hồ sơ của bạn...
+    </div>
+
+    <!-- Navigation Tabs (Hướng 2: Chia Tab) -->
+    <nav class="profile-tabs-nav" aria-label="Phân loại hồ sơ">
+      <button type="button" class="profile-tab-btn is-active" data-tab-target="tab-identity" aria-selected="true" role="tab">
+        <i class="fa-solid fa-id-card" aria-hidden="true"></i>
+        <span>Thông tin cá nhân</span>
+      </button>
+      <button type="button" class="profile-tab-btn" data-tab-target="tab-learning" aria-selected="false" role="tab">
+        <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>
+        <span>Thiết lập học tập</span>
+      </button>
+      <button type="button" class="profile-tab-btn" data-tab-target="tab-goals" aria-selected="false" role="tab">
+        <i class="fa-solid fa-bullseye" aria-hidden="true"></i>
+        <span>Mục tiêu mỗi ngày</span>
+      </button>
+      <button type="button" class="profile-tab-btn" data-tab-target="tab-security" aria-selected="false" role="tab">
+        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+        <span>Bảo mật</span>
+      </button>
+    </nav>
+
+    <!-- Main Profile Form -->
+    <form class="profile-form" id="profileForm" novalidate hidden>
+      <input type="hidden" name="avatar_url" id="hiddenAvatarUrl">
+
+      <!-- TAB 1: Thông tin cá nhân -->
+      <section class="profile-tab-panel is-active" id="tab-identity" role="tabpanel" aria-labelledby="identityTitle">
+        <div class="profile-card">
+          <div class="profile-section-heading">
+            <span class="profile-section-icon"><i class="fa-solid fa-user-pen" aria-hidden="true"></i></span>
+            <div>
+              <h2 id="identityTitle">Thông tin cá nhân</h2>
+              <p>Tên hiển thị và danh tính của bạn trên bảng thành tích Slanguage.</p>
+            </div>
+          </div>
+
+          <div class="profile-fields">
+            <div class="profile-field-group">
+              <label for="input_display_name">Họ và tên <span class="required-star">*</span></label>
+              <input id="input_display_name" name="display_name" type="text" maxlength="50" autocomplete="name" required placeholder="Nhập họ và tên...">
+              <span class="field-error-msg" id="error_display_name"></span>
+            </div>
+
+            <div class="profile-field-group">
+              <label for="input_username">Tên đăng nhập <span class="required-star">*</span></label>
+              <input id="input_username" name="username" type="text" minlength="3" maxlength="30" autocomplete="username" required placeholder="vd: nhat_anh99">
+              <small class="field-hint">Chỉ dùng chữ thường không dấu, số và gạch dưới (_).</small>
+              <span class="field-error-msg" id="error_username"></span>
+            </div>
+
+            <div class="profile-field-group">
+              <label for="input_birth_year">Năm sinh</label>
+              <input id="input_birth_year" name="birth_year" type="number" min="1900" max="2100" inputmode="numeric" placeholder="vd: 2000">
+              <span class="field-error-msg" id="error_birth_year"></span>
+            </div>
+
+            <div class="profile-field-group">
+              <label for="input_country_code">Mã quốc gia</label>
+              <input id="input_country_code" name="country_code" type="text" maxlength="2" placeholder="VN, JP, US..." autocomplete="country">
+              <small class="field-hint">Mã 2 chữ cái chuẩn ISO (VD: VN, JP, US).</small>
+              <span class="field-error-msg" id="error_country_code"></span>
+            </div>
+
+            <div class="profile-field-group profile-field-wide">
+              <label for="input_timezone">Múi giờ học tập <span class="required-star">*</span></label>
+              <input id="input_timezone" name="timezone" type="text" maxlength="64" placeholder="Asia/Ho_Chi_Minh" required>
+              <small class="field-hint">Dùng để tính chu kỳ Streak và giờ nhắc học chính xác.</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: Thiết lập học tập (Segmented Chips & Cờ) -->
+      <section class="profile-tab-panel" id="tab-learning" role="tabpanel" aria-labelledby="learningTitle" hidden>
+        <div class="profile-card">
+          <div class="profile-section-heading">
+            <span class="profile-section-icon"><i class="fa-solid fa-language" aria-hidden="true"></i></span>
+            <div>
+              <h2 id="learningTitle">Thiết lập học tập</h2>
+              <p>Lộ trình và bài học tương tác sẽ điều chỉnh dựa theo trình độ của bạn.</p>
+            </div>
+          </div>
+
+          <div class="profile-fields">
+            <div class="profile-field-group">
+              <label for="select_native_language">Ngôn ngữ mẹ đẻ <span class="required-star">*</span></label>
+              <div class="select-with-flag">
+                <select id="select_native_language" name="native_language" required>
+                  <option value="vi">🇻🇳 Tiếng Việt</option>
+                  <option value="en">🇬🇧 Tiếng Anh</option>
+                  <option value="ja">🇯🇵 Tiếng Nhật</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="profile-field-group">
+              <label for="select_target_language">Ngôn ngữ đang học <span class="required-star">*</span></label>
+              <div class="select-with-flag">
+                <select id="select_target_language" name="target_language" required>
+                  <option value="en">🇬🇧 Tiếng Anh</option>
+                  <option value="ja">🇯🇵 Tiếng Nhật</option>
+                  <option value="vi">🇻🇳 Tiếng Việt</option>
+                </select>
+              </div>
+              <span class="field-error-msg" id="error_languages"></span>
+            </div>
+
+            <!-- Segmented Chips: Trình độ hiện tại -->
+            <div class="profile-field-group profile-field-wide">
+              <label>Trình độ hiện tại (Khung tham chiếu CEFR)</label>
+              <div class="segmented-chips-container" id="currentLevelChips">
+                <button type="button" class="cefr-chip" data-level="A1"><strong>A1</strong><span>Mới bắt đầu</span></button>
+                <button type="button" class="cefr-chip" data-level="A2"><strong>A2</strong><span>Sơ cấp</span></button>
+                <button type="button" class="cefr-chip" data-level="B1"><strong>B1</strong><span>Trung cấp</span></button>
+                <button type="button" class="cefr-chip" data-level="B2"><strong>B2</strong><span>Khá</span></button>
+                <button type="button" class="cefr-chip" data-level="C1"><strong>C1</strong><span>Nâng cao</span></button>
+                <button type="button" class="cefr-chip" data-level="C2"><strong>C2</strong><span>Thành thạo</span></button>
+              </div>
+              <input type="hidden" name="current_level" id="hiddenCurrentLevel">
+            </div>
+
+            <!-- Segmented Chips: Trình độ mục tiêu -->
+            <div class="profile-field-group profile-field-wide">
+              <label>Trình độ mục tiêu mong muốn</label>
+              <div class="segmented-chips-container" id="targetLevelChips">
+                <button type="button" class="cefr-chip" data-level="A1"><strong>A1</strong><span>Mới bắt đầu</span></button>
+                <button type="button" class="cefr-chip" data-level="A2"><strong>A2</strong><span>Sơ cấp</span></button>
+                <button type="button" class="cefr-chip" data-level="B1"><strong>B1</strong><span>Trung cấp</span></button>
+                <button type="button" class="cefr-chip" data-level="B2"><strong>B2</strong><span>Khá</span></button>
+                <button type="button" class="cefr-chip" data-level="C1"><strong>C1</strong><span>Nâng cao</span></button>
+                <button type="button" class="cefr-chip" data-level="C2"><strong>C2</strong><span>Thành thạo</span></button>
+              </div>
+              <input type="hidden" name="target_level" id="hiddenTargetLevel">
+              <span class="field-error-msg" id="error_cefr_progression"></span>
+            </div>
+
+            <div class="profile-field-group">
+              <label for="select_learning_goal">Mục đích học tập</label>
+              <select id="select_learning_goal" name="learning_goal">
+                <option value="">Chọn mục đích...</option>
+                <option value="travel">✈️ Du lịch &amp; Khám phá</option>
+                <option value="work">💼 Công việc &amp; Sự nghiệp</option>
+                <option value="study">🎓 Học tập &amp; Du học</option>
+                <option value="exam">📝 Luyện thi chứng chỉ</option>
+                <option value="hobby">🎮 Sở thích &amp; Đam mê</option>
+                <option value="other">✨ Mục đích khác</option>
+              </select>
+            </div>
+
+            <div class="profile-field-group">
+              <label for="input_reminder_time">Giờ nhắc học mỗi ngày</label>
+              <input id="input_reminder_time" name="reminder_time" type="time">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: Mục tiêu mỗi ngày (Sliders + Interactive Ring Preview) -->
+      <section class="profile-tab-panel" id="tab-goals" role="tabpanel" aria-labelledby="goalsTitle" hidden>
+        <div class="profile-card">
+          <div class="profile-section-heading">
+            <span class="profile-section-icon"><i class="fa-solid fa-chart-line" aria-hidden="true"></i></span>
+            <div>
+              <h2 id="goalsTitle">Mục tiêu rèn luyện mỗi ngày</h2>
+              <p>Điều chỉnh các thông số để phù hợp với thời gian biểu của bạn.</p>
+            </div>
+          </div>
+
+          <div class="goals-interactive-layout">
+            <!-- Vòng tròn tiến độ xem trước thời gian thực (Cảm hứng Openquiz.ai) -->
+            <div class="goals-preview-ring-box">
+              <div class="ring-svg-wrapper">
+                <svg class="goal-progress-svg" viewBox="0 0 120 120">
+                  <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+                  <circle class="ring-fill" id="goalRingFill" cx="60" cy="60" r="50"></circle>
+                </svg>
+                <div class="ring-center-content">
+                  <span class="ring-icon"><i class="fa-solid fa-fire-flame-curved" aria-hidden="true"></i></span>
+                  <strong class="ring-xp-val" id="ringXpDisplay">20</strong>
+                  <span class="ring-xp-label">XP / ngày</span>
+                </div>
+              </div>
+              <p class="goal-recommendation-note" id="goalTipText">
+                <i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Đạt tối thiểu <strong>20 XP</strong> mỗi ngày để duy trì chuỗi Streak học liên tục!
+              </p>
+            </div>
+
+            <!-- Controls: Sliders + Nút +/- -->
+            <div class="goals-controls-box">
+              <!-- Slider 1: Thời gian học -->
+              <div class="goal-slider-item">
+                <div class="goal-slider-header">
+                  <span class="slider-title"><i class="fa-solid fa-stopwatch" aria-hidden="true"></i> Thời gian học</span>
+                  <span class="slider-value-badge"><span id="val_minutes">15</span> phút / ngày</span>
+                </div>
+                <div class="slider-control-row">
+                  <button type="button" class="stepper-btn" data-step-target="daily_goal_minutes" data-step="-5" aria-label="Giảm 5 phút"><i class="fa-solid fa-minus"></i></button>
+                  <input type="range" id="range_minutes" name="daily_goal_minutes" min="5" max="240" step="5" value="15">
+                  <button type="button" class="stepper-btn" data-step-target="daily_goal_minutes" data-step="5" aria-label="Tăng 5 phút"><i class="fa-solid fa-plus"></i></button>
+                </div>
+              </div>
+
+              <!-- Slider 2: Số bài học -->
+              <div class="goal-slider-item">
+                <div class="goal-slider-header">
+                  <span class="slider-title"><i class="fa-solid fa-book" aria-hidden="true"></i> Số bài học</span>
+                  <span class="slider-value-badge"><span id="val_lessons">1</span> bài / ngày</span>
+                </div>
+                <div class="slider-control-row">
+                  <button type="button" class="stepper-btn" data-step-target="daily_goal_lessons" data-step="-1" aria-label="Giảm 1 bài"><i class="fa-solid fa-minus"></i></button>
+                  <input type="range" id="range_lessons" name="daily_goal_lessons" min="1" max="20" step="1" value="1">
+                  <button type="button" class="stepper-btn" data-step-target="daily_goal_lessons" data-step="1" aria-label="Tăng 1 bài"><i class="fa-solid fa-plus"></i></button>
+                </div>
+              </div>
+
+              <!-- Slider 3: Điểm XP -->
+              <div class="goal-slider-item">
+                <div class="goal-slider-header">
+                  <span class="slider-title"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Điểm kinh nghiệm mục tiêu</span>
+                  <span class="slider-value-badge"><span id="val_xp">20</span> XP / ngày</span>
+                </div>
+                <div class="slider-control-row">
+                  <button type="button" class="stepper-btn" data-step-target="daily_goal_xp" data-step="-10" aria-label="Giảm 10 XP"><i class="fa-solid fa-minus"></i></button>
+                  <input type="range" id="range_xp" name="daily_goal_xp" min="10" max="500" step="10" value="20">
+                  <button type="button" class="stepper-btn" data-step-target="daily_goal_xp" data-step="10" aria-label="Tăng 10 XP"><i class="fa-solid fa-plus"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: Bảo mật & Đổi mật khẩu (Nút Cập nhật mật khẩu riêng) -->
+      <section class="profile-tab-panel" id="tab-security" role="tabpanel" aria-labelledby="securityTitle" hidden>
+        <div class="profile-card">
+          <div class="profile-section-heading">
+            <span class="profile-section-icon"><i class="fa-solid fa-key" aria-hidden="true"></i></span>
+            <div>
+              <h2 id="securityTitle">Đổi mật khẩu tài khoản</h2>
+              <p>Mật khẩu an toàn giúp bảo vệ tiến trình học tập và thông tin cá nhân của bạn.</p>
+            </div>
+          </div>
+
+          <div class="security-form-container">
+            <div class="profile-field-group">
+              <label for="input_new_password">Mật khẩu mới</label>
+              <div class="password-input-wrapper">
+                <input id="input_new_password" type="password" placeholder="Nhập ít nhất 8 ký tự..." autocomplete="new-password">
+                <button type="button" class="toggle-password-btn" data-toggle="input_new_password" aria-label="Hiện mật khẩu">
+                  <i class="fa-regular fa-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+
+              <!-- Thanh độ mạnh mật khẩu đổi màu thời gian thực -->
+              <div class="password-strength-box">
+                <div class="strength-track">
+                  <span class="strength-bar" id="passwordStrengthBar"></span>
+                </div>
+                <span class="strength-label" id="passwordStrengthLabel">Độ mạnh: Chưa nhập</span>
+              </div>
+            </div>
+
+            <div class="profile-field-group">
+              <label for="input_confirm_password">Xác nhận mật khẩu mới</label>
+              <div class="password-input-wrapper">
+                <input id="input_confirm_password" type="password" placeholder="Nhập lại mật khẩu mới..." autocomplete="new-password">
+                <button type="button" class="toggle-password-btn" data-toggle="input_confirm_password" aria-label="Hiện mật khẩu">
+                  <i class="fa-regular fa-eye" aria-hidden="true"></i>
+                </button>
+              </div>
+              <span class="field-error-msg" id="error_password_match"></span>
+            </div>
+
+            <!-- Nút Cập nhật mật khẩu riêng ngay trong card Bảo mật -->
+            <div class="security-action-row">
+              <button type="button" class="study-primary-button security-submit-btn" id="btnUpdatePassword">
+                <i class="fa-solid fa-shield-check" aria-hidden="true"></i> Cập nhật mật khẩu
+              </button>
+              <span class="security-feedback-msg" id="securityFeedbackMsg" role="status" aria-live="polite"></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Thanh Lưu Thay Đổi Dính Đáy (Floating Sticky Save Bar) -->
+      <aside class="sticky-save-bar" id="stickySaveBar" aria-label="Thanh lưu thay đổi" hidden>
+        <div class="sticky-save-content">
+          <div class="sticky-save-info">
+            <span class="dirty-dot"></span>
+            <span class="sticky-save-text">Bạn có các thay đổi chưa được lưu</span>
+          </div>
+          <div class="sticky-save-actions">
+            <button type="button" class="sticky-cancel-btn" id="btnDiscardChanges">Hoàn tác</button>
+            <button type="submit" class="sticky-submit-btn" id="saveProfileButton">
+              <span class="btn-spinner" id="saveSpinner" hidden></span>
+              <span class="btn-check-icon" id="saveCheckIcon" hidden><i class="fa-solid fa-check"></i></span>
+              <span id="saveProfileLabel">Lưu thay đổi</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+    </form>
+  </main>
+
+  <script type="module" src="../../types/home/profile.ts"></script>
+</body>
+</html>

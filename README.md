@@ -151,6 +151,43 @@ python scripts/create_admin.py --email admin@example.com --name "Admin"
 uvicorn app.main:app --reload --port 8000
 ```
 
+### Chat AI với Supabase Vector DB
+
+Chạy migration `Supebase/migrations/04_rag.sql` trong Supabase SQL Editor để tạo vector table và hàm tìm kiếm. Trong `Backend/.env`, cấu hình `RAG_EMBEDDING_API_KEYS` (hoặc dùng `GEMINI_API_KEYS` làm dự phòng); các embedding hiện dùng `gemini-embedding-001` với 768 chiều.
+
+Chat Gemini dùng model `gemini-3.5-flash-lite` mặc định. Có thể đặt `GEMINI_CHAT_MODEL` trong `Backend/.env` để chọn model khác còn được Google hỗ trợ. Không dùng `gemini-2.5-flash` cho dự án mới: Google đã đánh dấu model này deprecated và giới hạn API cho người dùng hiện hữu.
+
+Sau khi đăng nhập bằng tài khoản admin, gọi `POST /api/v1/admin/rag/reindex` để đưa các chủ đề và từ vựng Anh/Nhật hiện có vào Vector DB. Khi thêm nội dung bài học chi tiết, gửi `POST /api/v1/admin/rag/documents` với header `Authorization: Bearer <admin_access_token>` và JSON:
+
+```json
+{
+  "title": "Thì hiện tại hoàn thành",
+  "language_code": "English",
+  "content": "Nội dung bài học, cách dùng và ví dụ..."
+}
+```
+
+`language_code` nhận `English`, `Japanese` hoặc `all`. Reindex sau khi nội dung chủ đề/từ vựng thay đổi. Chat AI chỉ gọi LLM khi tìm thấy context phù hợp; lỗi vector store được trả về để thử lại, còn không có kết quả phù hợp thì AI từ chối câu hỏi ngoài phạm vi.
+
+### Bài học, tiến độ và ôn tập từ vựng
+
+Chạy lần lượt `Supebase/migrations/01_schema.sql`, `Supebase/migrations/06_learning_lessons.sql`, `Supebase/migrations/07_ordered_topic_quizzes.sql` và `Supebase/migrations/08_admin_word_management_rpcs.sql` trong Supabase SQL Editor. Migration 06 tạo bảng bài học/câu hỏi/tiến độ, RPC chấm đáp án một lần, cộng XP và tính Level (100 XP mỗi Level), cùng lịch nhắc ôn từ vựng. Migration 07 tạo lộ trình gồm nhiều chủ đề có thứ tự và quiz từ vựng 4 câu (2 câu điền từ, 2 câu chọn một trong bốn đáp án); chủ đề kế tiếp chỉ mở khi đạt 4/4. Migration 08 cài các RPC tạo/sửa/xóa từ vựng và yêu cầu PostgREST tải lại schema.
+
+API học viên yêu cầu `Authorization: Bearer <access_token>`:
+- `GET /api/v1/lessons/topics/{topic_id}/lessons` trả trạng thái hoàn thành/khóa theo thứ tự bài.
+- `GET /api/v1/vocabulary/learning-paths` trả danh sách lộ trình; `GET /api/v1/vocabulary/learning-paths/{path_id}` trả các chủ đề cùng tiến độ và trạng thái khóa/mở.
+- `GET /api/v1/lessons/topics/{topic_id}/lessons?path_id={path_id}` tải bài kiểm tra của chủ đề trong lộ trình đã chọn.
+- `GET /api/v1/lessons/{lesson_id}/questions` chỉ trả nội dung câu hỏi và lựa chọn, không kèm đáp án.
+- `POST /api/v1/lessons/questions/{question_id}/answer` với `{"selected_option_id":"a"}` chấm một lần; gửi lại cùng câu hỏi trả kết quả đã lưu.
+- `POST /api/v1/lessons/{lesson_id}/complete` cộng XP phía máy chủ khi đã trả lời hết câu hỏi; quiz lộ trình chỉ được hoàn thành và mở chủ đề sau nếu đạt 4/4.
+- `GET /api/v1/me/progress` trả XP và Level; `POST /api/v1/vocabulary/words/{word_id}/review` với `{"review_id":"<uuid>","rating":"Khó"}`, `{"review_id":"<uuid>","rating":"Tốt"}` hoặc `{"review_id":"<uuid>","rating":"Dễ"}` cập nhật mastery và `next_review_at`. Dùng lại cùng `review_id` khi thử gửi lại để tránh ghi nhận hai lần.
+
+### Nhận dạng giọng nói trong Chat AI
+
+Chat AI dùng OpenAI Whisper (`base`) để tự nhận dạng ngôn ngữ từ bản ghi âm. FFmpeg được đóng gói cùng `imageio-ffmpeg`; audio được xử lý tạm thời trên backend và không lưu vào Supabase. Lần đầu khởi chạy nhận dạng, Whisper tải model (khoảng 142 MB) vào cache; cài các thư viện bằng `pip install -r Backend/requirements.txt`.
+
+Trong lúc nói, trình duyệt hiển thị bản nhận dạng tạm thời nếu Web Speech API được hỗ trợ; khi dừng, backend Whisper tạo transcript cuối cùng và Chat AI tự gửi tin nhắn. Các câu hỏi dịch/giải nghĩa (ví dụ “Nice to meet you có nghĩa là gì?”) được coi là yêu cầu học ngôn ngữ và có thể trả lời dù Vector DB không có mục khớp.
+
 ### 3. Thiết lập Frontend (TypeScript + Vite)
 Mở terminal thứ hai tại thư mục gốc:
 ```powershell
@@ -160,7 +197,7 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 npm run dev
 ```
 
-Mở URL được Vite hiển thị trong terminal. `Frontend/.env` chỉ cần `VITE_API_BASE_URL=http://127.0.0.1:8000`. Đăng nhập qua `/api/v1/auth/admin/login`; backend xác thực bằng Supabase Auth và chỉ cấp session cho tài khoản có `role=admin`. Dashboard quản trị hỗ trợ xem danh sách, xem chi tiết, thêm, sửa và xóa từ vựng. Đăng nhập bị giới hạn tối đa 5 lượt mỗi email/IP và 20 lượt mỗi IP trong 15 phút; bộ đếm được lưu nguyên tử trong Supabase, dùng chung giữa các tiến trình. Sau khi cập nhật schema, chạy lại migration `Supebase/migrations/01_schema.sql`. Không mở HTML trực tiếp hoặc dùng Live Server: TypeScript cần được Vite phục vụ.
+Mở URL được Vite hiển thị trong terminal. `Frontend/.env` chỉ cần `VITE_API_BASE_URL=http://127.0.0.1:8000`. Đăng nhập qua `/api/v1/auth/admin/login`; backend xác thực bằng Supabase Auth và chỉ cấp session cho tài khoản có `role=admin`. Dashboard quản trị hỗ trợ xem danh sách, xem chi tiết, thêm, sửa và xóa từ vựng. Đăng nhập bị giới hạn tối đa 5 lượt mỗi email/IP và 20 lượt mỗi IP trong 15 phút; bộ đếm được lưu nguyên tử trong Supabase, dùng chung giữa các tiến trình. Nếu RPC quản trị từ vựng thiếu trong Supabase, chạy `Supebase/migrations/08_admin_word_management_rpcs.sql` trong SQL Editor; không cần chạy lại toàn bộ migration nền. Không mở HTML trực tiếp hoặc dùng Live Server: TypeScript cần được Vite phục vụ.
 
 ---
 

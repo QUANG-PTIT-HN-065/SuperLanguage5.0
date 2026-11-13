@@ -1,0 +1,123 @@
+<!-- ============================================================
+     Slanguage · Header dùng chung
+     Được ui/header.ts fetch và inject vào <div data-app-header>.
+     Serve root = thư mục Frontend/ (đường dẫn bắt đầu bằng "/").
+     ============================================================ -->
+
+<header class="app-header" id="appHeader">
+  <div class="header-inner">
+    <a class="brand" href="/src/pages/home/index.html" aria-label="Slanguage, về Trang chủ">
+      <span class="brand-mark"><img src="/assets/logo.png" alt="" width="32" height="32"></span>
+      <span class="brand-name">Sl<span class="brand-accent">anguage</span></span>
+    </a>
+
+    <nav class="main-nav" aria-label="Điều hướng chính">
+      <ul class="nav-links" id="navLinks">
+        <li><a class="nav-link" href="/src/pages/home/index.html" data-nav="home">Trang chủ</a></li>
+        <li><a class="nav-link" href="/src/pages/learning/index.html" data-nav="learning">Học tập</a></li>
+        <li><a class="nav-link" href="/src/pages/vocabulary/index.html" data-nav="vocabulary">Từ vựng</a></li>
+        <li><a class="nav-link" href="/src/pages/chat/index.html" data-nav="chat">Luyện tập AI</a></li>
+      </ul>
+      <span class="nav-indicator" id="navIndicator" aria-hidden="true"></span>
+    </nav>
+
+    <div class="header-tools">
+      <!-- Trạng thái kết nối: chỉ hiện ở trang Luyện tập AI -->
+      <span class="status-pill auth-only" id="connectionStatus" role="status" hidden>
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="connectionLabel">Đang kiểm tra…</span>
+      </span>
+
+      <span class="hud-chip hud-chip--streak auth-only" id="streakChip" title="Chuỗi ngày học liên tục">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2c1.6 3.1.6 5-.6 6.6-1.3 1.8-2.9 3.3-2.9 5.9A5.5 5.5 0 0 0 14 20.4c3.4-.7 5.5-3.6 5.5-7.1 0-4.6-3.4-7.6-5.4-9.3.3 1.9-.4 3.1-1.4 3.7.4-2.2-.6-4.4-2.7-5.7Zm-2.2 12c-.4.7-.6 1.4-.6 2.2a2.9 2.9 0 0 0 5.8.1c0-1.4-.8-2.2-1.5-3-.6.9-1.6 1.2-2.6.9-.7-.2-1-.6-1.1-.2Z"/>
+        </svg>
+        <span data-learner-streak id="headerStreakVal">0</span>
+        <span class="chip-unit">ngày</span>
+      </span>
+
+      <span class="hud-chip hud-chip--xp auth-only" id="xpChip" title="Điểm kinh nghiệm tích lũy">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 3.2l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.4l5.9-.8L12 3.2Z"/>
+        </svg>
+        <span id="headerXPVal" class="tabular">0</span>
+        <span class="chip-unit">XP</span>
+      </span>
+
+      <!-- Chọn ngôn ngữ học -->
+      <div class="dropdown dropdown--lang auth-only" id="langDropdown">
+        <button type="button" class="trigger" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdownMenu">
+          <img class="flag" id="currentLangFlag" src="/assets/flags/flag-jp.png" alt="" width="22" height="16">
+          <span class="lang-label" id="currentLangLabel">Đang tải…</span>
+          <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="menu" id="langDropdownMenu" role="menu" aria-label="Ngôn ngữ bạn đang học">
+          <p class="menu-heading">Ngôn ngữ đang học</p>
+          <button type="button" class="menu-item" role="menuitem" data-lang="ja">
+            <img class="flag" src="/assets/flags/flag-jp.png" alt="" width="22" height="16">
+            <span class="menu-text"><span>Tiếng Nhật</span><span class="menu-sub">ご挨拶から始めましょう</span></span>
+            <svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>
+          </button>
+          <button type="button" class="menu-item" role="menuitem" data-lang="en">
+            <img class="flag" src="/assets/flags/flag-en.png" alt="" width="22" height="16">
+            <span class="menu-text"><span>Tiếng Anh</span><span class="menu-sub">Let’s speak English</span></span>
+            <svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>
+          </button>
+          <button type="button" class="menu-item" role="menuitem" data-lang="vi">
+            <img class="flag" src="/assets/flags/flag-vn.png" alt="" width="22" height="16">
+            <span class="menu-text"><span>Tiếng Việt</span><span class="menu-sub">Luyện phát âm và ngữ điệu</span></span>
+            <svg class="check" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tài khoản -->
+      <div class="dropdown dropdown--user auth-only" id="userDropdown">
+        <button type="button" class="trigger trigger--avatar" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-controls="userDropdownMenu" aria-label="Menu tài khoản">
+          <img class="avatar" id="headerAvatar" src="/assets/logo.png" alt="" width="30" height="30">
+        </button>
+        <div class="menu menu--user" id="userDropdownMenu" role="menu" aria-label="Tài khoản">
+          <p class="menu-heading"><span data-learner-name>Học viên</span></p>
+          <a class="menu-item" role="menuitem" href="/src/pages/profile/index.html">
+            <span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span>
+            <span class="menu-text"><span>Hồ sơ của tôi</span><span class="menu-sub">Xem và chỉnh sửa thông tin</span></span>
+          </a>
+          <a class="menu-item" role="menuitem" href="/src/pages/chat/index.html">
+            <span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-5.2A8 8 0 1 1 21 12Z"/></svg></span>
+            <span class="menu-text"><span>Luyện tập AI</span><span class="menu-sub">Thực hành hội thoại</span></span>
+          </a>
+          <hr class="menu-divider">
+          <button type="button" class="menu-item menu-item--danger" role="menuitem" id="navLogoutItem">
+            <span class="menu-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 17l4-5-4-5"/><path d="M19 12H9"/><path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6"/></svg></span>
+            <span class="menu-text"><span>Đăng xuất</span><span class="menu-sub">Thoát khỏi phiên học</span></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Khách -->
+      <div class="guest-actions guest-only" id="guestNavAuth">
+        <a class="btn btn--ghost-navy btn--small" href="/src/pages/login/index.html?redirect=current">Đăng nhập</a>
+        <a class="btn btn--primary btn--small" href="/src/pages/login/index.html?mode=signup">Đăng ký</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="tabbar" id="appTabbar" aria-label="Điều hướng nhanh">
+  <a class="tab" href="/src/pages/home/index.html" data-nav="home">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V19a1 1 0 0 1-1 1h-4v-5h-6v5H5a1 1 0 0 1-1-1Z"/></svg>
+    <span>Trang chủ</span>
+  </a>
+  <a class="tab" href="/src/pages/learning/index.html" data-nav="learning">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5Z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5A1.5 1.5 0 0 0 20 18.5Z"/></svg>
+    <span>Học tập</span>
+  </a>
+  <a class="tab" href="/src/pages/vocabulary/index.html" data-nav="vocabulary">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+    <span>Từ vựng</span>
+  </a>
+  <a class="tab" href="/src/pages/chat/index.html" data-nav="chat">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-5.2A8 8 0 1 1 21 12Z"/><path d="M9 11h6"/></svg>
+    <span>Luyện AI</span>
+  </a>
+</nav>
