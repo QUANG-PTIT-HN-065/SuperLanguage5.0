@@ -2,6 +2,8 @@ import { slanguageApi } from "../shared/api-client.js";
 
 const CHAT_API_PREFIX = "/api/v1/chat-ai";
 
+export { transcribeChatAudio } from "../shared/speech-api.js";
+
 export interface Conversation {
   id: string;
   title: string;
@@ -31,9 +33,8 @@ export interface ChatMessageResponse {
   ai_feedback: string | null;
 }
 
-export interface AudioTranscriptionResponse {
-  conversation_id: string;
-  transcript: string;
+export interface ReadingPromptResponse {
+  sentence: string;
 }
 
 export async function listChatConversations(): Promise<Conversation[]> {
@@ -71,31 +72,15 @@ export async function sendChatMessage(
   return response.data;
 }
 
-export async function transcribeChatAudio(
+export async function generateChatReadingPrompt(
   conversationId: string,
-  audio: Blob,
-): Promise<AudioTranscriptionResponse> {
-  const formData = new FormData();
-  formData.append("conversation_id", conversationId);
-  formData.append("audio", audio, audioFilename(audio.type));
-
-  const response = await slanguageApi<AudioTranscriptionResponse>(
-    `${CHAT_API_PREFIX}/transcribe-audio`,
-    { method: "POST", body: formData },
+): Promise<ReadingPromptResponse> {
+  const response = await slanguageApi<ReadingPromptResponse>(
+    `${CHAT_API_PREFIX}/reading-prompt`,
+    {
+      method: "POST",
+      body: { conversation_id: conversationId },
+    },
   );
   return response.data;
-}
-
-function audioFilename(contentType: string): string {
-  const normalizedType = contentType.split(";", 1)[0].trim().toLowerCase();
-  const extensions: Record<string, string> = {
-    "audio/aac": "aac",
-    "audio/mp4": "m4a",
-    "audio/mpeg": "mp3",
-    "audio/ogg": "ogg",
-    "audio/wav": "wav",
-    "audio/webm": "webm",
-    "audio/x-wav": "wav",
-  };
-  return `voice.${extensions[normalizedType] || "webm"}`;
 }

@@ -169,9 +169,11 @@ Sau khi đăng nhập bằng tài khoản admin, gọi `POST /api/v1/admin/rag/r
 
 `language_code` nhận `English`, `Japanese` hoặc `all`. Reindex sau khi nội dung chủ đề/từ vựng thay đổi. Chat AI chỉ gọi LLM khi tìm thấy context phù hợp; lỗi vector store được trả về để thử lại, còn không có kết quả phù hợp thì AI từ chối câu hỏi ngoài phạm vi.
 
+Trong phòng Chat AI, nút **Tạo câu đọc theo chủ đề** yêu cầu AI tạo một câu hỏi ngắn dựa trên chủ đề của buổi trò chuyện; học viên đọc câu đó để nhận điểm chính xác và tô dấu các từ đọc sai/thiếu. Nhận diện giọng nói dùng ngôn ngữ đích của hội thoại thay vì tự đoán ngôn ngữ. Tạo câu và nhận diện bản ghi đều dùng quota AI hằng ngày. Tính năng này nằm trong Chat AI, không nằm trong flashcard từ vựng.
+
 ### Bài học, tiến độ và ôn tập từ vựng
 
-Chạy lần lượt `Supebase/migrations/01_schema.sql`, `Supebase/migrations/06_learning_lessons.sql`, `Supebase/migrations/07_ordered_topic_quizzes.sql` và `Supebase/migrations/08_admin_word_management_rpcs.sql` trong Supabase SQL Editor. Migration 06 tạo bảng bài học/câu hỏi/tiến độ, RPC chấm đáp án một lần, cộng XP và tính Level (100 XP mỗi Level), cùng lịch nhắc ôn từ vựng. Migration 07 tạo lộ trình gồm nhiều chủ đề có thứ tự và quiz từ vựng 4 câu (2 câu điền từ, 2 câu chọn một trong bốn đáp án); chủ đề kế tiếp chỉ mở khi đạt 4/4. Migration 08 cài các RPC tạo/sửa/xóa từ vựng và yêu cầu PostgREST tải lại schema.
+Chạy lần lượt `Supebase/migrations/01_schema.sql`, `Supebase/migrations/06_learning_lessons.sql`, `Supebase/migrations/07_ordered_topic_quizzes.sql`, `Supebase/migrations/08_admin_word_management_rpcs.sql` và `Supebase/migrations/10_daily_ai_quota.sql` trong Supabase SQL Editor. Migration 06 tạo bảng bài học/câu hỏi/tiến độ, RPC chấm đáp án một lần, cộng XP và tính Level (100 XP mỗi Level), cùng lịch nhắc ôn từ vựng. Migration 07 tạo lộ trình gồm nhiều chủ đề có thứ tự và quiz từ vựng 4 câu (2 câu điền từ, 2 câu chọn một trong bốn đáp án); chủ đề kế tiếp chỉ mở khi đạt 4/4. Migration 08 cài các RPC tạo/sửa/xóa từ vựng. Migration 10 bật quota nguyên tử 15 lượt AI mỗi ngày theo múi giờ hồ sơ; quota áp dụng cho phản hồi chat AI, tạo câu đọc và nhận diện giọng nói.
 
 API học viên yêu cầu `Authorization: Bearer <access_token>`:
 - `GET /api/v1/lessons/topics/{topic_id}/lessons` trả trạng thái hoàn thành/khóa theo thứ tự bài.

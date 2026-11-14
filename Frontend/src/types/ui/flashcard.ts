@@ -13,6 +13,7 @@ export interface FlashcardWord {
   partOfSpeech: string | null;
   example: string | null;
   exampleMeaning: string | null;
+  languageCode?: string;
   level: string;
   mastery_level?: number;
   next_review_at?: string;
@@ -25,6 +26,7 @@ export interface FlashcardSessionOptions {
   onRating: (word: FlashcardWord, rating: ReviewRating) => Promise<boolean>;
   onComplete: (reviewedCount: number, knownCount: number) => Promise<void>;
   onClose: () => void;
+  onCardChange?: (word: FlashcardWord | null) => void;
 }
 
 export class FlashcardController {
@@ -37,6 +39,7 @@ export class FlashcardController {
   private onRating: (word: FlashcardWord, rating: ReviewRating) => Promise<boolean>;
   private onComplete: (reviewedCount: number, knownCount: number) => Promise<void>;
   private onClose: () => void;
+  private onCardChange?: (word: FlashcardWord | null) => void;
 
   // DOM Elements
   private backdrop: HTMLElement;
@@ -58,6 +61,7 @@ export class FlashcardController {
     this.onRating = options.onRating;
     this.onComplete = options.onComplete;
     this.onClose = options.onClose;
+    this.onCardChange = options.onCardChange;
 
     this.backdrop = document.getElementById("focusModeBackdrop") as HTMLElement;
     this.flipper = document.getElementById("flashcardFlipper") as HTMLElement;
@@ -89,6 +93,7 @@ export class FlashcardController {
   }
 
   public close(): void {
+    this.onCardChange?.(null);
     if (this.backdrop) {
       this.backdrop.hidden = true;
       this.backdrop.setAttribute("aria-hidden", "true");
@@ -171,6 +176,7 @@ export class FlashcardController {
     if (this.progressFill) {
       this.progressFill.style.width = `${((this.currentIndex) / this.words.length) * 100}%`;
     }
+    this.onCardChange?.(word);
   }
 
   public async rate(rating: ReviewRating): Promise<void> {
@@ -202,6 +208,7 @@ export class FlashcardController {
   }
 
   private showCompletion(): void {
+    this.onCardChange?.(null);
     if (this.choicesContainer) this.choicesContainer.hidden = true;
     if (this.revealBtn) this.revealBtn.hidden = true;
     if (this.completionContainer) this.completionContainer.hidden = false;
@@ -238,7 +245,7 @@ export class FlashcardController {
 
     this.stage?.addEventListener("click", (e) => {
       const target = e.target as HTMLElement;
-      if (target.closest("#reviewAudioBtn") || target.closest(".flip-back-btn")) return;
+      if (target.closest("button")) return;
       this.flip();
     });
 
@@ -288,6 +295,11 @@ export class FlashcardController {
       if (this.backdrop && !this.backdrop.hidden) {
         if (e.key === "Escape") {
           this.close();
+        } else if (
+          e.target instanceof Element &&
+          e.target.closest("button, input, textarea, select, [contenteditable='true']")
+        ) {
+          return;
         } else if (e.key === " " || e.code === "Space") {
           e.preventDefault();
           this.flip();

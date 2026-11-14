@@ -10,6 +10,7 @@ export interface AudioRecorderOptions {
   onStateChange?: (state: RecorderState) => void;
   onTick?: (remainingSeconds: number, elapsedSeconds: number) => void;
   onError?: (type: 'denied' | 'unsupported' | 'error', message: string) => void;
+  onRecordingComplete?: (blob: Blob) => void;
 }
 
 export class AudioRecorder {
@@ -208,6 +209,7 @@ export class AudioRecorder {
         const blob = new Blob(this.audioChunks, { type: mimeType });
         this.cleanup();
         this.setState('idle');
+        this.options.onRecordingComplete?.(blob);
         resolve(blob);
       };
 

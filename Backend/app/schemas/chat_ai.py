@@ -53,6 +53,14 @@ class MessageResponse(BaseModel):
     ai_feedback: Optional[str] = None
 
 
+class ReadingPromptRequest(BaseModel):
+    conversation_id: UUID
+
+
+class ReadingPromptResponse(BaseModel):
+    sentence: str = Field(min_length=1, max_length=280)
+
+
 class AudioUploadResponse(BaseModel):
     conversation_id: UUID
     file_name: str

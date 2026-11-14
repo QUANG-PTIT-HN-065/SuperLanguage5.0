@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.core.deps import get_current_profile
 from app.core.config import settings
+from app.core.ai_quota import consume_daily_ai_call
 from app.schemas.chat_ai import (
     AudioTranscriptionResponse,
     AudioUploadResponse,
@@ -17,9 +18,11 @@ from app.schemas.chat_ai import (
     ConversationResponse,
     MessageSend,
     MessageResponse,
+    ReadingPromptRequest,
+    ReadingPromptResponse,
 )
 from app.schemas.reponse import BaseResponse
-from app.services.ai_service import AIService
+from app.services.ai_service import AIService, OFF_TOPIC_REFUSAL
 from app.services.speech_service import (
     InvalidAudioError,
     SpeechNotRecognizedError,
@@ -35,6 +38,12 @@ _CHAT_LANGUAGE_NAMES = {
     "English": "English",
     "ja": "Japanese",
     "Japanese": "Japanese",
+}
+_CHAT_ASR_LANGUAGE_CODES = {
+    "en": "en",
+    "English": "en",
+    "ja": "ja",
+    "Japanese": "ja",
 }
 
 
@@ -76,6 +85,54 @@ def _verify_audio_conversation(
     if not conversation.data:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy phòng trò chuyện.")
     return conversation.data[0]["language_code"]
+
+
+async def _read_audio_upload(audio: UploadFile) -> bytes:
+    try:
+        content_type = (audio.content_type or "").split(";", maxsplit=1)[0].strip().lower()
+        if content_type not in _AUDIO_EXTENSIONS:
+            raise HTTPException(
+                status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                "Định dạng âm thanh không được hỗ trợ.",
+            )
+        audio_bytes = await audio.read(_MAX_AUDIO_BYTES + 1)
+    finally:
+        await audio.close()
+
+    if not audio_bytes:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "File ghi âm đang trống.")
+    if len(audio_bytes) > _MAX_AUDIO_BYTES:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            "File ghi âm vượt quá giới hạn 10 MB.",
+        )
+    return audio_bytes
+
+
+async def _transcribe_for_profile(
+    audio_bytes: bytes,
+    profile: Dict[str, Any],
+    language: str,
+) -> str:
+    consume_daily_ai_call(profile)
+    try:
+        return await run_in_threadpool(transcribe_audio, audio_bytes, language)
+    except InvalidAudioError as exc:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "Không thể đọc file ghi âm. Hãy ghi âm lại rồi thử tiếp.",
+        ) from exc
+    except SpeechNotRecognizedError as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Chưa nhận diện rõ lời nói. Hãy nói gần micro và thử lại.",
+        ) from exc
+    except SpeechServiceUnavailableError as exc:
+        logger.warning("Whisper speech recognition service is unavailable.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Dịch vụ nhận diện giọng nói đang bận. Vui lòng thử lại sau.",
+        ) from exc
 
 
 @router.get("/conversations", response_model=BaseResponse[list[ConversationResponse]])
@@ -242,6 +299,74 @@ def create_conversation(
     )
 
 
+@router.post(
+    "/reading-prompt",
+    response_model=BaseResponse[ReadingPromptResponse],
+)
+async def generate_reading_prompt(
+    data: ReadingPromptRequest,
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[ReadingPromptResponse]:
+    try:
+        conversation = (
+            supabase.table("conversations")
+            .select("title,language_code")
+            .eq("id", str(data.conversation_id))
+            .eq("user_id", profile["id"])
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:
+        logger.exception("Could not load the AI reading-practice conversation.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải phòng trò chuyện lúc này. Vui lòng thử lại.",
+        ) from exc
+
+    if not conversation.data:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy phòng trò chuyện.")
+
+    row = conversation.data[0]
+    language_code = row.get("language_code")
+    language = _CHAT_LANGUAGE_NAMES.get(language_code)
+    topic = row.get("title")
+    if language is None or not isinstance(topic, str) or not topic.strip():
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Chủ đề hoặc ngôn ngữ của phòng trò chuyện không hợp lệ.",
+        )
+
+    consume_daily_ai_call(profile)
+    try:
+        sentence, _ = await AIService.generate_chat_response(
+            "Create one short question for the learner to read aloud.",
+            language,
+            profile.get("current_level") or "A1",
+            reading_topic=topic,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("AI reading-practice prompt generation failed.")
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "AI chưa thể tạo câu đọc lúc này. Vui lòng thử lại.",
+        ) from exc
+
+    sentence = sentence.strip()
+    if sentence == OFF_TOPIC_REFUSAL or not sentence or len(sentence) > 280:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "AI chưa trả về được một câu đọc hợp lệ. Vui lòng thử lại.",
+        )
+
+    return BaseResponse(
+        status="success",
+        message="Đã tạo câu luyện đọc theo chủ đề.",
+        data=ReadingPromptResponse(sentence=sentence),
+    )
+
+
 @router.post("/upload-audio", response_model=BaseResponse[AudioUploadResponse])
 async def upload_audio(
     conversation_id: UUID = Form(...),
@@ -324,58 +449,56 @@ async def transcribe_chat_audio(
     audio: UploadFile = File(...),
     profile: Dict[str, Any] = Depends(get_current_profile),
 ) -> BaseResponse[AudioTranscriptionResponse]:
-    """Transcribe a temporary audio recording and automatically detect its language."""
+    """Transcribe a temporary audio recording in the conversation's target language."""
     try:
-        _verify_audio_conversation(conversation_id, profile)
+        conversation_language = _verify_audio_conversation(conversation_id, profile)
     except Exception:
         await audio.close()
         raise
-    content_type = (audio.content_type or "").split(";", maxsplit=1)[0].strip().lower()
-    if content_type not in _AUDIO_EXTENSIONS:
+    language = _CHAT_ASR_LANGUAGE_CODES.get(conversation_language)
+    if language is None:
         await audio.close()
-        raise HTTPException(
-            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            "Định dạng âm thanh không được hỗ trợ.",
-        )
-
-    try:
-        audio_bytes = await audio.read(_MAX_AUDIO_BYTES + 1)
-    finally:
-        await audio.close()
-
-    if not audio_bytes:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "File ghi âm đang trống.")
-    if len(audio_bytes) > _MAX_AUDIO_BYTES:
-        raise HTTPException(
-            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            "File ghi âm vượt quá giới hạn 10 MB.",
-        )
-
-    try:
-        transcript = await run_in_threadpool(
-            transcribe_audio,
-            audio_bytes,
-        )
-    except InvalidAudioError as exc:
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            "Không thể đọc file ghi âm. Hãy ghi âm lại rồi thử tiếp.",
-        ) from exc
-    except SpeechNotRecognizedError as exc:
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "Chưa nhận diện rõ lời nói. Hãy nói gần micro và thử lại.",
-        ) from exc
-    except SpeechServiceUnavailableError as exc:
-        logger.warning("Whisper speech recognition service is unavailable.")
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            "Dịch vụ nhận diện giọng nói đang bận. Vui lòng thử lại sau.",
-        ) from exc
+            "Ngôn ngữ của phòng trò chuyện không được hỗ trợ nhận diện.",
+        )
+    audio_bytes = await _read_audio_upload(audio)
+    transcript = await _transcribe_for_profile(audio_bytes, profile, language)
 
     return BaseResponse(
         status="success",
         message="Đã chuyển giọng nói thành văn bản.",
+        data=AudioTranscriptionResponse(transcript=transcript),
+    )
+
+
+@router.post(
+    "/transcribe-practice",
+    response_model=BaseResponse[AudioTranscriptionResponse],
+)
+async def transcribe_practice_audio(
+    conversation_id: UUID = Form(...),
+    audio: UploadFile = File(...),
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[AudioTranscriptionResponse]:
+    """Transcribe a learner's reading in the conversation's target language."""
+    try:
+        conversation_language = _verify_audio_conversation(conversation_id, profile)
+    except Exception:
+        await audio.close()
+        raise
+    language = _CHAT_ASR_LANGUAGE_CODES.get(conversation_language)
+    if language is None:
+        await audio.close()
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Ngôn ngữ của phòng trò chuyện không được hỗ trợ nhận diện.",
+        )
+    audio_bytes = await _read_audio_upload(audio)
+    transcript = await _transcribe_for_profile(audio_bytes, profile, language)
+    return BaseResponse(
+        status="success",
+        message="Đã nhận diện câu đọc.",
         data=AudioTranscriptionResponse(transcript=transcript),
     )
 
@@ -438,12 +561,14 @@ async def send_message(
         and row["content"].strip()
     ]
 
+    consume_daily_ai_call(profile)
     try:
         ai_reply, ai_feedback = await AIService.generate_chat_response(
             data.user_message,
             _CHAT_LANGUAGE_NAMES[language_code],
             profile.get("current_level") or "A1",
             conversation_history=conversation_history,
+            free_conversation=True,
         )
     except HTTPException as exc:
         if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
