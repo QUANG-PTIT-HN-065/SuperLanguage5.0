@@ -1,7 +1,7 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader } from "../shared/learner-header";
 import { mountHeader } from "../ui/header.js";
-import { FlashcardController, FlashcardWord, ReviewRating } from "../../ts/ui/flashcard";
+import { FlashcardController, FlashcardWord, ReviewRating } from "../ui/flashcard";
 
 interface Topic {
   id: number;

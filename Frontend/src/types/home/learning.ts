@@ -27,7 +27,7 @@ import {
 } from "./learner-progress";
 import { MOCK_PRACTICE_TOPIC_IDS } from "./lesson-practice-generator";
 import { type LearningPathTopic } from "./learning-path-route";
-import { renderRoadmap, setTopicLessonState } from "../../ts/pages/roadmap";
+import { renderRoadmap, setTopicLessonState } from "./roadmap";
 
 type LearningTopic = LearningPathTopic;
 

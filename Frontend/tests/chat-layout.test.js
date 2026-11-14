@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const page = readFileSync(resolve(process.cwd(), "src/pages/chat/index.html"), "utf8");
 const script = readFileSync(resolve(process.cwd(), "src/types/chat/chat.ts"), "utf8");
 const chatApi = readFileSync(resolve(process.cwd(), "src/types/chat/chat-api.ts"), "utf8");
-const styles = readFileSync(resolve(process.cwd(), "src/css/chat/style.css"), "utf8");
+const styles = readFileSync(resolve(process.cwd(), "src/styles/chat/style.css"), "utf8");
 
 describe("AI chat page", () => {
   it("uses unique IDs for the active chat controls", () => {

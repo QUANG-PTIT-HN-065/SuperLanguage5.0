@@ -1,5 +1,5 @@
 /* ===== admin-ui.css — dùng chung cho Login / Dashboard / Từ vựng =====
-   Nạp SAU styles.css:  <link rel="stylesheet" href="../../css/Admin/admin-ui.css">  */
+   Nạp SAU styles.css:  <link rel="stylesheet" href="../../styles/admin/admin-ui.css">  */
 
 /* 1) Icon Material Symbols: luôn căn giữa, không bị lệch dòng / tràn chữ khi font chưa tải */
 .material-symbols-outlined {

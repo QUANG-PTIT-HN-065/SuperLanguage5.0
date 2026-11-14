@@ -9,8 +9,8 @@ import {
   type LessonOption,
   type LessonQuestion,
 } from "./lesson-practice-generator";
-import { launchConfetti } from "../../ts/ui/confetti";
-import { showToast } from "../../ts/ui/toast";
+import { launchConfetti } from "../ui/confetti";
+import { showToast } from "../ui/toast";
 
 interface CheckedAnswer {
   selected_option_id: string;

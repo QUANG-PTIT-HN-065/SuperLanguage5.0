@@ -1,7 +1,7 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader, renderLearnerHeader } from "../shared/learner-header";
 import { mountHeader } from "../ui/header.js";
-import { AvatarUploader } from "../../ts/ui/avatar-upload";
+import { AvatarUploader } from "../ui/avatar-upload";
 import {
   validateUsername,
   validateDisplayName,
@@ -10,7 +10,7 @@ import {
   validateCefrProgression,
   validateLanguages,
   evaluatePasswordStrength,
-} from "../../ts/ui/validators";
+} from "../ui/validators";
 
 type JsonRecord = Record<string, unknown>;
 

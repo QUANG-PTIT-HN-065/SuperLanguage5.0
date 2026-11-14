@@ -1,4 +1,4 @@
-import type { LearningPathTopic } from "../../types/home/learning-path-route";
+import type { LearningPathTopic } from "./learning-path-route";
 
 export type RoadmapNodeState = "done" | "current" | "locked";
 
