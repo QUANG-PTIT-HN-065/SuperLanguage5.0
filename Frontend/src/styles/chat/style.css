@@ -283,6 +283,60 @@ button {
   gap: var(--s-3, 12px);
 }
 
+.practice-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--rule, #d7d9d2);
+  border-radius: 6px;
+  background: var(--ground, #f3f0e5);
+}
+
+.practice-mode-tab {
+  display: flex;
+  min-width: 0;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--muted, #5c7078);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.practice-mode-tab[aria-selected="true"] {
+  border-color: var(--rule, #d7d9d2);
+  background: var(--paper, #fbf9f2);
+  color: var(--teal-deep, #0c696e);
+}
+
+.practice-mode-tab:focus-visible {
+  outline: 3px solid var(--teal, #117e83);
+  outline-offset: 2px;
+}
+
+.practice-mode-panel[hidden] {
+  display: none;
+}
+
+.practice-mode-description {
+  margin: 0;
+  color: var(--muted, #5c7078);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+}
+
+.practice-topic-title {
+  margin-top: 0;
+}
+
 .form-section-title {
   display: flex;
   align-items: center;
@@ -310,15 +364,16 @@ button {
 /* Language Segmented Chips */
 .language-segmented-chips {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  background: #f1f5f9;
+  background: var(--ground, #f3f0e5);
   padding: 4px;
-  border-radius: var(--r-md, 16px);
+  border-radius: 6px;
 }
 
 .lang-chip {
   display: flex;
+  min-height: 48px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -344,7 +399,6 @@ button {
   color: var(--teal, #0f7c86);
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(15, 124, 134, 0.12);
-  transform: scale(1.03);
 }
 
 /* Topic Grid */
@@ -356,6 +410,7 @@ button {
 
 .topic-chip {
   display: flex;
+  min-height: 48px;
   align-items: center;
   gap: 8px;
   padding: 10px 10px;
@@ -861,6 +916,132 @@ button {
   background: #fbfcfe;
   scroll-behavior: smooth;
   scrollbar-gutter: stable;
+}
+
+.chat-reading-practice {
+  display: grid;
+  gap: 10px;
+  align-self: flex-start;
+  width: min(100%, 720px);
+  margin: 0 0 16px;
+  padding: 18px;
+  border: 1px solid var(--rule, #d7d9d2);
+  border-radius: 12px;
+  background: var(--paper, #fbf9f2);
+  color: var(--ink, #183248);
+}
+
+.chat-reading-practice[hidden],
+.chat-reading-practice__result[hidden] {
+  display: none;
+}
+
+.chat-reading-practice__heading h3,
+.chat-reading-practice__heading p,
+.chat-reading-practice__status,
+.chat-reading-practice__legend,
+.chat-reading-practice__score,
+.chat-reading-practice__label,
+.chat-reading-practice__text {
+  margin: 0;
+}
+
+.chat-reading-practice__heading h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.chat-reading-practice__heading p,
+.chat-reading-practice__status,
+.chat-reading-practice__legend {
+  color: var(--muted, #5c7078);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.chat-reading-practice__prompt {
+  max-width: 65ch;
+  margin: 2px 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.chat-reading-practice__record {
+  display: inline-flex;
+  min-height: 48px;
+  justify-self: start;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 14px;
+  border: 1px solid var(--teal, #117e83);
+  border-radius: 4px;
+  background: var(--teal, #117e83);
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.chat-reading-practice__record:hover {
+  background: var(--teal-deep, #0c696e);
+}
+
+.chat-reading-practice__record:focus-visible,
+.reading-practice-action__button:focus-visible {
+  outline: 3px solid var(--teal-deep, #0c696e);
+  outline-offset: 3px;
+}
+
+.chat-reading-practice__record:disabled,
+.reading-practice-action__button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.chat-reading-practice__status[data-state="error"] {
+  color: var(--signal, #9e402c);
+}
+
+.chat-reading-practice__result {
+  display: grid;
+  gap: 7px;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule, #d7d9d2);
+}
+
+.chat-reading-practice__score {
+  color: var(--teal-deep, #0c696e);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.chat-reading-practice__label {
+  margin-top: 4px;
+  color: var(--muted, #5c7078);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.chat-reading-practice__text {
+  color: var(--ink, #183248);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.chat-reading-practice__word--correct {
+  color: #176341;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.chat-reading-practice__word--incorrect {
+  color: var(--signal, #9e402c);
+  text-decoration: underline wavy;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
 /* Empty State Có Hồn */
@@ -1436,6 +1617,49 @@ button {
   font-weight: 600;
 }
 
+.reading-practice-action {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.reading-practice-action__button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 9px 14px;
+  border: 1px solid var(--teal, #117e83);
+  border-radius: 4px;
+  color: var(--teal-deep, #0c696e);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.reading-practice-action__button:hover {
+  background: var(--teal-soft, #e3eeea);
+}
+
+.reading-practice-action__status {
+  margin: 0;
+  color: var(--muted, #5c7078);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+body[data-practice-mode="read-aloud"] .composer,
+body[data-practice-mode="read-aloud"] .quick-start-title,
+body[data-practice-mode="read-aloud"] .quick-start-grid,
+body[data-practice-mode="read-aloud"] .desktop-kbd-hint {
+  display: none;
+}
+
+body[data-practice-mode="free-chat"] .chat-reading-practice {
+  display: none;
+}
+
 /* Pill Composer */
 .composer {
   display: flex;
@@ -1862,6 +2086,11 @@ button {
   }
   .messages {
     padding: 12px;
+  }
+
+  .chat-reading-practice {
+    margin-bottom: 12px;
+    padding: 14px;
   }
 }
 

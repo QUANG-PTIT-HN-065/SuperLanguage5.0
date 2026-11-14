@@ -28,7 +28,7 @@ def _load_model():
     return whisper.load_model("base")
 
 
-def transcribe_audio(audio_bytes: bytes) -> str:
+def transcribe_audio(audio_bytes: bytes, language: str | None = None) -> str:
     try:
         decoded = subprocess.run(
             [
@@ -67,6 +67,7 @@ def transcribe_audio(audio_bytes: bytes) -> str:
             result = _load_model().transcribe(
                 audio,
                 task="transcribe",
+                language=language,
                 fp16=False,
                 verbose=False,
             )

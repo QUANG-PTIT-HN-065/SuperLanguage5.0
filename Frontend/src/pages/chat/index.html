@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="../../styles/chat/style.css">
     <script type="module" src="../../types/chat/chat.ts"></script>
   </head>
-  <body class="user-guest" data-page-state="loading" data-mobile-step="setup">
+  <body class="user-guest" data-page-state="loading" data-mobile-step="setup" data-practice-mode="free-chat">
     <section class="workspace">
       <!-- Header dùng chung đồng bộ với toàn hệ thống Slanguage -->
       <div data-app-header></div>
@@ -52,7 +52,7 @@
             </div>
             <ul class="guest-benefits">
               <li><i class="fa-solid fa-comments"></i> Xem trước tối đa 3 lượt trò chuyện</li>
-              <li><i class="fa-solid fa-list"></i> Chọn chủ đề và thử giao diện luyện tập</li>
+              <li><i class="fa-solid fa-list"></i> Chọn ngôn ngữ và trải nghiệm các cách luyện tập</li>
               <li><i class="fa-solid fa-cloud-arrow-up"></i> Đăng nhập để dùng AI thật và lưu lịch sử</li>
             </ul>
             <div class="guest-actions">
@@ -80,11 +80,40 @@
             </div>
           </div>
 
-          <!-- Form thiết lập buổi học 1 bước nhanh gọn -->
+          <!-- Form thiết lập chế độ luyện tập -->
           <form id="conversationForm" class="session-setup-form">
+            <div class="practice-mode-tabs" role="tablist" aria-label="Chế độ luyện tập">
+              <button
+                type="button"
+                class="practice-mode-tab"
+                id="freeChatTab"
+                role="tab"
+                aria-selected="true"
+                aria-controls="freeChatPanel"
+                tabindex="0"
+                data-practice-mode="free-chat"
+              >
+                <i class="fa-solid fa-comments" aria-hidden="true"></i>
+                <span>Trò chuyện tự do</span>
+              </button>
+              <button
+                type="button"
+                class="practice-mode-tab"
+                id="readAloudTab"
+                role="tab"
+                aria-selected="false"
+                aria-controls="readAloudPanel"
+                tabindex="-1"
+                data-practice-mode="read-aloud"
+              >
+                <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i>
+                <span>Đọc theo mẫu</span>
+              </button>
+            </div>
+
             <div class="form-section-title">
               <span class="section-badge">BƯỚC 1</span>
-              <h4>Chọn ngôn ngữ luyện tập</h4>
+              <h4>Ngôn ngữ muốn luyện tập</h4>
             </div>
             <div class="language-segmented-chips" role="radiogroup" aria-label="Ngôn ngữ luyện tập">
               <button type="button" class="lang-chip is-active" data-lang="English" role="radio" aria-checked="true">
@@ -99,54 +128,76 @@
             <!-- Hidden input để đồng bộ với logic backend cũ nếu cần -->
             <input type="hidden" id="languageSelect" value="English">
 
-            <div class="form-section-title">
-              <span class="section-badge">BƯỚC 2</span>
-              <h4>Chọn chủ đề hội thoại</h4>
-            </div>
-            <div class="topic-grid" id="topicGrid" role="radiogroup" aria-label="Chủ đề gợi ý">
-              <button type="button" class="topic-chip is-selected" data-topic="Giao tiếp hàng ngày" role="radio" aria-checked="true">
-                <span class="topic-icon">☕</span>
-                <span class="topic-text">Giao tiếp hàng ngày</span>
-              </button>
-              <button type="button" class="topic-chip" data-topic="Gọi món tại nhà hàng" role="radio" aria-checked="false">
-                <span class="topic-icon">🍜</span>
-                <span class="topic-text">Ở nhà hàng</span>
-              </button>
-              <button type="button" class="topic-chip" data-topic="Kể về sở thích" role="radio" aria-checked="false">
-                <span class="topic-icon">🎨</span>
-                <span class="topic-text">Kể về sở thích</span>
-              </button>
-              <button type="button" class="topic-chip" data-topic="Đi mua sắm & hỏi giá" role="radio" aria-checked="false">
-                <span class="topic-icon">🛍️</span>
-                <span class="topic-text">Đi mua sắm</span>
-              </button>
-              <button type="button" class="topic-chip" data-topic="Phỏng vấn xin việc" role="radio" aria-checked="false">
-                <span class="topic-icon">💼</span>
-                <span class="topic-text">Phỏng vấn xin việc</span>
-              </button>
-              <button type="button" class="topic-chip" data-topic="Du lịch & hỏi đường" role="radio" aria-checked="false">
-                <span class="topic-icon">✈️</span>
-                <span class="topic-text">Du lịch & hỏi đường</span>
-              </button>
+            <div
+              class="practice-mode-panel"
+              id="freeChatPanel"
+              role="tabpanel"
+              aria-labelledby="freeChatTab"
+              tabindex="0"
+              data-practice-mode-panel="free-chat"
+            >
+              <p class="practice-mode-description">
+                Bắt đầu bằng lời chào hoặc điều bạn muốn nói. Gia sư AI sẽ trò chuyện tiếp theo mạch của bạn.
+              </p>
             </div>
 
-            <!-- Tự nhập chủ đề thu gọn mượt mà -->
-            <div class="custom-topic-wrap">
-              <button type="button" class="btn-toggle-custom-topic" id="btnToggleCustomTopic" aria-expanded="false">
-                <i class="fa-solid fa-plus"></i> <span>Chủ đề của riêng bạn...</span>
-              </button>
-              <div class="custom-topic-input-box" id="customTopicBox" hidden>
-                <input id="topicInput" type="text" maxlength="100" placeholder="VD: Thảo luận về phim hoạt hình Ghibli..." autocomplete="off">
+            <div
+              class="practice-mode-panel"
+              id="readAloudPanel"
+              role="tabpanel"
+              aria-labelledby="readAloudTab"
+              tabindex="0"
+              data-practice-mode-panel="read-aloud"
+              hidden
+            >
+              <div class="form-section-title practice-topic-title">
+                <h4>Chủ đề câu đọc</h4>
+              </div>
+              <div class="topic-grid" id="topicGrid" role="radiogroup" aria-label="Chủ đề câu đọc">
+                <button type="button" class="topic-chip is-selected" data-topic="Giao tiếp hàng ngày" role="radio" aria-checked="true">
+                  <i class="topic-icon fa-solid fa-mug-hot" aria-hidden="true"></i>
+                  <span class="topic-text">Giao tiếp hàng ngày</span>
+                </button>
+                <button type="button" class="topic-chip" data-topic="Gọi món tại nhà hàng" role="radio" aria-checked="false">
+                  <i class="topic-icon fa-solid fa-utensils" aria-hidden="true"></i>
+                  <span class="topic-text">Ở nhà hàng</span>
+                </button>
+                <button type="button" class="topic-chip" data-topic="Kể về sở thích" role="radio" aria-checked="false">
+                  <i class="topic-icon fa-solid fa-palette" aria-hidden="true"></i>
+                  <span class="topic-text">Kể về sở thích</span>
+                </button>
+                <button type="button" class="topic-chip" data-topic="Đi mua sắm & hỏi giá" role="radio" aria-checked="false">
+                  <i class="topic-icon fa-solid fa-bag-shopping" aria-hidden="true"></i>
+                  <span class="topic-text">Đi mua sắm</span>
+                </button>
+                <button type="button" class="topic-chip" data-topic="Phỏng vấn xin việc" role="radio" aria-checked="false">
+                  <i class="topic-icon fa-solid fa-briefcase" aria-hidden="true"></i>
+                  <span class="topic-text">Phỏng vấn xin việc</span>
+                </button>
+                <button type="button" class="topic-chip" data-topic="Du lịch & hỏi đường" role="radio" aria-checked="false">
+                  <i class="topic-icon fa-solid fa-plane" aria-hidden="true"></i>
+                  <span class="topic-text">Du lịch & hỏi đường</span>
+                </button>
+              </div>
+
+              <div class="custom-topic-wrap">
+                <button type="button" class="btn-toggle-custom-topic" id="btnToggleCustomTopic" aria-expanded="false">
+                  <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                  <span>Chủ đề khác</span>
+                </button>
+                <div class="custom-topic-input-box" id="customTopicBox" hidden>
+                  <label class="sr-only" for="topicInput">Nhập chủ đề câu đọc</label>
+                  <input id="topicInput" type="text" maxlength="100" placeholder="VD: Một chuyến đi đáng nhớ..." autocomplete="off">
+                </div>
               </div>
             </div>
 
-            <!-- Nút bắt đầu nổi bật (trên mobile dính đáy bước 1) -->
             <div class="start-session-footer">
               <button class="new-session-button" id="startSessionBtn" type="submit">
-                <i class="fa-solid fa-comments"></i>
-                <span id="startSessionBtnText">Bắt đầu buổi luyện tập</span>
+                <i class="fa-solid fa-comments" id="startSessionIcon" aria-hidden="true"></i>
+                <span id="startSessionBtnText">Bắt đầu trò chuyện tự do</span>
               </button>
-              <p class="start-hint" id="startSessionHint">Bấm để kết nối trực tiếp với gia sư AI</p>
+              <p class="start-hint" id="startSessionHint">Không cần chọn chủ đề trước.</p>
             </div>
           </form>
 
@@ -177,7 +228,7 @@
           <!-- Chat Header -->
           <header class="chat-header">
             <!-- Nút back chỉ hiển thị trên mobile để quay lại bước 1 Thiết lập -->
-            <button type="button" class="mobile-step-back-btn" id="mobileStepBackBtn" aria-label="Quay lại thiết lập chủ đề">
+            <button type="button" class="mobile-step-back-btn" id="mobileStepBackBtn" aria-label="Quay lại chọn chế độ và ngôn ngữ">
               <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
               <span>Thiết lập</span>
             </button>
@@ -190,9 +241,9 @@
               <div class="conversation-title-meta">
                 <div class="title-with-flag">
                   <img src="../../../assets/flags/flag-en.png" alt="" class="header-flag-icon" id="headerLanguageFlag" />
-                  <strong id="conversationTitle">Giao tiếp hàng ngày</strong>
+                  <strong id="conversationTitle">Trò chuyện tự do</strong>
                 </div>
-                <span id="conversationLanguage">Tiếng Anh · Phản xạ tự nhiên</span>
+                <span id="conversationLanguage">Tiếng Anh · Trò chuyện tự do</span>
               </div>
             </div>
 
@@ -223,11 +274,11 @@
               </div>
               <h2 class="welcome-greeting" id="welcomeGreeting">Hello! Ready to speak English?</h2>
               <p class="welcome-subtext" id="welcomeSubtext">
-                Chào mừng bạn! Tôi là gia sư AI của Slanguage. Chọn một chủ đề bắt đầu nhanh hoặc giữ phím mic để luyện phản xạ ngay nhé!
+                Bắt đầu bằng lời chào hoặc điều bạn muốn nói. Gia sư AI sẽ trò chuyện tiếp theo mạch của bạn.
               </p>
 
               <!-- 4 thẻ Bắt đầu nhanh -->
-              <div class="quick-start-title">Bắt đầu nhanh với một chạm:</div>
+              <div class="quick-start-title">Gợi ý mở lời (không bắt buộc):</div>
               <div class="quick-start-grid" id="quickStartGrid">
                 <button type="button" class="quick-card" data-topic="Giao tiếp hàng ngày" data-prompt="Hi! Let's talk about our daily routine.">
                   <span class="q-icon">☕</span>
@@ -269,6 +320,34 @@
               </div>
             </div>
           </div>
+
+          <section class="chat-reading-practice" id="readPractice" hidden aria-labelledby="readPracticeTitle">
+            <div class="chat-reading-practice__heading">
+              <h3 id="readPracticeTitle">Đọc theo mẫu</h3>
+              <p>Đọc câu bên dưới để nhận diện và đối chiếu từ bạn nói.</p>
+            </div>
+            <p class="chat-reading-practice__prompt" id="readPracticePrompt"></p>
+            <div class="reading-practice-action">
+              <button type="button" class="reading-practice-action__button" id="readingPromptButton">
+                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+                <span>Tạo câu khác</span>
+              </button>
+              <p class="reading-practice-action__status" id="readingPromptStatus" role="status" aria-live="polite"></p>
+            </div>
+            <button type="button" class="chat-reading-practice__record" id="readPracticeRecord">
+              <i class="fa-solid fa-microphone" aria-hidden="true"></i>
+              <span id="readPracticeButtonText">Đọc câu hỏi</span>
+            </button>
+            <p class="chat-reading-practice__status" id="readPracticeStatus" role="status" aria-live="polite"></p>
+            <div class="chat-reading-practice__result" id="readPracticeResult" hidden aria-live="polite">
+              <p class="chat-reading-practice__score" id="readPracticeScore"></p>
+              <p class="chat-reading-practice__legend">Gạch liền: đúng · gạch lượn: sai hoặc thiếu</p>
+              <p class="chat-reading-practice__label">Câu AI tạo</p>
+              <p class="chat-reading-practice__text" id="readPracticeExpected"></p>
+              <p class="chat-reading-practice__label">Bạn đã đọc</p>
+              <p class="chat-reading-practice__text" id="readPracticeTranscript"></p>
+            </div>
+          </section>
 
           <!-- Trạng thái AI đang suy nghĩ -->
           <div class="assistant-status" id="assistantStatus" role="status" aria-live="polite" hidden>

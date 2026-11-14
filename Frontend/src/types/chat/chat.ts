@@ -3,12 +3,14 @@ import { isLearnerAuthenticated } from "../shared/api-client.js";
 import { mountHeader } from "../ui/header.js";
 import { AudioRecorder, RecorderState } from "../ui/recorder.js";
 import { renderQuickReplies } from "../ui/feedback.js";
+import { transcribeChatAudio } from "../shared/speech-api.js";
+import { ReadAloudPractice } from "./read-aloud.js";
 import {
   createChatConversation,
+  generateChatReadingPrompt,
   listChatConversations,
   listConversationMessages,
   sendChatMessage,
-  transcribeChatAudio,
   type Conversation,
 } from "./chat-api.js";
 
@@ -20,13 +22,13 @@ const LANGUAGE_META: Record<string, { flag: string; greeting: string; subtext: s
   English: {
     flag: "../../../assets/flags/flag-en.png",
     greeting: "Hello! Ready to speak English?",
-    subtext: "Chào mừng bạn! Tôi là gia sư AI của Slanguage. Hãy chọn một chủ đề hoặc giữ nút mic để bắt đầu luyện phản xạ nhé!",
+    subtext: "Bắt đầu bằng lời chào hoặc điều bạn muốn nói. Gia sư AI sẽ trò chuyện tiếp theo mạch của bạn.",
     promptLang: "en-US",
   },
   Japanese: {
     flag: "../../../assets/flags/flag-jp.png",
     greeting: "こんにちは！一緒に日本語を話しましょう！",
-    subtext: "Chào mừng bạn! Hãy cùng gia sư AI luyện tập đối thoại tiếng Nhật giao tiếp tự nhiên nhé!",
+    subtext: "話したいことから始めましょう。AI が会話の流れに合わせて応答します。",
     promptLang: "ja-JP",
   },
   Vietnamese: {
@@ -59,6 +61,9 @@ const scrollBottomBtn = document.getElementById("scrollBottomBtn") as HTMLButton
 const mobileStepBackBtn = document.getElementById("mobileStepBackBtn") as HTMLButtonElement | null;
 const voiceStatus = document.getElementById("voiceStatus") as HTMLElement | null;
 const startSessionHint = document.getElementById("startSessionHint") as HTMLElement | null;
+const readingPromptButton = document.getElementById("readingPromptButton") as HTMLButtonElement | null;
+const readingPromptStatus = document.getElementById("readingPromptStatus") as HTMLElement | null;
+const readPracticePanel = document.getElementById("readPractice") as HTMLElement | null;
 
 // Header meta
 const headerLanguageFlag = document.getElementById("headerLanguageFlag") as HTMLImageElement | null;
@@ -75,6 +80,7 @@ const btnToggleCustomTopic = document.getElementById("btnToggleCustomTopic") as 
 const customTopicBox = document.getElementById("customTopicBox") as HTMLDivElement | null;
 const startSessionBtn = document.getElementById("startSessionBtn") as HTMLButtonElement | null;
 const startSessionBtnText = document.getElementById("startSessionBtnText") as HTMLElement | null;
+const startSessionIcon = document.getElementById("startSessionIcon");
 const historyList = document.getElementById("conversationHistory") as HTMLDivElement | null;
 const historyStatus = document.getElementById("historyStatus") as HTMLElement | null;
 const refreshHistory = document.getElementById("refreshHistory") as HTMLButtonElement | null;
@@ -90,6 +96,9 @@ const btnContinuePractice = document.getElementById("btnContinuePractice") as HT
 // App State
 let currentLanguage = "English";
 let currentTopic = "Giao tiếp hàng ngày";
+type PracticeMode = "free-chat" | "read-aloud";
+let currentPracticeMode: PracticeMode = "free-chat";
+let activeSessionMode: PracticeMode | null = null;
 let activeConversation: Conversation | null = null;
 let conversationHistory: Conversation[] = [];
 let isGuest = true;
@@ -97,19 +106,23 @@ let guestTrialCount = 0;
 let isStartingSession = false;
 let isSessionStarted = false;
 let isSendingMessage = false;
+let isGeneratingReadingPrompt = false;
 let sessionSeconds = 0;
 let sessionTimerInterval: number | null = null;
 let totalMessagesExchanged = 0;
 let audioRecorder: AudioRecorder | null = null;
 let spacePressed = false;
+const readAloudPractice = new ReadAloudPractice();
 
 // Initial setup
 async function init() {
   checkAuthStatus();
   setupLanguageChips();
+  setupPracticeModeTabs();
   setupTopicChips();
   setupCustomTopicToggle();
   setupQuickStartCards();
+  setupReadingPrompt();
   setupAudioRecorder();
   setupMessageInput();
   setupModals();
@@ -130,11 +143,6 @@ async function init() {
 
 function checkAuthStatus() {
   isGuest = !isLearnerAuthenticated();
-  if (startSessionHint) {
-    startSessionHint.textContent = isGuest
-      ? "Bản xem trước giới hạn 3 lượt."
-      : "Bắt đầu hội thoại mới; tin nhắn sẽ được lưu vào lịch sử.";
-  }
 
   const guestCard = document.getElementById("guestCard");
   const learnerCard = document.getElementById("learnerCard");
@@ -145,6 +153,9 @@ function checkAuthStatus() {
     if (guestCard) guestCard.hidden = false;
     if (learnerCard) learnerCard.hidden = true;
     if (guestQuotaBar) guestQuotaBar.hidden = false;
+    if (readingPromptStatus) {
+      readingPromptStatus.textContent = "Đăng nhập để tạo câu đọc và chấm điểm bằng AI.";
+    }
 
     // Load trial count
     const savedTrials = parseInt(localStorage.getItem(GUEST_TRIAL_KEY) || "0", 10);
@@ -156,8 +167,12 @@ function checkAuthStatus() {
     if (guestCard) guestCard.hidden = true;
     if (learnerCard) learnerCard.hidden = false;
     if (guestQuotaBar) guestQuotaBar.hidden = true;
+    if (readingPromptStatus) {
+      readingPromptStatus.textContent = "AI sẽ tạo câu theo chủ đề đã chọn.";
+    }
     loadLearnerProfile();
   }
+  updatePracticeModeView();
 }
 
 function updateGuestQuotaUI() {
@@ -189,7 +204,7 @@ function loadLearnerProfile() {
 }
 
 /* ============================================================
-   BƯỚC 1: NGÔN NGỮ & CHỦ ĐỀ
+   NGÔN NGỮ & CHẾ ĐỘ LUYỆN TẬP
    ============================================================ */
 function setupLanguageChips() {
   const chips = document.querySelectorAll<HTMLButtonElement>(".lang-chip");
@@ -199,6 +214,79 @@ function setupLanguageChips() {
       if (language) setSelectedLanguage(language);
     });
   });
+}
+
+function setupPracticeModeTabs() {
+  const tabs = Array.from(document.querySelectorAll<HTMLButtonElement>(".practice-mode-tab"));
+  const tabList = document.querySelector<HTMLElement>('[role="tablist"][aria-label="Chế độ luyện tập"]');
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const mode = tab.dataset.practiceMode;
+      if (mode === "free-chat" || mode === "read-aloud") setPracticeMode(mode);
+    });
+  });
+
+  tabList?.addEventListener("keydown", (event) => {
+    if (!(event instanceof KeyboardEvent)) return;
+    const activeIndex = tabs.indexOf(document.activeElement as HTMLButtonElement);
+    if (activeIndex < 0 || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+
+    event.preventDefault();
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? tabs.length - 1
+          : (activeIndex + (event.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length;
+    tabs[nextIndex]?.focus();
+    tabs[nextIndex]?.click();
+  });
+
+  updatePracticeModeView();
+}
+
+function setPracticeMode(mode: PracticeMode) {
+  if (currentPracticeMode !== mode) readAloudPractice.reset();
+  currentPracticeMode = mode;
+  document.body.dataset.practiceMode = mode;
+
+  document.querySelectorAll<HTMLButtonElement>(".practice-mode-tab").forEach((tab) => {
+    const selected = tab.dataset.practiceMode === mode;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+  });
+  document.querySelectorAll<HTMLElement>("[data-practice-mode-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.practiceModePanel !== mode;
+  });
+
+  updatePracticeModeView();
+}
+
+function updatePracticeModeView() {
+  if (document.body) document.body.dataset.practiceMode = currentPracticeMode;
+  if (startSessionBtnText) {
+    startSessionBtnText.textContent =
+      currentPracticeMode === "read-aloud" ? "Bắt đầu đọc theo mẫu" : "Bắt đầu trò chuyện tự do";
+  }
+  startSessionIcon?.classList.toggle("fa-microphone-lines", currentPracticeMode === "read-aloud");
+  startSessionIcon?.classList.toggle("fa-comments", currentPracticeMode === "free-chat");
+  if (startSessionHint) {
+    if (isGuest && currentPracticeMode === "read-aloud") {
+      startSessionHint.textContent = "Đăng nhập để tạo câu đọc và chấm điểm bằng AI.";
+    } else if (currentPracticeMode === "read-aloud") {
+      startSessionHint.textContent = "AI tạo câu theo chủ đề; bạn đọc để nhận kết quả.";
+    } else if (isGuest) {
+      startSessionHint.textContent = "Bản xem trước giới hạn 3 lượt.";
+    } else {
+      startSessionHint.textContent = "Bắt đầu mà không cần chọn chủ đề.";
+    }
+  }
+  if (!isSessionStarted && conversationTitle) {
+    conversationTitle.textContent =
+      currentPracticeMode === "read-aloud" ? currentTopic : "Trò chuyện tự do";
+  }
+  updateLanguageView(currentLanguage);
 }
 
 function setSelectedLanguage(language: string) {
@@ -226,12 +314,20 @@ function updateLanguageView(lang: string) {
   const meta = LANGUAGE_META[lang] || LANGUAGE_META.English;
 
   if (headerLanguageFlag) headerLanguageFlag.src = meta.flag;
-  if (conversationLanguage) conversationLanguage.textContent = `${lang} · Phản xạ tự nhiên`;
+  if (conversationLanguage) {
+    conversationLanguage.textContent =
+      currentPracticeMode === "read-aloud" ? `${lang} · Đọc theo mẫu` : `${lang} · Trò chuyện tự do`;
+  }
 
   const welcomeGreeting = document.getElementById("welcomeGreeting");
   const welcomeSubtext = document.getElementById("welcomeSubtext");
   if (welcomeGreeting) welcomeGreeting.textContent = meta.greeting;
-  if (welcomeSubtext) welcomeSubtext.textContent = meta.subtext;
+  if (welcomeSubtext) {
+    welcomeSubtext.textContent =
+      currentPracticeMode === "read-aloud"
+        ? "Chọn một chủ đề để AI tạo câu mẫu, sau đó đọc thành tiếng để được chấm điểm."
+        : meta.subtext;
+  }
 }
 
 function setupTopicChips() {
@@ -246,11 +342,8 @@ function setupTopicChips() {
       chip.setAttribute("aria-checked", "true");
 
       currentTopic = chip.getAttribute("data-topic") || "Giao tiếp hàng ngày";
-      if (conversationTitle) conversationTitle.textContent = currentTopic;
-
-      if (startSessionBtn) {
-        startSessionBtn.disabled = false;
-        if (startSessionBtnText) startSessionBtnText.textContent = `Bắt đầu: ${currentTopic}`;
+      if (currentPracticeMode === "read-aloud" && !isSessionStarted && conversationTitle) {
+        conversationTitle.textContent = currentTopic;
       }
     });
   });
@@ -270,10 +363,8 @@ function setupCustomTopicToggle() {
     const val = topicInput.value.trim();
     if (val) {
       currentTopic = val;
-      if (conversationTitle) conversationTitle.textContent = val;
-      if (startSessionBtn) {
-        startSessionBtn.disabled = false;
-        if (startSessionBtnText) startSessionBtnText.textContent = `Bắt đầu: ${val}`;
+      if (currentPracticeMode === "read-aloud" && !isSessionStarted && conversationTitle) {
+        conversationTitle.textContent = val;
       }
     }
   });
@@ -283,6 +374,7 @@ function setupQuickStartCards() {
   const cards = document.querySelectorAll<HTMLButtonElement>(".quick-card");
   cards.forEach((card) => {
     card.addEventListener("click", () => {
+      if (currentPracticeMode !== "free-chat") return;
       const topic = card.getAttribute("data-topic") || "Giao tiếp hàng ngày";
       const prompt = card.getAttribute("data-prompt") || "Hello!";
       currentTopic = topic;
@@ -301,6 +393,17 @@ function setupMobileStepper() {
   if (conversationForm) {
     conversationForm.addEventListener("submit", (e) => {
       e.preventDefault();
+      if (currentPracticeMode === "read-aloud") {
+        if (isGuest) {
+          showToast("Đăng nhập để tạo câu đọc và chấm điểm bằng AI.");
+          return;
+        }
+        goToMobileChat(false);
+        void startNewPracticeSession().then((started) => {
+          if (started) void requestReadingPrompt();
+        });
+        return;
+      }
       goToMobileChat();
       void startNewPracticeSession();
     });
@@ -313,13 +416,17 @@ function setupMobileStepper() {
   }
 }
 
-function goToMobileChat() {
+function setupReadingPrompt() {
+  readingPromptButton?.addEventListener("click", () => void requestReadingPrompt());
+}
+
+function goToMobileChat(focusComposer = true) {
   document.body.setAttribute("data-mobile-step", "chat");
-  if (messageInput) messageInput.focus();
+  if (focusComposer) messageInput?.focus();
 }
 
 async function startNewPracticeSession(initialAiPrompt?: string): Promise<boolean> {
-  if (isStartingSession) return false;
+  if (isStartingSession || isGeneratingReadingPrompt) return false;
   if (!isGuest && !isSupportedChatLanguage(currentLanguage)) {
     showToast("Hiện chỉ hỗ trợ luyện tập tiếng Anh và tiếng Nhật.");
     return false;
@@ -327,17 +434,26 @@ async function startNewPracticeSession(initialAiPrompt?: string): Promise<boolea
 
   isStartingSession = true;
   if (startSessionBtn) startSessionBtn.disabled = true;
+  const sessionTitle =
+    currentPracticeMode === "read-aloud"
+      ? currentTopic
+      : initialAiPrompt
+        ? currentTopic
+        : "Trò chuyện tự do";
+  if (conversationTitle) conversationTitle.textContent = sessionTitle;
 
   try {
     const conversation = isGuest
       ? null
       : await createChatConversation({
-          title: currentTopic,
+          title: sessionTitle,
           language_code: getSupportedChatLanguage(currentLanguage),
         });
 
     activeConversation = conversation;
+    activeSessionMode = currentPracticeMode;
     if (conversation) setHeaderConnectionStatus("connected");
+    readAloudPractice.reset();
     isSessionStarted = true;
     totalMessagesExchanged = 0;
     sessionSeconds = 0;
@@ -349,8 +465,10 @@ async function startNewPracticeSession(initialAiPrompt?: string): Promise<boolea
     if (voiceButton) voiceButton.disabled = false;
     if (sendButton) sendButton.disabled = !messageInput?.value.trim();
 
-    const prompt = initialAiPrompt || getInitialGreeting(currentLanguage, currentTopic);
-    appendAiMessage(prompt, generateQuickReplies(currentLanguage));
+    if (currentPracticeMode === "free-chat") {
+      const prompt = initialAiPrompt || getInitialGreeting(currentLanguage, sessionTitle);
+      appendAiMessage(prompt, generateQuickReplies(currentLanguage));
+    }
     if (conversation) void loadHistory();
     return true;
   } catch (error) {
@@ -360,6 +478,68 @@ async function startNewPracticeSession(initialAiPrompt?: string): Promise<boolea
   } finally {
     isStartingSession = false;
     if (startSessionBtn) startSessionBtn.disabled = false;
+  }
+}
+
+async function requestReadingPrompt(): Promise<void> {
+  if (isGuest) {
+    showToast("Đăng nhập để AI tạo câu hỏi và chấm điểm phần đọc.");
+    return;
+  }
+  if (isSendingMessage || isGeneratingReadingPrompt) {
+    showToast("Hãy chờ tác vụ hiện tại hoàn tất rồi thử lại.");
+    return;
+  }
+  const matchingReadingConversation =
+    activeConversation &&
+    activeSessionMode === "read-aloud" &&
+    activeConversation.title === currentTopic &&
+    languageFromCode(activeConversation.language_code) === currentLanguage;
+  if ((!isSessionStarted || !matchingReadingConversation) && !(await startNewPracticeSession())) return;
+  if (!activeConversation) {
+    showToast("Không tìm thấy buổi luyện tập đang mở.");
+    return;
+  }
+
+  const conversation = activeConversation;
+  isGeneratingReadingPrompt = true;
+  if (readingPromptButton) readingPromptButton.disabled = true;
+  if (messageInput) messageInput.disabled = true;
+  if (sendButton) sendButton.disabled = true;
+  if (voiceButton) voiceButton.disabled = true;
+  if (readingPromptStatus) readingPromptStatus.textContent = "AI đang tạo câu đọc theo chủ đề...";
+  if (readPracticePanel && messagesElement) {
+    messagesElement.append(readPracticePanel);
+    readPracticePanel.hidden = false;
+  }
+  setLiveStatus("THINKING");
+
+  try {
+    const response = await generateChatReadingPrompt(conversation.id);
+    if (activeConversation?.id !== conversation.id) return;
+    const sentence = response.sentence.trim();
+    if (!sentence) throw new Error("AI chưa trả về câu hỏi hợp lệ.");
+
+    document.getElementById("welcomeCard")?.remove();
+    readAloudPractice.reset();
+    if (readPracticePanel && messagesElement) messagesElement.append(readPracticePanel);
+    readAloudPractice.setSentence(sentence, conversation.language_code, conversation.id);
+    if (readingPromptStatus) readingPromptStatus.textContent = `Câu đọc theo chủ đề “${conversation.title}” đã sẵn sàng.`;
+    scrollToBottom();
+  } catch (error) {
+    const message = getErrorMessage(error);
+    if (readingPromptStatus) readingPromptStatus.textContent = `Không tạo được câu đọc: ${message}`;
+    showToast(`Không tạo được câu đọc: ${message}`);
+  } finally {
+    isGeneratingReadingPrompt = false;
+    if (readingPromptButton) readingPromptButton.disabled = false;
+    if (messageInput) messageInput.disabled = !isSupportedChatLanguage(currentLanguage);
+    if (voiceButton) voiceButton.disabled = !isSupportedChatLanguage(currentLanguage);
+    if (sendButton) {
+      sendButton.disabled =
+        !isSupportedChatLanguage(currentLanguage) || !messageInput?.value.trim();
+    }
+    setLiveStatus("READY");
   }
 }
 
@@ -374,11 +554,14 @@ function getSupportedChatLanguage(language: string): "English" | "Japanese" {
 
 function getInitialGreeting(lang: string, topic: string): string {
   if (lang === "Japanese") {
+    if (topic === "Trò chuyện tự do") return "こんにちは！今日は何について話しましょうか？";
     return `こんにちは！今日は「${topic}」について練習しましょう。準備はいいですか？`;
   }
   if (lang === "Vietnamese") {
+    if (topic === "Trò chuyện tự do") return "Xin chào! Hôm nay bạn muốn trò chuyện về điều gì?";
     return `Xin chào bạn! Hôm nay chúng ta sẽ cùng luyện tập chủ đề "${topic}". Bạn muốn chia sẻ điều gì trước?`;
   }
+  if (topic === "Trò chuyện tự do") return "Hi! What would you like to talk about today?";
   return `Hello there! Today we are practicing the topic "${topic}". How are you doing today?`;
 }
 
@@ -599,7 +782,7 @@ function triggerAutoResize(textarea: HTMLTextAreaElement) {
 
 async function sendMessage(content: string): Promise<boolean> {
   const text = content.trim();
-  if (!text || isSendingMessage) return false;
+  if (!text || isSendingMessage || isGeneratingReadingPrompt) return false;
 
   if (isGuest && guestTrialCount >= MAX_GUEST_TRIALS) {
     if (guestLimitModal) guestLimitModal.hidden = false;
@@ -1014,15 +1197,18 @@ function renderHistoryItems(items: Conversation[]) {
 async function openConversation(conversationId: string) {
   if (!historyStatus) return;
   const conversation = conversationHistory.find((item) => item.id === conversationId);
-  if (!conversation || isSendingMessage) return;
+  if (!conversation || isSendingMessage || isGeneratingReadingPrompt) return;
 
   try {
     historyStatus.textContent = "Đang tải hội thoại...";
     historyStatus.hidden = false;
     const messages = await listConversationMessages(conversationId);
 
+    setPracticeMode("free-chat");
     activeConversation = conversation;
+    activeSessionMode = "free-chat";
     isSessionStarted = true;
+    readAloudPractice.reset();
     currentTopic = conversation.title;
     setSelectedLanguage(languageFromCode(conversation.language_code));
     if (conversationTitle) conversationTitle.textContent = conversation.title;
