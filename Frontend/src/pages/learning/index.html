@@ -211,12 +211,7 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H6"/><path d="m12 19-7-7 7-7"/></svg>
             Thoát bài học
           </button>
-          <div class="lesson-toolbar__actions">
-            <span id="lessonProgressText">Câu 1/1</span>
-            <button type="button" class="study-secondary-button matching-demo__launch" id="openMatchingDemo" hidden>
-              Thử ghép cặp · dữ liệu mẫu
-            </button>
-          </div>
+          <span id="lessonProgressText">Câu 1/1</span>
         </div>
         <div
           class="lesson-progress-track"
@@ -227,6 +222,7 @@
           aria-valuemax="100"
           aria-valuenow="0"
         ><span id="lessonProgressFill"></span></div>
+        <p class="lesson-generation-notice" id="lessonGenerationNotice" role="status" aria-live="polite" hidden></p>
         <article class="lesson-question" id="lessonQuestion">
           <p class="lesson-question-count" id="lessonQuestionCount"></p>
           <h2 id="lessonTitle" tabindex="-1"></h2>
@@ -300,7 +296,7 @@
             </p>
             <div class="lesson-result__actions">
               <button type="button" class="study-primary-button" id="retryLesson" hidden>
-                Thử lại 4 câu
+                Thử lại bài học
               </button>
               <button type="button" class="study-primary-button" id="continueToPath" hidden>
                 Tiếp tục
@@ -313,57 +309,6 @@
           </div>
         </dialog>
         <div class="lesson-notice" id="lessonNotice" role="alert" hidden></div>
-      </section>
-
-      <section class="matching-demo" id="matchingDemo" hidden aria-labelledby="matchingDemoTitle">
-        <header class="matching-demo__toolbar">
-          <button type="button" class="study-text-button" id="closeMatchingDemo">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H6"/><path d="m12 19-7-7 7-7"/></svg>
-            Quay lại bài học
-          </button>
-          <span class="matching-demo__sample-label">Bản thử · Không lưu tiến độ</span>
-        </header>
-        <div class="matching-demo__intro">
-          <div>
-            <h2 id="matchingDemoTitle" tabindex="-1">Ghép từ với nghĩa</h2>
-            <p>Chọn một từ rồi chọn nghĩa tương ứng. Trên máy tính, bạn cũng có thể kéo thẻ sang cột bên kia.</p>
-          </div>
-          <div class="matching-demo__stats" aria-label="Thống kê lượt ghép">
-            <span id="matchingDemoCombo" data-level="0">Combo 0</span>
-            <span id="matchingDemoMistakes">Lỗi: 0</span>
-          </div>
-        </div>
-        <div
-          class="matching-demo__progress"
-          id="matchingDemoProgress"
-          role="progressbar"
-          aria-label="Tiến độ ghép cặp"
-          aria-valuemin="0"
-          aria-valuemax="100"
-          aria-valuenow="0"
-        ><span id="matchingDemoProgressFill"></span></div>
-        <p class="matching-demo__feedback" id="matchingDemoFeedback" role="status" aria-live="polite">
-          Chọn một thẻ ở mỗi cột. Dùng Tab rồi Enter để chọn bằng bàn phím.
-        </p>
-        <div class="matching-demo__columns" id="matchingDemoColumns">
-          <section class="matching-demo__column" aria-labelledby="matchingWordsHeading">
-            <h3 id="matchingWordsHeading">Từ</h3>
-            <div class="matching-demo__cards" id="matchingWordCards" role="group" aria-labelledby="matchingWordsHeading"></div>
-          </section>
-          <section class="matching-demo__column" aria-labelledby="matchingMeaningsHeading">
-            <h3 id="matchingMeaningsHeading">Nghĩa</h3>
-            <div class="matching-demo__cards" id="matchingMeaningCards" role="group" aria-labelledby="matchingMeaningsHeading"></div>
-          </section>
-        </div>
-        <section class="matching-demo__complete" id="matchingDemoComplete" hidden aria-labelledby="matchingDemoCompleteTitle">
-          <p class="matching-demo__complete-label">Lượt thử đã xong</p>
-          <h2 id="matchingDemoCompleteTitle" tabindex="-1">Bạn đã ghép đủ 4/4 cặp</h2>
-          <p id="matchingDemoCompleteText"></p>
-          <div class="matching-demo__complete-actions">
-            <button type="button" class="study-primary-button" id="restartMatchingDemo">Chơi lại lượt thử</button>
-            <button type="button" class="study-secondary-button" id="returnFromMatchingDemo">Quay lại bài học</button>
-          </div>
-        </section>
       </section>
 
       <div class="learning-actions-grid">
@@ -400,6 +345,5 @@
 
   <script type="module" src="../../types/home/learning.ts"></script>
   <script type="module" src="../../types/home/lesson-quiz.ts"></script>
-  <script type="module" src="../../types/home/lesson-matching-demo.ts"></script>
 </body>
 </html>

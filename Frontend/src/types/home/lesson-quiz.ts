@@ -1,28 +1,16 @@
 import { isLearnerAuthenticated, readMockData, slanguageApi } from "../shared/api-client";
 import { XP_PER_LEVEL, levelFromXp } from "./learner-progress";
+import {
+  generateMockPractice,
+  MOCK_PRACTICE_TOPIC_IDS,
+  parseTopicVocabulary,
+  type LessonContent,
+  type LessonMatchingPair,
+  type LessonOption,
+  type LessonQuestion,
+} from "./lesson-practice-generator";
 import { launchConfetti } from "../../ts/ui/confetti";
 import { showToast } from "../../ts/ui/toast";
-
-interface LessonOption {
-  id: string;
-  text: string;
-}
-
-interface LessonQuestion {
-  id: number;
-  prompt: string;
-  question_type: "multiple_choice" | "fill_in";
-  options: LessonOption[];
-}
-
-interface LessonContent {
-  lesson: {
-    id: number;
-    title: string;
-    description: string | null;
-  };
-  questions: LessonQuestion[];
-}
 
 interface CheckedAnswer {
   selected_option_id: string;
@@ -56,6 +44,22 @@ interface DemoAnswerKey {
   explanation: string | null;
 }
 
+interface MatchingMistake {
+  key: string;
+  word: string;
+  selectedMeaning: string;
+  correctMeaning: string;
+}
+
+interface MatchingState {
+  selectedCard: HTMLButtonElement | null;
+  matchedIds: Set<string>;
+  mistakes: MatchingMistake[];
+  resolving: boolean;
+  timer: number;
+  status: HTMLElement;
+}
+
 const DEMO_XP_PER_LESSON = 20;
 
 const workspace = document.getElementById("lessonWorkspace");
@@ -73,6 +77,7 @@ let lesson: LessonContent | null = null;
 let questionIndex = 0;
 let selectedOptionId: string | null = null;
 let checkedAnswer: CheckedAnswer | null = null;
+let matchingState: MatchingState | null = null;
 let activeRequest = false;
 let completed = false;
 let demoScore = 0;
@@ -130,8 +135,56 @@ function collectDemoAnswerKeys(value: unknown): void {
   }
 }
 
+async function findDemoTopicId(lessonId: number): Promise<number> {
+  const payload = await readMockData<unknown>("topic-lessons.json");
+  for (const [topicId, value] of Object.entries(asRecord(payload))) {
+    if (!Array.isArray(value)) continue;
+    if (value.some((item) => positiveInt(asRecord(item).id) === lessonId)) {
+      return positiveInt(topicId);
+    }
+  }
+  return 0;
+}
+
 async function loadLessonContent(lessonId: number): Promise<LessonContent> {
   if (isDemoMode()) {
+    const topicId = topicIdOfLesson(lessonId) || await findDemoTopicId(lessonId);
+    if (MOCK_PRACTICE_TOPIC_IDS.has(topicId)) {
+      const [lessonPayload, vocabularyPayload] = await Promise.all([
+        readMockData<unknown>("lesson-questions.json", (data) => {
+          const map = asRecord(data);
+          return map[String(lessonId)] ?? map.default;
+        }),
+        readMockData<unknown>("topic-vocabulary.json"),
+      ]);
+      const lessonData = parseLessonContent(lessonPayload);
+      const vocabularyTopics = asRecord(asRecord(vocabularyPayload).topics);
+      if (!Object.prototype.hasOwnProperty.call(vocabularyTopics, String(topicId))) {
+        throw new Error(`Chủ đề ${topicId} chưa có bộ từ vựng thử nghiệm.`);
+      }
+      const topic = parseTopicVocabulary(vocabularyPayload, topicId);
+      const storageKey = `slanguage_mock_practice_recent_${topicId}`;
+      const recentValue = localStorage.getItem(storageKey);
+      const recentKeys: string[] = recentValue === null
+        ? []
+        : JSON.parse(recentValue) as string[];
+      if (!Array.isArray(recentKeys) || recentKeys.some((key) => typeof key !== "string")) {
+        throw new Error("Lịch sử đề thử không hợp lệ. Hãy xóa dữ liệu trang rồi thử lại.");
+      }
+      const generated = generateMockPractice(
+        lessonId,
+        lessonData.lesson.title,
+        topic,
+        recentKeys,
+      );
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify([...recentKeys, ...generated.questionKeys].slice(-60)),
+      );
+      collectDemoAnswerKeys(generated.content);
+      return generated.content;
+    }
+
     const payload = await readMockData<unknown>("lesson-questions.json", (data) => {
       const map = asRecord(data);
       return map[String(lessonId)] ?? map.default;
@@ -179,19 +232,24 @@ async function requestCompletion(content: LessonContent, score: number): Promise
   const questionCount = content.questions.length;
   if (isDemoMode()) {
     const passed = score === questionCount;
-    const xpAwarded = passed ? DEMO_XP_PER_LESSON : 0;
     const previousXp = nonNegativeInt(localStorage.getItem("slanguage_user_xp"));
-    const xpTotal = (previousXp < 0 ? 0 : previousXp) + xpAwarded;
     const previousStreak = nonNegativeInt(localStorage.getItem("slanguage_user_streak"));
+    const xpTotal = previousXp < 0 ? 0 : previousXp;
+    const currentStreak = previousStreak < 0 ? 0 : previousStreak;
+    const xpAwarded = content.generation?.source === "mock"
+      ? 0
+      : passed
+        ? DEMO_XP_PER_LESSON
+        : 0;
     return {
       score,
       question_count: questionCount,
       passed,
       xp_awarded: xpAwarded,
-      xp_total: xpTotal,
+      xp_total: xpTotal + xpAwarded,
       level: levelFromXp(xpTotal),
       xp_into_level: xpTotal % XP_PER_LEVEL,
-      current_streak: previousStreak < 0 ? 0 : previousStreak,
+      current_streak: currentStreak,
       already_completed: false,
     };
   }
@@ -246,7 +304,7 @@ function parseLessonContent(value: unknown): LessonContent {
     const question = asRecord(value);
     const id = positiveInt(question.id);
     const questionText = typeof question.prompt === "string" ? question.prompt.trim() : "";
-    const questionType: LessonQuestion["question_type"] | null = question.question_type === "fill_in"
+    const questionType: "multiple_choice" | "fill_in" | null = question.question_type === "fill_in"
       ? "fill_in"
       : question.question_type === "multiple_choice" || question.question_type === undefined
         ? "multiple_choice"
@@ -283,6 +341,74 @@ function parseLessonContent(value: unknown): LessonContent {
   };
 }
 
+function shuffleItems<T>(items: readonly T[]): T[] {
+  const shuffled = [...items];
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const other = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[other]] = [shuffled[other], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function clearMatchingState(): void {
+  if (matchingState) window.clearTimeout(matchingState.timer);
+  matchingState = null;
+}
+
+function matchingCard(pair: LessonMatchingPair, side: "word" | "meaning"): HTMLButtonElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "lesson-matching__card";
+  button.dataset.matchingPairId = pair.id;
+  button.dataset.matchingSide = side;
+  button.setAttribute("aria-pressed", "false");
+  button.setAttribute("aria-label", `${side === "word" ? "Từ" : "Nghĩa"}: ${pair[side]}`);
+  button.textContent = pair[side];
+  return button;
+}
+
+function renderMatchingOptions(question: Extract<LessonQuestion, { question_type: "matching" }>): void {
+  if (!optionsContainer) return;
+  const wrapper = document.createElement("div");
+  wrapper.className = "lesson-matching";
+  wrapper.setAttribute("aria-label", "Bảng ghép từ với nghĩa");
+
+  const status = document.createElement("p");
+  status.className = "lesson-matching__status";
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
+  status.textContent = `Đã ghép 0/${question.pairs.length} cặp. Chọn một từ rồi chọn nghĩa tương ứng.`;
+
+  const columns = document.createElement("div");
+  columns.className = "lesson-matching__columns";
+  for (const [side, headingText] of [["word", "Từ"], ["meaning", "Nghĩa"]] as const) {
+    const column = document.createElement("section");
+    const heading = document.createElement("h3");
+    const group = document.createElement("div");
+    const headingId = `lessonMatching${side}Heading`;
+    column.className = "lesson-matching__column";
+    heading.id = headingId;
+    heading.textContent = headingText;
+    group.className = "lesson-matching__cards";
+    group.setAttribute("role", "group");
+    group.setAttribute("aria-labelledby", headingId);
+    const pairs = shuffleItems(question.pairs);
+    group.append(...pairs.map((pair) => matchingCard(pair, side)));
+    column.append(heading, group);
+    columns.append(column);
+  }
+  wrapper.append(status, columns);
+  optionsContainer.append(wrapper);
+  matchingState = {
+    selectedCard: null,
+    matchedIds: new Set(),
+    mistakes: [],
+    resolving: false,
+    timer: 0,
+    status,
+  };
+}
+
 function renderQuestion(): void {
   if (!lesson || !optionsContainer) return;
   if (questionPanel) questionPanel.hidden = false;
@@ -296,14 +422,32 @@ function renderQuestion(): void {
   if (questionCount) questionCount.textContent = `Câu ${questionIndex + 1} trên ${lesson.questions.length}`;
   if (prompt) prompt.textContent = question.prompt;
   const questionType = document.getElementById("lessonQuestionType");
+  const isEnglishFillIn = question.question_type === "fill_in"
+    && lesson.generation?.language_code === "en";
+  const fillInLabel = isEnglishFillIn ? "Nhập nghĩa tiếng Việt" : "Nhập cách đọc";
   if (questionType) {
     questionType.textContent = question.question_type === "fill_in"
-      ? "Điền từ còn thiếu"
-      : "Chọn một trong bốn từ";
+      ? isEnglishFillIn
+        ? "Điền nghĩa"
+        : "Điền cách đọc"
+      : question.question_type === "matching"
+        ? "Ghép từ với nghĩa"
+        : "Chọn một đáp án";
   }
 
+  clearMatchingState();
   optionsContainer.replaceChildren();
-  if (question.question_type === "fill_in") {
+  optionsContainer.setAttribute(
+    "aria-label",
+    question.question_type === "matching"
+      ? "Ghép từ với nghĩa"
+      : question.question_type === "fill_in"
+        ? fillInLabel
+        : "Chọn một đáp án",
+  );
+  if (question.question_type === "matching") {
+    renderMatchingOptions(question);
+  } else if (question.question_type === "fill_in") {
     const input = document.createElement("input");
     input.type = "text";
     input.className = "lesson-answer-input";
@@ -311,8 +455,8 @@ function renderQuestion(): void {
     input.maxLength = 200;
     input.autocomplete = "off";
     input.spellcheck = false;
-    input.setAttribute("aria-label", "Nhập từ còn thiếu");
-    input.placeholder = "Nhập từ còn thiếu";
+    input.setAttribute("aria-label", fillInLabel);
+    input.placeholder = fillInLabel;
     optionsContainer.append(input);
   } else {
     for (const [index, option] of question.options.entries()) {
@@ -330,6 +474,14 @@ function renderQuestion(): void {
       button.append(letter, text);
       optionsContainer.append(button);
     }
+  }
+
+  const generationNotice = document.getElementById("lessonGenerationNotice");
+  if (generationNotice) {
+    generationNotice.hidden = lesson.generation?.source !== "mock";
+    generationNotice.textContent = lesson.generation?.source === "mock"
+      ? `Đề mock theo mẫu ngẫu nhiên từ từ vựng chủ đề ${lesson.generation.topic_name}; chưa gọi AI, không lưu XP hay tiến độ.`
+      : "";
   }
 
   const progressText = document.getElementById("lessonProgressText");
@@ -350,6 +502,112 @@ function renderQuestion(): void {
   title?.focus();
 }
 
+function updateMatchingStatus(message?: string): void {
+  const question = lesson?.questions[questionIndex];
+  if (!matchingState || question?.question_type !== "matching") return;
+  const completedPairs = matchingState.matchedIds.size;
+  const totalPairs = question.pairs.length;
+  matchingState.status.textContent = message
+    ?? `Đã ghép ${completedPairs}/${totalPairs} cặp. Chọn một từ rồi chọn nghĩa tương ứng.`;
+
+  if (completedPairs === totalPairs) {
+    selectedOptionId = matchingState.mistakes.length === 0 ? "all-matched" : "matched-with-mistakes";
+    matchingState.status.textContent = matchingState.mistakes.length === 0
+      ? `Đã ghép đủ ${totalPairs}/${totalPairs} cặp. Nhấn “Kiểm tra đáp án” để tiếp tục.`
+      : `Đã ghép đủ ${totalPairs}/${totalPairs} cặp, nhưng có cặp chưa chính xác. Nhấn “Kiểm tra đáp án” để xem kết quả.`;
+    if (checkButton) checkButton.disabled = false;
+  }
+}
+
+function selectMatchingCard(card: HTMLButtonElement): void {
+  const question = lesson?.questions[questionIndex];
+  const state = matchingState;
+  const pairId = card.dataset.matchingPairId;
+  const side = card.dataset.matchingSide;
+  if (
+    question?.question_type !== "matching" ||
+    !state ||
+    !pairId ||
+    (side !== "word" && side !== "meaning") ||
+    state.resolving ||
+    card.disabled
+  ) {
+    return;
+  }
+
+  const first = state.selectedCard;
+  if (!first) {
+    state.selectedCard = card;
+    card.classList.add("is-selected");
+    card.setAttribute("aria-pressed", "true");
+    updateMatchingStatus(side === "word" ? "Đã chọn một từ. Giờ chọn nghĩa tương ứng." : "Đã chọn một nghĩa. Giờ chọn từ tương ứng.");
+    return;
+  }
+
+  if (first === card) {
+    first.classList.remove("is-selected");
+    first.setAttribute("aria-pressed", "false");
+    state.selectedCard = null;
+    updateMatchingStatus();
+    return;
+  }
+
+  const firstSide = first.dataset.matchingSide;
+  if (firstSide === side) {
+    first.classList.remove("is-selected");
+    first.setAttribute("aria-pressed", "false");
+    state.selectedCard = card;
+    card.classList.add("is-selected");
+    card.setAttribute("aria-pressed", "true");
+    updateMatchingStatus(side === "word" ? "Đã đổi từ đã chọn. Chọn nghĩa tương ứng." : "Đã đổi nghĩa đã chọn. Chọn từ tương ứng.");
+    return;
+  }
+
+  const wordCard = side === "word" ? card : first;
+  const meaningCard = side === "meaning" ? card : first;
+  const wordId = wordCard.dataset.matchingPairId;
+  const meaningId = meaningCard.dataset.matchingPairId;
+  const correctPair = question.pairs.find((pair) => pair.id === wordId);
+  if (!wordId || !meaningId || !correctPair) return;
+
+  state.selectedCard = null;
+  if (wordId === meaningId) {
+    state.matchedIds.add(wordId);
+    for (const matchedCard of [wordCard, meaningCard]) {
+      matchedCard.disabled = true;
+      matchedCard.classList.remove("is-selected");
+      matchedCard.classList.add("is-matched");
+      matchedCard.setAttribute("aria-pressed", "false");
+    }
+    updateMatchingStatus();
+    return;
+  }
+
+  const mistakeKey = `${wordId}:${meaningId}`;
+  if (!state.mistakes.some((mistake) => mistake.key === mistakeKey)) {
+    state.mistakes.push({
+      key: mistakeKey,
+      word: correctPair.word,
+      selectedMeaning: meaningCard.textContent ?? "",
+      correctMeaning: correctPair.meaning,
+    });
+  }
+  state.resolving = true;
+  wordCard.classList.add("is-wrong");
+  meaningCard.classList.add("is-wrong");
+  wordCard.setAttribute("aria-pressed", "true");
+  meaningCard.setAttribute("aria-pressed", "true");
+  state.status.textContent = `Cặp chưa khớp. Đã ghép ${state.matchedIds.size}/${question.pairs.length} cặp.`;
+  state.timer = window.setTimeout(() => {
+    for (const wrongCard of [wordCard, meaningCard]) {
+      wrongCard.classList.remove("is-wrong");
+      wrongCard.setAttribute("aria-pressed", "false");
+    }
+    state.resolving = false;
+    updateMatchingStatus();
+  }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
+}
+
 async function openLesson(lessonId: number, pushHistory: boolean): Promise<void> {
   if ((!isLearnerAuthenticated() && !isDemoMode()) || !workspace) return;
   if (activeRequest) return;
@@ -358,6 +616,7 @@ async function openLesson(lessonId: number, pushHistory: boolean): Promise<void>
   activeRequest = true;
   completed = false;
   lesson = null;
+  clearMatchingState();
   demoScore = 0;
   answerReviews.length = 0;
   lastLessonId = lessonId;
@@ -380,6 +639,7 @@ async function openLesson(lessonId: number, pushHistory: boolean): Promise<void>
 
   try {
     lesson = await loadLessonContent(lessonId);
+    if (lesson.generation) lastTopicId = lesson.generation.topic_id;
     questionIndex = 0;
     renderQuestion();
   } catch (error) {
@@ -394,6 +654,12 @@ function selectOption(event: Event): void {
   if (checkedAnswer || activeRequest) return;
   const target = event.target;
   if (!(target instanceof Element)) return;
+  const question = lesson?.questions[questionIndex];
+  if (question?.question_type === "matching") {
+    const card = target.closest<HTMLButtonElement>("[data-matching-pair-id]");
+    if (card && optionsContainer?.contains(card)) selectMatchingCard(card);
+    return;
+  }
   const option = target.closest<HTMLButtonElement>("[data-option-id]");
   if (!option || !optionsContainer?.contains(option)) return;
   selectedOptionId = option.dataset.optionId || null;
@@ -426,7 +692,16 @@ async function checkAnswer(): Promise<void> {
     const correct = answer.correct_option_id;
     checkedAnswer = answer;
     if (answer.is_correct) demoScore += 1;
-    else {
+    else if (question.question_type === "matching" && matchingState) {
+      for (const mistake of matchingState.mistakes) {
+        answerReviews.push({
+          prompt: `Ghép từ “${mistake.word}” với nghĩa tương ứng.`,
+          selected: mistake.selectedMeaning,
+          correct: mistake.correctMeaning,
+          explanation: null,
+        });
+      }
+    } else {
       const selectedText = question.question_type === "fill_in"
         ? answer.selected_option_id
         : question.options.find((option) => option.id === selected)?.text ?? selected;
@@ -446,15 +721,22 @@ async function checkAnswer(): Promise<void> {
         button.classList.add("is-incorrect");
       }
     }
+    for (const button of optionsContainer?.querySelectorAll<HTMLButtonElement>(".lesson-matching__card") || []) {
+      button.disabled = true;
+    }
     const answerInput = optionsContainer?.querySelector<HTMLInputElement>("[data-answer-input]");
     if (answerInput) answerInput.disabled = true;
     const feedback = document.getElementById("lessonFeedback");
     if (feedback) {
-      const questionFeedback = question.question_type === "fill_in" && !answer.is_correct
-        ? `Chưa đúng. Đáp án là “${correct}”.`
-        : answer.is_correct
-          ? "Chính xác."
-          : "Chưa đúng. Đáp án đúng đã được đánh dấu.";
+      const questionFeedback = question.question_type === "matching"
+        ? answer.is_correct
+          ? "Ghép chính xác tất cả các cặp."
+          : "Có cặp ghép chưa chính xác. Xem lại đáp án ở phần tổng kết."
+        : question.question_type === "fill_in" && !answer.is_correct
+          ? `Chưa đúng. Đáp án là “${correct}”.`
+          : answer.is_correct
+            ? "Chính xác."
+            : "Chưa đúng. Đáp án đúng đã được đánh dấu.";
       feedback.textContent = `${questionFeedback}${checkedAnswer.explanation ? ` ${checkedAnswer.explanation}` : ""}`;
       feedback.dataset.state = answer.is_correct ? "correct" : "incorrect";
     }
@@ -571,6 +853,10 @@ function animateXp(amount: number): void {
 function renderScoreDelta(score: number, lessonId: number): void {
   const element = document.getElementById("lessonScoreDelta");
   if (!element) return;
+  if (lesson?.generation?.source === "mock") {
+    element.hidden = true;
+    return;
+  }
   const key = `slanguage_lesson_last_score_${lessonId}`;
   const storedScore = localStorage.getItem(key);
   const previous = storedScore === null ? -1 : nonNegativeInt(storedScore);
@@ -610,6 +896,7 @@ function closeResultDialog(): void {
 function renderResult(result: LessonCompletion, lessonId: number): void {
   if (!resultPanel || !lesson) return;
   const { score, question_count: count, passed, xp_awarded: xpAwarded, current_streak: streak } = result;
+  const mockGenerated = lesson.generation?.source === "mock";
   const xpReceived = result.already_completed ? 0 : xpAwarded;
   const headline = document.getElementById("lessonResultHeadline");
   const titleElement = document.getElementById("lessonResultTitle");
@@ -622,20 +909,32 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
   const returnButton = document.getElementById("returnToTopics") as HTMLButtonElement | null;
   const streakElement = document.getElementById("lessonResultStreak");
 
-  completed = passed;
+  completed = passed && !mockGenerated;
   lastXpTotal = result.xp_total;
   headline?.setAttribute("data-state", passed ? "passed" : "failed");
-  if (eyebrow) eyebrow.textContent = passed ? "Một bước tiến mới" : "Thêm một lượt luyện nữa";
-  if (titleElement) titleElement.textContent = passed ? "Quá đã! Bạn làm được rồi" : "Chưa đủ 4/4 lần này";
+  if (eyebrow) eyebrow.textContent = mockGenerated
+    ? "Kết quả dữ liệu thử"
+    : passed
+      ? "Một bước tiến mới"
+      : "Thêm một lượt luyện nữa";
+  if (titleElement) {
+    titleElement.textContent = mockGenerated
+      ? "Lượt luyện đã xong"
+      : passed
+        ? "Quá đã! Bạn làm được rồi"
+        : `Chưa đủ ${count}/${count} lần này`;
+  }
   if (textElement) {
-    textElement.textContent = passed
-      ? result.already_completed
-        ? `${formatScore(score, count)} câu đúng · Kết quả này đã được ghi nhận trước đó.`
-        : `${formatScore(score, count)} câu đúng · Bạn vừa tiến thêm một bước trên lộ trình.`
-      : `${formatScore(score, count)} câu đúng — vài từ đang chơi trốn tìm thôi. Mình xem lại rồi thử thêm lượt nữa nhé!`;
+    textElement.textContent = mockGenerated
+      ? `${formatScore(score, count)} câu đúng · Bộ câu hỏi này dùng dữ liệu mock, không cập nhật XP hay tiến độ.`
+      : passed
+        ? result.already_completed
+          ? `${formatScore(score, count)} câu đúng · Kết quả này đã được ghi nhận trước đó.`
+          : `${formatScore(score, count)} câu đúng · Bạn vừa tiến thêm một bước trên lộ trình.`
+        : `${formatScore(score, count)} câu đúng — vài từ đang chơi trốn tìm thôi. Mình xem lại rồi thử thêm lượt nữa nhé!`;
   }
   if (unlock) {
-    unlock.hidden = !passed;
+    unlock.hidden = mockGenerated || !passed;
     const message = unlock.querySelector("span");
     if (message) {
       message.textContent = hasNextTopic()
@@ -644,13 +943,16 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
     }
   }
   if (rule) {
-    rule.hidden = passed;
+    rule.hidden = passed || mockGenerated;
     rule.textContent = `Cần đạt ${count}/${count} để mở khóa chủ đề tiếp theo.`;
   }
-  if (retryButton) retryButton.hidden = passed;
-  if (continueButton) continueButton.hidden = !passed;
+  if (retryButton) {
+    retryButton.hidden = mockGenerated ? false : passed;
+    retryButton.textContent = mockGenerated ? "Tạo đề khác" : `Thử lại ${count} câu`;
+  }
+  if (continueButton) continueButton.hidden = mockGenerated || !passed;
   if (returnButton) returnButton.textContent = "Để sau";
-  if (returnButton) returnButton.hidden = passed;
+  if (returnButton) returnButton.hidden = passed && !mockGenerated;
   if (streakElement) streakElement.textContent = `${streak} ngày`;
 
   renderAnswerReviews();
@@ -658,12 +960,14 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
   animateScore(score, count);
   animateXp(xpReceived);
 
-  localStorage.setItem("slanguage_user_xp", String(result.xp_total));
-  localStorage.setItem("slanguage_user_streak", String(streak));
-  const headerXp = document.getElementById("headerXPVal");
-  if (headerXp) headerXp.textContent = `${result.xp_total.toLocaleString("vi-VN")} XP`;
-  const headerStreak = document.getElementById("headerStreakVal");
-  if (headerStreak) headerStreak.textContent = String(streak);
+  if (!mockGenerated) {
+    localStorage.setItem("slanguage_user_xp", String(result.xp_total));
+    localStorage.setItem("slanguage_user_streak", String(streak));
+    const headerXp = document.getElementById("headerXPVal");
+    if (headerXp) headerXp.textContent = `${result.xp_total.toLocaleString("vi-VN")} XP`;
+    const headerStreak = document.getElementById("headerStreakVal");
+    if (headerStreak) headerStreak.textContent = String(streak);
+  }
   lastXpAwarded = xpReceived;
 
   resultPanel.hidden = false;
@@ -672,7 +976,7 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
     (passed ? continueButton : retryButton)?.focus();
   });
 
-  if (passed && !result.already_completed) {
+  if (passed && !result.already_completed && !mockGenerated) {
     launchConfetti(resultPanel);
   }
 }

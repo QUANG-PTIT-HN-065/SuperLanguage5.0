@@ -25,6 +25,7 @@ import {
   type LearnerOverview,
   type StreakDay,
 } from "./learner-progress";
+import { MOCK_PRACTICE_TOPIC_IDS } from "./lesson-practice-generator";
 import { type LearningPathTopic } from "./learning-path-route";
 import { renderRoadmap, setTopicLessonState } from "../../ts/pages/roadmap";
 
@@ -668,13 +669,20 @@ async function loadTopicLessons(topic: LearningTopic, pathId: number): Promise<v
       return;
     }
 
-    const label = nextLesson.is_completed ? "Học lại" : "Bắt đầu";
+    const mixedPracticeDemo = demoMode && MOCK_PRACTICE_TOPIC_IDS.has(topic.id);
+    const label = mixedPracticeDemo
+      ? "Làm đề thử"
+      : nextLesson.is_completed
+        ? "Học lại"
+        : "Bắt đầu";
     setTopicLessonState(topic.id, {
       status: "ready",
       slot: {
         lessonId: nextLesson.id,
         label,
-        ariaLabel: `${label} bài ${nextLesson.title} của chủ đề ${topic.name}`,
+        ariaLabel: mixedPracticeDemo
+          ? `Làm đề thử ngẫu nhiên từ 10 đến 15 câu cho chủ đề ${topic.name}`
+          : `${label} bài ${nextLesson.title} của chủ đề ${topic.name}`,
       },
     });
   } catch (error) {

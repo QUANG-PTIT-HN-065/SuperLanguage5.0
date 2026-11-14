@@ -2147,142 +2147,42 @@ body.roadmap-sheet-open {
   }
 }
 
-/* ---------- Bài thử ghép cặp ---------- */
-.lesson-toolbar__actions {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.matching-demo__launch {
-  min-height: 44px;
-  padding: 8px 12px;
-  font-size: 0.78rem;
-}
-
-.matching-demo {
-  width: min(820px, 100%);
-  margin: 30px auto 0;
-  padding: 20px 0 0;
-  border-top: 1px solid var(--learner-rule);
-}
-
-.matching-demo__toolbar,
-.matching-demo__intro,
-.matching-demo__stats,
-.matching-demo__complete-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.matching-demo__sample-label,
-.matching-demo__stats {
-  color: var(--learner-muted);
-  font-size: 0.8rem;
-}
-
-.matching-demo__sample-label {
-  text-align: right;
-}
-
-.matching-demo__intro {
-  align-items: flex-end;
-  margin-top: 24px;
-}
-
-.matching-demo__intro > div:first-child {
-  min-width: 0;
-  max-width: 62ch;
-}
-
-.learning-path-page .matching-demo__intro h2,
-.learning-path-page .matching-demo__complete h2 {
-  margin: 0;
-  color: var(--learner-ink);
-  font-size: clamp(1.4rem, 3vw, 1.8rem);
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
-}
-
-.matching-demo__intro p,
-.matching-demo__complete > p:not(.matching-demo__complete-label) {
-  margin: 8px 0 0;
+/* ---------- Dạng ghép cặp trong đề luyện ---------- */
+.lesson-generation-notice {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-block: 1px solid var(--learner-rule);
   color: var(--learner-text);
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
-
-.matching-demo__stats {
-  flex: 0 0 auto;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  font-variant-numeric: tabular-nums;
-}
-
-.matching-demo__stats span:first-child {
-  min-width: 92px;
-  padding: 6px 9px;
-  border-radius: 4px;
-  color: var(--learner-muted);
-  background: var(--learner-ground);
-  text-align: center;
-  transition: color 180ms ease, background-color 180ms ease;
-}
-
-.matching-demo__stats span:first-child[data-level="1"],
-.matching-demo__stats span:first-child[data-level="2"] {
-  color: #155b60;
   background: var(--learner-teal-soft);
+  font-size: 0.84rem;
+  line-height: 1.55;
 }
 
-.matching-demo__stats span:first-child[data-level="3"],
-.matching-demo__stats span:first-child[data-level="4"],
-.matching-demo__stats span:first-child[data-level="5"] {
-  color: #654d1a;
-  background: #f8f1dc;
+.lesson-matching {
+  width: min(820px, 100%);
+  margin: 18px auto 0;
 }
 
-.matching-demo__progress {
-  height: 5px;
-  margin-top: 20px;
-  overflow: hidden;
-  background: var(--learner-rule);
-}
-
-.matching-demo__progress span {
-  display: block;
-  width: 0;
-  height: 100%;
-  background: var(--learner-teal);
-  transition: width 240ms var(--learner-ease);
-}
-
-.matching-demo__feedback {
+.lesson-matching__status {
   min-height: 24px;
-  margin: 14px 0 0;
+  margin: 0;
   color: var(--learner-text);
   font-size: 0.88rem;
   line-height: 1.5;
 }
 
-.matching-demo__columns {
+.lesson-matching__columns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(20px, 5vw, 42px);
-  margin-top: 20px;
+  margin-top: 14px;
 }
 
-.matching-demo__column {
+.lesson-matching__column {
   min-width: 0;
 }
 
-.matching-demo__column h3 {
+.lesson-matching__column h3 {
   margin: 0 0 10px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--learner-rule);
@@ -2291,15 +2191,15 @@ body.roadmap-sheet-open {
   font-weight: 600;
 }
 
-.matching-demo__cards {
+.lesson-matching__cards {
   display: grid;
   gap: 8px;
 }
 
-.matching-demo__card {
+.lesson-matching__card {
   display: flex;
   width: 100%;
-  min-height: 58px;
+  min-height: 56px;
   align-items: center;
   padding: 12px 14px;
   border: 1px solid #b9c5c2;
@@ -2313,87 +2213,46 @@ body.roadmap-sheet-open {
   overflow-wrap: anywhere;
   cursor: pointer;
   touch-action: manipulation;
-  user-select: none;
   transition: border-color 140ms var(--learner-ease), background-color 140ms var(--learner-ease), opacity 180ms ease;
 }
 
-.matching-demo__card:hover:not(:disabled) {
+.lesson-matching__card:hover:not(:disabled) {
   border-color: var(--learner-teal);
   background: #f0f5ef;
 }
 
-.matching-demo__card:focus-visible,
-.matching-demo__toolbar button:focus-visible,
-.matching-demo__complete-actions button:focus-visible {
+.lesson-matching__card:focus-visible {
   outline: 3px solid var(--learner-teal);
   outline-offset: 3px;
 }
 
-.matching-demo__card.is-selected,
-.matching-demo__card.is-drop-target {
+.lesson-matching__card.is-selected {
   border-color: var(--learner-teal);
   background: var(--learner-teal-soft);
 }
 
-.matching-demo__card.is-dragging {
-  opacity: 0.45;
-}
-
-.matching-demo__card.is-matched {
+.lesson-matching__card.is-matched {
   border-color: #3b8c76;
   background: #e4f0e8;
-  animation: matching-card-correct 440ms var(--learner-ease) forwards;
+  opacity: 0.72;
+  animation: matching-card-correct 300ms var(--learner-ease);
 }
 
-.matching-demo__card.is-wrong {
+.lesson-matching__card.is-wrong {
   border-color: #b94b38;
   background: var(--learner-signal-soft);
   animation: matching-card-wrong 380ms ease-in-out;
 }
 
-.matching-demo__card:disabled {
+.lesson-matching__card:disabled {
   color: var(--learner-ink);
   cursor: default;
 }
 
-.matching-demo__drag-ghost {
-  position: fixed;
-  z-index: 1600;
-  width: min(260px, 70vw);
-  min-height: 54px;
-  border-color: var(--learner-teal);
-  background: var(--learner-paper);
-  box-shadow: 0 10px 24px rgb(24 50 72 / 18%);
-  pointer-events: none;
-  opacity: 0.96;
-}
-
-.matching-demo__complete {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--learner-rule);
-}
-
-.matching-demo__complete-label {
-  margin: 0 0 8px;
-  color: var(--learner-teal);
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.matching-demo__complete-actions {
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  margin-top: 18px;
-}
-
-.matching-demo__complete-actions button {
-  min-height: 48px;
-}
-
 @keyframes matching-card-correct {
-  35% { transform: scale(1.025); }
-  to { transform: scale(0.92); opacity: 0; }
+  0% { opacity: 1; transform: scale(0.98); }
+  35% { opacity: 0.84; transform: scale(1.025); }
+  to { opacity: 0.72; transform: scale(0.98); }
 }
 
 @keyframes matching-card-wrong {
@@ -2401,64 +2260,20 @@ body.roadmap-sheet-open {
   40%, 80% { transform: translateX(4px); }
 }
 
-@media (max-width: 760px) {
-  .lesson-toolbar__actions {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-}
-
 @media (max-width: 600px) {
-  .matching-demo {
-    margin-top: 22px;
-  }
-
-  .matching-demo__intro {
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .matching-demo__columns {
+  .lesson-matching__columns {
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
-  }
-
-  .matching-demo__card {
-    min-height: 56px;
-  }
-
-  .matching-demo__complete-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .matching-demo__complete-actions button {
-    width: 100%;
-  }
-}
-
-@media (max-width: 380px) {
-  .matching-demo__intro {
-    flex-direction: column;
-  }
-
-  .matching-demo__stats {
-    width: 100%;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
+    gap: 18px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .matching-demo__progress span,
-  .matching-demo__stats span:first-child,
-  .matching-demo__card {
+  .lesson-matching__card {
     transition-duration: 0.01ms;
   }
 
-  .matching-demo__card.is-matched,
-  .matching-demo__card.is-wrong {
+  .lesson-matching__card.is-matched,
+  .lesson-matching__card.is-wrong {
     animation: none;
   }
 }
