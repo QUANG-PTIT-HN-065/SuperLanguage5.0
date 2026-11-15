@@ -42,9 +42,7 @@ table {
 
   .slg-app-navbar .navbar-container {
     display: grid !important;
-    grid-template-areas:
-      "brand actions"
-      "navigation navigation";
+    grid-template-areas: "brand actions";
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 4px 8px;
@@ -56,32 +54,7 @@ table {
   }
 
   .slg-app-navbar .nav-center {
-    grid-area: navigation;
-    display: flex;
-    width: 100%;
-    min-width: 0;
-    justify-content: flex-start;
-    overflow: hidden;
-  }
-
-  .slg-app-navbar .nav-links {
-    width: 100%;
-    justify-content: flex-start;
-    gap: 4px;
-    overflow-x: auto;
-    padding: 0 0 2px;
-    scrollbar-width: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .slg-app-navbar .nav-links::-webkit-scrollbar {
     display: none;
-  }
-
-  .slg-app-navbar .nav-links a {
-    min-height: 42px;
-    padding: 10px 8px 8px;
-    font-size: 0.8rem;
   }
 
   .slg-app-navbar .nav-right {
@@ -534,6 +507,73 @@ table {
   .roadmap-sheet {
     padding-right: 14px;
     padding-left: 14px;
+  }
+}
+
+@media (min-width: 760.02px) and (max-width: 1280px) {
+  .slg-app-navbar .navbar-container {
+    display: grid;
+    grid-template-areas:
+      "brand tools"
+      "navigation navigation";
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 12px;
+  }
+
+  .slg-app-navbar .nav-left {
+    grid-area: brand;
+    min-width: 0;
+  }
+
+  .slg-app-navbar .nav-center {
+    grid-area: navigation;
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .slg-app-navbar .nav-right {
+    grid-area: tools;
+    min-width: 0;
+    margin-left: auto;
+  }
+}
+
+@media (min-width: 760.02px) and (max-width: 1024px) {
+  .slg-app-navbar .stat-chip.auth-only,
+  .slg-app-navbar .user-info-text {
+    display: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  html {
+    scrollbar-gutter: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-tabs-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    overflow: visible;
+    border-radius: 12px;
+  }
+
+  .profile-tab-btn {
+    min-width: 0;
+    padding: 10px 8px;
+    white-space: normal;
+    line-height: 1.25;
+    text-align: center;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .slg-mobile-tabbar .tab[data-nav="profile"] {
+    display: none;
   }
 }
 

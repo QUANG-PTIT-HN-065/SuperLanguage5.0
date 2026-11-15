@@ -151,9 +151,9 @@
               hidden
             >
               <div class="form-section-title practice-topic-title">
-                <h4>Chủ đề câu đọc</h4>
+                <h4>Chủ đề luyện tập</h4>
               </div>
-              <div class="topic-grid" id="topicGrid" role="radiogroup" aria-label="Chủ đề câu đọc">
+              <div class="topic-grid" id="topicGrid" role="radiogroup" aria-label="Chủ đề luyện tập">
                 <button type="button" class="topic-chip is-selected" data-topic="Giao tiếp hàng ngày" role="radio" aria-checked="true">
                   <i class="topic-icon fa-solid fa-mug-hot" aria-hidden="true"></i>
                   <span class="topic-text">Giao tiếp hàng ngày</span>
@@ -186,7 +186,7 @@
                   <span>Chủ đề khác</span>
                 </button>
                 <div class="custom-topic-input-box" id="customTopicBox" hidden>
-                  <label class="sr-only" for="topicInput">Nhập chủ đề câu đọc</label>
+                  <label class="sr-only" for="topicInput">Nhập chủ đề luyện tập</label>
                   <input id="topicInput" type="text" maxlength="100" placeholder="VD: Một chuyến đi đáng nhớ..." autocomplete="off">
                 </div>
               </div>
@@ -324,29 +324,17 @@
           <section class="chat-reading-practice" id="readPractice" hidden aria-labelledby="readPracticeTitle">
             <div class="chat-reading-practice__heading">
               <h3 id="readPracticeTitle">Đọc theo mẫu</h3>
-              <p>Đọc câu bên dưới để nhận diện và đối chiếu từ bạn nói.</p>
+              <p>AI tự đặt câu hỏi và đưa câu trả lời mẫu. Hãy nghe rồi đọc câu mẫu thành tiếng.</p>
             </div>
-            <p class="chat-reading-practice__prompt" id="readPracticePrompt"></p>
             <div class="reading-practice-action">
-              <button type="button" class="reading-practice-action__button" id="readingPromptButton">
-                <i class="fa-solid fa-rotate" aria-hidden="true"></i>
-                <span>Tạo câu khác</span>
-              </button>
               <p class="reading-practice-action__status" id="readingPromptStatus" role="status" aria-live="polite"></p>
             </div>
+            <div class="chat-reading-practice__turns" id="readPracticeTurns" aria-live="polite"></div>
             <button type="button" class="chat-reading-practice__record" id="readPracticeRecord">
               <i class="fa-solid fa-microphone" aria-hidden="true"></i>
-              <span id="readPracticeButtonText">Đọc câu hỏi</span>
+              <span id="readPracticeButtonText">Đọc câu mẫu để chấm phát âm</span>
             </button>
             <p class="chat-reading-practice__status" id="readPracticeStatus" role="status" aria-live="polite"></p>
-            <div class="chat-reading-practice__result" id="readPracticeResult" hidden aria-live="polite">
-              <p class="chat-reading-practice__score" id="readPracticeScore"></p>
-              <p class="chat-reading-practice__legend">Gạch liền: đúng · gạch lượn: sai hoặc thiếu</p>
-              <p class="chat-reading-practice__label">Câu AI tạo</p>
-              <p class="chat-reading-practice__text" id="readPracticeExpected"></p>
-              <p class="chat-reading-practice__label">Bạn đã đọc</p>
-              <p class="chat-reading-practice__text" id="readPracticeTranscript"></p>
-            </div>
           </section>
 
           <!-- Trạng thái AI đang suy nghĩ -->

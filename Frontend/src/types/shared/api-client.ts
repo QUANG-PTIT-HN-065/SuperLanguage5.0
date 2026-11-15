@@ -191,3 +191,42 @@ export async function slanguageApi<T = unknown>(
   }
   return parseResponse<T>(response);
 }
+
+export async function slanguageApiAudio(path: string, body: unknown): Promise<Blob> {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const send = (accessToken: string | null) => {
+    const headers = new Headers({
+      Accept: "audio/mpeg",
+      "Content-Type": "application/json",
+    });
+    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+    return fetch(`${API_BASE_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+  };
+
+  let response = await send(token);
+  if (response.status === 401 && token) {
+    response = await send(await refreshAccessToken());
+  }
+  if (!response.ok) {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error(`Backend trả về lỗi HTTP ${response.status}.`);
+    }
+    throw new Error(getErrorMessage(payload, response.status));
+  }
+
+  const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+  if (!contentType.startsWith("audio/")) {
+    throw new Error("Backend trả về dữ liệu giọng đọc không hợp lệ.");
+  }
+
+  const audio = await response.blob();
+  if (!audio.size) throw new Error("Backend trả về file giọng đọc trống.");
+  return audio;
+}

@@ -164,6 +164,10 @@ export class AvatarUploader {
     }
   }
 
+  public openPicker(): void {
+    this.fileInput.click();
+  }
+
   public getAvatarDataUrl(): string | null {
     return this.currentDataUrl;
   }

@@ -1,4 +1,7 @@
-import { transcribePracticeAudio } from "../shared/speech-api.js";
+import {
+  submitReadingPracticeAnswer,
+  type ReadingPracticeTurn,
+} from "./chat-api.js";
 import { AudioRecorder, RecorderState } from "../ui/recorder.js";
 
 interface WordToken {
@@ -139,52 +142,24 @@ export function compareTranscript(
   };
 }
 
-function renderComparedText(
-  element: HTMLElement,
-  source: string,
-  words: ComparedWord[],
-): void {
-  const fragment = document.createDocumentFragment();
-  let cursor = 0;
-  for (const word of words) {
-    fragment.append(document.createTextNode(source.slice(cursor, word.start)));
-    const wrapper = document.createElement("span");
-    wrapper.className = word.isCorrect
-      ? "chat-reading-practice__word--correct"
-      : "chat-reading-practice__word--incorrect";
-    const accessibleLabel = document.createElement("span");
-    accessibleLabel.className = "sr-only";
-    accessibleLabel.textContent = `${word.isCorrect ? "Đúng" : "Chưa đúng"}: `;
-    const visibleWord = document.createElement("span");
-    visibleWord.setAttribute("aria-hidden", "true");
-    visibleWord.textContent = word.text;
-    wrapper.append(accessibleLabel, visibleWord);
-    fragment.append(wrapper);
-    cursor = word.end;
-  }
-  fragment.append(document.createTextNode(source.slice(cursor)));
-  element.replaceChildren(fragment);
-}
-
 export class ReadAloudPractice {
   private readonly panel = document.getElementById("readPractice");
-  private readonly prompt = document.getElementById("readPracticePrompt");
+  private readonly turnsElement = document.getElementById("readPracticeTurns");
   private readonly recordButton = document.getElementById("readPracticeRecord") as HTMLButtonElement | null;
   private readonly buttonText = document.getElementById("readPracticeButtonText");
   private readonly status = document.getElementById("readPracticeStatus");
-  private readonly result = document.getElementById("readPracticeResult");
-  private readonly score = document.getElementById("readPracticeScore");
-  private readonly expectedText = document.getElementById("readPracticeExpected");
-  private readonly transcriptText = document.getElementById("readPracticeTranscript");
   private readonly recorder: AudioRecorder;
   private readonly supported: boolean;
-  private sentence = "";
+  private turns: ReadingPracticeTurn[] = [];
   private languageCode = "en";
   private conversationId = "";
   private generation = 0;
-  private isTranscribing = false;
+  private isSubmitting = false;
 
-  constructor() {
+  constructor(
+    private readonly speak: (text: string, languageCode: string) => Promise<void>,
+    private readonly onAnswerSubmitted: () => Promise<void>,
+  ) {
     this.recorder = new AudioRecorder(null, {
       maxDurationSeconds: 30,
       onStateChange: (state) => this.handleRecorderState(state),
@@ -204,39 +179,87 @@ export class ReadAloudPractice {
       event.stopPropagation();
       void this.toggleRecording();
     });
+    this.turnsElement?.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest<HTMLButtonElement>("[data-speak-turn]");
+      if (!button?.dataset.speakTurn) return;
+      const turn = this.turns.find((item) => item.id === button.dataset.speakTurn);
+      if (turn) {
+        const text = button.dataset.speakPart === "sample"
+          ? turn.sample_answer
+          : turn.question;
+        void this.speak(text, this.languageCode);
+      }
+    });
   }
 
-  public setSentence(sentence: string, languageCode: string, conversationId: string): void {
+  public setTurns(
+    turns: ReadingPracticeTurn[],
+    languageCode: string,
+    conversationId: string,
+  ): void {
     this.generation += 1;
     if (this.recorder.getState() !== "idle") this.recorder.cancel();
-    this.isTranscribing = false;
-    this.sentence = sentence.trim();
+    this.isSubmitting = false;
+    this.turns = turns;
     this.languageCode = languageCode.toLowerCase().startsWith("ja") ? "ja" : "en";
     this.conversationId = conversationId;
-    if (this.panel) this.panel.hidden = !this.sentence;
-    if (this.prompt) this.prompt.textContent = this.sentence;
-    if (this.result) this.result.hidden = true;
-    this.expectedText?.replaceChildren();
-    this.transcriptText?.replaceChildren();
-    this.score?.replaceChildren();
+    if (this.panel) this.panel.hidden = !conversationId;
+    this.renderTurns();
     this.setStatus(
-      this.sentence
-        ? this.supported
-          ? "Đọc câu hỏi trên rồi bấm nút để bắt đầu."
-          : "Trình duyệt này không hỗ trợ ghi âm bằng micro."
-        : "",
+      !conversationId
+        ? ""
+        : this.pendingTurn()
+          ? this.supported
+            ? "Đọc câu trả lời mẫu thành tiếng để AI chấm phát âm."
+            : "Trình duyệt này không hỗ trợ ghi âm bằng micro."
+          : "AI đang chuẩn bị câu hỏi tiếp theo...",
     );
     this.updateButton();
   }
 
+  public addTurn(
+    turn: ReadingPracticeTurn,
+    languageCode: string,
+    conversationId: string,
+  ): void {
+    this.languageCode = languageCode.toLowerCase().startsWith("ja") ? "ja" : "en";
+    this.conversationId = conversationId;
+    if (this.panel) this.panel.hidden = false;
+    this.turns = this.turns.some((item) => item.id === turn.id)
+      ? this.turns.map((item) => item.id === turn.id ? turn : item)
+      : [...this.turns, turn];
+    this.renderTurns();
+    this.setStatus(
+      this.supported
+        ? "Đọc câu trả lời mẫu thành tiếng để AI chấm phát âm."
+        : "Trình duyệt này không hỗ trợ ghi âm bằng micro.",
+    );
+    this.updateButton();
+    this.scrollToLatestTurn();
+  }
+
   public reset(): void {
-    this.setSentence("", "en", "");
+    this.setTurns([], "en", "");
+  }
+
+  public speakQuestion(turn: ReadingPracticeTurn): Promise<void> {
+    return this.speak(turn.question, this.languageCode);
+  }
+
+  public hasPendingTurn(): boolean {
+    return Boolean(this.pendingTurn());
+  }
+
+  private pendingTurn(): ReadingPracticeTurn | undefined {
+    return [...this.turns].reverse().find((turn) => !turn.transcript && !turn.ai_feedback);
   }
 
   private async toggleRecording(): Promise<void> {
-    if (!this.sentence || !this.supported || this.isTranscribing) return;
+    if (!this.pendingTurn() || !this.supported || this.isSubmitting) return;
     if (this.recorder.getState() === "recording") {
-      this.setStatus("Đang xử lý bản ghi...");
+      this.setStatus("Đang xử lý câu trả lời...");
       this.updateButton();
       await this.recorder.stop();
       return;
@@ -249,14 +272,14 @@ export class ReadAloudPractice {
       this.recorder.cancel();
       return;
     }
-    if (started) this.setStatus("Đang ghi âm · đọc câu mẫu rồi bấm dừng.");
+    if (started) this.setStatus("Đang ghi âm · đọc câu trả lời mẫu rồi bấm dừng.");
   }
 
   private handleRecorderState(state: RecorderState): void {
     if (state === "requesting") {
       this.setStatus("Đang mở micro...");
     } else if (state === "recording") {
-      this.setStatus("Đang ghi âm · đọc câu mẫu rồi bấm dừng.");
+      this.setStatus("Đang ghi âm · đọc câu trả lời mẫu rồi bấm dừng.");
     }
     this.updateButton();
   }
@@ -265,57 +288,181 @@ export class ReadAloudPractice {
     if (!this.recordButton || !this.buttonText) return;
     const state = this.recorder.getState();
     this.recordButton.disabled =
-      !this.sentence || !this.supported || this.isTranscribing || state === "requesting";
-    this.buttonText.textContent = state === "recording" ? "Dừng và chấm điểm" : "Đọc câu hỏi";
+      !this.pendingTurn() || !this.supported || this.isSubmitting || state === "requesting";
+    this.buttonText.textContent = state === "recording"
+      ? "Dừng và gửi bản ghi"
+      : "Đọc câu mẫu để chấm phát âm";
     this.recordButton.setAttribute(
       "aria-label",
-      state === "recording" ? "Dừng ghi âm và chấm điểm câu đọc" : "Bắt đầu đọc câu hỏi",
+      state === "recording"
+        ? "Dừng ghi âm và gửi bản ghi"
+        : "Bắt đầu đọc câu trả lời mẫu",
     );
   }
 
   private async handleRecordingComplete(blob: Blob): Promise<void> {
     const generation = this.generation;
+    const turn = this.pendingTurn();
+    if (!turn) return;
     if (!blob.size) {
-      this.setStatus("Bản ghi trống. Hãy thử đọc lại câu hỏi.", true);
+      this.setStatus("Bản ghi trống. Hãy thử trả lời lại.", true);
       return;
     }
 
-    this.isTranscribing = true;
+    this.isSubmitting = true;
     this.updateButton();
-    this.setStatus("Đang nhận diện câu trả lời...");
+    this.setStatus("Đang nghe và chấm phát âm...");
     try {
-      const response = await transcribePracticeAudio(this.conversationId, blob);
+      const result = await submitReadingPracticeAnswer(
+        this.conversationId,
+        turn.id,
+        blob,
+      );
       if (generation !== this.generation) return;
-      const comparison = compareTranscript(this.sentence, response.transcript, this.languageCode);
-      if (!comparison.totalWordCount) {
-        this.setStatus("Câu mẫu không có từ để đối chiếu.", true);
-        return;
-      }
-      if (this.expectedText) {
-        renderComparedText(this.expectedText, this.sentence, comparison.expected);
-      }
-      if (this.transcriptText) {
-        renderComparedText(this.transcriptText, response.transcript, comparison.spoken);
-      }
-      if (this.score) {
-        this.score.textContent =
-          `Độ chính xác ${comparison.accuracy}% · ${comparison.correctWordCount}/${comparison.totalWordCount} từ đúng`;
-      }
-      if (this.result) this.result.hidden = false;
-      this.setStatus("Đã chấm điểm phần đọc.");
+      this.turns = this.turns.map((item) => item.id === result.id ? result : item);
+      this.renderTurns();
+      this.setStatus("Đã lưu điểm phát âm và góp ý của AI.");
+      this.scrollToLatestTurn();
+      await this.onAnswerSubmitted();
     } catch (error) {
       if (generation === this.generation) {
         this.setStatus(
-          error instanceof Error ? error.message : "Không thể nhận diện câu đọc. Vui lòng thử lại.",
+          error instanceof Error
+            ? error.message
+            : "Không thể đánh giá câu trả lời. Vui lòng thử lại.",
           true,
         );
       }
     } finally {
       if (generation === this.generation) {
-        this.isTranscribing = false;
+        this.isSubmitting = false;
         this.updateButton();
       }
     }
+  }
+
+  private renderTurns(): void {
+    if (!this.turnsElement) return;
+    const fragment = document.createDocumentFragment();
+    for (const [index, turn] of this.turns.entries()) {
+      const article = document.createElement("article");
+      article.className = "chat-reading-practice__turn";
+
+      const heading = document.createElement("div");
+      heading.className = "chat-reading-practice__turn-heading";
+      const title = document.createElement("h4");
+      title.textContent = `Câu hỏi ${index + 1}`;
+      const speakers = document.createElement("div");
+      speakers.className = "chat-reading-practice__speakers";
+      speakers.append(
+        this.createSpeakButton(turn, "question", "Nghe câu hỏi", index),
+        this.createSpeakButton(turn, "sample", "Nghe câu mẫu", index),
+      );
+      heading.append(title, speakers);
+      article.append(heading);
+
+      const messages = document.createElement("div");
+      messages.className = "chat-reading-practice__messages";
+      const questionMessage = document.createElement("div");
+      questionMessage.className =
+        "chat-reading-practice__message chat-reading-practice__message--assistant";
+      this.appendTextBlock(questionMessage, "Câu hỏi", turn.question, "prompt");
+      const sampleMessage = document.createElement("div");
+      sampleMessage.className =
+        "chat-reading-practice__message chat-reading-practice__message--sample";
+      this.appendTextBlock(sampleMessage, "Câu trả lời mẫu", turn.sample_answer, "sample");
+      messages.append(questionMessage, sampleMessage);
+
+      if (turn.transcript) {
+        const learnerColumn = document.createElement("div");
+        learnerColumn.className = "chat-reading-practice__learner-column";
+        const learnerMessage = document.createElement("div");
+        learnerMessage.className =
+          "chat-reading-practice__message chat-reading-practice__message--learner";
+        this.appendTextBlock(learnerMessage, "Bạn đã trả lời", turn.transcript, "transcript");
+        learnerColumn.append(learnerMessage);
+        if (turn.ai_feedback) this.appendFeedback(learnerColumn, turn.ai_feedback);
+        messages.append(learnerColumn);
+      }
+
+      article.append(messages);
+      fragment.append(article);
+    }
+    this.turnsElement.replaceChildren(fragment);
+  }
+
+  private createSpeakButton(
+    turn: ReadingPracticeTurn,
+    part: "question" | "sample",
+    label: string,
+    index: number,
+  ): HTMLButtonElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "chat-reading-practice__speak";
+    button.dataset.speakTurn = turn.id;
+    button.dataset.speakPart = part;
+    button.setAttribute("aria-label", `${label}, câu hỏi ${index + 1}`);
+    const icon = document.createElement("i");
+    icon.className = "fa-solid fa-volume-high";
+    icon.setAttribute("aria-hidden", "true");
+    const text = document.createElement("span");
+    text.textContent = label;
+    button.append(icon, text);
+    return button;
+  }
+
+  private appendTextBlock(
+    parent: HTMLElement,
+    label: string,
+    text: string,
+    kind: string,
+  ): void {
+    const block = document.createElement("div");
+    block.className = `chat-reading-practice__block chat-reading-practice__block--${kind}`;
+    const labelElement = document.createElement("p");
+    labelElement.className = "chat-reading-practice__label";
+    labelElement.textContent = label;
+    const textElement = document.createElement("p");
+    textElement.className = "chat-reading-practice__text";
+    textElement.textContent = text;
+    block.append(labelElement, textElement);
+    parent.append(block);
+  }
+
+  private appendFeedback(
+    parent: HTMLElement,
+    feedback: NonNullable<ReadingPracticeTurn["ai_feedback"]>,
+  ): void {
+    const fields: [string, string][] = [
+      ["Lỗi ngữ pháp", feedback.grammar_error],
+      ["Câu sửa đúng", feedback.corrected_sentence],
+      ["Cách nói tự nhiên hơn", feedback.natural_suggestion],
+      ["Góp ý phát âm", feedback.pronunciation_feedback],
+    ];
+    if (feedback.pronunciation_score !== null) {
+      fields.unshift(["Điểm phát âm", `${feedback.pronunciation_score}/100`]);
+    }
+    const populated = fields.filter(([, value]) => value.trim());
+    if (!populated.length) {
+      const notice = document.createElement("p");
+      notice.className = "chat-reading-practice__feedback-empty";
+      notice.textContent = "Câu trả lời không có lỗi đáng chú ý.";
+      parent.append(notice);
+      return;
+    }
+
+    const feedbackElement = document.createElement("div");
+    feedbackElement.className = "chat-reading-practice__feedback";
+    for (const [label, value] of populated) {
+      this.appendTextBlock(feedbackElement, label, value, "feedback");
+    }
+    parent.append(feedbackElement);
+  }
+
+  private scrollToLatestTurn(): void {
+    const lastTurn = this.turnsElement?.lastElementChild;
+    lastTurn?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   private setStatus(message: string, isError = false): void {
