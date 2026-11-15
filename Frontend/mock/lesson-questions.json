@@ -1,0 +1,87 @@
+{
+  "status": "success",
+  "message": "Đã tải câu hỏi của bài học (dữ liệu mẫu).",
+  "data": {
+    "102": {
+      "lesson": { "id": 102, "title": "Chào buổi tối", "description": "こんにちは・こんばんは trong hội thoại thường ngày." },
+      "questions": [
+        { "id": 10201, "prompt": "Chào một người bạn gặp lúc 3 giờ chiều, bạn nói gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "おはようございます" }, { "id": "b", "text": "こんにちは" }, { "id": "c", "text": "こんばんは" }, { "id": "d", "text": "おやすみなさい" } ], "correct_option_id": "b", "explanation": "こんにちは dùng từ khoảng 10 giờ sáng đến trước khi trời tối." },
+        { "id": 10202, "prompt": "「こんばんは」 nghĩa là gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "Chào buổi sáng" }, { "id": "b", "text": "Chúc ngủ ngon" }, { "id": "c", "text": "Chào buổi tối" }, { "id": "d", "text": "Tạm biệt" } ], "correct_option_id": "c", "explanation": "こんばんは là lời chào buổi tối, không dùng khi đi ngủ." },
+        { "id": 10203, "prompt": "Điền từ còn thiếu: お___なさい (chúc ngủ ngon).", "question_type": "fill_in", "options": [], "correct_option_id": "やすみ", "explanation": "おやすみなさい dùng trước khi đi ngủ hoặc khi rời khỏi nơi làm việc vào buổi tối." },
+        { "id": 10204, "prompt": "Câu nào dùng để chào tạm biệt một cách lịch sự?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "失礼します" }, { "id": "b", "text": "いただきます" }, { "id": "c", "text": "はじめまして" }, { "id": "d", "text": "おかえり" } ], "correct_option_id": "a", "explanation": "失礼します nghĩa là “tôi xin phép”, dùng khi rời đi hoặc kết thúc cuộc gặp." }
+      ]
+    },
+    "202": {
+      "lesson": { "id": 202, "title": "Hỏi giá và thanh toán", "description": "いくらですか・お会計お願いします." },
+      "questions": [
+        { "id": 20201, "prompt": "Muốn hỏi giá một món đồ, bạn nói gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "いくらですか" }, { "id": "b", "text": "どこですか" }, { "id": "c", "text": "いつですか" }, { "id": "d", "text": "だれですか" } ], "correct_option_id": "a", "explanation": "いくらですか là câu hỏi giá chuẩn trong cửa hàng." },
+        { "id": 20202, "prompt": "「お会計お願いします」 dùng khi nào?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "Khi gọi món" }, { "id": "b", "text": "Khi muốn thanh toán" }, { "id": "c", "text": "Khi đặt bàn" }, { "id": "d", "text": "Khi khen món ăn" } ], "correct_option_id": "b", "explanation": "お会計 là hoá đơn/thanh toán; thêm お願いします để nhờ vả lịch sự." },
+        { "id": 20203, "prompt": "Điền từ còn thiếu: これを___さい (cho tôi cái này).", "question_type": "fill_in", "options": [], "correct_option_id": "くだ", "explanation": "これをください = “cho tôi cái này”. ください là dạng yêu cầu lịch sự." },
+        { "id": 20204, "prompt": "Số 1.500 yên đọc là gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "せんごひゃくえん" }, { "id": "b", "text": "ごひゃくえん" }, { "id": "c", "text": "にせんえん" }, { "id": "d", "text": "ひゃくえん" } ], "correct_option_id": "a", "explanation": "1.500 = せん(1000) + ごひゃく(500) + えん." }
+      ]
+    },
+    "301": {
+      "lesson": { "id": 301, "title": "Mua vé tàu", "description": "Hỏi ga đến, giá vé và sân ga." },
+      "questions": [
+        { "id": 30101, "prompt": "Muốn hỏi tàu này có đến Shibuya không, bạn nói gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "渋谷に行きますか" }, { "id": "b", "text": "渋谷はどこですか" }, { "id": "c", "text": "渋谷は高いですか" }, { "id": "d", "text": "渋谷は何時ですか" } ], "correct_option_id": "a", "explanation": "「destination に行きますか」 hỏi phương tiện có đi tới điểm đó không." },
+        { "id": 30102, "prompt": "「切符」 nghĩa là gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "Sân ga" }, { "id": "b", "text": "Vé" }, { "id": "c", "text": "Bản đồ" }, { "id": "d", "text": "Toa tàu" } ], "correct_option_id": "b", "explanation": "切符 (きっぷ) là vé; 駅 là ga, 地図 là bản đồ." },
+        { "id": 30103, "prompt": "Điền từ còn thiếu: 東京まで___円ですか (đến Tokyo hết bao nhiêu tiền?).", "question_type": "fill_in", "options": [], "correct_option_id": "いくら", "explanation": "「destination までいくらですか」 hỏi giá vé tới điểm đó." },
+        { "id": 30104, "prompt": "Muốn hỏi tàu chạy lúc mấy giờ, bạn dùng từ để hỏi nào?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "どこ" }, { "id": "b", "text": "だれ" }, { "id": "c", "text": "何時" }, { "id": "d", "text": "なぜ" } ], "correct_option_id": "c", "explanation": "何時 (なんじ) hỏi giờ; どこ hỏi địa điểm, だれ hỏi người." }
+      ]
+    },
+    "401": {
+      "lesson": { "id": 401, "title": "Xin phép nghỉ", "description": "Mẫu câu xin nghỉ và báo trễ với cấp trên." },
+      "questions": [
+        { "id": 40101, "prompt": "Mẫu câu xin phép nghỉ đúng mực với cấp trên là gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "休みたいです" }, { "id": "b", "text": "お休みをいただけますか" }, { "id": "c", "text": "休みます" }, { "id": "d", "text": "休んでもいい" } ], "correct_option_id": "b", "explanation": "いただけますか là dạng nhờ vả khiêm nhường, phù hợp khi nói với cấp trên." },
+        { "id": 40102, "prompt": "「遅刻します」 nghĩa là gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "Đến trễ" }, { "id": "b", "text": "Về sớm" }, { "id": "c", "text": "Nghỉ phép" }, { "id": "d", "text": "Tăng ca" } ], "correct_option_id": "a", "explanation": "遅刻 (ちこく) là đến trễ; 早退 là về sớm." },
+        { "id": 40103, "prompt": "Điền từ còn thiếu: 体調が___ので、お休みをいただきます (vì sức khoẻ không tốt nên tôi xin nghỉ).", "question_type": "fill_in", "options": [], "correct_option_id": "わるい", "explanation": "体調が悪い = sức khoẻ không tốt. ので nêu lý do một cách trung tính, lịch sự." },
+        { "id": 40104, "prompt": "Câu nào dùng để xin lỗi vì làm phiền cấp trên?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "お世話になっております" }, { "id": "b", "text": "ご迷惑をおかけします" }, { "id": "c", "text": "よろしくお願いいたします" }, { "id": "d", "text": "承知しました" } ], "correct_option_id": "b", "explanation": "ご迷惑をおかけします = “tôi gây phiền cho anh/chị”, dùng khi xin nghỉ đột xuất." }
+      ]
+    },
+    "1101": {
+      "lesson": { "id": 1101, "title": "Mở đầu email", "description": "お世話になっております và lời chào đầu thư." },
+      "questions": [
+        { "id": 110101, "prompt": "Câu mở đầu email công việc chuẩn mực là gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "こんにちは" }, { "id": "b", "text": "お世話になっております" }, { "id": "c", "text": "はじめまして" }, { "id": "d", "text": "お元気ですか" } ], "correct_option_id": "b", "explanation": "お世話になっております là lời chào mở đầu email gửi đối tác/đồng nghiệp đã quen biết." },
+        { "id": 110102, "prompt": "Khi gửi email lần đầu cho một công ty khác, bạn dùng gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "初めてご連絡いたします" }, { "id": "b", "text": "また会いましょう" }, { "id": "c", "text": "久しぶりです" }, { "id": "d", "text": "おやすみなさい" } ], "correct_option_id": "a", "explanation": "初めてご連絡いたします = “tôi liên hệ lần đầu”, dùng cho email đầu tiên." },
+        { "id": 110103, "prompt": "Điền từ còn thiếu: ___様 (kính gửi ông/bà, dùng sau tên công ty/người).", "question_type": "fill_in", "options": [], "correct_option_id": "さま", "explanation": "様 (さま) là hậu tố kính ngữ; viết bằng hiragana khi chưa rõ tên người nhận." },
+        { "id": 110104, "prompt": "「件名」 trong email nghĩa là gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "Người nhận" }, { "id": "b", "text": "Tiêu đề" }, { "id": "c", "text": "Tệp đính kèm" }, { "id": "d", "text": "Chữ ký" } ], "correct_option_id": "b", "explanation": "件名 (けんめい) là tiêu đề email; cần ngắn và nêu rõ mục đích." }
+      ]
+    },
+    "1701": {
+      "lesson": { "id": 1701, "title": "Nhóm từ chỉ người", "description": "Từ vựng N5 về gia đình và nghề nghiệp." },
+      "questions": [
+        { "id": 170101, "prompt": "「先生」 dùng để gọi ai?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "Học sinh" }, { "id": "b", "text": "Giáo viên, bác sĩ, luật sư" }, { "id": "c", "text": "Nhân viên công ty" }, { "id": "d", "text": "Bạn cùng lớp" } ], "correct_option_id": "b", "explanation": "先生 là kính xưng cho người có chuyên môn: giáo viên, bác sĩ, luật sư, nhà văn." },
+        { "id": 170102, "prompt": "Từ nào nghĩa là “nhân viên công ty”?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "学生" }, { "id": "b", "text": "会社員" }, { "id": "c", "text": "医者" }, { "id": "d", "text": "店員" } ], "correct_option_id": "b", "explanation": "会社員 (かいしゃいん) là nhân viên công ty; 学生 là học sinh/sinh viên." },
+        { "id": 170103, "prompt": "Điền từ còn thiếu: ___員 (nhân viên cửa hàng).", "question_type": "fill_in", "options": [], "correct_option_id": "てん", "explanation": "店員 (てんいん) là nhân viên cửa hàng." },
+        { "id": 170104, "prompt": "Khi nói về mẹ của người khác, bạn dùng từ nào?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "母" }, { "id": "b", "text": "お母さん" }, { "id": "c", "text": "父" }, { "id": "d", "text": "姉" } ], "correct_option_id": "b", "explanation": "お母さん dùng cho mẹ người khác; 母 là cách nói khiêm nhường về mẹ mình." }
+      ]
+    },
+    "1801": {
+      "lesson": { "id": 1801, "title": "Trợ từ は・が・を", "description": "Phân biệt trợ từ trong câu đơn." },
+      "questions": [
+        { "id": 180101, "prompt": "Điền trợ từ: わたし___学生です (tôi là học sinh).", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "を" }, { "id": "b", "text": "は" }, { "id": "c", "text": "に" }, { "id": "d", "text": "で" } ], "correct_option_id": "b", "explanation": "は đánh dấu chủ đề của câu: “về tôi thì tôi là học sinh”." },
+        { "id": 180102, "prompt": "Điền trợ từ: 本___読みます (đọc sách).", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "を" }, { "id": "b", "text": "は" }, { "id": "c", "text": "が" }, { "id": "d", "text": "へ" } ], "correct_option_id": "a", "explanation": "を đánh dấu tân ngữ trực tiếp của ngoại động từ 読む." },
+        { "id": 180103, "prompt": "Điền trợ từ còn thiếu: だれ___来ましたか (ai đã đến?).", "question_type": "fill_in", "options": [], "correct_option_id": "が", "explanation": "が đánh dấu chủ ngữ của nội động từ 来る, đặc biệt trong câu hỏi có từ để hỏi." },
+        { "id": 180104, "prompt": "Câu nào đúng ngữ pháp?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "わたしは 日本語を 話します" }, { "id": "b", "text": "わたしを 日本語は 話します" }, { "id": "c", "text": "日本語は わたしを 話します" }, { "id": "d", "text": "話します を わたしは" } ], "correct_option_id": "a", "explanation": "Trật tự chuẩn: chủ đề は + tân ngữ を + động từ." }
+      ]
+    },
+    "9001": {
+      "lesson": { "id": 9001, "title": "Từ vựng cốt lõi", "description": "Học và ôn nhóm từ chính của chủ đề." },
+      "questions": [
+        { "id": 900101, "prompt": "「ありがとう」 nghĩa là gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "Xin chào" }, { "id": "b", "text": "Cảm ơn" }, { "id": "c", "text": "Xin lỗi" }, { "id": "d", "text": "Tạm biệt" } ], "correct_option_id": "b", "explanation": "ありがとう là lời cảm ơn thân mật; thêm ございます để lịch sự hơn." },
+        { "id": 900102, "prompt": "Từ nào nghĩa là “nước”?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "お茶" }, { "id": "b", "text": "水" }, { "id": "c", "text": "ご飯" }, { "id": "d", "text": "肉" } ], "correct_option_id": "b", "explanation": "水 (みず) là nước; お茶 là trà, ご飯 là cơm, 肉 là thịt." },
+        { "id": 900103, "prompt": "Điền từ còn thiếu: すみ___せん (xin lỗi/xin phép).", "question_type": "fill_in", "options": [], "correct_option_id": "ま", "explanation": "すみません dùng để xin lỗi hoặc gọi nhân viên một cách lịch sự." },
+        { "id": 900104, "prompt": "「大きい」 nghĩa là gì?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "Nhỏ" }, { "id": "b", "text": "To, lớn" }, { "id": "c", "text": "Đắt" }, { "id": "d", "text": "Xa" } ], "correct_option_id": "b", "explanation": "大きい (おおきい) là tính từ đuôi い nghĩa “to, lớn”; trái nghĩa là 小さい." }
+      ]
+    },
+    "default": {
+      "lesson": { "id": 9001, "title": "Từ vựng cốt lõi", "description": "Học và ôn nhóm từ chính của chủ đề." },
+      "questions": [
+        { "id": 900201, "prompt": "「おはようございます」 dùng vào lúc nào?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "Buổi sáng" }, { "id": "b", "text": "Buổi trưa" }, { "id": "c", "text": "Buổi tối" }, { "id": "d", "text": "Khi đi ngủ" } ], "correct_option_id": "a", "explanation": "おはようございます là lời chào buổi sáng, dùng được cả trong công sở." },
+        { "id": 900202, "prompt": "Từ nào nghĩa là “ngày hôm nay”?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "昨日" }, { "id": "b", "text": "今日" }, { "id": "c", "text": "明日" }, { "id": "d", "text": "毎日" } ], "correct_option_id": "b", "explanation": "今日 (きょう) là hôm nay; 昨日 hôm qua, 明日 ngày mai." },
+        { "id": 900203, "prompt": "Điền từ còn thiếu: よろしくお___いします (mong được giúp đỡ).", "question_type": "fill_in", "options": [], "correct_option_id": "ねが", "explanation": "よろしくお願いします là câu kết thúc lịch sự khi nhờ vả hoặc làm quen." },
+        { "id": 900204, "prompt": "「高い」 KHÔNG có nghĩa nào sau đây?", "question_type": "multiple_choice", "options": [ { "id": "a", "text": "Đắt" }, { "id": "b", "text": "Cao" }, { "id": "c", "text": "Rẻ" }, { "id": "d", "text": "Giá cao" } ], "correct_option_id": "c", "explanation": "高い nghĩa là đắt hoặc cao; “rẻ” là 安い." }
+      ]
+    }
+  }
+}

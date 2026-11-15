@@ -108,11 +108,17 @@ export async function adminApi<T>(
 
   const send = (token: string): Promise<Response> => {
     const headers = new Headers({ Authorization: `Bearer ${token}` });
-    if (options.body !== undefined) headers.set("Content-Type", "application/json");
+    if (options.body !== undefined && !(options.body instanceof FormData)) {
+      headers.set("Content-Type", "application/json");
+    }
     return fetch(`${API_BASE_URL}${path}`, {
       method: options.method ?? "GET",
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.body instanceof FormData
+        ? options.body
+        : options.body === undefined
+          ? undefined
+          : JSON.stringify(options.body),
     });
   };
 
@@ -346,19 +352,24 @@ export async function requireAdminSession(): Promise<AdminProfile | null> {
     return null;
   }
 
+  const meData =
+    typeof result === "object" && result !== null && "data" in result
+      ? result.data
+      : result;
+
   if (
-    typeof result !== "object" ||
-    result === null ||
-    !("profile" in result) ||
-    typeof result.profile !== "object" ||
-    result.profile === null
+    typeof meData !== "object" ||
+    meData === null ||
+    !("profile" in meData) ||
+    typeof meData.profile !== "object" ||
+    meData.profile === null
   ) {
     clearTokens();
     goToLogin();
     return null;
   }
 
-  const profile = (result as { profile: Record<string, unknown> }).profile;
+  const profile = meData.profile as Record<string, unknown>;
   const userRole = typeof profile.role === "string" ? profile.role : "";
   const userEmail = typeof profile.email === "string" ? profile.email : "";
   const displayName = typeof profile.display_name === "string" ? profile.display_name : null;

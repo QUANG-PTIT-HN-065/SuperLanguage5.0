@@ -160,3 +160,91 @@ class TopicUpdate(BaseModel):
             return None
         cleaned = str(value).strip()
         return cleaned or None
+
+
+class LearningPathCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    language_code: str = Field(pattern=LANG_PATTERN)
+    name: str = Field(min_length=1, max_length=150)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    sort_order: int = Field(default=100, ge=1, le=32767)
+    topic_ids: list[int] = Field(min_length=1, max_length=100)
+
+    @field_validator("name")
+    @classmethod
+    def clean_path_name(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Tên lộ trình không được để trống.")
+        return cleaned
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def clean_path_description(cls, value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = str(value).strip()
+        return cleaned or None
+
+    @field_validator("topic_ids", mode="before")
+    @classmethod
+    def clean_path_topic_ids(cls, values: Any) -> list[int]:
+        if values is None:
+            raise ValueError("Vui lòng chọn ít nhất một chủ đề.")
+        cleaned: list[int] = []
+        for value in values:
+            try:
+                topic_id = int(value)
+                if topic_id > 0 and topic_id not in cleaned:
+                    cleaned.append(topic_id)
+            except (TypeError, ValueError):
+                continue
+        if not cleaned:
+            raise ValueError("Vui lòng chọn ít nhất một chủ đề hợp lệ.")
+        return cleaned
+
+
+class LearningPathUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    language_code: Optional[str] = Field(default=None, pattern=LANG_PATTERN)
+    name: Optional[str] = Field(default=None, min_length=1, max_length=150)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    sort_order: Optional[int] = Field(default=None, ge=1, le=32767)
+    topic_ids: Optional[list[int]] = Field(default=None, min_length=1, max_length=100)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def clean_updated_path_name(cls, value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = str(value).strip()
+        if not cleaned:
+            raise ValueError("Tên lộ trình không được để trống.")
+        return cleaned
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def clean_updated_path_description(cls, value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = str(value).strip()
+        return cleaned or None
+
+    @field_validator("topic_ids", mode="before")
+    @classmethod
+    def clean_updated_path_topic_ids(cls, values: Any) -> Optional[list[int]]:
+        if values is None:
+            return None
+        cleaned: list[int] = []
+        for value in values:
+            try:
+                topic_id = int(value)
+                if topic_id > 0 and topic_id not in cleaned:
+                    cleaned.append(topic_id)
+            except (TypeError, ValueError):
+                continue
+        if not cleaned:
+            raise ValueError("Vui lòng chọn ít nhất một chủ đề hợp lệ.")
+        return cleaned

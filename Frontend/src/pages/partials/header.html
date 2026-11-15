@@ -1,0 +1,145 @@
+<!-- ============================================================
+     Slanguage · Header dùng chung chuẩn hóa theo Trang chủ
+     Được ui/header.ts fetch và inject vào <div data-app-header>.
+     Đồng bộ nhận diện sáng (nền trắng, chữ tím thương hiệu, stat chips,
+     dropdown ngôn ngữ & tài khoản, và tab bar mobile 4 tab dính đáy).
+     ============================================================ -->
+
+<header class="navbar slg-app-navbar app-header" id="appHeader">
+  <div class="navbar-container header-inner">
+    <!-- Brand Logo -->
+    <div class="nav-left">
+      <a href="/src/pages/home/index.html" class="brand-logo brand" aria-label="Slanguage, về Trang chủ">
+        <img src="/assets/logo.png" alt="Slanguage Logo" class="brand-logo-img" width="40" height="40">
+        <span class="brand-name">S<span class="brand-language">language</span></span>
+      </a>
+    </div>
+
+    <!-- Center Navigation Links (Ẩn trên mobile, chuyển sang Tabbar đáy) -->
+    <nav class="nav-center main-nav" aria-label="Điều hướng chính">
+      <ul class="nav-links" id="navLinks">
+        <li><a href="/src/pages/home/index.html" class="nav-link" data-nav="home">Trang chủ</a></li>
+        <li><a href="/src/pages/learning/index.html" class="nav-link" data-nav="learning">Học tập</a></li>
+        <li><a href="/src/pages/vocabulary/index.html" class="nav-link" data-nav="vocabulary">Từ vựng</a></li>
+        <li><a href="/src/pages/chat/index.html" class="nav-link" data-nav="chat">Luyện tập AI</a></li>
+      </ul>
+      <span class="nav-indicator" id="navIndicator" aria-hidden="true"></span>
+    </nav>
+
+    <!-- Right Header Tools / Stat Chips / User Account -->
+    <div class="nav-right header-tools">
+      <!-- Trạng thái kết nối (Chỉ dùng khi ở phòng chat AI) -->
+      <span class="connection-status status-pill auth-only" id="connectionStatus" role="status" hidden>
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="connectionLabel">Đang kiểm tra…</span>
+      </span>
+
+      <!-- Chip Chuỗi Streak ngọn lửa động -->
+      <div class="stat-chip streak hud-chip hud-chip--streak auth-only" id="streakChip" title="Chuỗi ngày học liên tục">
+        <img src="/assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip" width="20" height="20">
+        <span data-learner-streak id="headerStreakVal">0 Ngày</span>
+      </div>
+
+      <!-- Chip Tổng XP điểm kinh nghiệm -->
+      <div class="stat-chip xp hud-chip hud-chip--xp auth-only" id="xpChip" title="Điểm kinh nghiệm tích lũy">
+        <i class="fa-solid fa-star" aria-hidden="true"></i>
+        <span id="headerXPVal" class="tabular">0 XP</span>
+      </div>
+
+      <!-- Chip Năng lượng trái tim (Hearts) -->
+      <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
+        <i class="fa-solid fa-heart" aria-hidden="true"></i>
+        <span>5/5</span>
+      </div>
+
+      <!-- 3-Ngôn ngữ Dropdown Selector -->
+      <div class="lang-dropdown dropdown dropdown--lang auth-only" id="langDropdown">
+        <button type="button" class="lang-dropdown-btn trigger" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
+          <img src="/assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon flag" id="currentLangFlag" width="24" height="16">
+          <span class="lang-current-label lang-label" id="currentLangLabel">Tiếng Nhật</span>
+          <i class="fa-solid fa-chevron-down lang-chevron chevron" aria-hidden="true"></i>
+        </button>
+        <div class="lang-dropdown-menu menu" id="langDropdownMenu" role="menu" aria-label="Ngôn ngữ bạn đang học">
+          <button type="button" class="lang-dropdown-item menu-item active is-selected" data-lang="ja" role="menuitem">
+            <img src="/assets/flags/flag-jp.png" alt="JP" class="flag-icon flag" width="22" height="15">
+            <span class="menu-text"><span>Tiếng Nhật (日本語)</span><span class="menu-sub">ご挨拶から始めましょう</span></span>
+            <i class="fa-solid fa-check check-icon check" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="lang-dropdown-item menu-item" data-lang="en" role="menuitem">
+            <img src="/assets/flags/flag-en.png" alt="EN" class="flag-icon flag" width="22" height="15">
+            <span class="menu-text"><span>English (Tiếng Anh)</span><span class="menu-sub">Let’s speak English</span></span>
+            <i class="fa-solid fa-check check-icon check" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="lang-dropdown-item menu-item" data-lang="vi" role="menuitem">
+            <img src="/assets/flags/flag-vn.png" alt="VN" class="flag-icon flag" width="22" height="15">
+            <span class="menu-text"><span>Tiếng Việt (Vietnamese)</span><span class="menu-sub">Luyện phát âm chuẩn</span></span>
+            <i class="fa-solid fa-check check-icon check" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- User Account Dropdown (Khi đã đăng nhập) -->
+      <div class="user-dropdown dropdown dropdown--user auth-only" id="userDropdown">
+        <button type="button" class="user-dropdown-btn trigger trigger--avatar" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
+          <img src="/assets/logo.png" alt="Ảnh đại diện" class="user-avatar-mini avatar" id="headerAvatar" width="36" height="36">
+          <div class="user-info-text">
+            <div class="name" data-learner-name id="profileName">Học viên</div>
+            <div class="role" id="profileEmail">Học viên</div>
+          </div>
+          <i class="fa-solid fa-chevron-down user-chevron chevron" aria-hidden="true"></i>
+        </button>
+        <div class="user-dropdown-menu menu menu--user" id="userDropdownMenu" role="menu" aria-label="Menu tài khoản">
+          <a href="/src/pages/profile/index.html" class="user-dropdown-item menu-item" role="menuitem">
+            <span class="menu-item-icon"><i class="fa-solid fa-user-pen" aria-hidden="true"></i></span>
+            <span class="menu-item-text"><span class="title">Hồ sơ của tôi</span><span class="sub">Xem và chỉnh sửa thông tin</span></span>
+          </a>
+          <a href="/src/pages/chat/index.html" class="user-dropdown-item menu-item" role="menuitem">
+            <div class="menu-item-icon"><i class="fa-solid fa-comments" aria-hidden="true"></i></div>
+            <div class="menu-item-text">
+              <span class="title">Phòng luyện tập AI</span>
+              <span class="sub">Tiếp tục luyện giao tiếp</span>
+            </div>
+          </a>
+          <div class="user-dropdown-divider menu-divider"></div>
+          <button type="button" class="user-dropdown-item logout-item menu-item menu-item--danger" id="logoutButton" role="menuitem">
+            <span class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i></span>
+            <span class="menu-item-text"><span class="title">Đăng xuất</span><span class="sub">Thoát khỏi phiên học</span></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Khách chưa đăng nhập -->
+      <div class="guest-nav-auth guest-actions guest-only" id="guestNavAuth">
+        <a class="nav-auth-login btn btn--ghost-navy btn--small" href="/src/pages/login/index.html?redirect=current">Đăng nhập</a>
+        <a class="nav-auth-register btn btn--primary btn--small" href="/src/pages/login/index.html?mode=signup">Đăng ký</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     TAB BAR MOBILE DÍNH ĐÁY (Hiển thị mượt mà trên < 768px)
+     4 tab trên điện thoại: Trang chủ, Học tập, Từ vựng, Chat AI
+     ============================================================ -->
+<nav class="tabbar slg-mobile-tabbar" id="appTabbar" aria-label="Điều hướng nhanh trên điện thoại">
+  <a class="tab" href="/src/pages/home/index.html" data-nav="home">
+    <i class="fa-solid fa-house tab-icon" aria-hidden="true"></i>
+    <span>Trang chủ</span>
+  </a>
+  <a class="tab" href="/src/pages/learning/index.html" data-nav="learning">
+    <i class="fa-solid fa-graduation-cap tab-icon" aria-hidden="true"></i>
+    <span>Học tập</span>
+  </a>
+  <a class="tab" href="/src/pages/vocabulary/index.html" data-nav="vocabulary">
+    <i class="fa-solid fa-book-bookmark tab-icon" aria-hidden="true"></i>
+    <span>Từ vựng</span>
+  </a>
+  <a class="tab" href="/src/pages/chat/index.html" data-nav="chat">
+    <i class="fa-solid fa-comments tab-icon" aria-hidden="true"></i>
+    <span>Luyện AI</span>
+  </a>
+  <a class="tab" href="/src/pages/profile/index.html" data-nav="profile">
+    <i class="fa-solid fa-user-circle tab-icon" aria-hidden="true"></i>
+    <span>Hồ sơ</span>
+  </a>
+</nav>

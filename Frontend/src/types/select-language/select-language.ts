@@ -1,3 +1,10 @@
+import {
+  clearAuthTokens,
+  saveAuthTokens,
+  saveLearnerIdentity,
+  slanguageApi,
+} from "../shared/api-client";
+
 /**
  * ===================================================================
  * SLANGUAGE - DEDICATED LANGUAGE SELECTION CONTROLLER
@@ -223,7 +230,7 @@ class SelectLanguageController {
     this.updateTranslationStreamUI();
   }
 
-  private handleProceedToOtp(): void {
+  private async handleProceedToOtp(): Promise<void> {
     if (!this.validateLanguagePair()) {
       const origin = LANGUAGE_MAP[this.originLanguage];
       this.showToast(`⚠️ Ngôn ngữ muốn học không được trùng với ngôn ngữ mẹ đẻ (${origin.name})!`);
@@ -235,15 +242,78 @@ class SelectLanguageController {
       return;
     }
 
-    // Persist language choices to sessionStorage & localStorage
-    sessionStorage.setItem('slanguage_reg_native', this.originLanguage);
-    sessionStorage.setItem('slanguage_reg_target', this.targetLanguage);
+    const fullName = sessionStorage.getItem('slanguage_reg_name');
+    const email = sessionStorage.getItem('slanguage_reg_email');
+    const password = sessionStorage.getItem('slanguage_reg_pass');
+    if (!fullName || !email || !password) {
+      this.showToast('Phiên đăng ký không còn hợp lệ. Vui lòng nhập lại thông tin.');
+      window.location.href = '../register/index.html';
+      return;
+    }
 
-    localStorage.setItem('slanguage_native_language', this.originLanguage);
-    localStorage.setItem('slanguage_active_language', this.targetLanguage);
+    if (this.btnProceedToOtp) {
+      this.btnProceedToOtp.disabled = true;
+      this.btnProceedToOtp.dataset.originalText = this.btnProceedToOtp.innerHTML;
+      this.btnProceedToOtp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi yêu cầu...';
+    }
 
-    // Navigate to dedicated OTP Verification Page
-    window.location.href = '../verify-otp/index.html';
+    try {
+      const response = await slanguageApi<{
+        user_id: string;
+        email: string;
+        email_confirmation_required: boolean;
+        access_token?: string;
+        refresh_token?: string;
+      }>('/api/v1/auth/register', {
+        method: 'POST',
+        anonymous: true,
+        body: {
+          email,
+          password,
+          display_name: fullName,
+          native_language: this.originLanguage,
+          target_language: this.targetLanguage,
+          accept_terms: true
+        }
+      });
+
+      sessionStorage.setItem('slanguage_reg_native', this.originLanguage);
+      sessionStorage.setItem('slanguage_reg_target', this.targetLanguage);
+      localStorage.setItem('slanguage_native_language', this.originLanguage);
+      localStorage.setItem('slanguage_active_language', this.targetLanguage);
+
+      if (response.data.email_confirmation_required) {
+        clearAuthTokens();
+        localStorage.setItem('slanguage_is_logged_in', 'false');
+        localStorage.removeItem('slanguage_user_id');
+        localStorage.setItem('slanguage_user_name', fullName);
+        localStorage.setItem('slanguage_user_email', response.data.email);
+        this.showToast('Đã gửi mã xác thực. Vui lòng kiểm tra email của bạn.');
+        window.location.href = '../verify-otp/index.html';
+        return;
+      }
+
+      if (!response.data.access_token || !response.data.refresh_token) {
+        throw new Error('Backend không trả về phiên đăng nhập hợp lệ.');
+      }
+      saveAuthTokens({
+        access_token: response.data.access_token,
+        refresh_token: response.data.refresh_token
+      });
+      saveLearnerIdentity({
+        id: response.data.user_id,
+        email: response.data.email,
+        display_name: fullName
+      });
+      sessionStorage.removeItem('slanguage_reg_pass');
+      window.location.href = '../home/index.html';
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : 'Không thể đăng ký lúc này. Vui lòng thử lại.');
+      if (this.btnProceedToOtp) {
+        this.btnProceedToOtp.disabled = false;
+        this.btnProceedToOtp.innerHTML = this.btnProceedToOtp.dataset.originalText || 'Xác nhận & Nhận mã OTP';
+      }
+    }
   }
 
   private showToast(message: string): void {
@@ -268,3 +338,5 @@ if (document.readyState === 'loading') {
 } else {
   initSelectLanguage();
 }
+
+export {};

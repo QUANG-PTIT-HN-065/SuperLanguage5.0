@@ -10,6 +10,7 @@ from app.schemas.reponse import BaseResponse
 from app.schemas.auth import (
     EmailRequest,
     LoginRequest,
+    LogoutRequest,
     OTPVerifyRequest,
     RefreshRequest,
     RegisterRequest,
@@ -241,10 +242,43 @@ def refresh(data: RefreshRequest):
 
 
 @router.post("/logout", response_model=BaseResponse[None])
-def logout(token: str = Depends(get_bearer_token)):
-    """Thu hồi phiên đăng nhập hiện tại."""
+def logout(data: LogoutRequest | None = None, token: str = Depends(get_bearer_token)):
+    """Thu hồi phiên đăng nhập hiện tại.
+
+    Hỗ trợ cả luồng cũ dùng bearer token và luồng mới nhận refresh_token trong body.
+    Nếu refresh_token hết hạn hoặc không hợp lệ, logout vẫn coi như thành công theo nguyên tắc idempotent.
+    """
+    refresh_token = (data.refresh_token if data else None) or ""
+    active_token = token
+
+    if refresh_token:
+        client = new_auth_client()
+        try:
+            session = client.auth.refresh_session(refresh_token)
+            active_token = getattr(session.session, "access_token", None) or token
+        except Exception as exc:  # pragma: no cover - logic validated via unit tests
+            status_code = getattr(exc, "status", None) or getattr(exc, "status_code", None)
+            if status_code == status.HTTP_401_UNAUTHORIZED:
+                return {
+                    "status": "success",
+                    "message": "Đã đăng xuất.",
+                    "data": None,
+                    "error": None,
+                }
+            if isinstance(status_code, int):
+                raise HTTPException(status_code, "Không thể đăng xuất do lỗi xác thực.") from exc
+            raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Dịch vụ xác thực đang tạm thời không khả dụng.") from exc
+
+    if not active_token:
+        return {
+            "status": "success",
+            "message": "Đã đăng xuất.",
+            "data": None,
+            "error": None,
+        }
+
     try:
-        supabase_admin.auth.admin.sign_out(token, "local")
+        supabase_admin.auth.admin.sign_out(active_token, "local")
     except Exception:
         # Token có thể đã hết hạn; client vẫn nên xóa token ở phía mình
         logger.info("Logout: không thu hồi được token (có thể đã hết hạn).")
@@ -283,6 +317,26 @@ def send_otp(data: EmailRequest):
     return {
         "status": "success",
         "message": "Nếu email hợp lệ, mã OTP đã được gửi tới hộp thư của bạn.",
+        "data": {"sent": True},
+        "error": None,
+    }
+
+
+@router.post("/resend-signup-otp", response_model=BaseResponse[Dict[str, bool]])
+def resend_signup_otp(data: EmailRequest):
+    client = new_auth_client()
+    try:
+        client.auth.resend({"type": "signup", "email": str(data.email)})
+    except Exception as exc:
+        _raise_auth_error(
+            exc,
+            status.HTTP_502_BAD_GATEWAY,
+            "Không thể gửi lại mã xác thực lúc này. Vui lòng thử lại sau.",
+        )
+
+    return {
+        "status": "success",
+        "message": "Nếu tài khoản đang chờ xác thực, mã mới đã được gửi tới email.",
         "data": {"sent": True},
         "error": None,
     }

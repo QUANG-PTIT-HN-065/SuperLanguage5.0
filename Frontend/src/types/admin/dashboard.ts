@@ -11,6 +11,110 @@ export interface TopicItem {
   word_count?: number;
 }
 
+async function loadDocuments(): Promise<void> {
+  try {
+    documentsList = await adminApi<RagDocument[]>("/api/v1/admin/rag/documents");
+    renderDocumentsTable();
+  } catch (error) {
+    showApiError(error);
+  }
+}
+
+function renderDocumentsTable(): void {
+  const tbody = getElement("documentsTableBody");
+  const badge = getElement("totalDocumentsBadge");
+  const languageFilter = getFieldValue("filterDocumentLanguage") || "all";
+  const filteredDocuments = documentsList.filter((item) => (
+    languageFilter === "all"
+      || (languageFilter === "all-language" && item.language_code === "all")
+      || item.language_code === languageFilter
+  ));
+  const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / DOCUMENT_PAGE_SIZE));
+  documentPage = Math.min(documentPage, totalPages);
+  const start = (documentPage - 1) * DOCUMENT_PAGE_SIZE;
+  const visibleDocuments = filteredDocuments.slice(start, start + DOCUMENT_PAGE_SIZE);
+  if (badge) badge.textContent = `${filteredDocuments.length}/${documentsList.length} tài liệu`;
+  if (!tbody) return;
+  if (!filteredDocuments.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-slate-400">Chưa có tài liệu nào được lập chỉ mục.</td></tr>';
+  } else {
+    tbody.replaceChildren(...visibleDocuments.map((item) => {
+      const row = window.document.createElement("tr");
+      row.className = "hover:bg-slate-50 border-b border-slate-100";
+
+      const title = window.document.createElement("td");
+      title.className = "py-3 px-4 max-w-xs";
+      const titleText = window.document.createElement("p");
+      titleText.className = "font-bold text-slate-900 truncate";
+      titleText.textContent = item.title;
+      const keyText = window.document.createElement("p");
+      keyText.className = "text-[11px] text-slate-400 font-mono truncate";
+      keyText.textContent = item.document_key;
+      title.append(titleText, keyText);
+
+      const language = window.document.createElement("td");
+      language.className = "py-3 px-4 whitespace-nowrap";
+      language.textContent = item.language_code;
+
+      const chunks = window.document.createElement("td");
+      chunks.className = "py-3 px-4 text-center font-semibold";
+      chunks.textContent = String(item.chunks_count);
+
+      const content = window.document.createElement("td");
+      content.className = "py-3 px-4 max-w-sm";
+      content.textContent = item.content;
+      content.title = item.content;
+      content.classList.add("truncate", "text-slate-600");
+
+      const actions = window.document.createElement("td");
+      actions.className = "py-3 px-4 text-right";
+      const remove = window.document.createElement("button");
+      remove.type = "button";
+      remove.className = "text-rose-600 hover:text-rose-800 text-xs font-semibold";
+      remove.textContent = "Xóa";
+      remove.addEventListener("click", () => void removeDocument(item));
+      actions.append(remove);
+
+      row.append(title, language, chunks, content, actions);
+      return row;
+    }));
+  }
+
+  const info = getElement("documentPaginationInfo");
+  if (info) {
+    info.textContent = filteredDocuments.length
+      ? `Hiển thị ${start + 1}-${Math.min(start + DOCUMENT_PAGE_SIZE, filteredDocuments.length)} / ${filteredDocuments.length} tài liệu`
+      : "Không có tài liệu phù hợp";
+  }
+  const pageNumber = getElement("documentPageNumber");
+  if (pageNumber) pageNumber.textContent = `${documentPage}/${totalPages}`;
+  const previous = getElement<HTMLButtonElement>("prevDocumentPage");
+  const next = getElement<HTMLButtonElement>("nextDocumentPage");
+  if (previous) previous.disabled = documentPage <= 1;
+  if (next) next.disabled = documentPage >= totalPages;
+}
+
+async function removeDocument(document: RagDocument): Promise<void> {
+  if (!window.confirm(`Xóa tài liệu "${document.title}" khỏi Vector DB?`)) return;
+  try {
+    await adminApi(`/api/v1/admin/rag/documents/${encodeURIComponent(document.document_key)}`, { method: "DELETE" });
+    showToast("Đã xóa tài liệu khỏi Vector DB.", "success");
+    await loadDocuments();
+  } catch (error) {
+    showApiError(error);
+  }
+}
+
+interface LearningPathItem {
+  id: number;
+  language_code: string;
+  name: string;
+  description: string | null;
+  sort_order: number;
+  topics: TopicItem[];
+  topic_ids?: number[];
+}
+
 export interface LanguageOption {
   code: string;
   name: string;
@@ -41,9 +145,23 @@ interface OverviewStats {
   language_distribution: Record<string, number>;
 }
 
+interface RagDocument {
+  document_key: string;
+  title: string;
+  language_code: string;
+  content: string;
+  chunks_count: number;
+  created_at: string | null;
+}
+
 const languagesMap = new Map<string, string>();
 let topicsList: TopicItem[] = [];
+let learningPaths: LearningPathItem[] = [];
+let selectedLearningPathTopicIds: number[] = [];
 let usersList: UserItem[] = [];
+let documentsList: RagDocument[] = [];
+let documentPage = 1;
+const DOCUMENT_PAGE_SIZE = 5;
 let activeTab = "dashboard";
 let currentTopicFilterLang = "all";
 let chartInstance: Chart | null = null;
@@ -81,6 +199,8 @@ export async function initDashboard(): Promise<void> {
       loadDashboardStats(),
       loadTopics(),
       loadUsers(),
+      loadLearningPaths(),
+      loadDocuments(),
     ]);
   } catch (error) {
     if (error instanceof ForbiddenError) {
@@ -178,8 +298,198 @@ async function loadTopics(langCode: string = "all"): Promise<void> {
       if (failed && topicsList.length === 0) throw failed.reason;
     }
     renderTopicsTable();
+    renderLearningPathTopicOptions();
   } catch (err) {
     showApiError(err);
+  }
+}
+
+async function loadLearningPaths(): Promise<void> {
+    try {
+      const response = await adminApi<{ items: LearningPathItem[] }>(
+        "/api/v1/admin/learning-paths?language_code=all",
+      );
+      learningPaths = response.items || [];
+      renderLearningPaths();
+    } catch (error) {
+      showApiError(error);
+    }
+  }
+
+function renderLearningPathTopicOptions(selectedIds?: number[]): void {
+    const languageCode = getFieldValue("learningPathLanguage");
+    const container = getElement<HTMLDivElement>("learningPathTopics");
+    const help = getElement("learningPathTopicHelp");
+    if (!container) return;
+    const topics = topicsList
+      .filter((topic) => topic.language_code === languageCode)
+      .sort((left, right) => left.sort_order - right.sort_order || left.id - right.id);
+    if (selectedIds) {
+      selectedLearningPathTopicIds = Array.from(new Set(selectedIds))
+        .filter((id) => topics.some((topic) => topic.id === id));
+    } else {
+      selectedLearningPathTopicIds = selectedLearningPathTopicIds
+        .filter((id) => topics.some((topic) => topic.id === id));
+    }
+
+    if (!topics.length) {
+      const empty = document.createElement("p");
+      empty.className = "p-3 text-xs text-slate-600";
+      empty.textContent = "Chưa có chủ đề cho ngôn ngữ này. Hãy tạo chủ đề trước.";
+      container.replaceChildren(empty);
+      if (help) help.textContent = "Chọn một ngôn ngữ có chủ đề để bắt đầu.";
+      return;
+    }
+
+    const rows = topics.map((topic) => {
+      const row = document.createElement("div");
+      row.className = "flex items-center gap-3 border-b border-slate-100 px-3 py-2 last:border-b-0";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.id = `learningPathTopic-${topic.id}`;
+      checkbox.checked = selectedLearningPathTopicIds.includes(topic.id);
+      checkbox.className = "h-4 w-4 accent-blue-700";
+      const label = document.createElement("label");
+      label.htmlFor = checkbox.id;
+      label.className = "min-w-0 flex-1 cursor-pointer text-sm text-slate-800";
+      label.textContent = topic.name;
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          if (selectedLearningPathTopicIds.length >= 100) {
+            checkbox.checked = false;
+            showToast("Mỗi lộ trình có thể có tối đa 100 chủ đề.", "error");
+            return;
+          }
+          selectedLearningPathTopicIds.push(topic.id);
+        } else {
+          selectedLearningPathTopicIds = selectedLearningPathTopicIds
+            .filter((id) => id !== topic.id);
+        }
+        renderLearningPathTopicOptions();
+      });
+      row.append(checkbox, label);
+
+      const selectedIndex = selectedLearningPathTopicIds.indexOf(topic.id);
+      if (selectedIndex >= 0) {
+        const order = document.createElement("span");
+        order.className = "w-6 text-center text-xs font-semibold text-slate-600";
+        order.textContent = String(selectedIndex + 1);
+        row.append(order);
+        for (const [labelText, direction] of [["Lên", -1], ["Xuống", 1]] as const) {
+          const move = document.createElement("button");
+          move.type = "button";
+          move.className = "rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40";
+          move.textContent = labelText;
+          move.setAttribute("aria-label", `${labelText} ${topic.name} trong thứ tự học`);
+          move.disabled = selectedIndex + direction < 0 ||
+            selectedIndex + direction >= selectedLearningPathTopicIds.length;
+          move.addEventListener("click", () => {
+            const nextIndex = selectedIndex + direction;
+            const reordered = [...selectedLearningPathTopicIds];
+            [reordered[selectedIndex], reordered[nextIndex]] =
+              [reordered[nextIndex], reordered[selectedIndex]];
+            selectedLearningPathTopicIds = reordered;
+            renderLearningPathTopicOptions();
+          });
+          row.append(move);
+        }
+      } else {
+        row.append(document.createElement("span"));
+      }
+      return row;
+    });
+    container.replaceChildren(...rows);
+    if (help) {
+      help.textContent = selectedLearningPathTopicIds.length
+        ? `${selectedLearningPathTopicIds.length} chủ đề đã chọn. Chủ đề đầu mở trước; các chủ đề sau mở khi đạt 4/4.`
+        : "Chọn các chủ đề cùng ngôn ngữ; dùng nút Lên và Xuống để đặt thứ tự mở khóa.";
+    }
+  }
+
+function renderLearningPaths(): void {
+    const body = getElement("learningPathsTableBody");
+    if (!body) return;
+    if (!learningPaths.length) {
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 4;
+      cell.className = "p-6 text-center text-sm text-slate-500";
+      cell.textContent = "Chưa có lộ trình. Tạo lộ trình và thêm các chủ đề học tập.";
+      row.append(cell);
+      body.replaceChildren(row);
+      return;
+    }
+
+    body.replaceChildren(...learningPaths.map((path) => {
+      const row = document.createElement("tr");
+      const title = document.createElement("td");
+      title.className = "p-3";
+      const name = document.createElement("strong");
+      name.className = "block text-slate-800";
+      name.textContent = path.name;
+      const description = document.createElement("span");
+      description.className = "text-xs text-slate-500";
+      description.textContent = path.description || "Chưa có mô tả";
+      title.append(name, description);
+
+      const language = document.createElement("td");
+      language.className = "p-3 text-xs";
+      language.textContent = languagesMap.get(path.language_code) || path.language_code.toUpperCase();
+
+      const topics = document.createElement("td");
+      topics.className = "p-3 text-xs text-slate-600";
+      topics.textContent = path.topics.length
+        ? path.topics.map((topic, index) => `${index + 1}. ${topic.name}`).join(" → ")
+        : "Chưa có chủ đề";
+      topics.title = topics.textContent;
+
+      const actions = document.createElement("td");
+      actions.className = "p-3 text-right whitespace-nowrap";
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "px-2 py-1 text-blue-700 hover:bg-blue-50 rounded";
+      edit.textContent = "Sửa";
+      edit.addEventListener("click", () => editLearningPath(path));
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "ml-1 px-2 py-1 text-rose-700 hover:bg-rose-50 rounded";
+      remove.textContent = "Xóa";
+      remove.addEventListener("click", () => void removeLearningPath(path));
+      actions.append(edit, remove);
+      row.append(title, language, topics, actions);
+      return row;
+    }));
+  }
+
+function editLearningPath(path: LearningPathItem): void {
+    getElement<HTMLInputElement>("editLearningPathId")!.value = String(path.id);
+    getElement<HTMLInputElement>("learningPathName")!.value = path.name;
+    getElement<HTMLSelectElement>("learningPathLanguage")!.value = path.language_code;
+    getElement<HTMLTextAreaElement>("learningPathDescription")!.value = path.description || "";
+    getElement<HTMLInputElement>("learningPathOrder")!.value = String(path.sort_order || 100);
+    const topicIds = path.topics.map((topic) => topic.id);
+    renderLearningPathTopicOptions(topicIds);
+    getElement<HTMLButtonElement>("cancelLearningPathEdit")?.removeAttribute("hidden");
+    getElement("learningPathForm")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+function resetLearningPathForm(): void {
+    getElement<HTMLFormElement>("learningPathForm")?.reset();
+    getElement<HTMLInputElement>("editLearningPathId")!.value = "";
+    selectedLearningPathTopicIds = [];
+    renderLearningPathTopicOptions([]);
+    getElement<HTMLButtonElement>("cancelLearningPathEdit")?.setAttribute("hidden", "");
+  }
+
+async function removeLearningPath(path: LearningPathItem): Promise<void> {
+    if (!window.confirm(`Xóa lộ trình "${path.name}"?`)) return;
+    try {
+      await adminApi(`/api/v1/admin/learning-paths/${path.id}`, { method: "DELETE" });
+      if (getFieldValue("editLearningPathId") === String(path.id)) resetLearningPathForm();
+      await loadLearningPaths();
+      showToast("Đã xóa lộ trình.", "success");
+    } catch (error) {
+      showApiError(error);
   }
 }
 
@@ -423,14 +733,19 @@ async function loadLanguages(): Promise<void> {
 
     const topicLangSelect = getElement<HTMLSelectElement>("inputTopicLanguage");
     const filterTopicLang = getElement<HTMLSelectElement>("filterTopicLanguage");
+    const pathLanguageSelect = getElement<HTMLSelectElement>("learningPathLanguage");
 
-    if (topicLangSelect) {
-      topicLangSelect.replaceChildren(...res.items.map((l) => {
+    const languageOptions = res.items.map((l) => {
         const opt = document.createElement("option");
         opt.value = l.code;
         opt.textContent = `${l.name} (${String(l.code ?? "").toUpperCase()})`;
         return opt;
-      }));
+      });
+    if (topicLangSelect) {
+      topicLangSelect.replaceChildren(...languageOptions.map((option) => option.cloneNode(true) as HTMLOptionElement));
+    }
+    if (pathLanguageSelect) {
+      pathLanguageSelect.replaceChildren(...languageOptions.map((option) => option.cloneNode(true) as HTMLOptionElement));
     }
 
     if (filterTopicLang) {
@@ -486,6 +801,7 @@ function setupNavigation(): void {
       const titles: Record<string, string> = {
         dashboard: "Tổng Quan Điều Hành Hệ Thống",
         topics: "Quản Lý Chủ Đề Học Tập (Topics)",
+        documents: "Quản Lý Tài Liệu AI",
         users: "Quản Trị Học Viên & Người Dùng",
         analytics: "Thống Kê Báo Cáo Chuyên Sâu",
         settings: "Cài Đặt Hệ Thống & Phân Quyền",
@@ -512,7 +828,7 @@ function setupNavigation(): void {
   });
 
   const hash = window.location.hash.replace("#", "");
-  if (hash && ["dashboard", "topics", "users", "analytics", "settings"].includes(hash)) {
+  if (hash && ["dashboard", "topics", "documents", "users", "analytics", "settings"].includes(hash)) {
     switchTab(hash);
   }
 }
@@ -588,6 +904,86 @@ function initEngagementChart(): void {
 }
 
 function setupEventListeners(): void {
+  getElement("documentForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const title = getFieldValue("inputDocumentTitle");
+    const languageCode = getFieldValue("inputDocumentLanguage");
+    const content = getFieldValue("inputDocumentContent");
+    const fileInput = getElement<HTMLInputElement>("inputDocumentFile");
+    const file = fileInput?.files?.[0];
+    if (!languageCode || (!content && !file)) {
+      showToast("Vui lòng nhập nội dung hoặc chọn một file để tải lên.", "error");
+      return;
+    }
+
+    const submit = getElement<HTMLButtonElement>("btnSubmitDocument");
+    if (submit) submit.disabled = true;
+    try {
+      let result: { chunks_indexed: number };
+      if (file) {
+        const formData = new FormData();
+        formData.append("language_code", languageCode);
+        formData.append("file", file);
+        result = await adminApi<{ chunks_indexed: number }>("/api/v1/admin/rag/documents/upload", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        if (!title) {
+          showToast("Vui lòng nhập tiêu đề khi nhập nội dung thủ công.", "error");
+          return;
+        }
+        result = await adminApi<{ chunks_indexed: number }>("/api/v1/admin/rag/documents", {
+          method: "POST",
+          body: { title, language_code: languageCode, content },
+        });
+      }
+      getElement<HTMLFormElement>("documentForm")?.reset();
+      showToast(`Đã lập chỉ mục tài liệu (${result.chunks_indexed} đoạn).`, "success");
+      await loadDocuments();
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
+
+  getElement("btnRefreshDocuments")?.addEventListener("click", () => void loadDocuments());
+  getElement("filterDocumentLanguage")?.addEventListener("change", () => {
+    documentPage = 1;
+    renderDocumentsTable();
+  });
+  getElement("prevDocumentPage")?.addEventListener("click", () => {
+    if (documentPage > 1) {
+      documentPage -= 1;
+      renderDocumentsTable();
+    }
+  });
+  getElement("nextDocumentPage")?.addEventListener("click", () => {
+    const filter = getFieldValue("filterDocumentLanguage") || "all";
+    const totalPages = Math.max(1, Math.ceil(
+      documentsList.filter((item) => filter === "all" || item.language_code === filter || (filter === "all-language" && item.language_code === "all")).length
+      / DOCUMENT_PAGE_SIZE,
+    ));
+    if (documentPage < totalPages) {
+      documentPage += 1;
+      renderDocumentsTable();
+    }
+  });
+  getElement("btnReindexDocuments")?.addEventListener("click", async () => {
+    const button = getElement<HTMLButtonElement>("btnReindexDocuments");
+    if (button) button.disabled = true;
+    try {
+      const result = await adminApi<{ message: string; data: { documents_indexed: number } }>("/api/v1/admin/rag/reindex", { method: "POST" });
+      showToast(`${result.message} (${result.data.documents_indexed} tài liệu).`, "success");
+      await loadDocuments();
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      if (button) button.disabled = false;
+    }
+  });
+
   // Submit Topic Form (POST hoặc PUT thật vào CSDL)
   getElement("topicForm")?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -630,6 +1026,52 @@ function setupEventListeners(): void {
   });
 
   getElement("btnCancelTopicEdit")?.addEventListener("click", resetTopicForm);
+
+  getElement("learningPathLanguage")?.addEventListener("change", () => {
+    renderLearningPathTopicOptions();
+  });
+  getElement("cancelLearningPathEdit")?.addEventListener("click", resetLearningPathForm);
+  getElement("learningPathForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const languageCode = getFieldValue("learningPathLanguage");
+    const topicIds = [...selectedLearningPathTopicIds];
+    if (!topicIds.length) {
+      showToast("Hãy chọn ít nhất một chủ đề cho lộ trình.", "error");
+      return;
+    }
+
+    const editId = Number(getFieldValue("editLearningPathId"));
+    const isEdit = Number.isInteger(editId) && editId > 0;
+    const submit = getElement<HTMLButtonElement>("submitLearningPath");
+    if (submit) submit.disabled = true;
+    try {
+      const payload = {
+        language_code: languageCode,
+        name: getFieldValue("learningPathName"),
+        description: getFieldValue("learningPathDescription") || null,
+        sort_order: Number(getFieldValue("learningPathOrder")) || 100,
+        topic_ids: topicIds,
+      };
+      if (isEdit) {
+        await adminApi(`/api/v1/admin/learning-paths/${editId}`, {
+          method: "PUT",
+          body: payload,
+        });
+      } else {
+        await adminApi("/api/v1/admin/learning-paths", {
+          method: "POST",
+          body: payload,
+        });
+      }
+      resetLearningPathForm();
+      await loadLearningPaths();
+      showToast(isEdit ? "Đã cập nhật lộ trình." : "Đã tạo lộ trình.", "success");
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
 
   // Search & Filter topics
   getElement("searchTopicInput")?.addEventListener("input", renderTopicsTable);

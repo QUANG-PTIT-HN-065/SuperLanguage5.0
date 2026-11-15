@@ -5,6 +5,7 @@
  */
 
 import { slanguageApi } from '../shared/api-client';
+import { initializeLearnerHeader, logoutLearner } from '../shared/learner-header';
 
 interface VocabularyReviewResult {
   data: {
@@ -136,8 +137,8 @@ const languagesDB: Record<string, LanguageData> = {
 
 class SlanguageDashboard {
   private currentLang: 'en' | 'ja' | 'vi' = 'ja';
-  private currentXP: number = 2450;
-  private currentStreak: number = 14;
+  private currentXP: number = 0;
+  private currentStreak: number = 0;
   private isLoggedIn: boolean = false;
   private isCompletingReview = false;
   private pendingReview: { sessionId: string; knowsWord: boolean } | null = null;
@@ -186,7 +187,7 @@ class SlanguageDashboard {
     this.updateStreakDisplay();
 
     // Check saved user name and sync with Header & Leaderboard
-    const savedUserName = localStorage.getItem('slanguage_user_name') || 'Vua Xứ Thanh';
+    const savedUserName = localStorage.getItem('slanguage_user_name') || 'Học viên';
     document.querySelectorAll('.user-info-text .name').forEach(el => {
       el.textContent = savedUserName;
     });
@@ -262,11 +263,7 @@ class SlanguageDashboard {
       if (logoutBtn) {
         logoutBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          localStorage.setItem('slanguage_is_logged_in', 'false');
-          this.isLoggedIn = false;
-          this.applyAuthState();
-          this.showToast('Bạn đã đăng xuất tài khoản 👋');
-          if (userDropdown) userDropdown.classList.remove('open');
+          logoutLearner();
         });
       }
     }
@@ -839,6 +836,7 @@ class SlanguageDashboard {
 
 // Instantiate on DOMContentLoaded
 function initSlanguageDashboard(): void {
+  void initializeLearnerHeader({ bindControls: false });
   (window as unknown as { homeApp?: SlanguageDashboard }).homeApp = new SlanguageDashboard();
 }
 

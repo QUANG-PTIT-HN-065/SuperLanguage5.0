@@ -1,0 +1,96 @@
+/* ============================================================
+   Slanguage · Design tokens
+   Nguồn: bảng màu + font + chuyển động của giao diện hiện tại.
+   ============================================================ */
+
+:root {
+  /* ---------- Color ---------- */
+  --navy: #16324a;
+  --navy-800: #12293d;
+  --navy-900: #0d1f2f;
+  --teal: #0f7c86;
+  --teal-600: #0b636b;
+  --teal-300: #4fb6bd;
+  --cream: #f3efe4;
+  --card: #fbf9f3;
+  --ink: #16324a;
+  --muted: #5e7083;
+  --line: #e2dccb;
+  --success: #2e9e6b;
+  --danger: #d64545;
+  /* bản đủ tương phản 4.5:1 để dùng làm chữ (danger gốc 4.16:1 trên nền card) */
+  --danger-text: #be3838;
+  --streak: #f0803c;
+  --xp: #f5b301;
+
+  /* Text/surface biến thể dùng riêng trên nền navy (đảm bảo >= 4.5:1) */
+  --on-navy: var(--cream);
+  --on-navy-muted: rgba(243, 239, 228, 0.72);
+  --on-navy-faint: rgba(243, 239, 228, 0.5);
+  --on-navy-line: rgba(243, 239, 228, 0.16);
+  --on-navy-surface: rgba(243, 239, 228, 0.08);
+  --on-navy-surface-strong: rgba(243, 239, 228, 0.14);
+
+  /* ---------- Border radius ---------- */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-pill: 999px;
+
+  /* ---------- Shadow (3 cấp, navy, alpha thấp) ---------- */
+  --shadow-sm: 0 1px 2px rgb(22 50 74 / 7%), 0 2px 6px rgb(22 50 74 / 5%);
+  --shadow-md: 0 6px 16px rgb(22 50 74 / 12%), 0 2px 6px rgb(22 50 74 / 7%);
+  --shadow-lg: 0 20px 44px rgb(22 50 74 / 18%), 0 6px 14px rgb(22 50 74 / 9%);
+  --shadow-navy: 0 10px 30px rgb(13 31 47 / 35%);
+
+  /* ---------- Spacing (thang 4px) ---------- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-12: 48px;
+  --s-16: 64px;
+
+  /* ---------- Typography ---------- */
+  --font-display: "Lexend", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Inter", "Segoe UI", system-ui, sans-serif;
+
+  /* Fluid scale — nội dung luôn >= 14px */
+  --text-xs: 0.875rem;                                     /* 14px */
+  --text-sm: clamp(0.875rem, 0.85rem + 0.12vw, 0.9375rem);  /* 14 -> 15 */
+  --text-base: clamp(0.9375rem, 0.9rem + 0.2vw, 1.0625rem); /* 15 -> 17 */
+  --text-lg: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);      /* 17 -> 20 */
+  --text-xl: clamp(1.25rem, 1.1rem + 0.6vw, 1.625rem);      /* 20 -> 26 */
+  --text-2xl: clamp(1.5rem, 1.25rem + 1.1vw, 2.125rem);     /* 24 -> 34 */
+  --text-3xl: clamp(1.875rem, 1.45rem + 1.9vw, 2.875rem);   /* 30 -> 46 */
+
+  --leading-tight: 1.2;
+  --leading-body: 1.6;
+  --tracking-tight: -0.015em;
+
+  /* ---------- Motion ---------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 150ms;
+  --dur: 260ms;
+  --dur-slow: 420ms;
+  --stagger: 60ms;
+
+  /* ---------- Layout ---------- */
+  --container: 1120px;
+  --header-h: 64px;
+  --tabbar-h: 62px;
+  --gutter: clamp(16px, 3.2vw, 32px);
+  --touch: 44px;
+
+  /* ---------- Layer ---------- */
+  --z-tabbar: 880;
+  --z-header: 900;
+  --z-menu: 950;
+  --z-toast: 1000;
+
+  /* ---------- Breakpoint (ghim để đối chiếu) ---------- */
+  /* 480 / 768 / 1024 / 1280 */
+}

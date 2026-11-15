@@ -1,3 +1,5 @@
+import { saveAuthTokens, saveLearnerIdentity, slanguageApi } from "../shared/api-client";
+
 /**
  * ===================================================================
  * SLANGUAGE - DEDICATED OTP VERIFICATION CONTROLLER
@@ -5,46 +7,6 @@
  * Purpose: Dedicated page for 8-digit OTP confirmation & account activation
  * ===================================================================
  */
-
-interface UserAccount {
-  fullName: string;
-  email: string;
-  password: string;
-  nativeLanguage?: string;
-  targetLanguage?: string;
-  xp?: number;
-  createdAt?: string;
-}
-
-const DEFAULT_USERS_DB: UserAccount[] = [
-  {
-    fullName: 'Vua Xứ Thanh',
-    email: 'quanquan@gmail.com',
-    password: '123456',
-    nativeLanguage: 'vi',
-    targetLanguage: 'ja',
-    xp: 0,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    fullName: 'Học viên Slanguage',
-    email: 'hocvien@slanguage.edu.vn',
-    password: '123456',
-    nativeLanguage: 'vi',
-    targetLanguage: 'en',
-    xp: 0,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    fullName: 'Nguyễn Văn A',
-    email: 'learner@gmail.com',
-    password: '123456',
-    nativeLanguage: 'vi',
-    targetLanguage: 'ja',
-    xp: 0,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  }
-];
 
 type AppLanguage = 'vi' | 'en' | 'ja';
 
@@ -73,14 +35,14 @@ const LANGUAGE_MAP: Record<AppLanguage, LanguageDetail> = {
 };
 
 class VerifyOtpController {
-  private registeredFullName: string = 'Học viên Slanguage';
-  private registeredEmail: string = 'learner@gmail.com';
+  private registeredFullName: string = '';
+  private registeredEmail: string = '';
   private originLanguage: AppLanguage = 'vi';
   private targetLanguage: AppLanguage = 'ja';
 
-  private currentOtpCode: string = '86868686';
   private otpSecondsLeft: number = 60;
   private otpTimerInterval: number | null = null;
+  private isSubmittingOtp = false;
 
   // DOM Elements
   private displayOtpEmail: HTMLElement | null = null;
@@ -117,6 +79,10 @@ class VerifyOtpController {
     if (savedEmail) this.registeredEmail = savedEmail;
     if (savedNative && LANGUAGE_MAP[savedNative]) this.originLanguage = savedNative;
     if (savedTarget && LANGUAGE_MAP[savedTarget]) this.targetLanguage = savedTarget;
+    if (!this.registeredEmail || !sessionStorage.getItem('slanguage_reg_pass')) {
+      window.location.replace('../register/index.html');
+      return;
+    }
 
     // 2. Cache DOM elements
     this.displayOtpEmail = document.getElementById('displayOtpEmail');
@@ -154,7 +120,7 @@ class VerifyOtpController {
 
     this.bindEvents();
     this.startOtpCountdown();
-    this.showToast(`📬 Mã xác thực OTP 8 số đã gửi tới ${this.registeredEmail}`);
+    this.showToast(`Mã xác thực đã được gửi tới ${this.registeredEmail}`);
   }
 
   private bindEvents(): void {
@@ -181,9 +147,8 @@ class VerifyOtpController {
 
         if (this.otpErrorNote) this.otpErrorNote.style.display = 'none';
 
-        // Auto submit if all 8 digits are entered
-        if (this.getEnteredOtp().length === 8) {
-          this.handleVerifyOtp();
+        if (this.getEnteredOtp().length === this.otpBoxes.length) {
+          void this.handleVerifyOtp();
         }
       });
 
@@ -204,7 +169,7 @@ class VerifyOtpController {
         } else if (e.key === 'ArrowRight' && index < this.otpBoxes.length - 1) {
           this.otpBoxes[index + 1].focus();
         } else if (e.key === 'Enter') {
-          this.handleVerifyOtp();
+          void this.handleVerifyOtp();
         }
       });
 
@@ -212,7 +177,7 @@ class VerifyOtpController {
       box.addEventListener('paste', (e: ClipboardEvent) => {
         e.preventDefault();
         const pasted = e.clipboardData?.getData('text') || '';
-        const digits = pasted.replace(/[^0-9]/g, '').slice(0, 8);
+        const digits = pasted.replace(/[^0-9]/g, '').slice(0, this.otpBoxes.length);
         if (digits) {
           digits.split('').forEach((d, idx) => {
             if (this.otpBoxes[idx]) {
@@ -220,10 +185,10 @@ class VerifyOtpController {
               this.otpBoxes[idx].classList.add('filled');
             }
           });
-          const nextFocus = Math.min(digits.length, 7);
+          const nextFocus = Math.min(digits.length, this.otpBoxes.length - 1);
           this.otpBoxes[nextFocus].focus();
-          if (digits.length === 8) {
-            this.handleVerifyOtp();
+          if (digits.length === this.otpBoxes.length) {
+            void this.handleVerifyOtp();
           }
         }
       });
@@ -232,17 +197,14 @@ class VerifyOtpController {
     // 3. Resend OTP Button
     if (this.btnResendOtp) {
       this.btnResendOtp.addEventListener('click', () => {
-        this.currentOtpCode = '86868686';
-        this.clearOtpInputs();
-        this.startOtpCountdown();
-        this.showToast(`📬 Mã OTP mới đã gửi tới ${this.registeredEmail}`);
+        void this.handleResendOtp();
       });
     }
 
     // 4. Confirm OTP Button
     if (this.btnConfirmOtp) {
       this.btnConfirmOtp.addEventListener('click', () => {
-        this.handleVerifyOtp();
+        void this.handleVerifyOtp();
       });
     }
 
@@ -306,26 +268,24 @@ class VerifyOtpController {
     }, 1000);
   }
 
-  private getUsersDB(): UserAccount[] {
-    const raw = localStorage.getItem('slanguage_users_db');
-    if (!raw) {
-      localStorage.setItem('slanguage_users_db', JSON.stringify(DEFAULT_USERS_DB));
-      return [...DEFAULT_USERS_DB];
-    }
+  private async handleResendOtp(): Promise<void> {
+    if (!this.btnResendOtp) return;
+    this.btnResendOtp.disabled = true;
     try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    } catch (e) {
-      console.error('Error parsing slanguage_users_db:', e);
+      await slanguageApi('/api/v1/auth/resend-signup-otp', {
+        method: 'POST',
+        body: { email: this.registeredEmail },
+        anonymous: true
+      });
+      this.clearOtpInputs();
+      this.startOtpCountdown();
+      this.showToast(`Mã xác thực mới đã được gửi tới ${this.registeredEmail}`);
+    } catch (error) {
+      this.btnResendOtp.disabled = false;
+      this.showOtpError(
+        error instanceof Error ? error.message : 'Không thể gửi lại mã lúc này. Vui lòng thử lại.'
+      );
     }
-    localStorage.setItem('slanguage_users_db', JSON.stringify(DEFAULT_USERS_DB));
-    return [...DEFAULT_USERS_DB];
-  }
-
-  private saveUsersDB(users: UserAccount[]): void {
-    localStorage.setItem('slanguage_users_db', JSON.stringify(users));
   }
 
   private clearOtpInputs(): void {
@@ -341,60 +301,59 @@ class VerifyOtpController {
     return this.otpBoxes.map(b => b.value.trim()).join('');
   }
 
-  private handleVerifyOtp(): void {
+  private async handleVerifyOtp(): Promise<void> {
+    if (this.isSubmittingOtp) return;
     const entered = this.getEnteredOtp();
 
-    if (entered.length < 8) {
+    if (entered.length !== this.otpBoxes.length) {
       if (this.otpErrorNote) {
-        this.otpErrorNote.textContent = 'Vui lòng nhập đủ 8 chữ số mã OTP.';
+        this.otpErrorNote.textContent = `Vui lòng nhập đủ ${this.otpBoxes.length} chữ số mã OTP.`;
         this.otpErrorNote.style.display = 'block';
       }
       return;
     }
 
-    if (entered !== this.currentOtpCode) {
+    this.isSubmittingOtp = true;
+    if (this.btnConfirmOtp) this.btnConfirmOtp.disabled = true;
+    try {
+      const response = await slanguageApi<{
+        access_token: string;
+        refresh_token: string;
+        user_id: string | null;
+      }>('/api/v1/auth/verify-otp', {
+        method: 'POST',
+        body: { email: this.registeredEmail, token: entered },
+        anonymous: true
+      });
+      saveAuthTokens(response.data);
+      saveLearnerIdentity({
+        id: response.data.user_id || undefined,
+        email: this.registeredEmail,
+        display_name: this.registeredFullName
+      });
+      localStorage.setItem('slanguage_native_language', this.originLanguage);
+      localStorage.setItem('slanguage_active_language', this.targetLanguage);
+      localStorage.setItem('slanguage_user_xp', '0');
+      sessionStorage.removeItem('slanguage_reg_pass');
+      this.showSuccessModal();
+    } catch (error) {
       this.otpBoxes.forEach(b => b.classList.add('error-shake'));
-      if (this.otpErrorNote) {
-        this.otpErrorNote.textContent = 'Mã OTP không chính xác. Vui lòng kiểm tra lại!';
-        this.otpErrorNote.style.display = 'block';
-      }
-      setTimeout(() => {
+      this.showOtpError(
+        error instanceof Error ? error.message : 'Mã OTP không hợp lệ hoặc đã hết hạn.'
+      );
+      window.setTimeout(() => {
         this.otpBoxes.forEach(b => b.classList.remove('error-shake'));
       }, 500);
-      return;
+    } finally {
+      this.isSubmittingOtp = false;
+      if (this.btnConfirmOtp) this.btnConfirmOtp.disabled = false;
     }
+  }
 
-    // SUCCESS: Save registered user to slanguage_users_db
-    const savedPass = sessionStorage.getItem('slanguage_reg_pass') || '123456';
-    const users = this.getUsersDB();
-    const existingIndex = users.findIndex(u => u.email.trim().toLowerCase() === this.registeredEmail.trim().toLowerCase());
-    const newUser: UserAccount = {
-      fullName: this.registeredFullName,
-      email: this.registeredEmail,
-      password: savedPass,
-      nativeLanguage: this.originLanguage,
-      targetLanguage: this.targetLanguage,
-      xp: 0,
-      createdAt: new Date().toISOString()
-    };
-    if (existingIndex >= 0) {
-      users[existingIndex] = newUser;
-    } else {
-      users.push(newUser);
-    }
-    this.saveUsersDB(users);
-
-    // Save user session to localStorage (No bonus XP or coins for new users)
-    localStorage.setItem('slanguage_user_name', this.registeredFullName);
-    localStorage.setItem('slanguage_user_email', this.registeredEmail);
-    localStorage.setItem('slanguage_user_password', savedPass);
-    localStorage.setItem('slanguage_native_language', this.originLanguage);
-    localStorage.setItem('slanguage_active_language', this.targetLanguage);
-    localStorage.setItem('slanguage_user_xp', '0');
-    localStorage.setItem('slanguage_is_logged_in', 'true');
-
-    // Show celebration modal
-    this.showSuccessModal();
+  private showOtpError(message: string): void {
+    if (!this.otpErrorNote) return;
+    this.otpErrorNote.textContent = message;
+    this.otpErrorNote.style.display = 'block';
   }
 
   private showSuccessModal(): void {
@@ -464,3 +423,5 @@ if (document.readyState === 'loading') {
 } else {
   initVerifyOtp();
 }
+
+export {};

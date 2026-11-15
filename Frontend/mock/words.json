@@ -1,0 +1,9 @@
+[
+  { "id": 101, "language_code": "ja", "word": "おはようございます", "phonetic": "ohayou gozaimasu", "meaning": "Chào buổi sáng (lịch sự)", "part_of_speech": "phrase", "level": "A1", "example_sentence": "おはようございます、今日もよろしくお願いします。", "example_meaning": "Chào buổi sáng, hôm nay cũng mong được giúp đỡ." },
+  { "id": 102, "language_code": "ja", "word": "いただきます", "phonetic": "itadakimasu", "meaning": "Nói trước khi ăn", "part_of_speech": "phrase", "level": "A1", "example_sentence": "みんな揃ったので、いただきます。", "example_meaning": "Mọi người đã đông đủ nên tôi bắt đầu ăn." },
+  { "id": 103, "language_code": "ja", "word": "切符", "phonetic": "きっぷ / kippu", "meaning": "Vé tàu, vé xe", "part_of_speech": "noun", "level": "A2", "example_sentence": "駅で切符を買いました。", "example_meaning": "Tôi đã mua vé ở nhà ga." },
+  { "id": 104, "language_code": "ja", "word": "打ち合わせ", "phonetic": "うちあわせ / uchiawase", "meaning": "Cuộc họp chuẩn bị", "part_of_speech": "noun", "level": "B1", "example_sentence": "午後から打ち合わせがあります。", "example_meaning": "Buổi chiều có một cuộc họp chuẩn bị." },
+  { "id": 105, "language_code": "ja", "word": "おすすめ", "phonetic": "osusume", "meaning": "Món được gợi ý", "part_of_speech": "noun", "level": "A2", "example_sentence": "おすすめはありますか。", "example_meaning": "Có món nào được gợi ý không?" },
+  { "id": 201, "language_code": "en", "word": "commute", "phonetic": "/kəˈmjuːt/", "meaning": "Đi lại giữa nhà và nơi làm việc", "part_of_speech": "verb", "level": "B1", "example_sentence": "I commute by train every morning.", "example_meaning": "Mỗi sáng tôi đi làm bằng tàu." },
+  { "id": 202, "language_code": "en", "word": "deadline", "phonetic": "/ˈded.laɪn/", "meaning": "Hạn chót", "part_of_speech": "noun", "level": "A2", "example_sentence": "We moved the deadline to Friday.", "example_meaning": "Chúng tôi dời hạn chót sang thứ Sáu." }
+]
