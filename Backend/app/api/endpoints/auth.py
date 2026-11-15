@@ -10,6 +10,7 @@ from app.schemas.reponse import BaseResponse
 from app.schemas.auth import (
     EmailRequest,
     LoginRequest,
+    LogoutRequest,
     OTPVerifyRequest,
     RefreshRequest,
     RegisterRequest,
@@ -241,13 +242,59 @@ def refresh(data: RefreshRequest):
 
 
 @router.post("/logout", response_model=BaseResponse[None])
-def logout(token: str = Depends(get_bearer_token)):
-    """Thu hồi phiên đăng nhập hiện tại."""
+def logout(
+    data: LogoutRequest | None = None,
+    token: str = Depends(get_bearer_token),
+):
+    """Thu hồi refresh token bằng Supabase Auth; hỗ trợ đăng xuất cũ bằng access token."""
+    token_to_revoke = token
+    if data and data.refresh_token:
+        client = new_auth_client()
+        try:
+            response = client.auth.refresh_session(data.refresh_token)
+        except Exception as exc:
+            upstream_status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
+            if upstream_status in {
+                status.HTTP_400_BAD_REQUEST,
+                status.HTTP_401_UNAUTHORIZED,
+                status.HTTP_403_FORBIDDEN,
+            }:
+                logger.info("Logout: refresh token is already expired or revoked.")
+                return {
+                    "status": "success",
+                    "message": "Phiên đăng nhập đã hết hạn hoặc được thu hồi.",
+                    "data": None,
+                    "error": None,
+                }
+            _raise_auth_error(
+                exc,
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "Không thể thu hồi phiên đăng nhập lúc này.",
+            )
+
+        if response.session is None:
+            logger.info("Logout: refresh token has no active session.")
+            return {
+                "status": "success",
+                "message": "Phiên đăng nhập đã kết thúc.",
+                "data": None,
+                "error": None,
+            }
+        token_to_revoke = response.session.access_token
+
     try:
-        supabase_admin.auth.admin.sign_out(token, "local")
-    except Exception:
-        # Token có thể đã hết hạn; client vẫn nên xóa token ở phía mình
-        logger.info("Logout: không thu hồi được token (có thể đã hết hạn).")
+        supabase_admin.auth.admin.sign_out(token_to_revoke, "local")
+    except Exception as exc:
+        if data and data.refresh_token:
+            logger.exception("Could not revoke the refreshed Supabase session.")
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "Không thể thu hồi phiên đăng nhập lúc này.",
+            ) from exc
+        logger.warning(
+            "Legacy logout could not revoke the access-token session (error_type=%s).",
+            type(exc).__name__,
+        )
     return {
         "status": "success",
         "message": "Đã đăng xuất.",

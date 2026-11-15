@@ -50,6 +50,8 @@ export class ForbiddenError extends Error {
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 const ACCESS_TOKEN_KEY = "superlanguage.admin.accessToken";
 const REFRESH_TOKEN_KEY = "superlanguage.admin.refreshToken";
+let expirationTimer: number | null = null;
+let isExpiringSession = false;
 
 function extractApiErrorMessage(payload: unknown, status: number): string {
   if (typeof payload === "object" && payload !== null && "detail" in payload) {
@@ -99,7 +101,7 @@ export async function adminApi<T>(
   path: string,
   options: { method?: "GET" | "POST" | "PUT" | "DELETE"; body?: unknown } = {},
 ): Promise<T> {
-  let accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+  const accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
   if (!accessToken) {
     clearTokens();
     goToLogin();
@@ -122,36 +124,11 @@ export async function adminApi<T>(
     });
   };
 
-  let response = await send(accessToken);
+  const response = await send(accessToken);
+
   if (response.status === 401) {
-    const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
-    if (!refreshToken) {
-      clearTokens();
-      goToLogin();
-      throw new ApiError("Phiên quản trị đã hết hạn.", 401);
-    }
-
-    try {
-      const refreshed = await postJson<RefreshResponse>("/api/v1/auth/refresh", {
-        refresh_token: refreshToken,
-      });
-      if (!refreshed.access_token || !refreshed.refresh_token) {
-        throw new Error("Backend không trả về token mới.");
-      }
-      saveTokens(refreshed);
-      accessToken = refreshed.access_token;
-      response = await send(accessToken);
-    } catch (error) {
-      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-        clearTokens();
-        goToLogin();
-      }
-      if (error instanceof Error) throw error;
-      throw new ApiError("Không thể làm mới phiên quản trị.", 401);
-    }
-  }
-
-  if (response.status === 401 || response.status === 403) {
+    expireAdminSession(accessToken, sessionStorage.getItem(REFRESH_TOKEN_KEY));
+  } else if (response.status === 403) {
     clearTokens();
     goToLogin();
   }
@@ -171,9 +148,15 @@ export async function adminApi<T>(
 function saveTokens(tokens: RefreshResponse): void {
   sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
   sessionStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  isExpiringSession = false;
+  scheduleAdminSessionExpiry(tokens.access_token);
 }
 
 export function clearTokens(): void {
+  if (expirationTimer !== null && typeof window !== "undefined") {
+    window.clearTimeout(expirationTimer);
+  }
+  expirationTimer = null;
   sessionStorage.removeItem(ACCESS_TOKEN_KEY);
   sessionStorage.removeItem(REFRESH_TOKEN_KEY);
 }
@@ -200,6 +183,64 @@ async function fetchCurrentProfile(accessToken: string): Promise<Response> {
   return fetch(`${API_BASE_URL}/api/v1/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
+}
+
+function tokenExpiry(token: string): number | null {
+  try {
+    const encodedPayload = token.split(".")[1];
+    if (!encodedPayload) return null;
+    const base64 = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "=")));
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function scheduleAdminSessionExpiry(token: string): void {
+  if (typeof window === "undefined") return;
+  if (expirationTimer !== null) window.clearTimeout(expirationTimer);
+
+  const expiresAt = tokenExpiry(token);
+  if (expiresAt === null) return;
+
+  const delay = Math.max(0, expiresAt - Date.now());
+  expirationTimer = window.setTimeout(() => {
+    if (sessionStorage.getItem(ACCESS_TOKEN_KEY) !== token) return;
+    if (Date.now() < expiresAt) {
+      scheduleAdminSessionExpiry(token);
+      return;
+    }
+    expireAdminSession(token, sessionStorage.getItem(REFRESH_TOKEN_KEY));
+  }, Math.min(delay, 2_147_000_000));
+}
+
+function expireAdminSession(accessToken: string, refreshToken: string | null): void {
+  if (isExpiringSession) return;
+  isExpiringSession = true;
+
+  const headers = new Headers({ "Content-Type": "application/json" });
+  headers.set("Authorization", `Bearer ${accessToken}`);
+  void fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(refreshToken ? { refresh_token: refreshToken } : {}),
+    keepalive: true,
+  }).then((response) => {
+    if (!response.ok) {
+      console.error(`Admin session revocation failed with HTTP ${response.status}.`);
+    }
+  }).catch(() => {
+    console.error("Could not reach the auth service to revoke the admin session.");
+  });
+
+  clearTokens();
+  goToLogin();
+}
+
+if (typeof window !== "undefined") {
+  const currentToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+  if (currentToken) scheduleAdminSessionExpiry(currentToken);
 }
 
 /**
@@ -316,21 +357,8 @@ export async function requireAdminSession(): Promise<AdminProfile | null> {
   }
 
   if (response.status === 401) {
-    try {
-      const refreshResponse = await postJson<ApiResponse<RefreshResponse>>("/api/v1/auth/refresh", {
-        refresh_token: refreshToken,
-      });
-      const refreshed = refreshResponse.data;
-      if (!refreshed || !refreshed.access_token || !refreshed.refresh_token) {
-        throw new Error("Không thể cấp mới token.");
-      }
-      saveTokens(refreshed);
-      response = await fetchCurrentProfile(refreshed.access_token);
-    } catch {
-      clearTokens();
-      goToLogin();
-      return null;
-    }
+    expireAdminSession(accessToken, refreshToken);
+    return null;
   }
 
   if (response.status === 401 || response.status === 403) {

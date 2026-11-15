@@ -15,10 +15,19 @@ const SESSION_KEYS = [
   ACCESS_TOKEN_KEY,
   REFRESH_TOKEN_KEY,
   "slanguage_active_language",
+  "slanguage_native_language",
   "slanguage_user_id",
   "slanguage_user_name",
   "slanguage_user_email",
   "slanguage_is_logged_in",
+  "slanguage_user_profile",
+  "slanguage_user_password",
+  "slanguage_user_xp",
+  "slanguage_user_streak",
+  "slanguage_streak",
+  "slanguage_daily_goal",
+  "slanguage_stats_synced",
+  "slanguage_stats_synced_at",
 ];
 
 export function getToken(): string | null {
