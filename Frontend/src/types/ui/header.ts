@@ -99,13 +99,13 @@ function bindDropdowns(root: ParentNode): void {
   const triggerOf = (dd: HTMLElement): HTMLButtonElement | null => pick<HTMLButtonElement>(dd, ".trigger");
 
   const close = (dd: HTMLElement): void => {
-    dd.classList.remove("is-open");
+    dd.classList.remove("is-open", "open");
     triggerOf(dd)?.setAttribute("aria-expanded", "false");
   };
 
   const open = (dd: HTMLElement): void => {
     dropdowns.forEach(close);
-    dd.classList.add("is-open");
+    dd.classList.add("is-open", "open");
     triggerOf(dd)?.setAttribute("aria-expanded", "true");
   };
 
@@ -289,6 +289,7 @@ export async function mountHeader(options: HeaderOptions): Promise<void> {
   bindDropdowns(mount);
   bindLanguage(mount);
   pick<HTMLButtonElement>(mount, "#navLogoutItem")?.addEventListener("click", logout);
+  pick<HTMLButtonElement>(mount, "#logoutButton")?.addEventListener("click", logout);
   headerStore.subscribe((state) => renderState(mount, state));
 
   if (signedIn) await loadHeader();

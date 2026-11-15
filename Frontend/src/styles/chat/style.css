@@ -920,27 +920,24 @@ button {
 
 .chat-reading-practice {
   display: grid;
-  gap: 10px;
-  align-self: flex-start;
-  width: min(100%, 720px);
+  gap: 14px;
+  align-self: stretch;
+  width: 100%;
   margin: 0 0 16px;
   padding: 18px;
   border: 1px solid var(--rule, #d7d9d2);
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--paper, #fbf9f2);
   color: var(--ink, #183248);
 }
 
-.chat-reading-practice[hidden],
-.chat-reading-practice__result[hidden] {
+.chat-reading-practice[hidden] {
   display: none;
 }
 
 .chat-reading-practice__heading h3,
 .chat-reading-practice__heading p,
 .chat-reading-practice__status,
-.chat-reading-practice__legend,
-.chat-reading-practice__score,
 .chat-reading-practice__label,
 .chat-reading-practice__text {
   margin: 0;
@@ -953,19 +950,151 @@ button {
 
 .chat-reading-practice__heading p,
 .chat-reading-practice__status,
-.chat-reading-practice__legend {
+.reading-practice-action__status {
   color: var(--muted, #5c7078);
   font-size: 0.8125rem;
   line-height: 1.5;
 }
 
-.chat-reading-practice__prompt {
-  max-width: 65ch;
-  margin: 2px 0;
-  font-size: 1.05rem;
-  font-weight: 500;
+.chat-reading-practice__turns {
+  display: grid;
+  gap: 16px;
+}
+
+.chat-reading-practice__turn {
+  display: grid;
+  gap: 13px;
+  min-width: 0;
+  padding-top: 15px;
+  border-top: 1px solid var(--rule, #d7d9d2);
+}
+
+.chat-reading-practice__messages {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.chat-reading-practice__message {
+  display: grid;
+  gap: 12px;
+  width: fit-content;
+  max-width: min(100%, 560px);
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--rule, #d7d9d2);
+}
+
+.chat-reading-practice__message--assistant {
+  justify-self: start;
+  border-radius: 12px 12px 12px 4px;
+  background: var(--ground, #f3f0e5);
+}
+
+.chat-reading-practice__message--sample {
+  justify-self: start;
+  margin-left: 12px;
+  border-color: var(--teal-soft, #e3eeea);
+  border-radius: 12px 12px 12px 4px;
+  background: var(--teal-soft, #e3eeea);
+}
+
+.chat-reading-practice__learner-column {
+  display: grid;
+  justify-self: end;
+  gap: 8px;
+  width: min(100%, 560px);
+  min-width: 0;
+}
+
+.chat-reading-practice__message--learner {
+  justify-self: end;
+  max-width: 100%;
+  border-color: var(--teal-soft, #e3eeea);
+  border-radius: 12px 12px 4px 12px;
+  background: var(--teal-soft, #e3eeea);
+}
+
+.chat-reading-practice__turn-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chat-reading-practice__turn-heading h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.chat-reading-practice__speakers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chat-reading-practice__speak {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--rule, #d7d9d2);
+  border-radius: 4px;
+  color: var(--teal-deep, #0c696e);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.chat-reading-practice__speak:hover {
+  background: var(--teal-soft, #e3eeea);
+}
+
+.chat-reading-practice__speak:focus-visible {
+  outline: 3px solid var(--teal-deep, #0c696e);
+  outline-offset: 3px;
+}
+
+.chat-reading-practice__block {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.chat-reading-practice__block--sample .chat-reading-practice__label {
+  color: var(--teal-deep, #0c696e);
+}
+
+.chat-reading-practice__label {
+  color: var(--muted, #5c7078);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.chat-reading-practice__text {
+  color: var(--ink, #183248);
+  font-size: 0.9375rem;
   line-height: 1.6;
   overflow-wrap: anywhere;
+}
+
+.chat-reading-practice__feedback {
+  display: grid;
+  gap: 10px;
+  padding: 10px 2px 0;
+  border-top: 1px solid var(--rule, #d7d9d2);
+}
+
+.chat-reading-practice__feedback-empty {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule, #d7d9d2);
+  color: var(--teal-deep, #0c696e);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 .chat-reading-practice__record {
@@ -987,61 +1116,18 @@ button {
   background: var(--teal-deep, #0c696e);
 }
 
-.chat-reading-practice__record:focus-visible,
-.reading-practice-action__button:focus-visible {
+.chat-reading-practice__record:focus-visible {
   outline: 3px solid var(--teal-deep, #0c696e);
   outline-offset: 3px;
 }
 
-.chat-reading-practice__record:disabled,
-.reading-practice-action__button:disabled {
+.chat-reading-practice__record:disabled {
   cursor: wait;
   opacity: 0.6;
 }
 
 .chat-reading-practice__status[data-state="error"] {
   color: var(--signal, #9e402c);
-}
-
-.chat-reading-practice__result {
-  display: grid;
-  gap: 7px;
-  padding-top: 8px;
-  border-top: 1px solid var(--rule, #d7d9d2);
-}
-
-.chat-reading-practice__score {
-  color: var(--teal-deep, #0c696e);
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.chat-reading-practice__label {
-  margin-top: 4px;
-  color: var(--muted, #5c7078);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-.chat-reading-practice__text {
-  color: var(--ink, #183248);
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  overflow-wrap: anywhere;
-}
-
-.chat-reading-practice__word--correct {
-  color: #176341;
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
-
-.chat-reading-practice__word--incorrect {
-  color: var(--signal, #9e402c);
-  text-decoration: underline wavy;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
 }
 
 /* Empty State Có Hồn */
@@ -1622,24 +1708,6 @@ button {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px 12px;
-}
-
-.reading-practice-action__button {
-  display: inline-flex;
-  min-height: 48px;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  padding: 9px 14px;
-  border: 1px solid var(--teal, #117e83);
-  border-radius: 4px;
-  color: var(--teal-deep, #0c696e);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.reading-practice-action__button:hover {
-  background: var(--teal-soft, #e3eeea);
 }
 
 .reading-practice-action__status {

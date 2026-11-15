@@ -22,27 +22,97 @@
   <div data-app-header></div>
 
   <main class="profile-main">
-    <!-- Top Hero Card: Avatar lớn, XP, Streak, Level, Email có icon khóa -->
-    <section class="profile-hero-card">
-      <div class="profile-hero-avatar-area" id="avatarUploadContainer">
-        <!-- Avatar Uploader mount point -->
-      </div>
-      <div class="profile-hero-details">
-        <div class="profile-hero-meta-row">
-          <span class="user-level-badge" id="profileLevelBadge">Cấp độ 1</span>
-          <span class="profile-stat-chip streak" title="Chuỗi học tập liên tục">
-            <i class="fa-solid fa-fire" aria-hidden="true"></i>
-            <span id="profileStreak">0 Ngày</span>
-          </span>
-          <span class="profile-stat-chip xp" title="Tổng điểm kinh nghiệm">
-            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-            <span id="profileXp">0 XP</span>
-          </span>
+    <!-- Top Hero Card (Cảm hứng Duolingo: Cover banner pastel, avatar tròn lớn, nút chỉnh sửa ảnh, meta user) -->
+    <section class="profile-hero-card profile-duo-hero-card">
+      <div class="profile-duo-cover">
+        <button type="button" class="profile-edit-avatar-btn" id="btnEditAvatar" title="Thay đổi ảnh đại diện" aria-label="Thay đổi ảnh đại diện">
+          <i class="fa-solid fa-pen" aria-hidden="true"></i>
+        </button>
+        <div class="profile-hero-avatar-area profile-duo-avatar-area" id="avatarUploadContainer">
+          <!-- Avatar Uploader mount point -->
         </div>
+      </div>
+
+      <div class="profile-hero-details profile-duo-details">
         <h1 class="profile-hero-name" id="profileDisplayName">Đang tải...</h1>
+        <div class="profile-username-tag" id="profileUsernameTag">@hocvien</div>
+        <div class="profile-joined-date" id="profileJoinedDate">
+          <i class="fa-regular fa-calendar" aria-hidden="true"></i> Đã tham gia Tháng 7, 2021
+        </div>
+
+        <div class="profile-social-row">
+          <div class="profile-follow-stats">
+            <span class="profile-stat-item"><strong id="profileFollowingCount">1</strong> Đang theo dõi</span>
+            <span class="profile-stat-item"><strong id="profileFollowersCount">3</strong> Người theo dõi</span>
+          </div>
+          <div class="profile-badges-group">
+            <span class="duo-badge duo-badge--rank" id="profileLevelBadge" title="Hạng giải đấu">
+              <i class="fa-solid fa-chess-rook" aria-hidden="true"></i> Cấp độ 1
+            </span>
+            <span class="duo-badge duo-badge--flag" title="Ngôn ngữ đang học">
+              <img id="profileBannerFlag" src="/assets/flags/flag-en.png" alt="Ngôn ngữ" width="24" height="16">
+            </span>
+          </div>
+        </div>
+
         <div class="profile-hero-email-row">
           <span class="profile-email-label" id="profileEmail">email@example.com</span>
-          <span class="profile-readonly-badge" title="Email định danh bảo mật"><i class="fa-solid fa-lock" aria-hidden="true"></i> Chỉ xem</span>
+          <span class="profile-readonly-badge" title="Email định danh bảo mật"><i class="fa-solid fa-lock" aria-hidden="true"></i> Tài khoản học viên</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Thống kê (Statistics) - Chuyển phần XP vào đây và tham khảo bố cục Duolingo 2x2 -->
+    <section class="profile-statistics-section" aria-labelledby="statisticsHeading">
+      <h2 class="profile-statistics-title" id="statisticsHeading">Thống kê</h2>
+      <div class="profile-duo-stats-grid">
+        <!-- 1. Day streak -->
+        <div class="duo-stat-card streak-card">
+          <div class="duo-stat-icon-wrap streak-icon-wrap">
+            <img src="/assets/streak-flame.gif?v=4" alt="Streak" class="streak-flame-img" width="28" height="28">
+          </div>
+          <div class="duo-stat-content">
+            <strong class="duo-stat-number" id="statDayStreak">0</strong>
+            <span class="duo-stat-label">Ngày streak</span>
+            <!-- Giữ ID cũ ẩn để tương thích hoàn toàn -->
+            <span id="profileStreak" hidden>0 Ngày</span>
+          </div>
+        </div>
+
+        <!-- 2. Total XP (Chuyển phần XP vào đây như Duolingo) -->
+        <div class="duo-stat-card xp-card">
+          <div class="duo-stat-icon-wrap xp-icon-wrap">
+            <i class="fa-solid fa-bolt" aria-hidden="true"></i>
+          </div>
+          <div class="duo-stat-content">
+            <strong class="duo-stat-number xp-number" id="statTotalXp">0</strong>
+            <span class="duo-stat-label">Tổng điểm XP</span>
+            <!-- Giữ ID cũ ẩn để tương thích hoàn toàn -->
+            <span id="profileXp" hidden>0 XP</span>
+          </div>
+        </div>
+
+        <!-- 3. Current league -->
+        <div class="duo-stat-card league-card">
+          <span class="duo-stat-corner-tag">TUẦN 1</span>
+          <div class="duo-stat-icon-wrap league-icon-wrap">
+            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+          </div>
+          <div class="duo-stat-content">
+            <strong class="duo-stat-number league-number" id="statLeagueName">Bạc</strong>
+            <span class="duo-stat-label">Giải đấu hiện tại</span>
+          </div>
+        </div>
+
+        <!-- 4. Top 3 finishes -->
+        <div class="duo-stat-card top3-card">
+          <div class="duo-stat-icon-wrap top3-icon-wrap">
+            <i class="fa-solid fa-medal" aria-hidden="true"></i>
+          </div>
+          <div class="duo-stat-content">
+            <strong class="duo-stat-number top3-number" id="statTop3Count">0</strong>
+            <span class="duo-stat-label">Lọt Top 3 vinh danh</span>
+          </div>
         </div>
       </div>
     </section>

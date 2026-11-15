@@ -3,14 +3,17 @@ import { isLearnerAuthenticated } from "../shared/api-client.js";
 import { mountHeader } from "../ui/header.js";
 import { AudioRecorder, RecorderState } from "../ui/recorder.js";
 import { renderQuickReplies } from "../ui/feedback.js";
-import { transcribeChatAudio } from "../shared/speech-api.js";
+import { getAiFeedbackDisplay } from "./ai-feedback.js";
 import { ReadAloudPractice } from "./read-aloud.js";
 import {
   createChatConversation,
   generateChatReadingPrompt,
   listChatConversations,
   listConversationMessages,
+  listReadingPracticeTurns,
   sendChatMessage,
+  sendVoiceChatMessage,
+  synthesizeChatSpeech,
   type Conversation,
 } from "./chat-api.js";
 
@@ -61,7 +64,6 @@ const scrollBottomBtn = document.getElementById("scrollBottomBtn") as HTMLButton
 const mobileStepBackBtn = document.getElementById("mobileStepBackBtn") as HTMLButtonElement | null;
 const voiceStatus = document.getElementById("voiceStatus") as HTMLElement | null;
 const startSessionHint = document.getElementById("startSessionHint") as HTMLElement | null;
-const readingPromptButton = document.getElementById("readingPromptButton") as HTMLButtonElement | null;
 const readingPromptStatus = document.getElementById("readingPromptStatus") as HTMLElement | null;
 const readPracticePanel = document.getElementById("readPractice") as HTMLElement | null;
 
@@ -111,8 +113,14 @@ let sessionSeconds = 0;
 let sessionTimerInterval: number | null = null;
 let totalMessagesExchanged = 0;
 let audioRecorder: AudioRecorder | null = null;
+let speechRequestId = 0;
+let activeSpeechAudio: HTMLAudioElement | null = null;
+let activeSpeechUrl: string | null = null;
 let spacePressed = false;
-const readAloudPractice = new ReadAloudPractice();
+const readAloudPractice = new ReadAloudPractice((text, languageCode) =>
+  speakText(text, languageCode.toLowerCase().startsWith("ja") ? "Japanese" : "English"),
+  () => requestReadingPrompt(),
+);
 
 // Initial setup
 async function init() {
@@ -122,7 +130,6 @@ async function init() {
   setupTopicChips();
   setupCustomTopicToggle();
   setupQuickStartCards();
-  setupReadingPrompt();
   setupAudioRecorder();
   setupMessageInput();
   setupModals();
@@ -154,7 +161,7 @@ function checkAuthStatus() {
     if (learnerCard) learnerCard.hidden = true;
     if (guestQuotaBar) guestQuotaBar.hidden = false;
     if (readingPromptStatus) {
-      readingPromptStatus.textContent = "Đăng nhập để tạo câu đọc và chấm điểm bằng AI.";
+      readingPromptStatus.textContent = "Đăng nhập để tạo câu hỏi và nhận góp ý của AI.";
     }
 
     // Load trial count
@@ -168,7 +175,7 @@ function checkAuthStatus() {
     if (learnerCard) learnerCard.hidden = false;
     if (guestQuotaBar) guestQuotaBar.hidden = true;
     if (readingPromptStatus) {
-      readingPromptStatus.textContent = "AI sẽ tạo câu theo chủ đề đã chọn.";
+      readingPromptStatus.textContent = "AI sẽ tạo câu hỏi và câu trả lời mẫu theo chủ đề.";
     }
     loadLearnerProfile();
   }
@@ -273,9 +280,9 @@ function updatePracticeModeView() {
   startSessionIcon?.classList.toggle("fa-comments", currentPracticeMode === "free-chat");
   if (startSessionHint) {
     if (isGuest && currentPracticeMode === "read-aloud") {
-      startSessionHint.textContent = "Đăng nhập để tạo câu đọc và chấm điểm bằng AI.";
+      startSessionHint.textContent = "Đăng nhập để tạo câu hỏi và nhận góp ý của AI.";
     } else if (currentPracticeMode === "read-aloud") {
-      startSessionHint.textContent = "AI tạo câu theo chủ đề; bạn đọc để nhận kết quả.";
+      startSessionHint.textContent = "AI đưa câu hỏi và câu trả lời mẫu; bạn trả lời theo ý mình.";
     } else if (isGuest) {
       startSessionHint.textContent = "Bản xem trước giới hạn 3 lượt.";
     } else {
@@ -325,7 +332,7 @@ function updateLanguageView(lang: string) {
   if (welcomeSubtext) {
     welcomeSubtext.textContent =
       currentPracticeMode === "read-aloud"
-        ? "Chọn một chủ đề để AI tạo câu mẫu, sau đó đọc thành tiếng để được chấm điểm."
+        ? "Chọn chủ đề, nghe câu hỏi, xem câu trả lời mẫu rồi trả lời theo cách của bạn."
         : meta.subtext;
   }
 }
@@ -395,7 +402,7 @@ function setupMobileStepper() {
       e.preventDefault();
       if (currentPracticeMode === "read-aloud") {
         if (isGuest) {
-          showToast("Đăng nhập để tạo câu đọc và chấm điểm bằng AI.");
+          showToast("Đăng nhập để tạo câu hỏi và nhận góp ý của AI.");
           return;
         }
         goToMobileChat(false);
@@ -414,10 +421,6 @@ function setupMobileStepper() {
       document.body.setAttribute("data-mobile-step", "setup");
     });
   }
-}
-
-function setupReadingPrompt() {
-  readingPromptButton?.addEventListener("click", () => void requestReadingPrompt());
 }
 
 function goToMobileChat(focusComposer = true) {
@@ -448,6 +451,7 @@ async function startNewPracticeSession(initialAiPrompt?: string): Promise<boolea
       : await createChatConversation({
           title: sessionTitle,
           language_code: getSupportedChatLanguage(currentLanguage),
+          practice_mode: currentPracticeMode,
         });
 
     activeConversation = conversation;
@@ -500,14 +504,12 @@ async function requestReadingPrompt(): Promise<void> {
     showToast("Không tìm thấy buổi luyện tập đang mở.");
     return;
   }
-
   const conversation = activeConversation;
   isGeneratingReadingPrompt = true;
-  if (readingPromptButton) readingPromptButton.disabled = true;
   if (messageInput) messageInput.disabled = true;
   if (sendButton) sendButton.disabled = true;
   if (voiceButton) voiceButton.disabled = true;
-  if (readingPromptStatus) readingPromptStatus.textContent = "AI đang tạo câu đọc theo chủ đề...";
+  if (readingPromptStatus) readingPromptStatus.textContent = "AI đang tạo câu hỏi theo chủ đề...";
   if (readPracticePanel && messagesElement) {
     messagesElement.append(readPracticePanel);
     readPracticePanel.hidden = false;
@@ -517,22 +519,27 @@ async function requestReadingPrompt(): Promise<void> {
   try {
     const response = await generateChatReadingPrompt(conversation.id);
     if (activeConversation?.id !== conversation.id) return;
-    const sentence = response.sentence.trim();
-    if (!sentence) throw new Error("AI chưa trả về câu hỏi hợp lệ.");
+    if (!response.question.trim() || !response.sample_answer.trim()) {
+      throw new Error("AI chưa trả về câu hỏi và câu trả lời mẫu hợp lệ.");
+    }
 
     document.getElementById("welcomeCard")?.remove();
-    readAloudPractice.reset();
     if (readPracticePanel && messagesElement) messagesElement.append(readPracticePanel);
-    readAloudPractice.setSentence(sentence, conversation.language_code, conversation.id);
-    if (readingPromptStatus) readingPromptStatus.textContent = `Câu đọc theo chủ đề “${conversation.title}” đã sẵn sàng.`;
+    const newTurn = {
+      ...response,
+      transcript: null,
+      ai_feedback: null,
+    };
+    readAloudPractice.addTurn(newTurn, conversation.language_code, conversation.id);
+    await readAloudPractice.speakQuestion(newTurn);
+    if (readingPromptStatus) readingPromptStatus.textContent = `Câu hỏi theo chủ đề “${conversation.title}” đã sẵn sàng.`;
     scrollToBottom();
   } catch (error) {
     const message = getErrorMessage(error);
-    if (readingPromptStatus) readingPromptStatus.textContent = `Không tạo được câu đọc: ${message}`;
-    showToast(`Không tạo được câu đọc: ${message}`);
+    if (readingPromptStatus) readingPromptStatus.textContent = `Không tạo được câu hỏi: ${message}`;
+    showToast(`Không tạo được câu hỏi: ${message}`);
   } finally {
     isGeneratingReadingPrompt = false;
-    if (readingPromptButton) readingPromptButton.disabled = false;
     if (messageInput) messageInput.disabled = !isSupportedChatLanguage(currentLanguage);
     if (voiceButton) voiceButton.disabled = !isSupportedChatLanguage(currentLanguage);
     if (sendButton) {
@@ -705,13 +712,8 @@ async function handleSpokenAudio(blob: Blob) {
     if (!activeConversation && !(await startNewPracticeSession())) return;
     if (!activeConversation) throw new Error("Không tìm thấy buổi luyện tập đang mở.");
 
-    if (voiceStatus) voiceStatus.textContent = "Đang nhận diện giọng nói...";
-    const result = await transcribeChatAudio(activeConversation.id, blob);
-    const transcript = result.transcript.trim();
-    if (!transcript) throw new Error("Chưa nhận diện được lời nói. Hãy thử ghi âm lại.");
-
-    if (voiceStatus) voiceStatus.textContent = "Đã nhận diện; đang gửi tin nhắn...";
-    const sent = await sendMessage(transcript);
+    if (voiceStatus) voiceStatus.textContent = "Đang xử lý giọng nói...";
+    const sent = await sendMessage("", blob);
     if (voiceStatus) {
       voiceStatus.textContent = sent
         ? "Đã gửi tin nhắn bằng giọng nói."
@@ -720,7 +722,7 @@ async function handleSpokenAudio(blob: Blob) {
   } catch (error) {
     const message = getErrorMessage(error);
     if (voiceStatus) voiceStatus.textContent = `Không thể gửi giọng nói: ${message}`;
-    showToast(`Không thể nhận diện giọng nói: ${message}`);
+    showToast(`Không thể gửi giọng nói: ${message}`);
   }
 }
 
@@ -780,9 +782,9 @@ function triggerAutoResize(textarea: HTMLTextAreaElement) {
   textarea.style.height = `${newHeight}px`;
 }
 
-async function sendMessage(content: string): Promise<boolean> {
+async function sendMessage(content: string, voiceAudio?: Blob): Promise<boolean> {
   const text = content.trim();
-  if (!text || isSendingMessage || isGeneratingReadingPrompt) return false;
+  if ((!text && !voiceAudio) || isSendingMessage || isGeneratingReadingPrompt) return false;
 
   if (isGuest && guestTrialCount >= MAX_GUEST_TRIALS) {
     if (guestLimitModal) guestLimitModal.hidden = false;
@@ -834,7 +836,9 @@ async function sendMessage(content: string): Promise<boolean> {
     }
 
     if (!conversationId) throw new Error("Không tìm thấy buổi luyện tập đang mở.");
-    const response = await sendChatMessage(conversationId, text);
+    const response = voiceAudio
+      ? await sendVoiceChatMessage(conversationId, voiceAudio)
+      : await sendChatMessage(conversationId, text);
     document.getElementById("welcomeCard")?.remove();
     appendUserMessage(response.user_message);
     appendAiMessage(
@@ -918,7 +922,9 @@ function appendAiMessage(text: string, quickReplies?: string[], feedback?: strin
   // TTS
   const ttsBtn = row.querySelector<HTMLButtonElement>(".btn-tts");
   if (ttsBtn) {
-    ttsBtn.addEventListener("click", () => speakText(text, currentLanguage));
+    ttsBtn.addEventListener("click", () => {
+      void speakText(text, currentLanguage);
+    });
   }
 
   const feedbackToggle = row.querySelector<HTMLButtonElement>(".feedback-toggle-btn");
@@ -955,8 +961,65 @@ function appendAiMessage(text: string, quickReplies?: string[], feedback?: strin
   scrollToBottom();
 }
 
+function stopSpeechPlayback(): number {
+  speechRequestId++;
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+
+  const audio = activeSpeechAudio;
+  activeSpeechAudio = null;
+  if (audio) {
+    audio.onended = null;
+    audio.onerror = null;
+    audio.pause();
+    audio.removeAttribute("src");
+    audio.load();
+  }
+  if (activeSpeechUrl) {
+    URL.revokeObjectURL(activeSpeechUrl);
+    activeSpeechUrl = null;
+  }
+  return speechRequestId;
+}
+
 function renderAiFeedback(feedback?: string | null): string {
-  if (!feedback?.trim()) return "";
+  const display = getAiFeedbackDisplay(feedback);
+  if (display.kind === "empty") return "";
+
+  if (display.kind === "text") {
+    return `
+      <div class="ai-feedback-accordion" role="region" aria-label="Góp ý từ gia sư AI">
+        <button type="button" class="feedback-toggle-btn" aria-expanded="false">
+          <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i>
+          <span>Xem góp ý từ gia sư</span>
+          <i class="fa-solid fa-chevron-down toggle-icon" aria-hidden="true"></i>
+        </button>
+        <div class="feedback-content" hidden><p>${escapeHtml(display.text)}</p></div>
+      </div>
+    `;
+  }
+
+  const structured = display.feedback;
+  const rows = [
+    structured.grammar_error ? `
+      <div class="feedback-row">
+        <div class="feedback-row-header"><span class="row-title"><i class="fa-solid fa-circle-exclamation"></i> Lỗi ngữ pháp</span></div>
+        <p>${escapeHtml(structured.grammar_error)}</p>
+      </div>
+    ` : "",
+    structured.corrected_sentence ? `
+      <div class="feedback-row">
+        <div class="feedback-row-header"><span class="row-title"><i class="fa-solid fa-check"></i> Câu sửa đúng</span></div>
+        <p>${escapeHtml(structured.corrected_sentence)}</p>
+      </div>
+    ` : "",
+    structured.natural_suggestion ? `
+      <div class="feedback-row">
+        <div class="feedback-row-header"><span class="row-title"><i class="fa-solid fa-comment-dots"></i> Gợi ý cách nói tự nhiên hơn</span></div>
+        <p>${escapeHtml(structured.natural_suggestion)}</p>
+      </div>
+    ` : "",
+  ].filter(Boolean).join("");
+
   return `
     <div class="ai-feedback-accordion" role="region" aria-label="Góp ý từ gia sư AI">
       <button type="button" class="feedback-toggle-btn" aria-expanded="false">
@@ -964,21 +1027,74 @@ function renderAiFeedback(feedback?: string | null): string {
         <span>Xem góp ý từ gia sư</span>
         <i class="fa-solid fa-chevron-down toggle-icon" aria-hidden="true"></i>
       </button>
-      <div class="feedback-content" hidden><p>${escapeHtml(feedback)}</p></div>
+      <div class="feedback-content" hidden>
+        ${rows}
+      </div>
     </div>
   `;
 }
 
-function speakText(text: string, lang: string) {
+function speakWithBrowser(text: string, lang: string): void {
   if (!("speechSynthesis" in window)) {
-    showToast("Trình duyệt không hỗ trợ đọc giọng nói TTS.");
+    showToast("Dịch vụ giọng đọc và giọng đọc của trình duyệt đều không khả dụng.");
     return;
   }
-  window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   const code = LANGUAGE_META[lang]?.promptLang || "en-US";
   utterance.lang = code;
   window.speechSynthesis.speak(utterance);
+}
+
+async function speakText(text: string, lang: string): Promise<void> {
+  const requestId = stopSpeechPlayback();
+  let browserFallbackShown = false;
+  const useBrowserFallback = (error?: unknown) => {
+    if (requestId !== speechRequestId || browserFallbackShown) return;
+    browserFallbackShown = true;
+    if (error) {
+      console.warn("Edge TTS failed; using browser speech synthesis.", error);
+      showToast("Dịch vụ giọng đọc chưa khả dụng; đang dùng giọng trình duyệt.");
+    }
+    speakWithBrowser(text, lang);
+  };
+
+  if (isLearnerAuthenticated()) {
+    try {
+      const audioBlob = await synthesizeChatSpeech(text, lang);
+      if (requestId !== speechRequestId) return;
+
+      const url = URL.createObjectURL(audioBlob);
+      const audio = new Audio(url);
+      activeSpeechAudio = audio;
+      activeSpeechUrl = url;
+      const releaseAudio = () => {
+        audio.onended = null;
+        audio.onerror = null;
+        if (activeSpeechAudio === audio) activeSpeechAudio = null;
+        if (activeSpeechUrl === url) {
+          URL.revokeObjectURL(url);
+          activeSpeechUrl = null;
+        }
+      };
+      audio.onended = releaseAudio;
+      audio.onerror = () => {
+        releaseAudio();
+        useBrowserFallback(new Error("Không phát được audio TTS."));
+      };
+      try {
+        await audio.play();
+        return;
+      } catch (error) {
+        releaseAudio();
+        throw error;
+      }
+    } catch (error) {
+      useBrowserFallback(error);
+      return;
+    }
+  }
+
+  useBrowserFallback();
 }
 
 function generateAiResponse(userText: string, lang: string): string {
@@ -1202,23 +1318,42 @@ async function openConversation(conversationId: string) {
   try {
     historyStatus.textContent = "Đang tải hội thoại...";
     historyStatus.hidden = false;
-    const messages = await listConversationMessages(conversationId);
+    const practiceMode = conversation.practice_mode ?? "free-chat";
+    const [messages, readingTurns] = await Promise.all([
+      practiceMode === "read-aloud" ? Promise.resolve([]) : listConversationMessages(conversationId),
+      practiceMode === "read-aloud" ? listReadingPracticeTurns(conversationId) : Promise.resolve([]),
+    ]);
 
-    setPracticeMode("free-chat");
+    setPracticeMode(practiceMode);
     activeConversation = conversation;
-    activeSessionMode = "free-chat";
+    activeSessionMode = practiceMode;
     isSessionStarted = true;
-    readAloudPractice.reset();
     currentTopic = conversation.title;
     setSelectedLanguage(languageFromCode(conversation.language_code));
     if (conversationTitle) conversationTitle.textContent = conversation.title;
     if (messagesElement) messagesElement.replaceChildren();
     document.getElementById("welcomeCard")?.remove();
 
-    totalMessagesExchanged = messages.filter((message) => message.sender_type === "user").length;
-    for (const message of messages) {
-      if (message.sender_type === "user") appendUserMessage(message.content);
-      else appendAiMessage(message.content, undefined, message.ai_feedback);
+    if (practiceMode === "read-aloud") {
+      if (readPracticePanel && messagesElement) messagesElement.append(readPracticePanel);
+      readAloudPractice.setTurns(
+        readingTurns,
+        conversation.language_code,
+        conversation.id,
+      );
+      if (readingPromptStatus) {
+        readingPromptStatus.textContent = readAloudPractice.hasPendingTurn()
+          ? "Đọc câu trả lời mẫu thành tiếng để AI chấm phát âm."
+          : "AI đang chuẩn bị câu hỏi tiếp theo...";
+      }
+      totalMessagesExchanged = readingTurns.filter((turn) => turn.transcript).length;
+    } else {
+      readAloudPractice.reset();
+      totalMessagesExchanged = messages.filter((message) => message.sender_type === "user").length;
+      for (const message of messages) {
+        if (message.sender_type === "user") appendUserMessage(message.content);
+        else appendAiMessage(message.content, undefined, message.ai_feedback);
+      }
     }
 
     const supported = isSupportedChatLanguage(currentLanguage);
@@ -1235,6 +1370,9 @@ async function openConversation(conversationId: string) {
     document.body.setAttribute("data-mobile-step", "chat");
     renderHistoryItems(conversationHistory);
     scrollToBottom();
+    if (practiceMode === "read-aloud") {
+      void requestReadingPrompt();
+    }
   } catch (error) {
     historyStatus.textContent = `Không tải được hội thoại: ${getErrorMessage(error)}`;
     historyStatus.hidden = false;
