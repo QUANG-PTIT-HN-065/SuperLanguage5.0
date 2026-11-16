@@ -1639,6 +1639,10 @@ class SlanguageDungeonTree {
   private readingArticleContent: HTMLElement | null = null;
 
   constructor() {
+    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+      window.location.replace('../login/index.html');
+      return;
+    }
     this.checkLessonAccess();
     this.initStorage();
     this.cacheDom();
@@ -1668,6 +1672,34 @@ class SlanguageDungeonTree {
   }
 
   private initStorage(): void {
+    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
+    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
+
+    let savedLang = (localStorage.getItem('slanguage_active_language') || localStorage.getItem('slanguage_current_lang') || 'ja') as 'ja' | 'en' | 'vi';
+    if (savedLang === nativeLang) {
+      savedLang = nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja');
+      localStorage.setItem('slanguage_active_language', savedLang);
+      localStorage.setItem('slanguage_current_lang', savedLang);
+    }
+    this.currentLang = savedLang;
+
+    // Filter header language dropdown & roadmap tabs to exclude native language
+    document.querySelectorAll<HTMLElement>('.lang-dropdown-item').forEach(item => {
+      if (item.getAttribute('data-lang') === nativeLang) {
+        item.style.display = 'none';
+      } else {
+        item.style.display = 'flex';
+      }
+    });
+
+    document.querySelectorAll<HTMLElement>('#treeLanguageTabs .tree-tab-btn').forEach(btn => {
+      if (btn.getAttribute('data-lang') === nativeLang) {
+        btn.style.display = 'none';
+      } else {
+        btn.style.display = 'inline-flex';
+      }
+    });
+
     const savedXP = localStorage.getItem('slanguage_user_xp');
     if (savedXP) {
       this.totalXP = parseInt(savedXP, 10) || 2450;
@@ -1718,18 +1750,63 @@ class SlanguageDungeonTree {
   }
 
   private initEventListeners(): void {
-    // Language Dropdown
+    const isLoggedIn = localStorage.getItem('slanguage_is_logged_in') === 'true';
+    if (isLoggedIn) {
+      document.body.classList.add('user-authenticated');
+      document.body.classList.remove('user-guest');
+    } else {
+      document.body.classList.add('user-guest');
+      document.body.classList.remove('user-authenticated');
+    }
+
+    const logoutBtn = document.getElementById('navLogoutItem');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        localStorage.setItem('slanguage_is_logged_in', 'false');
+      });
+    }
+
+    // Language & User Dropdowns
     const langDropdownBtn = document.getElementById('langDropdownBtn');
     const langDropdown = document.getElementById('langDropdown');
+    const userDropdownBtn = document.getElementById('userDropdownBtn');
+    const userDropdown = document.getElementById('userDropdown');
+
     if (langDropdownBtn && langDropdown) {
       langDropdownBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         langDropdown.classList.toggle('active');
-      });
-      document.addEventListener('click', () => {
-        langDropdown.classList.remove('active');
+        langDropdown.classList.toggle('open');
+        if (userDropdown) {
+          userDropdown.classList.remove('active');
+          userDropdown.classList.remove('open');
+        }
       });
     }
+
+    if (userDropdownBtn && userDropdown) {
+      userDropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        userDropdown.classList.toggle('active');
+        userDropdown.classList.toggle('open');
+        if (langDropdown) {
+          langDropdown.classList.remove('active');
+          langDropdown.classList.remove('open');
+        }
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      const target = e.target as Node;
+      if (langDropdown && !langDropdown.contains(target)) {
+        langDropdown.classList.remove('active');
+        langDropdown.classList.remove('open');
+      }
+      if (userDropdown && !userDropdown.contains(target)) {
+        userDropdown.classList.remove('active');
+        userDropdown.classList.remove('open');
+      }
+    });
 
     // Language Dropdown Items
     document.querySelectorAll('.lang-dropdown-item').forEach(item => {
@@ -1775,8 +1852,14 @@ class SlanguageDungeonTree {
   }
 
   public switchLanguage(lang: 'ja' | 'en' | 'vi'): void {
+    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
+    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
+    if (lang === nativeLang) return;
+
     if (this.currentLang === lang) return;
     this.currentLang = lang;
+    localStorage.setItem('slanguage_active_language', lang);
+    localStorage.setItem('slanguage_current_lang', lang);
 
     const langNames: Record<string, string> = {
       ja: 'Tiếng Nhật (JLPT N5)',
@@ -1784,9 +1867,9 @@ class SlanguageDungeonTree {
       vi: 'Tiếng Việt (Bản Xứ & Ứng Dụng)'
     };
     const flagImgs: Record<string, string> = {
-      ja: '../../../assets/flags/flag-jp.png',
-      en: '../../../assets/flags/flag-en.png',
-      vi: '../../../assets/flags/flag-vn.png'
+      ja: '../assets/flags/flag-jp.png',
+      en: '../assets/flags/flag-en.png',
+      vi: '../assets/flags/flag-vn.png'
     };
 
     const currentLangLabel = document.getElementById('currentLangLabel');
@@ -2465,7 +2548,24 @@ class SlanguageDungeonTree {
       } else {
         // NGƯỜI DÙNG BẤM "HOÀN THÀNH" -> CHINH PHỤC TOÀN BỘ ẢI DUNGEON!
         node.status = 'mastered';
-        this.totalXP += node.xpReward;
+        
+        // Kiểm tra hiệu ứng Boost XP đang kích hoạt (không cộng dồn)
+        let awardedXP = node.xpReward;
+        const activeExpBoost = localStorage.getItem('slanguage_active_exp_boost');
+        let boostNote = '';
+        if (activeExpBoost === 'double_xp') {
+          awardedXP = node.xpReward * 2;
+          boostNote = ' (x2 XP Gấp Đôi!)';
+          localStorage.removeItem('slanguage_active_exp_boost');
+          localStorage.removeItem('slanguage_xp_boost_active');
+        } else if (activeExpBoost === 'boost_10') {
+          awardedXP = Math.round(node.xpReward * 1.1);
+          boostNote = ' (+10% Boost XP!)';
+          localStorage.removeItem('slanguage_active_exp_boost');
+          localStorage.removeItem('slanguage_xp_boost_active');
+        }
+
+        this.totalXP += awardedXP;
         localStorage.setItem('slanguage_user_xp', this.totalXP.toString());
 
         if (this.currentHearts < this.maxHearts) {
@@ -2477,7 +2577,7 @@ class SlanguageDungeonTree {
         this.unlockNextNodes(node);
         this.renderTree();
 
-        this.showToast(`Tuyệt đỉnh! Đã hoàn thành ải, nhận +${node.xpReward} XP. Các nhánh đường tiếp theo đã mở khóa!`);
+        this.showToast(`Tuyệt đỉnh! Đã hoàn thành ải, nhận +${awardedXP} XP${boostNote}. Các nhánh đường tiếp theo đã mở khóa!`);
         this.closeModal();
       }
     }

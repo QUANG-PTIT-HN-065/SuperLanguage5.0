@@ -3072,3 +3072,28 @@ body.user-guest .lang-dropdown {
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
+
+.dashboard-api-status {
+  margin: 12px auto;
+  max-width: 1280px;
+  padding: 10px 16px;
+  border: 1px solid #9bd9cb;
+  border-radius: 10px;
+  background: #e8f8f4;
+  color: #174f46;
+}
+
+.dashboard-api-status[data-state="error"] {
+  border-color: #e5a5b1;
+  background: #fff0f2;
+  color: #8d1930;
+}
+
+.rank-avatar:not(img) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-ocean-tint);
+  color: var(--color-ocean);
+  font-weight: 700;
+}

@@ -11,11 +11,16 @@
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../styles/select-lesson/style.css">
-  <link rel="stylesheet" href="../../styles/shared/mobile-responsive.css">
+  <!-- Auth Guard: Chỉ cho phép truy cập khi đã đăng nhập, ngược lại điều hướng về Trang chủ với vai trò Guest -->
+  <script>
+    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+      window.location.replace('../login/index.html');
+    }
+  </script>
 </head>
-<body>
+<body class="user-authenticated">
 
-  <!-- ================= TOP NAVBAR ================= -->
+      <!-- ================= TOP NAVBAR ================= -->
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
@@ -27,9 +32,10 @@
         <nav>
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="../learning/index.html">Học tập</a></li>
+            <li><a href="./index.html" class="active">Học tập</a></li>
             <li><a href="../vocabulary/index.html">Luyện từ vựng</a></li>
-            <li><a href="../chat/index.html">Luyện tập với AI</a></li>
+            <li><a href="../ai-practice/index.html">Luyện tập với AI</a></li>
+            <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
           </ul>
         </nav>
       </div>
@@ -48,7 +54,7 @@
           <span id="headerHeartsVal">5/5</span>
         </div>
 
-        <!-- 3-Language Dropdown Selector -->
+        <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
         <div class="lang-dropdown auth-only" id="langDropdown">
           <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
             <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
@@ -74,12 +80,12 @@
           </div>
         </div>
 
-        <!-- User Account Dropdown -->
+        <!-- User Account Dropdown (Shown when logged in) -->
         <div class="user-dropdown auth-only" id="userDropdown">
           <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini" id="headerAvatar">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini">
             <div class="user-info-text">
-              <div class="name" id="headerUserName">Vua Xứ Thanh</div>
+              <div class="name">Vua Xứ Thanh</div>
               <div class="role">Học viên</div>
             </div>
             <i class="fa-solid fa-chevron-down user-chevron"></i>
@@ -92,11 +98,18 @@
                 <span class="sub">Hồ sơ & cài đặt tài khoản</span>
               </div>
             </a>
-            <a href="../profile/index.html#statisticsHeading" class="user-dropdown-item" role="menuitem">
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
               <div class="menu-item-text">
                 <span class="title">Tiến độ học tập</span>
                 <span class="sub">Thống kê XP & chuỗi ngày</span>
+              </div>
+            </a>
+                        <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Shop quy đổi</span>
+                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
               </div>
             </a>
             <div class="user-dropdown-divider"></div>
@@ -108,6 +121,12 @@
               </div>
             </a>
           </div>
+        </div>
+
+        <!-- Guest Auth Buttons (Shown when NOT logged in) -->
+        <div class="guest-nav-auth guest-only" id="guestNavAuth">
+          <a href="../login/index.html" class="nav-auth-login">Đăng nhập</a>
+          <a href="../register/index.html" class="nav-auth-register">Đăng ký</a>
         </div>
       </div>
     </div>
@@ -195,51 +214,104 @@
     <span class="toast-text" id="toastText">Đã chọn bài học!</span>
   </div>
 
-  <!-- ================= FOOTER ================= -->
-  <footer class="footer">
+    <footer class="footer">
     <div class="footer-container">
-      <div class="footer-col brand-col">
+      <!-- Cột 1: Giới thiệu thương hiệu -->
+      <div class="footer-col">
         <div class="brand-logo" style="margin-bottom: 14px;">
           <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
-        <p style="color: #94a3b8; font-size: 0.92rem; line-height: 1.6; margin-bottom: 16px;">
-          Hệ thống học ngôn ngữ trực tuyến phân nhánh chuyên sâu 3 trong 1: Tiếng Anh, Tiếng Nhật & Tiếng Việt.
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
         </p>
       </div>
 
+      <!-- Cột 2: Chương trình học -->
       <div class="footer-col">
-        <h4>Khóa Học</h4>
+        <h4>Chương trình học</h4>
         <ul>
-          <li><a href="./index.html">Danh Sách Buổi Học</a></li>
-          <li><a href="../roadmap/index.html">Bản Đồ Hầm Ngục</a></li>
-          <li><a href="../vocabulary/index.html">Sổ Tay Từ Vựng</a></li>
-          <li><a href="../chat/index.html">Luyện Tập Với AI</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
         </ul>
       </div>
 
+      <!-- Cột 3: Thông tin liên hệ -->
       <div class="footer-col">
-        <h4>Tính Năng Học Tập</h4>
-        <ul>
-          <li><a href="./index.html">Lộ Trình 16 Buổi</a></li>
-          <li><a href="../roadmap/index.html">Thử Thách Đấu Boss</a></li>
-          <li><a href="../profile/index.html">Theo Dõi Tiến Độ</a></li>
-          <li><a href="../profile/index.html#statisticsHeading">Thống Kê Học Tập</a></li>
+        <h4>Thông tin liên hệ</h4>
+        <ul class="footer-contact-list">
+          <li>
+            <i class="fa-solid fa-phone"></i>
+            <div>
+              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <a href="tel:19006868" class="contact-val">1900 6868</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-envelope"></i>
+            <div>
+              <span class="contact-label">Email học vụ:</span>
+              <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-location-dot"></i>
+            <div>
+              <span class="contact-label">Trụ sở học thuật:</span>
+              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-clock"></i>
+            <div>
+              <span class="contact-label">Thời gian làm việc:</span>
+              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+            </div>
+          </li>
         </ul>
       </div>
 
+      <!-- Cột 4: Cam kết chất lượng -->
       <div class="footer-col">
-        <h4>Hỗ Trợ & Điều Khoản</h4>
-        <ul>
-          <li><a href="../terms/index.html">Điều khoản người dùng</a></li>
-          <li><a href="../terms/index.html">Chính sách bảo mật</a></li>
-          <li><a href="../home/index.html">Trung tâm trợ giúp</a></li>
+        <h4>Cam kết chất lượng</h4>
+        <ul class="footer-commit-list">
+          <li>
+            <i class="fa-solid fa-shield-halved"></i>
+            <div>
+              <strong>Chuẩn đầu ra quốc tế</strong>
+              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-rotate-left"></i>
+            <div>
+              <strong>Cam kết hoàn học phí</strong>
+              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-user-graduate"></i>
+            <div>
+              <strong>Đồng hành 1-1 chuyên sâu</strong>
+              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-infinity"></i>
+            <div>
+              <strong>Quyền lợi học trọn đời</strong>
+              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+            </div>
+          </li>
         </ul>
       </div>
     </div>
 
     <div class="footer-bottom">
-      <p>&copy; 2026 Slanguage Inc. Toàn bộ bản quyền được bảo lưu. Thiết kế & phát triển cho Học viên.</p>
+      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.</div>
+      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
     </div>
   </footer>
 

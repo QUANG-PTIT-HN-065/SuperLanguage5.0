@@ -37,7 +37,7 @@ const languagesDB: Record<string, LanguageData> = {
     name: 'Tiếng Nhật',
     nativeName: '日本語',
     flag: '🇯🇵',
-    flagImg: '../../../assets/flags/flag-jp.png',
+    flagImg: '../assets/flags/flag-jp.png',
     courseTitle: 'Tiếng Nhật Sơ Cấp JLPT N5',
     currentLesson: 'Bài 14: Gọi món trong quán ăn Tokyo & Mẫu câu V-tai desu',
     lessonProgress: 72,
@@ -61,7 +61,7 @@ const languagesDB: Record<string, LanguageData> = {
     name: 'Tiếng Anh',
     nativeName: 'English',
     flag: '🇺🇸',
-    flagImg: '../../../assets/flags/flag-us.png',
+    flagImg: '../assets/flags/flag-us.png',
     courseTitle: 'English for Global Workplace & Fluency',
     currentLesson: 'Unit 9: Business Negotiation & Idiomatic Expressions',
     lessonProgress: 85,
@@ -85,7 +85,7 @@ const languagesDB: Record<string, LanguageData> = {
     name: 'Tiếng Việt',
     nativeName: 'Tiếng Việt',
     flag: '🇻🇳',
-    flagImg: '../../../assets/flags/flag-vn.png',
+    flagImg: '../assets/flags/flag-vn.png',
     courseTitle: 'Tiếng Việt Ứng Dụng & Giao Tiếp Đời Sống',
     currentLesson: 'Bài 6: Văn hóa ứng xử & Thành ngữ thường dùng',
     lessonProgress: 94,
@@ -108,8 +108,6 @@ const languagesDB: Record<string, LanguageData> = {
 
 class SlanguageDashboard {
   private currentLang: 'en' | 'ja' | 'vi' = 'ja';
-  private currentXP: number = 2450;
-  private currentStreak: number = 14;
   private isLoggedIn: boolean = false;
   private langCarouselTimer: number | null = null;
   private currentSlideIndex: number = 0;
@@ -144,22 +142,11 @@ class SlanguageDashboard {
     // Filter header language dropdown to exclude user's native language
     this.filterHeaderLanguageDropdown();
 
-    // Check saved XP
-    const savedXP = localStorage.getItem('slanguage_user_xp');
-    if (savedXP) {
-      this.currentXP = parseInt(savedXP, 10);
-    }
-    const xpBadge = document.getElementById('headerXPVal');
-    if (xpBadge) {
-      xpBadge.textContent = `${this.currentXP.toLocaleString()} XP`;
-    }
-
     // Check saved user name and sync with Header & Leaderboard
-    const savedUserName = localStorage.getItem('slanguage_user_name') || 'Vua Xứ Thanh';
+    const savedUserName = localStorage.getItem('slanguage_user_name') || 'Học viên';
     document.querySelectorAll('.user-info-text .name').forEach(el => {
       el.textContent = savedUserName;
     });
-    this.updateUserRankDisplay();
 
     this.bindEvents();
     this.render();
@@ -287,8 +274,7 @@ class SlanguageDashboard {
 
     if (btnKnow) {
       btnKnow.addEventListener('click', () => {
-        this.addXP(15);
-        this.showToast('Tuyệt vời! +15 XP vào kho báu học tập 🎉');
+        this.showToast('Đã ghi nhận lựa chọn. Điểm sẽ cập nhật sau khi kết quả được lưu.');
         if (flashcardBox) flashcardBox.classList.remove('flipped');
       });
     }
@@ -361,6 +347,9 @@ class SlanguageDashboard {
     const protectedKeywords = [
       'roadmap',
       'vocabulary',
+      'ai-practice',
+      'leaderboard',
+      'shop',
       'select-lesson',
       'profile'
     ];
@@ -531,87 +520,6 @@ class SlanguageDashboard {
     }
   }
 
-  private addXP(points: number): void {
-    this.currentXP += points;
-    localStorage.setItem('slanguage_user_xp', this.currentXP.toString());
-    const xpBadge = document.getElementById('headerXPVal');
-    if (xpBadge) {
-      xpBadge.textContent = `${this.currentXP.toLocaleString()} XP`;
-    }
-    this.updateUserRankDisplay();
-  }
-
-  private updateUserRankDisplay(): void {
-    const listEl = document.getElementById('homeRankingList') || document.querySelector('.sidebar-card .ranking-list');
-    const userHeaderName = document.querySelector('.user-info-text .name')?.textContent?.trim();
-    const currentUserName = localStorage.getItem('slanguage_user_name') || userHeaderName || 'Vua Xứ Thanh';
-    const miniAvatar = document.querySelector('.user-avatar-mini') as HTMLImageElement;
-    const userAvatar = (miniAvatar && miniAvatar.src) ? miniAvatar.src : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80';
-
-    if (!listEl) return;
-
-    interface HomeRankItem {
-      name: string;
-      avatar: string;
-      xp: number;
-      isCurrentUser: boolean;
-    }
-
-    const candidates: HomeRankItem[] = [
-      {
-        name: 'Minh Hoàng',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-        xp: 3120,
-        isCurrentUser: false
-      },
-      {
-        name: 'Lan Phương',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
-        xp: 2890,
-        isCurrentUser: false
-      },
-      {
-        name: 'Kenji Sato',
-        avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
-        xp: 2110,
-        isCurrentUser: false
-      },
-      {
-        name: `Bạn (${currentUserName})`,
-        avatar: userAvatar,
-        xp: this.currentXP,
-        isCurrentUser: true
-      }
-    ];
-
-    // Sắp xếp giảm dần theo điểm kinh nghiệm XP (Điểm cao đứng trước, điểm thấp đứng sau)
-    candidates.sort((a, b) => b.xp - a.xp);
-
-    listEl.innerHTML = '';
-    candidates.forEach((learner, index) => {
-      const rankNum = index + 1;
-      let badgeClass = '';
-      if (rankNum === 1) badgeClass = 'gold';
-      else if (rankNum === 2) badgeClass = 'silver';
-      else if (rankNum === 3) badgeClass = 'bronze';
-
-      const itemDiv = document.createElement('div');
-      itemDiv.className = `rank-item${learner.isCurrentUser ? ' is-user' : ''}`;
-      if (learner.isCurrentUser) {
-        itemDiv.id = 'currentUserRankItem';
-      }
-
-      itemDiv.innerHTML = `
-        <span class="rank-num ${badgeClass}" ${learner.isCurrentUser ? 'id="currentUserRankNum"' : ''}>${rankNum}</span>
-        <img src="${learner.avatar}" alt="${learner.name}" class="rank-avatar" ${learner.isCurrentUser ? 'id="currentUserRankAvatar"' : ''}>
-        <span class="rank-name" ${learner.isCurrentUser ? 'id="currentUserRankName"' : ''}>${learner.name}</span>
-        <span class="rank-xp" ${learner.isCurrentUser ? 'id="currentUserRankXP"' : ''}>${learner.xp.toLocaleString()} XP</span>
-      `;
-
-      listEl.appendChild(itemDiv);
-    });
-  }
-
   private render(): void {
     const data = languagesDB[this.currentLang];
     if (!data) return;
@@ -695,8 +603,6 @@ class SlanguageDashboard {
     const flashcardBox = document.getElementById('flashcardBox');
     if (flashcardBox) flashcardBox.classList.remove('flipped');
 
-    // Keep Leaderboard user rank item in sync
-    this.updateUserRankDisplay();
   }
 
   private openQuizModal(): void {
@@ -739,11 +645,10 @@ class SlanguageDashboard {
       if (feedback) {
         feedback.innerHTML = `
           <div style="background: #E0F2FE; border: 1px solid #0077B6; color: #0077B6; padding: 14px; border-radius: 12px; margin-top: 14px; font-weight: 700;">
-            <i class="fa-solid fa-circle-check"></i> Chính xác tuyệt đối! +20 XP đã được cộng!
+            <i class="fa-solid fa-circle-check"></i> Chính xác tuyệt đối!
           </div>
         `;
       }
-      this.addXP(20);
     } else {
       btnElement.style.background = '#FDE8EC';
       btnElement.style.borderColor = '#DC143C';
@@ -799,7 +704,7 @@ class SlanguageDashboard {
 
     toast.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(255, 183, 3, 0.25);">
-        <img src="../../../assets/logo.png" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));">
+        <img src="../assets/logo.png" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));">
         <span style="font-size: 0.85rem; font-weight: 700; color: #FFB703; letter-spacing: 0.2px;">S Language thông báo:</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px; font-size: 0.96rem; font-weight: 700; color: #ffffff;">

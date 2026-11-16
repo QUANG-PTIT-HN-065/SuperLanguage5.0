@@ -11,9 +11,6 @@
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../styles/home/style.css">
-  <link rel="stylesheet" href="../../styles/shared/user-experience.css">
-  <link rel="stylesheet" href="../../styles/shared/learner-header.css">
-  <link rel="stylesheet" href="../../styles/shared/mobile-responsive.css">
 </head>
 <body class="user-guest">
 
@@ -29,9 +26,10 @@
         <nav>
           <ul class="nav-links">
             <li><a href="./index.html" class="active">Trang chủ</a></li>
-            <li><a href="../learning/index.html">Học tập</a></li>
+            <li><a href="../roadmap/index.html">Học tập</a></li>
             <li><a href="../vocabulary/index.html">Luyện từ vựng</a></li>
-            <li><a href="../chat/index.html">Luyện tập với AI</a></li>
+            <li><a href="../ai-practice/index.html">Luyện tập với AI</a></li>
+            <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
           </ul>
         </nav>
       </div>
@@ -39,15 +37,15 @@
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
           <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
-          <span id="headerStreakVal">14 Ngày</span>
+          <span id="headerStreakVal">—</span>
         </div>
         <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
           <i class="fa-solid fa-star"></i>
-          <span id="headerXPVal">2,450 XP</span>
+          <span id="headerXPVal">—</span>
         </div>
         <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
           <i class="fa-solid fa-heart"></i>
-          <span id="headerHeartsVal">5/5</span>
+          <span id="headerHeartsVal">—</span>
         </div>
 
         <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
@@ -94,11 +92,18 @@
                 <span class="sub">Hồ sơ & cài đặt tài khoản</span>
               </div>
             </a>
-            <a href="../profile/index.html#statisticsHeading" class="user-dropdown-item" role="menuitem">
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
               <div class="menu-item-text">
                 <span class="title">Tiến độ học tập</span>
                 <span class="sub">Thống kê XP & chuỗi ngày</span>
+              </div>
+            </a>
+                        <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Shop quy đổi</span>
+                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
               </div>
             </a>
             <div class="user-dropdown-divider"></div>
@@ -122,6 +127,8 @@
   </header>
 
   <!-- ================= MAIN WRAPPER ================= -->
+  <div id="dashboardApiStatus" class="dashboard-api-status" role="status" aria-live="polite" hidden></div>
+
   <main class="main-wrapper">
     <!-- LEFT MAIN COLUMN -->
     <div class="content-left">
@@ -709,7 +716,7 @@
             <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; color: #a4bcc8;">Chuỗi học tập</div>
             <div class="streak-count">
               <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-main">
-              <span>14 Ngày</span>
+              <span id="sidebarStreakValue">— Ngày</span>
             </div>
           </div>
           <div style="text-align: right; font-size: 0.82rem; color: #7AE2CF;">
@@ -762,7 +769,7 @@
           <span style="font-size: 0.78rem; color: var(--color-teal);">Làm mới sau 8h</span>
         </div>
 
-        <div class="quest-list">
+        <div class="quest-list" id="homeDailyQuests" aria-live="polite">
           <div class="quest-item done">
             <div class="quest-check"><i class="fa-solid fa-check"></i></div>
             <div class="quest-details">
@@ -793,7 +800,7 @@
       <div class="sidebar-card auth-only" id="sidebarLeaderboardCard">
         <div class="sidebar-card-title">
           <span><i class="fa-solid fa-trophy"></i> Bảng xếp hạng</span>
-          <span style="font-size: 0.78rem; color: var(--text-muted);">Tuần 44</span>
+          <span id="homeLeaderboardPeriod" style="font-size: 0.78rem; color: var(--text-muted);">Tuần này</span>
         </div>
 
         <div class="ranking-list" id="homeRankingList">
@@ -901,7 +908,7 @@
           <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
           <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
           <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
-          <li><a href="../chat/index.html">Luyện ngữ âm với AI</a></li>
+          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
         </ul>
       </div>
 
@@ -994,7 +1001,7 @@
     </div>
   </div>
 
-  <!-- TypeScript compiled script execution -->
   <script type="module" src="../../types/home/home.ts"></script>
+  <script type="module" src="../../types/home/dashboard.ts"></script>
 </body>
 </html>

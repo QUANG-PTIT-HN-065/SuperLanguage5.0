@@ -11,11 +11,16 @@
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../styles/roadmap/style.css">
-  <link rel="stylesheet" href="../../styles/shared/mobile-responsive.css">
+  <!-- Auth Guard: Chỉ cho phép truy cập khi đã đăng nhập, ngược lại điều hướng về Trang chủ với vai trò Guest -->
+  <script>
+    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+      window.location.replace('../login/index.html');
+    }
+  </script>
 </head>
-<body>
+<body class="user-authenticated">
 
-  <!-- ================= TOP NAVBAR ================= -->
+      <!-- ================= TOP NAVBAR ================= -->
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
@@ -27,29 +32,30 @@
         <nav>
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="../learning/index.html">Học tập</a></li>
+            <li><a href="./index.html" class="active">Học tập</a></li>
             <li><a href="../vocabulary/index.html">Luyện từ vựng</a></li>
-            <li><a href="../chat/index.html">Luyện tập với AI</a></li>
+            <li><a href="../ai-practice/index.html">Luyện tập với AI</a></li>
+            <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
           </ul>
         </nav>
       </div>
 
       <div class="nav-right">
-        <div class="stat-chip streak" title="Chuỗi ngày học liên tục">
+        <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
           <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
-          <span>14 Ngày</span>
+          <span id="headerStreakVal">14 Ngày</span>
         </div>
-        <div class="stat-chip xp" title="Điểm kinh nghiệm tích lũy">
+        <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
           <i class="fa-solid fa-star"></i>
-          <span id="navXPVal">2,450 XP</span>
+          <span id="headerXPVal">2,450 XP</span>
         </div>
-        <div class="stat-chip hearts" title="Năng lượng làm bài (Sinh Mệnh Dungeon)">
-          <i class="fa-solid fa-heart" id="navHeartIcon"></i>
-          <span id="navHeartsVal">5/5</span>
+        <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
+          <i class="fa-solid fa-heart"></i>
+          <span id="headerHeartsVal">5/5</span>
         </div>
 
         <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
-        <div class="lang-dropdown" id="langDropdown">
+        <div class="lang-dropdown auth-only" id="langDropdown">
           <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
             <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
             <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
@@ -74,12 +80,12 @@
           </div>
         </div>
 
-        <!-- User Account Dropdown -->
-        <div class="user-dropdown" id="userDropdown">
+        <!-- User Account Dropdown (Shown when logged in) -->
+        <div class="user-dropdown auth-only" id="userDropdown">
           <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
             <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini">
             <div class="user-info-text">
-              <div class="name">Nhật Anh</div>
+              <div class="name">Vua Xứ Thanh</div>
               <div class="role">Học viên</div>
             </div>
             <i class="fa-solid fa-chevron-down user-chevron"></i>
@@ -92,15 +98,22 @@
                 <span class="sub">Hồ sơ & cài đặt tài khoản</span>
               </div>
             </a>
-            <a href="../profile/index.html#statisticsHeading" class="user-dropdown-item" role="menuitem">
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
               <div class="menu-item-text">
                 <span class="title">Tiến độ học tập</span>
                 <span class="sub">Thống kê XP & chuỗi ngày</span>
               </div>
             </a>
+                        <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Shop quy đổi</span>
+                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
+              </div>
+            </a>
             <div class="user-dropdown-divider"></div>
-            <a href="../login/index.html" class="user-dropdown-item logout-item" role="menuitem">
+            <a href="../login/index.html" class="user-dropdown-item logout-item" id="navLogoutItem" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
               <div class="menu-item-text">
                 <span class="title">Đăng xuất</span>
@@ -108,6 +121,12 @@
               </div>
             </a>
           </div>
+        </div>
+
+        <!-- Guest Auth Buttons (Shown when NOT logged in) -->
+        <div class="guest-nav-auth guest-only" id="guestNavAuth">
+          <a href="../login/index.html" class="nav-auth-login">Đăng nhập</a>
+          <a href="../register/index.html" class="nav-auth-register">Đăng ký</a>
         </div>
       </div>
     </div>
@@ -291,7 +310,6 @@
   <!-- TOAST NOTIFICATION -->
   <div class="roadmap-toast" id="roadmapToast"></div>
 
-  <!-- ================= FOOTER ================= -->
     <footer class="footer">
     <div class="footer-container">
       <!-- Cột 1: Giới thiệu thương hiệu -->

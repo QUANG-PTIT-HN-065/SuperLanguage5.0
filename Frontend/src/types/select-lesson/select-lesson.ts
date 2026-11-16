@@ -1,5 +1,3 @@
-export {};
-
 /**
  * Slanguage - Select Lesson Module (Lựa chọn buổi học / Session)
  * 16-Session Grid System (4x4) with Gatekeeper for Learning Roadmap
@@ -383,6 +381,10 @@ class SelectLessonManager {
   private userDropdownBtnEl!: HTMLButtonElement;
 
   constructor() {
+    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+      window.location.replace('../login/index.html');
+      return;
+    }
     this.initDOM();
     this.loadUserData();
     this.bindEvents();
@@ -414,11 +416,26 @@ class SelectLessonManager {
   }
 
   private loadUserData(): void {
-    // Current Target Language
-    const savedLang = localStorage.getItem('slanguage_current_lang') as TargetLang;
+    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
+    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
+
+    let savedLang = (localStorage.getItem('slanguage_current_lang') || localStorage.getItem('slanguage_active_language') || 'ja') as TargetLang;
+    if (savedLang === nativeLang) {
+      savedLang = (nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja')) as TargetLang;
+      localStorage.setItem('slanguage_current_lang', savedLang);
+      localStorage.setItem('slanguage_active_language', savedLang);
+    }
     if (savedLang && ['ja', 'en', 'vi'].includes(savedLang)) {
       this.currentLang = savedLang;
     }
+
+    document.querySelectorAll<HTMLElement>('.lang-dropdown-item').forEach(item => {
+      if (item.getAttribute('data-lang') === nativeLang) {
+        item.style.display = 'none';
+      } else {
+        item.style.display = 'flex';
+      }
+    });
 
     // Header XP
     const userXP = localStorage.getItem('slanguage_user_xp') || '2,450 XP';
@@ -515,22 +532,42 @@ class SelectLessonManager {
       }
     });
 
+    // Auth state synchronization
+    const isLoggedIn = localStorage.getItem('slanguage_is_logged_in') === 'true';
+    if (isLoggedIn) {
+      document.body.classList.add('user-authenticated');
+      document.body.classList.remove('user-guest');
+    } else {
+      document.body.classList.add('user-guest');
+      document.body.classList.remove('user-authenticated');
+    }
+
     // Logout
     const logoutBtn = document.getElementById('navLogoutItem');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {
+        localStorage.setItem('slanguage_is_logged_in', 'false');
         localStorage.removeItem('slanguage_current_user');
       });
     }
   }
 
   private switchLanguage(lang: TargetLang): void {
+    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
+    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
+    if (lang === nativeLang) {
+      this.showToast(`Bạn không thể chọn ngôn ngữ mẹ đẻ để học!`);
+      this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
+      return;
+    }
+
     if (this.currentLang === lang) {
       this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
       return;
     }
     this.currentLang = lang;
     localStorage.setItem('slanguage_current_lang', lang);
+    localStorage.setItem('slanguage_active_language', lang);
     this.applyCurrentLanguage();
     this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
     this.renderSessions();
@@ -717,3 +754,4 @@ if (document.readyState === 'loading') {
 } else {
   initSelectLessonManager();
 }
+export {};

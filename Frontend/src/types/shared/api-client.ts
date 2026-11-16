@@ -113,44 +113,6 @@ async function refreshAccessToken(): Promise<string> {
   return result.data.access_token;
 }
 
-const MOCK_BASE_URL = "/mock";
-
-/** Đọc một file mock có cùng dạng BaseResponse của backend. */
-export async function readMockData<T = unknown>(
-  file: string,
-  select?: (data: unknown) => unknown,
-): Promise<T> {
-  const response = await fetch(`${MOCK_BASE_URL}/${file}`, {
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) {
-    throw new Error("Không tải được dữ liệu mẫu của trang học tập.");
-  }
-  const payload = (await response.json()) as ApiResponse<unknown>;
-  if (typeof payload?.status !== "string" || !("data" in payload)) {
-    throw new Error("Dữ liệu mẫu không đúng định dạng BaseResponse.");
-  }
-  return (select ? select(payload.data) : payload.data) as T;
-}
-
-/** Gọi API thật; chỉ rơi về mock khi backend không reachable (lỗi mạng). */
-export async function slanguageApiOrMock<T = unknown>(
-  path: string,
-  file: string,
-  options: ApiRequestOptions & { onFallback?: () => void } = {},
-  select?: (data: unknown) => unknown,
-): Promise<T> {
-  const { onFallback, ...requestOptions } = options;
-  try {
-    const response = await slanguageApi<T>(path, requestOptions);
-    return response.data;
-  } catch (error) {
-    if (!(error instanceof TypeError)) throw error;
-    onFallback?.();
-    return readMockData<T>(file, select);
-  }
-}
-
 function isFormData(value: unknown): value is FormData {
   return typeof FormData !== "undefined" && value instanceof FormData;
 }
