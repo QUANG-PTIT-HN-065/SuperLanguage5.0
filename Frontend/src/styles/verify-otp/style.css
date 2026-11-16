@@ -543,3 +543,38 @@ body {
     justify-content: center;
   }
 }
+
+@media (max-width: 400px) {
+  body {
+    padding: 10px 8px;
+  }
+  .onboarding-page-card {
+    padding: 22px 10px;
+  }
+  .otp-digits-container {
+    gap: 4px;
+  }
+  .otp-box {
+    width: 30px;
+    height: 42px;
+    font-size: 1.15rem;
+    border-radius: 6px;
+  }
+  .onboarding-title {
+    font-size: 1.45rem;
+  }
+  .onboarding-subtitle {
+    font-size: 0.88rem;
+  }
+}
+
+@media (max-width: 340px) {
+  .otp-digits-container {
+    gap: 2px;
+  }
+  .otp-box {
+    width: 27px;
+    height: 38px;
+    font-size: 1rem;
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "status": "success",
+  "message": "Đã tải danh sách lộ trình.",
+  "data": [
+    {
+      "id": 1,
+      "language_code": "ja",
+      "name": "Tiếng Nhật sơ cấp A1",
+      "description": "Nền tảng phát âm, chào hỏi và những mẫu câu dùng mỗi ngày.",
+      "sort_order": 10,
+      "topic_count": 3,
+      "progress_percent": 67
+    },
+    {
+      "id": 2,
+      "language_code": "ja",
+      "name": "Giao tiếp công sở",
+      "description": "Họp nhóm, xin phép, viết email và nói chuyện với cấp trên.",
+      "sort_order": 20,
+      "topic_count": 3,
+      "progress_percent": 33
+    },
+    {
+      "id": 3,
+      "language_code": "ja",
+      "name": "Du lịch Nhật Bản",
+      "description": "Sân bay, tàu điện, khách sạn và hỏi đường khi đi tự túc.",
+      "sort_order": 30,
+      "topic_count": 4,
+      "progress_percent": 0
+    },
+    {
+      "id": 4,
+      "language_code": "ja",
+      "name": "Luyện thi JLPT N5",
+      "description": "Từ vựng và ngữ pháp trọng tâm, kèm bài trắc nghiệm mỗi chủ đề.",
+      "sort_order": 40,
+      "topic_count": 4,
+      "progress_percent": 25
+    },
+    {
+      "id": 5,
+      "language_code": "ja",
+      "name": "Ẩm thực và mua sắm",
+      "description": "Gọi món, hỏi giá, mặc cả và thanh toán ở cửa hàng tiện lợi.",
+      "sort_order": 50,
+      "topic_count": 3,
+      "progress_percent": 0
+    },
+    {
+      "id": 6,
+      "language_code": "ja",
+      "name": "Đời sống thường ngày",
+      "description": "Thời tiết, sức khoẻ, nhà cửa và những cuộc trò chuyện ngắn.",
+      "sort_order": 60,
+      "topic_count": 3,
+      "progress_percent": 0
+    },
+    {
+      "id": 7,
+      "language_code": "en",
+      "name": "English for work",
+      "description": "Meetings, stand-ups and polite email writing for the office.",
+      "sort_order": 10,
+      "topic_count": 3,
+      "progress_percent": 33
+    },
+    {
+      "id": 8,
+      "language_code": "en",
+      "name": "Small talk tự nhiên",
+      "description": "Mở đầu câu chuyện, giữ nhịp hội thoại và kết thúc lịch sự.",
+      "sort_order": 20,
+      "topic_count": 2,
+      "progress_percent": 0
+    }
+  ]
+}

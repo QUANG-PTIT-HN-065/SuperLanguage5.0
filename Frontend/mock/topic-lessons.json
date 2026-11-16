@@ -1,0 +1,42 @@
+{
+  "status": "success",
+  "message": "Đã tải bài học của chủ đề.",
+  "data": {
+    "1": [
+      { "id": 101, "title": "Chào buổi sáng", "description": "おはようございます và các biến thể theo thời điểm.", "is_completed": true, "is_locked": false, "score": 4, "question_count": 4, "can_retake": true },
+      { "id": 102, "title": "Chào buổi tối", "description": "こんにちは・こんばんは trong hội thoại thường ngày.", "is_completed": true, "is_locked": false, "score": 4, "question_count": 4, "can_retake": true }
+    ],
+    "2": [
+      { "id": 201, "title": "Gọi món căn bản", "description": "これをください và cách nêu số lượng.", "is_completed": true, "is_locked": false, "score": 4, "question_count": 4, "can_retake": true },
+      { "id": 202, "title": "Hỏi giá và thanh toán", "description": "いくらですか・お会計お願いします.", "is_completed": true, "is_locked": false, "score": 4, "question_count": 4, "can_retake": true }
+    ],
+    "3": [
+      { "id": 301, "title": "Mua vé tàu", "description": "Hỏi ga đến, giá vé và sân ga.", "is_completed": false, "is_locked": false, "score": null, "question_count": 4, "can_retake": false },
+      { "id": 302, "title": "Hỏi đường ra ga", "description": "Chỉ đường và xác nhận lại bằng câu ngắn.", "is_completed": false, "is_locked": true, "score": null, "question_count": 4, "can_retake": false }
+    ],
+    "4": [
+      { "id": 401, "title": "Xin phép nghỉ", "description": "Mẫu câu xin nghỉ và báo trễ với cấp trên.", "is_completed": true, "is_locked": false, "score": 4, "question_count": 4, "can_retake": true }
+    ],
+    "11": [
+      { "id": 1101, "title": "Mở đầu email", "description": "お世話になっております và lời chào đầu thư.", "is_completed": false, "is_locked": false, "score": null, "question_count": 4, "can_retake": false },
+      { "id": 1102, "title": "Kết thư lịch sự", "description": "よろしくお願いいたします và lời cảm ơn cuối thư.", "is_completed": false, "is_locked": true, "score": null, "question_count": 4, "can_retake": false }
+    ],
+    "17": [
+      { "id": 1701, "title": "Nhóm từ chỉ người", "description": "Từ vựng N5 về gia đình và nghề nghiệp.", "is_completed": true, "is_locked": false, "score": 4, "question_count": 4, "can_retake": true }
+    ],
+    "18": [
+      { "id": 1801, "title": "Trợ từ は・が・を", "description": "Phân biệt trợ từ trong câu đơn.", "is_completed": false, "is_locked": false, "score": null, "question_count": 4, "can_retake": false },
+      { "id": 1802, "title": "Thể ます và thể từ điển", "description": "Chuyển đổi giữa hai thể lịch sự.", "is_completed": false, "is_locked": true, "score": null, "question_count": 4, "can_retake": false }
+    ],
+    "5": [
+      { "id": 501, "title": "Small talk", "description": "Mở đầu và duy trì một cuộc trò chuyện ngắn bằng tiếng Anh.", "is_completed": true, "is_locked": false, "score": 4, "question_count": 4, "can_retake": true }
+    ],
+    "6": [
+      { "id": 601, "title": "Phỏng vấn xin việc", "description": "Từ vựng và cách diễn đạt thường dùng khi phỏng vấn.", "is_completed": false, "is_locked": false, "score": null, "question_count": 4, "can_retake": false }
+    ],
+    "default": [
+      { "id": 9001, "title": "Từ vựng cốt lõi", "description": "Học và ôn nhóm từ chính của chủ đề.", "is_completed": false, "is_locked": false, "score": null, "question_count": 4, "can_retake": false },
+      { "id": 9002, "title": "Hội thoại mẫu", "description": "Áp dụng từ vựng vào đoạn hội thoại ngắn.", "is_completed": false, "is_locked": true, "score": null, "question_count": 4, "can_retake": false }
+    ]
+  }
+}
