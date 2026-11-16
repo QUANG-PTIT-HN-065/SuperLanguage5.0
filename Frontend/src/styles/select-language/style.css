@@ -467,3 +467,47 @@ body {
     justify-content: center;
   }
 }
+
+@media (max-width: 480px) {
+  body {
+    padding: 12px 8px;
+  }
+  .onboarding-page-card {
+    padding: 22px 14px;
+    border-radius: 16px;
+  }
+  .onboarding-title {
+    font-size: 1.45rem;
+  }
+  .onboarding-subtitle {
+    font-size: 0.88rem;
+  }
+  .lang-select-card {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+  .lang-card-name {
+    font-size: 1.05rem;
+  }
+  .lang-card-sub {
+    font-size: 0.78rem;
+  }
+  .flag-img-card {
+    width: 32px;
+    height: 22px;
+  }
+  .stream-box {
+    padding: 10px 14px;
+  }
+}
+
+@media (max-width: 360px) {
+  .onboarding-title {
+    font-size: 1.3rem;
+  }
+  .btn-stage-primary,
+  .btn-stage-secondary {
+    padding: 11px 18px;
+    font-size: 0.9rem;
+  }
+}

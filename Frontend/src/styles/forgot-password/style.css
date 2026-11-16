@@ -415,18 +415,18 @@ body {
 .otp-inputs-grid {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   margin: 10px 0;
 }
 
 .otp-digit {
-  width: 54px;
-  height: 60px;
+  width: 48px;
+  height: 56px;
   background: rgba(2, 20, 36, 0.7);
   border: 2px solid rgba(226, 215, 243, 0.3);
-  border-radius: 14px;
+  border-radius: 12px;
   font-family: 'K2D', sans-serif;
-  font-size: 1.8rem;
+  font-size: 1.65rem;
   font-weight: 800;
   color: var(--color-topaz);
   text-align: center;
@@ -582,11 +582,59 @@ body {
 /* Responsive */
 @media (max-width: 600px) {
   .forgot-card {
-    padding: 28px 20px;
+    padding: 28px 16px;
+  }
+  .otp-inputs-grid {
+    gap: 5px;
   }
   .otp-digit {
-    width: 44px;
-    height: 52px;
+    width: 35px;
+    height: 46px;
+    font-size: 1.25rem;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 12px 8px;
+  }
+  .forgot-card {
+    padding: 24px 14px;
+    border-radius: 18px;
+  }
+  .forgot-title {
     font-size: 1.5rem;
+  }
+  .forgot-desc {
+    font-size: 0.88rem;
+  }
+  .btn-submit-forgot,
+  .btn-back-home {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 380px) {
+  .otp-inputs-grid {
+    gap: 4px;
+  }
+  .otp-digit {
+    width: 30px;
+    height: 42px;
+    font-size: 1.15rem;
+    border-radius: 6px;
+  }
+}
+
+@media (max-width: 340px) {
+  .otp-inputs-grid {
+    gap: 2px;
+  }
+  .otp-digit {
+    width: 27px;
+    height: 38px;
+    font-size: 1rem;
   }
 }

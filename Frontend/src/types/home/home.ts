@@ -4,35 +4,6 @@
  * flashcard interactions, XP tracker, streak logic, and lesson preview modal.
  */
 
-import { slanguageApi } from '../shared/api-client';
-import { initializeLearnerHeader, logoutLearner } from '../shared/learner-header';
-
-interface VocabularyReviewResult {
-  data: {
-    xp_total: number;
-    current_streak: number;
-    xp_awarded: number;
-    already_completed: boolean;
-  };
-}
-
-function isVocabularyReviewResult(value: unknown): value is VocabularyReviewResult {
-  if (!value || typeof value !== 'object' || !('data' in value)) return false;
-  const data = value.data;
-  return Boolean(
-    data &&
-    typeof data === 'object' &&
-    'xp_total' in data &&
-    typeof data.xp_total === 'number' &&
-    'current_streak' in data &&
-    typeof data.current_streak === 'number' &&
-    'xp_awarded' in data &&
-    typeof data.xp_awarded === 'number' &&
-    'already_completed' in data &&
-    typeof data.already_completed === 'boolean'
-  );
-}
-
 // Interface for language specific data
 interface LanguageData {
   id: 'en' | 'ja' | 'vi';
@@ -66,7 +37,7 @@ const languagesDB: Record<string, LanguageData> = {
     name: 'Tiếng Nhật',
     nativeName: '日本語',
     flag: '🇯🇵',
-    flagImg: new URL('../../../assets/flags/flag-jp.png', import.meta.url).href,
+    flagImg: '../../../assets/flags/flag-jp.png',
     courseTitle: 'Tiếng Nhật Sơ Cấp JLPT N5',
     currentLesson: 'Bài 14: Gọi món trong quán ăn Tokyo & Mẫu câu V-tai desu',
     lessonProgress: 72,
@@ -90,7 +61,7 @@ const languagesDB: Record<string, LanguageData> = {
     name: 'Tiếng Anh',
     nativeName: 'English',
     flag: '🇺🇸',
-    flagImg: new URL('../../../assets/flags/flag-us.png', import.meta.url).href,
+    flagImg: '../../../assets/flags/flag-us.png',
     courseTitle: 'English for Global Workplace & Fluency',
     currentLesson: 'Unit 9: Business Negotiation & Idiomatic Expressions',
     lessonProgress: 85,
@@ -114,7 +85,7 @@ const languagesDB: Record<string, LanguageData> = {
     name: 'Tiếng Việt',
     nativeName: 'Tiếng Việt',
     flag: '🇻🇳',
-    flagImg: new URL('../../../assets/flags/flag-vn.png', import.meta.url).href,
+    flagImg: '../../../assets/flags/flag-vn.png',
     courseTitle: 'Tiếng Việt Ứng Dụng & Giao Tiếp Đời Sống',
     currentLesson: 'Bài 6: Văn hóa ứng xử & Thành ngữ thường dùng',
     lessonProgress: 94,
@@ -137,11 +108,9 @@ const languagesDB: Record<string, LanguageData> = {
 
 class SlanguageDashboard {
   private currentLang: 'en' | 'ja' | 'vi' = 'ja';
-  private currentXP: number = 0;
-  private currentStreak: number = 0;
+  private currentXP: number = 2450;
+  private currentStreak: number = 14;
   private isLoggedIn: boolean = false;
-  private isCompletingReview = false;
-  private pendingReview: { sessionId: string; knowsWord: boolean } | null = null;
   private langCarouselTimer: number | null = null;
   private currentSlideIndex: number = 0;
   private isCarouselPaused: boolean = false;
@@ -165,29 +134,28 @@ class SlanguageDashboard {
 
     this.applyAuthState();
 
+
+
     // Check saved language or default to Japanese
     const savedLang = localStorage.getItem('slanguage_active_language') as 'en' | 'ja' | 'vi';
     if (savedLang && languagesDB[savedLang]) {
       this.currentLang = savedLang;
     }
+    // Filter header language dropdown to exclude user's native language
+    this.filterHeaderLanguageDropdown();
 
     // Check saved XP
     const savedXP = localStorage.getItem('slanguage_user_xp');
     if (savedXP) {
       this.currentXP = parseInt(savedXP, 10);
     }
-    const savedStreak = localStorage.getItem('slanguage_user_streak');
-    if (savedStreak) {
-      this.currentStreak = parseInt(savedStreak, 10);
-    }
     const xpBadge = document.getElementById('headerXPVal');
     if (xpBadge) {
       xpBadge.textContent = `${this.currentXP.toLocaleString()} XP`;
     }
-    this.updateStreakDisplay();
 
     // Check saved user name and sync with Header & Leaderboard
-    const savedUserName = localStorage.getItem('slanguage_user_name') || 'Học viên';
+    const savedUserName = localStorage.getItem('slanguage_user_name') || 'Vua Xứ Thanh';
     document.querySelectorAll('.user-info-text .name').forEach(el => {
       el.textContent = savedUserName;
     });
@@ -263,7 +231,11 @@ class SlanguageDashboard {
       if (logoutBtn) {
         logoutBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          logoutLearner();
+          localStorage.setItem('slanguage_is_logged_in', 'false');
+          this.isLoggedIn = false;
+          this.applyAuthState();
+          this.showToast('Bạn đã đăng xuất tài khoản 👋');
+          if (userDropdown) userDropdown.classList.remove('open');
         });
       }
     }
@@ -273,7 +245,7 @@ class SlanguageDashboard {
     langDropdownItems.forEach(item => {
       item.addEventListener('click', (e) => {
         const lang = (e.currentTarget as HTMLElement).getAttribute('data-lang') as 'en' | 'ja' | 'vi';
-        if (lang) {
+        if (lang && lang !== this.getNativeLanguage()) {
           this.switchLanguage(lang);
           if (langDropdown && langDropdownBtn) {
             langDropdown.classList.remove('open');
@@ -304,19 +276,8 @@ class SlanguageDashboard {
     // Flashcard Flip
     const flashcardBox = document.getElementById('flashcardBox');
     if (flashcardBox) {
-      const flipFlashcard = (): void => {
-        const isFlipped = flashcardBox.classList.toggle('flipped');
-        flashcardBox.setAttribute('aria-pressed', isFlipped.toString());
-        flashcardBox.querySelector('.flashcard-front')?.setAttribute('aria-hidden', isFlipped.toString());
-        flashcardBox.querySelector('.flashcard-back')?.setAttribute('aria-hidden', (!isFlipped).toString());
-      };
-
-      flashcardBox.addEventListener('click', flipFlashcard);
-      flashcardBox.addEventListener('keydown', (event: KeyboardEvent) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          flipFlashcard();
-        }
+      flashcardBox.addEventListener('click', () => {
+        flashcardBox.classList.toggle('flipped');
       });
     }
 
@@ -325,11 +286,18 @@ class SlanguageDashboard {
     const btnAgain = document.getElementById('btnFlashcardAgain');
 
     if (btnKnow) {
-      btnKnow.addEventListener('click', () => void this.completeVocabularyReview(true, flashcardBox));
+      btnKnow.addEventListener('click', () => {
+        this.addXP(15);
+        this.showToast('Tuyệt vời! +15 XP vào kho báu học tập 🎉');
+        if (flashcardBox) flashcardBox.classList.remove('flipped');
+      });
     }
 
     if (btnAgain) {
-      btnAgain.addEventListener('click', () => void this.completeVocabularyReview(false, flashcardBox));
+      btnAgain.addEventListener('click', () => {
+        this.showToast('Đã thêm từ này vào danh sách cần ôn lại hôm nay 📌');
+        if (flashcardBox) flashcardBox.classList.remove('flipped');
+      });
     }
 
     // Modal lesson quiz trigger
@@ -337,8 +305,14 @@ class SlanguageDashboard {
     const lessonModal = document.getElementById('lessonModalOverlay');
     const modalClose = document.getElementById('modalCloseBtn');
 
+
+
     if (btnResumeLesson && lessonModal) {
       btnResumeLesson.addEventListener('click', () => {
+        if (!this.isLoggedIn) {
+          window.location.href = '../login/index.html';
+          return;
+        }
         this.openQuizModal();
       });
     }
@@ -381,6 +355,18 @@ class SlanguageDashboard {
     });
   }
 
+
+
+  private isProtectedUrl(href: string): boolean {
+    const protectedKeywords = [
+      'roadmap',
+      'vocabulary',
+      'select-lesson',
+      'profile'
+    ];
+    return protectedKeywords.some(keyword => href.includes(keyword));
+  }
+
   private bindPageTransitions(): void {
     document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(link => {
       const href = link.getAttribute('href');
@@ -392,6 +378,11 @@ class SlanguageDashboard {
       ) {
         link.addEventListener('click', (e: MouseEvent) => {
           e.preventDefault();
+          if (!this.isLoggedIn && this.isProtectedUrl(href)) {
+            // Không hiển thị pop up cảnh báo, chuyển thẳng người dùng đến trang đăng nhập / đăng ký
+            window.location.href = '../login/index.html';
+            return;
+          }
           this.triggerLoadingAndRedirect(href);
         });
       }
@@ -497,10 +488,47 @@ class SlanguageDashboard {
   }
 
   public switchLanguage(lang: 'en' | 'ja' | 'vi'): void {
+    const nativeLang = this.getNativeLanguage();
+    if (lang === nativeLang) {
+      this.showToast(`Bạn không thể chọn ngôn ngữ mẹ đẻ (${languagesDB[lang].name}) làm ngôn ngữ học tập!`, languagesDB[lang].flagImg);
+      return;
+    }
     this.currentLang = lang;
     localStorage.setItem('slanguage_active_language', lang);
+    localStorage.setItem('slanguage_current_lang', lang);
     this.render();
     this.showToast(`Đã chuyển sang học: ${languagesDB[lang].name}`, languagesDB[lang].flagImg);
+  }
+
+  private getNativeLanguage(): 'en' | 'ja' | 'vi' {
+    const raw = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
+    if (raw.includes('vi') || raw.includes('việt')) return 'vi';
+    if (raw.includes('en') || raw.includes('anh')) return 'en';
+    if (raw.includes('ja') || raw.includes('nhật')) return 'ja';
+    return 'vi';
+  }
+
+  private filterHeaderLanguageDropdown(): void {
+    const nativeLang = this.getNativeLanguage();
+
+    // 1. Hide native language option from header dropdown menu
+    const dropdownItems = document.querySelectorAll<HTMLElement>('.lang-dropdown-item');
+    dropdownItems.forEach(item => {
+      const lang = item.getAttribute('data-lang');
+      if (lang === nativeLang) {
+        item.style.display = 'none';
+      } else {
+        item.style.display = 'flex';
+      }
+    });
+
+    // 2. Ensure current target language is not user's native language
+    if (this.currentLang === nativeLang) {
+      const fallback: 'en' | 'ja' | 'vi' = nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja');
+      this.currentLang = fallback;
+      localStorage.setItem('slanguage_active_language', fallback);
+      localStorage.setItem('slanguage_current_lang', fallback);
+    }
   }
 
   private addXP(points: number): void {
@@ -510,114 +538,78 @@ class SlanguageDashboard {
     if (xpBadge) {
       xpBadge.textContent = `${this.currentXP.toLocaleString()} XP`;
     }
-    const userRankXP = document.getElementById('currentUserRankXP') || document.querySelector('.rank-item.is-user .rank-xp');
-    if (userRankXP) {
-      userRankXP.textContent = `${this.currentXP.toLocaleString()} XP`;
-    }
-  }
-
-  private async completeVocabularyReview(knowsWord: boolean, flashcardBox: HTMLElement | null): Promise<void> {
-    if (this.isCompletingReview) return;
-
-    if (!this.isLoggedIn) {
-      this.showToast('Đăng nhập để lưu tiến độ ôn tập và nhận XP.');
-      return;
-    }
-
-    if (this.pendingReview && this.pendingReview.knowsWord !== knowsWord) {
-      this.showToast('Hãy thử gửi lại lựa chọn ôn tập trước đó để đồng bộ tiến độ.');
-      return;
-    }
-
-    this.isCompletingReview = true;
-    const reviewButtons = [
-      document.getElementById('btnFlashcardKnow'),
-      document.getElementById('btnFlashcardAgain'),
-    ].filter((button): button is HTMLButtonElement => button instanceof HTMLButtonElement);
-    reviewButtons.forEach(button => {
-      button.disabled = true;
-    });
-
-    try {
-      this.pendingReview ??= {
-        sessionId: window.crypto.randomUUID(),
-        knowsWord,
-      };
-      const sessionId = this.pendingReview.sessionId;
-      const response: unknown = await slanguageApi('/api/v1/vocabulary/review-sessions/complete', {
-        method: 'POST',
-        body: {
-          session_id: sessionId,
-          reviewed_count: 1,
-          known_count: knowsWord ? 1 : 0,
-        },
-      });
-      if (!isVocabularyReviewResult(response)) {
-        throw new Error('Máy chủ chưa trả về số liệu XP và streak hợp lệ.');
-      }
-
-      this.currentXP = response.data.xp_total;
-      this.currentStreak = response.data.current_streak;
-      localStorage.setItem('slanguage_user_xp', this.currentXP.toString());
-      localStorage.setItem('slanguage_user_streak', this.currentStreak.toString());
-      const xpBadge = document.getElementById('headerXPVal');
-      if (xpBadge) xpBadge.textContent = `${this.currentXP.toLocaleString()} XP`;
-      const userRankXP = document.getElementById('currentUserRankXP')
-        || document.querySelector('.rank-item.is-user .rank-xp');
-      if (userRankXP) userRankXP.textContent = `${this.currentXP.toLocaleString()} XP`;
-      this.updateStreakDisplay();
-      this.pendingReview = null;
-
-      if (response.data.already_completed) {
-        this.showToast('Phiên ôn tập này đã được đồng bộ trước đó.');
-      } else if (knowsWord) {
-        this.showToast(`Tuyệt vời! +${response.data.xp_awarded} XP. Chuỗi học: ${this.currentStreak} ngày.`);
-      } else {
-        this.showToast(`Đã ghi nhận từ cần ôn lại. Chuỗi học: ${this.currentStreak} ngày.`);
-      }
-
-      if (flashcardBox) {
-        flashcardBox.classList.remove('flipped');
-        flashcardBox.setAttribute('aria-pressed', 'false');
-        flashcardBox.querySelector('.flashcard-front')?.setAttribute('aria-hidden', 'false');
-        flashcardBox.querySelector('.flashcard-back')?.setAttribute('aria-hidden', 'true');
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Lỗi không xác định.';
-      this.showToast(`Không thể lưu phiên ôn tập: ${message}`);
-    } finally {
-      this.isCompletingReview = false;
-      reviewButtons.forEach(button => {
-        button.disabled = false;
-      });
-    }
-  }
-
-  private updateStreakDisplay(): void {
-    document.querySelectorAll('.stat-chip.streak span, .streak-count span').forEach(element => {
-      element.textContent = `${this.currentStreak} Ngày`;
-    });
+    this.updateUserRankDisplay();
   }
 
   private updateUserRankDisplay(): void {
+    const listEl = document.getElementById('homeRankingList') || document.querySelector('.sidebar-card .ranking-list');
     const userHeaderName = document.querySelector('.user-info-text .name')?.textContent?.trim();
     const currentUserName = localStorage.getItem('slanguage_user_name') || userHeaderName || 'Vua Xứ Thanh';
-
-    const userRankName = document.getElementById('currentUserRankName') || document.querySelector('.rank-item.is-user .rank-name');
-    if (userRankName) {
-      userRankName.textContent = `Bạn (${currentUserName})`;
-    }
-
-    const userRankXP = document.getElementById('currentUserRankXP') || document.querySelector('.rank-item.is-user .rank-xp');
-    if (userRankXP) {
-      userRankXP.textContent = `${this.currentXP.toLocaleString()} XP`;
-    }
-
     const miniAvatar = document.querySelector('.user-avatar-mini') as HTMLImageElement;
-    const userRankAvatar = (document.getElementById('currentUserRankAvatar') || document.querySelector('.rank-item.is-user .rank-avatar')) as HTMLImageElement;
-    if (miniAvatar && userRankAvatar && miniAvatar.src) {
-      userRankAvatar.src = miniAvatar.src;
+    const userAvatar = (miniAvatar && miniAvatar.src) ? miniAvatar.src : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80';
+
+    if (!listEl) return;
+
+    interface HomeRankItem {
+      name: string;
+      avatar: string;
+      xp: number;
+      isCurrentUser: boolean;
     }
+
+    const candidates: HomeRankItem[] = [
+      {
+        name: 'Minh Hoàng',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+        xp: 3120,
+        isCurrentUser: false
+      },
+      {
+        name: 'Lan Phương',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
+        xp: 2890,
+        isCurrentUser: false
+      },
+      {
+        name: 'Kenji Sato',
+        avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
+        xp: 2110,
+        isCurrentUser: false
+      },
+      {
+        name: `Bạn (${currentUserName})`,
+        avatar: userAvatar,
+        xp: this.currentXP,
+        isCurrentUser: true
+      }
+    ];
+
+    // Sắp xếp giảm dần theo điểm kinh nghiệm XP (Điểm cao đứng trước, điểm thấp đứng sau)
+    candidates.sort((a, b) => b.xp - a.xp);
+
+    listEl.innerHTML = '';
+    candidates.forEach((learner, index) => {
+      const rankNum = index + 1;
+      let badgeClass = '';
+      if (rankNum === 1) badgeClass = 'gold';
+      else if (rankNum === 2) badgeClass = 'silver';
+      else if (rankNum === 3) badgeClass = 'bronze';
+
+      const itemDiv = document.createElement('div');
+      itemDiv.className = `rank-item${learner.isCurrentUser ? ' is-user' : ''}`;
+      if (learner.isCurrentUser) {
+        itemDiv.id = 'currentUserRankItem';
+      }
+
+      itemDiv.innerHTML = `
+        <span class="rank-num ${badgeClass}" ${learner.isCurrentUser ? 'id="currentUserRankNum"' : ''}>${rankNum}</span>
+        <img src="${learner.avatar}" alt="${learner.name}" class="rank-avatar" ${learner.isCurrentUser ? 'id="currentUserRankAvatar"' : ''}>
+        <span class="rank-name" ${learner.isCurrentUser ? 'id="currentUserRankName"' : ''}>${learner.name}</span>
+        <span class="rank-xp" ${learner.isCurrentUser ? 'id="currentUserRankXP"' : ''}>${learner.xp.toLocaleString()} XP</span>
+      `;
+
+      listEl.appendChild(itemDiv);
+    });
   }
 
   private render(): void {
@@ -684,7 +676,6 @@ class SlanguageDashboard {
     if (heroProgressPercent && heroProgressFill) {
       heroProgressPercent.textContent = `${data.lessonProgress}%`;
       heroProgressFill.style.width = `${data.lessonProgress}%`;
-      heroProgressFill.parentElement?.setAttribute('aria-valuenow', data.lessonProgress.toString());
     }
 
     // Update Flashcard
@@ -702,12 +693,7 @@ class SlanguageDashboard {
 
     // Reset flipped state
     const flashcardBox = document.getElementById('flashcardBox');
-    if (flashcardBox) {
-      flashcardBox.classList.remove('flipped');
-      flashcardBox.setAttribute('aria-pressed', 'false');
-      flashcardBox.querySelector('.flashcard-front')?.setAttribute('aria-hidden', 'false');
-      flashcardBox.querySelector('.flashcard-back')?.setAttribute('aria-hidden', 'true');
-    }
+    if (flashcardBox) flashcardBox.classList.remove('flipped');
 
     // Keep Leaderboard user rank item in sync
     this.updateUserRankDisplay();
@@ -803,7 +789,7 @@ class SlanguageDashboard {
       toast.style.boxShadow = '0 12px 32px rgba(6, 26, 40, 0.6), 0 0 18px rgba(255, 183, 3, 0.25)';
       toast.style.zIndex = '3000';
       toast.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-      toast.style.fontFamily = "'Be Vietnam Pro', sans-serif";
+      toast.style.fontFamily = "'K2D', sans-serif";
       document.body.appendChild(toast);
     }
 
@@ -813,7 +799,7 @@ class SlanguageDashboard {
 
     toast.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(255, 183, 3, 0.25);">
-        <img src="../assets/logo.png" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));">
+        <img src="../../../assets/logo.png" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));">
         <span style="font-size: 0.85rem; font-weight: 700; color: #FFB703; letter-spacing: 0.2px;">S Language thông báo:</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px; font-size: 0.96rem; font-weight: 700; color: #ffffff;">
@@ -835,8 +821,8 @@ class SlanguageDashboard {
 }
 
 // Instantiate on DOMContentLoaded
+
 function initSlanguageDashboard(): void {
-  void initializeLearnerHeader({ bindControls: false });
   (window as unknown as { homeApp?: SlanguageDashboard }).homeApp = new SlanguageDashboard();
 }
 

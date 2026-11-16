@@ -4,13 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Slanguage - Cây Lộ Trình Học Tập Phân Nhánh</title>
-  <link rel="icon" type="image/png" href="../assets/logo.png">
-  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <link rel="icon" type="image/png" href="../../../assets/logo.png">
+  <link rel="apple-touch-icon" href="../../../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="../../styles/roadmap/style.css">
+  <link rel="stylesheet" href="../../styles/shared/mobile-responsive.css">
 </head>
 <body>
 
@@ -19,23 +20,23 @@
     <div class="navbar-container">
       <div class="nav-left">
         <a href="../home/index.html" class="brand-logo">
-          <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </a>
 
         <nav>
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="./index.html" class="active">Học tập</a></li>
+            <li><a href="../learning/index.html">Học tập</a></li>
             <li><a href="../vocabulary/index.html">Luyện từ vựng</a></li>
-            <li><a href="../ai-practice/index.html">Luyện tập với AI</a></li>
+            <li><a href="../chat/index.html">Luyện tập với AI</a></li>
           </ul>
         </nav>
       </div>
 
       <div class="nav-right">
         <div class="stat-chip streak" title="Chuỗi ngày học liên tục">
-          <img src="../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
           <span>14 Ngày</span>
         </div>
         <div class="stat-chip xp" title="Điểm kinh nghiệm tích lũy">
@@ -50,23 +51,23 @@
         <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
         <div class="lang-dropdown" id="langDropdown">
           <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
-            <img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
+            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
             <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
             <i class="fa-solid fa-chevron-down lang-chevron"></i>
           </button>
           <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
             <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
-              <img src="../assets/flags/flag-jp.png" alt="JP" class="flag-icon">
+              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon">
               <span class="lang-name">Tiếng Nhật (日本語)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
-              <img src="../assets/flags/flag-en.png" alt="EN" class="flag-icon">
+              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon">
               <span class="lang-name">English (Tiếng Anh)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
-              <img src="../assets/flags/flag-vn.png" alt="VN" class="flag-icon">
+              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon">
               <span class="lang-name">Tiếng Việt (Vietnamese)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
@@ -91,7 +92,7 @@
                 <span class="sub">Hồ sơ & cài đặt tài khoản</span>
               </div>
             </a>
-            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
+            <a href="../profile/index.html#statisticsHeading" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
               <div class="menu-item-text">
                 <span class="title">Tiến độ học tập</span>
@@ -296,7 +297,7 @@
       <!-- Cột 1: Giới thiệu thương hiệu -->
       <div class="footer-col">
         <div class="brand-logo" style="margin-bottom: 14px;">
-          <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
         <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
@@ -396,7 +397,7 @@
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" muted src="../assets/loading.mp4" loop playsinline></video>
+        <video id="loadingVideoPlayer" muted src="../../../assets/loading.mp4" loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>
@@ -404,22 +405,6 @@
     </div>
   </div>
 
-    <!-- Logic TypeScript cho trang -->
-  <script type="module" src="./roadmap.ts"></script>
-  <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
-  <script>
-    if (!window.roadmapApp) {
-      fetch('./roadmap.ts')
-        .then(function(r) { return r.text(); })
-        .then(function(code) {
-          var js = Babel.transform(code, { filename: 'roadmap.ts', presets: ['typescript'] }).code;
-          var s = document.createElement('script');
-          s.textContent = js;
-          document.body.appendChild(s);
-        })
-        .catch(function(err) { console.error('Error loading roadmap.ts:', err); });
-    }
-  </script>
+  <script type="module" src="../../types/roadmap/roadmap.ts"></script>
 </body>
 </html>

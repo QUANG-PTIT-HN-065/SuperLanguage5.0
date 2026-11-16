@@ -1784,9 +1784,9 @@ class SlanguageDungeonTree {
       vi: 'Tiếng Việt (Bản Xứ & Ứng Dụng)'
     };
     const flagImgs: Record<string, string> = {
-      ja: '../assets/flags/flag-jp.png',
-      en: '../assets/flags/flag-en.png',
-      vi: '../assets/flags/flag-vn.png'
+      ja: '../../../assets/flags/flag-jp.png',
+      en: '../../../assets/flags/flag-en.png',
+      vi: '../../../assets/flags/flag-vn.png'
     };
 
     const currentLangLabel = document.getElementById('currentLangLabel');
