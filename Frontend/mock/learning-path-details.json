@@ -1,0 +1,103 @@
+{
+  "status": "success",
+  "message": "Đã tải chi tiết lộ trình.",
+  "data": {
+    "1": {
+      "id": 1,
+      "language_code": "ja",
+      "name": "Tiếng Nhật sơ cấp A1",
+      "description": "Nền tảng phát âm, chào hỏi và những mẫu câu dùng mỗi ngày.",
+      "sort_order": 10,
+      "topics": [
+        { "id": 1, "name": "Chào hỏi", "description": "Câu chào cơ bản theo thời điểm trong ngày.", "icon_url": null, "word_count": 24, "mastered_word_count": 24, "progress_percent": 100, "is_locked": false, "is_completed": true, "quiz_score": 4, "quiz_question_count": 4 },
+        { "id": 2, "name": "Nhà hàng", "description": "Gọi món, hỏi giá và thanh toán.", "icon_url": null, "word_count": 30, "mastered_word_count": 30, "progress_percent": 100, "is_locked": false, "is_completed": true, "quiz_score": 4, "quiz_question_count": 4 },
+        { "id": 3, "name": "Giao thông", "description": "Chỉ đường, mua vé tàu và hỏi giờ.", "icon_url": null, "word_count": 28, "mastered_word_count": 9, "progress_percent": 32, "is_locked": false, "is_completed": false, "quiz_score": null, "quiz_question_count": null }
+      ]
+    },
+    "2": {
+      "id": 2,
+      "language_code": "ja",
+      "name": "Giao tiếp công sở",
+      "description": "Họp nhóm, xin phép, viết email và nói chuyện với cấp trên.",
+      "sort_order": 20,
+      "topics": [
+        { "id": 4, "name": "Công sở", "description": "Họp, xin phép và email lịch sự.", "icon_url": null, "word_count": 32, "mastered_word_count": 32, "progress_percent": 100, "is_locked": false, "is_completed": true, "quiz_score": 4, "quiz_question_count": 4 },
+        { "id": 11, "name": "Email lịch sự", "description": "Mở đầu, nội dung và kết thư đúng mực.", "icon_url": null, "word_count": 26, "mastered_word_count": 8, "progress_percent": 31, "is_locked": false, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 12, "name": "Họp nhóm", "description": "Nêu ý kiến, đồng ý và phản hồi trong cuộc họp.", "icon_url": null, "word_count": 24, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null }
+      ]
+    },
+    "3": {
+      "id": 3,
+      "language_code": "ja",
+      "name": "Du lịch Nhật Bản",
+      "description": "Sân bay, tàu điện, khách sạn và hỏi đường khi đi tự túc.",
+      "sort_order": 30,
+      "topics": [
+        { "id": 13, "name": "Sân bay", "description": "Làm thủ tục, hành lý và hỏi cổng ra máy bay.", "icon_url": null, "word_count": 22, "mastered_word_count": 0, "progress_percent": 0, "is_locked": false, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 14, "name": "Tàu điện", "description": "Mua vé, đổi tuyến và đọc bảng giờ chạy.", "icon_url": null, "word_count": 26, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 15, "name": "Khách sạn", "description": "Đặt phòng, nhận phòng và nhờ hỗ trợ.", "icon_url": null, "word_count": 20, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 16, "name": "Hỏi đường", "description": "Hỏi vị trí, khoảng cách và phương tiện gần nhất.", "icon_url": null, "word_count": 18, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null }
+      ]
+    },
+    "4": {
+      "id": 4,
+      "language_code": "ja",
+      "name": "Luyện thi JLPT N5",
+      "description": "Từ vựng và ngữ pháp trọng tâm, kèm bài trắc nghiệm mỗi chủ đề.",
+      "sort_order": 40,
+      "topics": [
+        { "id": 17, "name": "Từ vựng N5", "description": "800 từ cốt lõi chia theo nhóm nghĩa.", "icon_url": null, "word_count": 40, "mastered_word_count": 40, "progress_percent": 100, "is_locked": false, "is_completed": true, "quiz_score": 4, "quiz_question_count": 4 },
+        { "id": 18, "name": "Ngữ pháp N5", "description": "Trợ từ, thể lịch sự và mẫu câu thường gặp.", "icon_url": null, "word_count": 34, "mastered_word_count": 6, "progress_percent": 18, "is_locked": false, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 19, "name": "Nghe hiểu N5", "description": "Hội thoại ngắn và câu hỏi một đáp án.", "icon_url": null, "word_count": 28, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 20, "name": "Đọc hiểu N5", "description": "Đoạn văn ngắn, biển báo và mẩu thông báo.", "icon_url": null, "word_count": 30, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null }
+      ]
+    },
+    "5": {
+      "id": 5,
+      "language_code": "ja",
+      "name": "Ẩm thực và mua sắm",
+      "description": "Gọi món, hỏi giá, mặc cả và thanh toán ở cửa hàng tiện lợi.",
+      "sort_order": 50,
+      "topics": [
+        { "id": 21, "name": "Gọi món", "description": "Đọc thực đơn và nêu yêu cầu với nhân viên.", "icon_url": null, "word_count": 24, "mastered_word_count": 0, "progress_percent": 0, "is_locked": false, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 22, "name": "Mua sắm", "description": "Hỏi size, màu sắc và đổi trả hàng.", "icon_url": null, "word_count": 22, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 23, "name": "Thanh toán", "description": "Tiền mặt, thẻ và hoá đơn tại quầy.", "icon_url": null, "word_count": 18, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null }
+      ]
+    },
+    "6": {
+      "id": 6,
+      "language_code": "ja",
+      "name": "Đời sống thường ngày",
+      "description": "Thời tiết, sức khoẻ, nhà cửa và những cuộc trò chuyện ngắn.",
+      "sort_order": 60,
+      "topics": [
+        { "id": 24, "name": "Thời tiết", "description": "Mô tả trời mưa, nắng và dự báo trong ngày.", "icon_url": null, "word_count": 20, "mastered_word_count": 0, "progress_percent": 0, "is_locked": false, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 25, "name": "Sức khoẻ", "description": "Nói triệu chứng và mua thuốc ở hiệu.", "icon_url": null, "word_count": 22, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 26, "name": "Nhà cửa", "description": "Thuê nhà, báo hỏng và nói chuyện với hàng xóm.", "icon_url": null, "word_count": 24, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null }
+      ]
+    },
+    "7": {
+      "id": 7,
+      "language_code": "en",
+      "name": "English for work",
+      "description": "Meetings, stand-ups and polite email writing for the office.",
+      "sort_order": 10,
+      "topics": [
+        { "id": 5, "name": "Small talk", "description": "Opening lines for everyday conversations.", "icon_url": null, "word_count": 26, "mastered_word_count": 26, "progress_percent": 100, "is_locked": false, "is_completed": true, "quiz_score": 4, "quiz_question_count": 4 },
+        { "id": 6, "name": "Interview", "description": "Answering common interview questions.", "icon_url": null, "word_count": 30, "mastered_word_count": 10, "progress_percent": 33, "is_locked": false, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 31, "name": "Stand-up", "description": "Báo cáo tiến độ ngắn gọn mỗi ngày.", "icon_url": null, "word_count": 18, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null }
+      ]
+    },
+    "8": {
+      "id": 8,
+      "language_code": "en",
+      "name": "Small talk tự nhiên",
+      "description": "Mở đầu câu chuyện, giữ nhịp hội thoại và kết thúc lịch sự.",
+      "sort_order": 20,
+      "topics": [
+        { "id": 5, "name": "Small talk", "description": "Opening lines for everyday conversations.", "icon_url": null, "word_count": 26, "mastered_word_count": 4, "progress_percent": 15, "is_locked": false, "is_completed": false, "quiz_score": null, "quiz_question_count": null },
+        { "id": 32, "name": "Kết thúc hội thoại", "description": "Chào tạm biệt và hẹn gặp lại đúng lúc.", "icon_url": null, "word_count": 16, "mastered_word_count": 0, "progress_percent": 0, "is_locked": true, "is_completed": false, "quiz_score": null, "quiz_question_count": null }
+      ]
+    }
+  }
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "7f1c2b64-9d4a-4d1f-8f2b-3c5a1d6e0b12",
+    "email": "minh.duc@example.com",
+    "username": "minhduc",
+    "display_name": "Minh Đức",
+    "avatar_url": null,
+    "native_language": "vi",
+    "target_language": "ja",
+    "current_level": "A2",
+    "target_level": "B1",
+    "learning_goal": "work",
+    "daily_goal_xp": 20,
+    "role": "learner"
+  },
+  {
+    "id": "a2b9d0e1-4c6f-47a1-9e3d-88bb2f4c1a05",
+    "email": "ha.tran@example.com",
+    "username": "hatran",
+    "display_name": "Hà Trần",
+    "avatar_url": null,
+    "native_language": "vi",
+    "target_language": "en",
+    "current_level": "B1",
+    "target_level": "B2",
+    "learning_goal": "exam",
+    "daily_goal_xp": 30,
+    "role": "learner"
+  }
+]
