@@ -12,9 +12,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="./style.css">
 </head>
-<body>
+<body class="user-guest">
 
-  <!-- ================= TOP NAVBAR ================= -->
+    <!-- ================= TOP NAVBAR ================= -->
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
@@ -29,6 +29,7 @@
             <li><a href="../roadmap/index.html">Học tập</a></li>
             <li><a href="../vocabulary/index.html">Luyện từ vựng</a></li>
             <li><a href="../ai-practice/index.html">Luyện tập với AI</a></li>
+            <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
           </ul>
         </nav>
       </div>
@@ -36,7 +37,7 @@
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
           <img src="../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
-          <span>14 Ngày</span>
+          <span id="headerStreakVal">14 Ngày</span>
         </div>
         <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
           <i class="fa-solid fa-star"></i>
@@ -44,29 +45,29 @@
         </div>
         <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
           <i class="fa-solid fa-heart"></i>
-          <span>5/5</span>
+          <span id="headerHeartsVal">5/5</span>
         </div>
 
         <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
         <div class="lang-dropdown auth-only" id="langDropdown">
           <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
-            <img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
+            <img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
             <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
             <i class="fa-solid fa-chevron-down lang-chevron"></i>
           </button>
           <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
             <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
-              <img src="../assets/flags/flag-jp.png" alt="JP" class="flag-icon">
+              <img src="../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Nhật (日本語)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
-              <img src="../assets/flags/flag-en.png" alt="EN" class="flag-icon">
+              <img src="../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">English (Tiếng Anh)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
-              <img src="../assets/flags/flag-vn.png" alt="VN" class="flag-icon">
+              <img src="../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Việt (Vietnamese)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
@@ -96,6 +97,13 @@
               <div class="menu-item-text">
                 <span class="title">Tiến độ học tập</span>
                 <span class="sub">Thống kê XP & chuỗi ngày</span>
+              </div>
+            </a>
+                        <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Shop quy đổi</span>
+                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
               </div>
             </a>
             <div class="user-dropdown-divider"></div>
@@ -793,7 +801,7 @@
           <span style="font-size: 0.78rem; color: var(--text-muted);">Tuần 44</span>
         </div>
 
-        <div class="ranking-list">
+        <div class="ranking-list" id="homeRankingList">
           <div class="rank-item">
             <span class="rank-num gold">1</span>
             <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" alt="User 1" class="rank-avatar">
@@ -827,27 +835,26 @@
       <!-- GUEST PROMPT CARD (Shown when NOT logged in) -->
       <div class="sidebar-card guest-sidebar-card guest-only" id="guestSidebarPrompt">
         <div class="guest-card-header">
-          <div class="guest-card-badge-icon"><img src="../assets/streak-flame.gif?v=4" alt="Chuỗi học tập" class="streak-flame-img streak-flame-chip" style="height: 26px;"></div>
+          <div class="guest-card-badge-icon">
+            <img src="../assets/streak-flame.gif?v=4" alt="Chuỗi học tập" class="streak-flame-img streak-flame-chip" style="height: 26px;">
+          </div>
           <div>
             <h4 style="font-size: 1.05rem; font-weight: 700; color: var(--color-dark); margin-bottom: 2px;">Chuỗi học tập & BXH</h4>
             <span style="font-size: 0.8rem; color: var(--color-teal); font-weight: 600;">Dành cho học viên</span>
           </div>
         </div>
-        <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin: 14px 0 16px;">
+        <p class="guest-sidebar-desc">
           Đăng nhập ngay để kích hoạt chuỗi học tập hàng ngày, tích lũy XP mở khóa huy hiệu và tranh tài trên Bảng Vàng vinh danh cùng 50,000+ học viên!
         </p>
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <a href="../login/index.html" class="btn-primary" style="text-align: center; justify-content: center; text-decoration: none; padding: 11px 18px; border-radius: 12px; font-weight: 700; font-size: 0.95rem;">
+        <div class="guest-sidebar-actions">
+          <a href="../login/index.html" class="btn-guest-login">
             <i class="fa-solid fa-right-to-bracket"></i> Đăng nhập ngay
           </a>
-          <a href="../register/index.html" class="btn-secondary" style="text-align: center; justify-content: center; text-decoration: none; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 0.92rem;">
+          <a href="../register/index.html" class="btn-guest-register">
             Tạo tài khoản mới
           </a>
         </div>
       </div>
-
-
-
     </aside>
   </main>
 
@@ -879,7 +886,6 @@
     </div>
   </div>
 
-  <!-- ================= FOOTER ================= -->
   <footer class="footer">
     <div class="footer-container">
       <!-- Cột 1: Giới thiệu thương hiệu -->

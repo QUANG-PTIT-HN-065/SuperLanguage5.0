@@ -24,7 +24,7 @@ const DEFAULT_USERS_DB: UserAccount[] = [
     password: '123456',
     nativeLanguage: 'vi',
     targetLanguage: 'ja',
-    xp: 0,
+    xp: 2450,
     createdAt: '2026-01-01T00:00:00.000Z'
   },
   {
@@ -33,7 +33,7 @@ const DEFAULT_USERS_DB: UserAccount[] = [
     password: '123456',
     nativeLanguage: 'vi',
     targetLanguage: 'en',
-    xp: 0,
+    xp: 2450,
     createdAt: '2026-01-01T00:00:00.000Z'
   },
   {
@@ -42,7 +42,7 @@ const DEFAULT_USERS_DB: UserAccount[] = [
     password: '123456',
     nativeLanguage: 'vi',
     targetLanguage: 'ja',
-    xp: 0,
+    xp: 2450,
     createdAt: '2026-01-01T00:00:00.000Z'
   }
 ];
@@ -314,7 +314,8 @@ class SlanguageLogin {
     localStorage.setItem('slanguage_user_password', user.password);
     localStorage.setItem('slanguage_native_language', user.nativeLanguage || 'vi');
     localStorage.setItem('slanguage_active_language', user.targetLanguage || 'ja');
-    localStorage.setItem('slanguage_user_xp', (user.xp !== undefined ? user.xp : 0).toString());
+    const resolvedXP = (user.xp !== undefined && user.xp > 0) ? user.xp : (user.email === 'quanquan@gmail.com' ? 2450 : (user.xp || 0));
+    localStorage.setItem('slanguage_user_xp', resolvedXP.toString());
 
     this.showToast(`Chào mừng ${user.fullName} trở lại! Đang chuyển hướng...`);
     this.triggerLoadingAndRedirect('../home/index.html', 1200);

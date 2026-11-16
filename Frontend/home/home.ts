@@ -134,11 +134,15 @@ class SlanguageDashboard {
 
     this.applyAuthState();
 
+
+
     // Check saved language or default to Japanese
     const savedLang = localStorage.getItem('slanguage_active_language') as 'en' | 'ja' | 'vi';
     if (savedLang && languagesDB[savedLang]) {
       this.currentLang = savedLang;
     }
+    // Filter header language dropdown to exclude user's native language
+    this.filterHeaderLanguageDropdown();
 
     // Check saved XP
     const savedXP = localStorage.getItem('slanguage_user_xp');
@@ -241,7 +245,7 @@ class SlanguageDashboard {
     langDropdownItems.forEach(item => {
       item.addEventListener('click', (e) => {
         const lang = (e.currentTarget as HTMLElement).getAttribute('data-lang') as 'en' | 'ja' | 'vi';
-        if (lang) {
+        if (lang && lang !== this.getNativeLanguage()) {
           this.switchLanguage(lang);
           if (langDropdown && langDropdownBtn) {
             langDropdown.classList.remove('open');
@@ -301,8 +305,14 @@ class SlanguageDashboard {
     const lessonModal = document.getElementById('lessonModalOverlay');
     const modalClose = document.getElementById('modalCloseBtn');
 
+
+
     if (btnResumeLesson && lessonModal) {
       btnResumeLesson.addEventListener('click', () => {
+        if (!this.isLoggedIn) {
+          window.location.href = '../login/index.html';
+          return;
+        }
         this.openQuizModal();
       });
     }
@@ -345,6 +355,21 @@ class SlanguageDashboard {
     });
   }
 
+
+
+  private isProtectedUrl(href: string): boolean {
+    const protectedKeywords = [
+      'roadmap',
+      'vocabulary',
+      'ai-practice',
+      'leaderboard',
+      'shop',
+      'select-lesson',
+      'profile'
+    ];
+    return protectedKeywords.some(keyword => href.includes(keyword));
+  }
+
   private bindPageTransitions(): void {
     document.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(link => {
       const href = link.getAttribute('href');
@@ -356,6 +381,11 @@ class SlanguageDashboard {
       ) {
         link.addEventListener('click', (e: MouseEvent) => {
           e.preventDefault();
+          if (!this.isLoggedIn && this.isProtectedUrl(href)) {
+            // Không hiển thị pop up cảnh báo, chuyển thẳng người dùng đến trang đăng nhập / đăng ký
+            window.location.href = '../login/index.html';
+            return;
+          }
           this.triggerLoadingAndRedirect(href);
         });
       }
@@ -461,10 +491,47 @@ class SlanguageDashboard {
   }
 
   public switchLanguage(lang: 'en' | 'ja' | 'vi'): void {
+    const nativeLang = this.getNativeLanguage();
+    if (lang === nativeLang) {
+      this.showToast(`Bạn không thể chọn ngôn ngữ mẹ đẻ (${languagesDB[lang].name}) làm ngôn ngữ học tập!`, languagesDB[lang].flagImg);
+      return;
+    }
     this.currentLang = lang;
     localStorage.setItem('slanguage_active_language', lang);
+    localStorage.setItem('slanguage_current_lang', lang);
     this.render();
     this.showToast(`Đã chuyển sang học: ${languagesDB[lang].name}`, languagesDB[lang].flagImg);
+  }
+
+  private getNativeLanguage(): 'en' | 'ja' | 'vi' {
+    const raw = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
+    if (raw.includes('vi') || raw.includes('việt')) return 'vi';
+    if (raw.includes('en') || raw.includes('anh')) return 'en';
+    if (raw.includes('ja') || raw.includes('nhật')) return 'ja';
+    return 'vi';
+  }
+
+  private filterHeaderLanguageDropdown(): void {
+    const nativeLang = this.getNativeLanguage();
+
+    // 1. Hide native language option from header dropdown menu
+    const dropdownItems = document.querySelectorAll<HTMLElement>('.lang-dropdown-item');
+    dropdownItems.forEach(item => {
+      const lang = item.getAttribute('data-lang');
+      if (lang === nativeLang) {
+        item.style.display = 'none';
+      } else {
+        item.style.display = 'flex';
+      }
+    });
+
+    // 2. Ensure current target language is not user's native language
+    if (this.currentLang === nativeLang) {
+      const fallback: 'en' | 'ja' | 'vi' = nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja');
+      this.currentLang = fallback;
+      localStorage.setItem('slanguage_active_language', fallback);
+      localStorage.setItem('slanguage_current_lang', fallback);
+    }
   }
 
   private addXP(points: number): void {
@@ -474,31 +541,78 @@ class SlanguageDashboard {
     if (xpBadge) {
       xpBadge.textContent = `${this.currentXP.toLocaleString()} XP`;
     }
-    const userRankXP = document.getElementById('currentUserRankXP') || document.querySelector('.rank-item.is-user .rank-xp');
-    if (userRankXP) {
-      userRankXP.textContent = `${this.currentXP.toLocaleString()} XP`;
-    }
+    this.updateUserRankDisplay();
   }
 
   private updateUserRankDisplay(): void {
+    const listEl = document.getElementById('homeRankingList') || document.querySelector('.sidebar-card .ranking-list');
     const userHeaderName = document.querySelector('.user-info-text .name')?.textContent?.trim();
     const currentUserName = localStorage.getItem('slanguage_user_name') || userHeaderName || 'Vua Xứ Thanh';
-
-    const userRankName = document.getElementById('currentUserRankName') || document.querySelector('.rank-item.is-user .rank-name');
-    if (userRankName) {
-      userRankName.textContent = `Bạn (${currentUserName})`;
-    }
-
-    const userRankXP = document.getElementById('currentUserRankXP') || document.querySelector('.rank-item.is-user .rank-xp');
-    if (userRankXP) {
-      userRankXP.textContent = `${this.currentXP.toLocaleString()} XP`;
-    }
-
     const miniAvatar = document.querySelector('.user-avatar-mini') as HTMLImageElement;
-    const userRankAvatar = (document.getElementById('currentUserRankAvatar') || document.querySelector('.rank-item.is-user .rank-avatar')) as HTMLImageElement;
-    if (miniAvatar && userRankAvatar && miniAvatar.src) {
-      userRankAvatar.src = miniAvatar.src;
+    const userAvatar = (miniAvatar && miniAvatar.src) ? miniAvatar.src : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80';
+
+    if (!listEl) return;
+
+    interface HomeRankItem {
+      name: string;
+      avatar: string;
+      xp: number;
+      isCurrentUser: boolean;
     }
+
+    const candidates: HomeRankItem[] = [
+      {
+        name: 'Minh Hoàng',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
+        xp: 3120,
+        isCurrentUser: false
+      },
+      {
+        name: 'Lan Phương',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80',
+        xp: 2890,
+        isCurrentUser: false
+      },
+      {
+        name: 'Kenji Sato',
+        avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=80',
+        xp: 2110,
+        isCurrentUser: false
+      },
+      {
+        name: `Bạn (${currentUserName})`,
+        avatar: userAvatar,
+        xp: this.currentXP,
+        isCurrentUser: true
+      }
+    ];
+
+    // Sắp xếp giảm dần theo điểm kinh nghiệm XP (Điểm cao đứng trước, điểm thấp đứng sau)
+    candidates.sort((a, b) => b.xp - a.xp);
+
+    listEl.innerHTML = '';
+    candidates.forEach((learner, index) => {
+      const rankNum = index + 1;
+      let badgeClass = '';
+      if (rankNum === 1) badgeClass = 'gold';
+      else if (rankNum === 2) badgeClass = 'silver';
+      else if (rankNum === 3) badgeClass = 'bronze';
+
+      const itemDiv = document.createElement('div');
+      itemDiv.className = `rank-item${learner.isCurrentUser ? ' is-user' : ''}`;
+      if (learner.isCurrentUser) {
+        itemDiv.id = 'currentUserRankItem';
+      }
+
+      itemDiv.innerHTML = `
+        <span class="rank-num ${badgeClass}" ${learner.isCurrentUser ? 'id="currentUserRankNum"' : ''}>${rankNum}</span>
+        <img src="${learner.avatar}" alt="${learner.name}" class="rank-avatar" ${learner.isCurrentUser ? 'id="currentUserRankAvatar"' : ''}>
+        <span class="rank-name" ${learner.isCurrentUser ? 'id="currentUserRankName"' : ''}>${learner.name}</span>
+        <span class="rank-xp" ${learner.isCurrentUser ? 'id="currentUserRankXP"' : ''}>${learner.xp.toLocaleString()} XP</span>
+      `;
+
+      listEl.appendChild(itemDiv);
+    });
   }
 
   private render(): void {
