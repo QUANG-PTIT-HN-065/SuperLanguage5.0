@@ -21,7 +21,11 @@ from app.services.learning_path_service import (
     update_learning_path,
 )
 from app.services.learning_service import get_path_topic_states, review_vocabulary_word
-from app.services.vocabulary_service import list_topics, list_words
+from app.services.vocabulary_service import (
+    list_catalog_topics,
+    list_topics,
+    list_words,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -77,26 +81,14 @@ def review_word(
 @router.get("/learning-paths", response_model=BaseResponse[list[Dict[str, Any]]])
 def get_learning_paths(profile: Dict[str, Any] = Depends(get_current_profile)):
     """Lộ trình và các chủ đề người học có quyền truy cập."""
-    accessible_topics: Dict[int, Dict[str, Any]] = {}
-    offset = 0
-    while True:
-        page = list_topics(profile, limit=100, offset=offset)
-        page_items = page["items"]
-        accessible_topics.update({topic["id"]: topic for topic in page_items})
-        offset += len(page_items)
-        if not page_items or offset >= page["available"]:
-            break
-
+    catalog = list_catalog_topics(profile)
     paths = list_learning_paths(profile["target_language"])
-    visible_paths = []
-    for path in paths:
-        path_topics = [
-            topic for topic in path["topics"] if topic["id"] in accessible_topics
-        ]
-        if path_topics:
-            visible_paths.append({
-                key: value for key, value in path.items() if key != "topics"
-            } | {"topic_count": len(path_topics)})
+    visible_paths = [
+        {key: value for key, value in path.items() if key != "topics"}
+        | {"topic_count": len(catalog)}
+        for path in paths
+        if catalog
+    ]
     return BaseResponse(
         status="success",
         message="Đã tải danh sách lộ trình.",
@@ -112,17 +104,7 @@ def get_learning_path(
     path_id: int,
     profile: Dict[str, Any] = Depends(get_current_profile),
 ):
-    """Chi tiết lộ trình với danh sách chủ đề có thể học."""
-    accessible_topics: Dict[int, Dict[str, Any]] = {}
-    offset = 0
-    while True:
-        page = list_topics(profile, limit=100, offset=offset)
-        page_items = page["items"]
-        accessible_topics.update({topic["id"]: topic for topic in page_items})
-        offset += len(page_items)
-        if not page_items or offset >= page["available"]:
-            break
-
+    """Chi tiết lộ trình với toàn bộ chủ đề của ngôn ngữ đang học."""
     path = next(
         (
             item
@@ -134,18 +116,13 @@ def get_learning_path(
     if path is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy lộ trình.")
 
-    topics = []
-    for topic in path["topics"]:
-        if topic["id"] not in accessible_topics:
-            continue
-        progress = accessible_topics[topic["id"]]
-        topics.append({
-            **topic,
-            "word_count": progress["word_count"],
-            "mastered_word_count": progress["mastered_word_count"],
-            "progress_percent": progress["progress_percent"],
-        })
-    topic_states = get_path_topic_states(path_id, profile["id"], topics)
+    topics = list_catalog_topics(profile)
+    topic_states = get_path_topic_states(
+        path_id,
+        profile["id"],
+        topics,
+        is_premium=profile.get("plan_id") == "premium",
+    )
     topics = [
         {**topic, **topic_states.get(topic["id"], {
             "is_locked": False,

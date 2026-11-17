@@ -1,3 +1,6 @@
+import logging
+
+import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
@@ -11,6 +14,9 @@ from app.api.endpoints import admin, auth, users, vocabulary, chat_ai, lessons, 
 
 
 from app.core.exception import AppException
+
+logger = logging.getLogger(__name__)
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -90,4 +96,20 @@ async def app_exception_handler(request: Request, exc: AppException):
                 "detail": str(exc)
             }
         }
+    )
+
+
+@app.exception_handler(httpx.TransportError)
+async def supabase_transport_error_handler(request: Request, exc: httpx.TransportError):
+    logger.error(
+        "Supabase transport failure on %s %s: %s",
+        request.method, request.url.path, exc,
+    )
+    message = (
+        "Không thể kết nối Supabase (lỗi DNS/mạng). "
+        "Kiểm tra kết nối internet, DNS hoặc trạng thái project Supabase rồi thử lại."
+    )
+    return JSONResponse(
+        status_code=503,
+        content={"status": "error", "message": message, "data": None, "detail": message},
     )

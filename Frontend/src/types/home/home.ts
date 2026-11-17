@@ -4,6 +4,9 @@
  * flashcard interactions, XP tracker, streak logic, and lesson preview modal.
  */
 
+import { slanguageApi } from '../shared/api-client';
+import { logoutLearner } from '../shared/learner-header';
+
 // Interface for language specific data
 interface LanguageData {
   id: 'en' | 'ja' | 'vi';
@@ -218,11 +221,7 @@ class SlanguageDashboard {
       if (logoutBtn) {
         logoutBtn.addEventListener('click', (e) => {
           e.preventDefault();
-          localStorage.setItem('slanguage_is_logged_in', 'false');
-          this.isLoggedIn = false;
-          this.applyAuthState();
-          this.showToast('Bạn đã đăng xuất tài khoản 👋');
-          if (userDropdown) userDropdown.classList.remove('open');
+          void logoutLearner();
         });
       }
     }
@@ -485,6 +484,7 @@ class SlanguageDashboard {
     this.currentLang = lang;
     localStorage.setItem('slanguage_active_language', lang);
     localStorage.setItem('slanguage_current_lang', lang);
+    void slanguageApi('/api/v1/me', { method: 'PATCH', body: { target_language: lang } }).catch(() => {});
     this.render();
     this.showToast(`Đã chuyển sang học: ${languagesDB[lang].name}`, languagesDB[lang].flagImg);
   }

@@ -66,3 +66,53 @@ class LessonQuestionPublic(BaseModel):
     prompt: str
     question_type: Literal["multiple_choice", "fill_in"] = "multiple_choice"
     options: list[dict[str, Any]]
+
+
+class TopicReadingEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str = Field(min_length=1, max_length=150)
+    passage: str = Field(min_length=1, max_length=700)
+    translation: str = Field(min_length=1, max_length=1000)
+
+    @field_validator("title", "passage", "translation")
+    @classmethod
+    def clean_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned or "\x00" in cleaned or cleaned != value:
+            raise ValueError("Nội dung không được rỗng, thừa khoảng trắng đầu/cuối hoặc chứa NUL.")
+        return cleaned
+
+
+class TopicReadingsUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    readings: list[TopicReadingEntry] = Field(min_length=5, max_length=5)
+
+
+class BossQuizRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    topic_id: int = Field(ge=1)
+    path_id: int = Field(ge=1)
+
+
+class BossQuizAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    index: int = Field(ge=0)
+    value: Any
+
+
+class BossQuizGradeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    quiz_token: str = Field(min_length=1)
+    answers: list[BossQuizAnswer] = Field(min_length=1, max_length=25)
+
+
+class BossQuizSpeakRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    quiz_token: str = Field(min_length=1)
+    index: int = Field(ge=0)

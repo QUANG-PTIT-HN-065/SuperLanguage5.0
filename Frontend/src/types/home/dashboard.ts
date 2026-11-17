@@ -1,4 +1,5 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { renderLearnerHeader } from "../shared/learner-header";
 
 interface DailyQuest {
   id: string;
@@ -244,22 +245,12 @@ async function loadLearnerDashboard(): Promise<void> {
     ]);
 
     const overview = asRecord(overviewResponse.data, "hồ sơ học viên");
-    const profile = asRecord(overview.profile, "hồ sơ học viên");
     const stats = asRecord(overview.stats, "thống kê học tập");
     const dashboard = asRecord(dashboardResponse.data, "bảng điều khiển");
-    const xp = asCount(stats.xp_total, "tổng XP");
     const streak = asCount(stats.current_streak, "chuỗi ngày học");
-    const displayName =
-      typeof profile.display_name === "string" && profile.display_name.trim()
-        ? profile.display_name.trim()
-        : asText(profile.username, "tên học viên");
 
-    setText("headerXPVal", `${xp.toLocaleString("vi-VN")} XP`);
-    setText("headerStreakVal", `${streak} Ngày`);
+    renderLearnerHeader(overviewResponse.data);
     setText("sidebarStreakValue", `${streak} Ngày`);
-    document.querySelectorAll(".user-info-text .name").forEach((element) => {
-      element.textContent = displayName;
-    });
 
     renderDailyQuests(asArray<DailyQuest>(dashboard.daily_quests, "nhiệm vụ"));
     renderStreakWeek(asArray<StreakDay>(dashboard.streak_week, "chuỗi ngày"));

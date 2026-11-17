@@ -1,4 +1,5 @@
-import { clearAuthTokens, isLearnerAuthenticated, slanguageApi } from "./api-client";
+import { clearAuthTokens, clearLearnerCache, isLearnerAuthenticated, slanguageApi } from "./api-client";
+import { formatHeartLock, heartLockRemainingMs, isHeartsLocked, readHearts } from "./hearts";
 
 interface LearnerHeaderOptions {
   loadProfile?: boolean;
@@ -59,18 +60,39 @@ function updateLanguageDisplay(languageCode: string): void {
   });
 }
 
+function initialsAvatar(name: string): string {
+  const initials = (
+    name.trim().split(/\s+/).slice(-2).map((part) => part.charAt(0).toUpperCase()).join("") || "SL"
+  ).replace(/[&<>"]/g, "");
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='96'>` +
+    `<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>` +
+    `<stop offset='0' stop-color='#0077B6'/><stop offset='1' stop-color='#7AE2CF'/>` +
+    `</linearGradient></defs>` +
+    `<rect width='96' height='96' fill='url(#g)'/>` +
+    `<text x='48' y='62' font-family='sans-serif' font-size='36' font-weight='700' fill='#ffffff' text-anchor='middle'>${initials}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 export function renderLearnerHeader(payload: unknown): void {
   const data = asRecord(payload);
   const profile = asRecord(data.profile);
   const stats = asRecord(data.stats);
+  const plan = asRecord(data.plan);
   const name = text(profile.display_name, text(profile.username, "Học viên"));
   const email = text(profile.email, "Tài khoản học viên");
   const languageCode = text(profile.target_language);
   const xp = count(stats.xp_total);
   const streak = count(stats.current_streak);
+  const maxHearts = count(plan.max_hearts) || 5;
+  const hearts = Math.min(readHearts(), maxHearts);
 
   document.querySelectorAll<HTMLElement>(".user-info-text .name, [data-learner-name]").forEach((element) => {
     element.textContent = name;
+  });
+  document.querySelectorAll<HTMLElement>(".user-info-text .role").forEach((element) => {
+    element.textContent = text(profile.role) === "admin" ? "Quản trị viên" : "Học viên";
   });
   const emailElement = document.querySelector<HTMLElement>("[data-learner-email], #profileEmail");
   if (emailElement) emailElement.textContent = email;
@@ -88,16 +110,24 @@ export function renderLearnerHeader(payload: unknown): void {
       ? String(streak)
       : `${streak} Ngày`;
   });
+  document.querySelectorAll<HTMLElement>("#headerHeartsVal, .stat-chip.hearts span").forEach((element) => {
+    element.textContent = `${hearts}/${maxHearts}`;
+    const chip = element.closest<HTMLElement>(".hud-chip, .stat-chip") || element;
+    chip.title = isHeartsLocked()
+      ? `Hết máu — sinh lực khóa hồi 24 giờ, còn ${formatHeartLock(heartLockRemainingMs())}`
+      : `Sinh lực: ${hearts}/${maxHearts}`;
+  });
 
-  const avatar = document.getElementById("headerAvatar");
-  if (avatar instanceof HTMLImageElement) {
-    const avatarUrl = text(profile.avatar_url);
-    if (avatarUrl.startsWith("https://")) avatar.src = avatarUrl;
-  }
+  const avatarUrl = text(profile.avatar_url);
+  const avatarSrc = avatarUrl.startsWith("https://") ? avatarUrl : initialsAvatar(name);
+  document.querySelectorAll<HTMLImageElement>(".user-avatar-mini, #headerAvatar, #profileAvatarImg").forEach((img) => {
+    img.src = avatarSrc;
+  });
   updateLanguageDisplay(languageCode);
 
   localStorage.setItem("slanguage_user_name", name);
   localStorage.setItem("slanguage_user_email", email);
+  localStorage.setItem("slanguage_user_xp", String(xp));
   if (languageCode) localStorage.setItem("slanguage_active_language", languageCode);
 }
 
@@ -128,21 +158,20 @@ async function changeLearningLanguage(languageCode: string, button: HTMLButtonEl
   }
 }
 
-export function logoutLearner(): void {
-  clearAuthTokens();
-  for (const key of [
-    "slanguage_is_logged_in",
-    "slanguage_user_id",
-    "slanguage_user_email",
-    "slanguage_user_name",
-    "slanguage_active_language",
-    "slanguage_user_xp",
-    "slanguage_user_streak",
-    "slanguage_daily_goal",
-  ]) {
-    localStorage.removeItem(key);
+export async function logoutLearner(): Promise<void> {
+  // Thu hồi phiên phía Supabase trước khi xóa token; keepalive để request kịp
+  // hoàn thành dù trang điều hướng ngay tới trang đăng nhập.
+  const refreshToken = localStorage.getItem("slanguage_refresh_token");
+  if (refreshToken) {
+    void slanguageApi("/api/v1/auth/logout", {
+      method: "POST",
+      body: { refresh_token: refreshToken },
+      keepalive: true,
+    }).catch(() => {});
   }
-  window.location.assign("../login/index.html");
+  clearAuthTokens();
+  clearLearnerCache();
+  window.location.replace("../login/index.html");
 }
 
 function bindHeaderControls(): void {
@@ -198,7 +227,7 @@ function bindHeaderControls(): void {
 
   document.querySelector("#navLogoutItem, #logoutButton")?.addEventListener("click", (event) => {
     event.preventDefault();
-    logoutLearner();
+    void logoutLearner();
   });
 }
 

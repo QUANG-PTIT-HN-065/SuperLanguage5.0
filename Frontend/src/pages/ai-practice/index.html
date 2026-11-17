@@ -32,9 +32,9 @@
         <nav>
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="../learning/index.html">Học tập</a></li>
+            <li><a href="../select-lesson/index.html">Học tập</a></li>
             <li><a href="../vocabulary/index.html">Từ vựng</a></li>
-            <li><a href="../chat/index.html" class="active">Luyện tập AI</a></li>
+            <li><a href="../ai-practice/index.html" class="active">Luyện tập AI</a></li>
             <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
           </ul>
         </nav>
@@ -43,11 +43,11 @@
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
           <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
-          <span id="headerStreakVal">14 Ngày</span>
+          <span id="headerStreakVal">0 Ngày</span>
         </div>
         <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
           <i class="fa-solid fa-star"></i>
-          <span id="headerXPVal">2,450 XP</span>
+          <span id="headerXPVal">0 XP</span>
         </div>
         <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
           <i class="fa-solid fa-heart"></i>
@@ -83,9 +83,9 @@
         <!-- User Account Dropdown (Shown when logged in) -->
         <div class="user-dropdown auth-only" id="userDropdown">
           <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini">
+            <img src="../../../assets/logo.png" alt="Avatar" class="user-avatar-mini" id="headerAvatar">
             <div class="user-info-text">
-              <div class="name">Vua Xứ Thanh</div>
+              <div class="name" id="headerUserName">Học viên</div>
               <div class="role">Học viên</div>
             </div>
             <i class="fa-solid fa-chevron-down user-chevron"></i>
@@ -363,6 +363,19 @@
           </label>
           <input type="password" id="geminiApiKeyInput" class="form-input" placeholder="Dán mã API Key Gemini (AIzaSy...)">
           <small class="form-help">Mã API được lưu hoàn toàn trên trình duyệt của bạn (Local Storage) và không bị tải lên máy chủ ngoài.</small>
+        </div>
+
+        <div class="form-group" id="voiceToneGroup">
+          <label class="form-label" for="voiceToneSelect">
+            <i class="fa-solid fa-microphone-lines"></i> Giọng đọc AI (ADSUP Voice):
+          </label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <select id="voiceToneSelect" class="form-input" style="flex: 1;"></select>
+            <button type="button" class="btn-cancel" id="btnPreviewVoice" title="Nghe thử giọng đang chọn">
+              <i class="fa-solid fa-headphones"></i> Nghe thử
+            </button>
+          </div>
+          <small class="form-help" id="voiceToneHelp">Chọn tone giọng cho câu trả lời của AI, lưu riêng theo từng ngôn ngữ.</small>
         </div>
 
         <div class="form-group">

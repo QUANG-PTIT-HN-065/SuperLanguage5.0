@@ -4,6 +4,9 @@
  * Supports Speech-to-Text (Mic), Text-to-Speech (Audio Voice), Grammar Corrections & XP Rewards.
  */
 
+import { slanguageApi, slanguageApiAudio } from '../shared/api-client';
+import { initializeLearnerHeader, logoutLearner } from '../shared/learner-header';
+
 // Global Window Speech Recognition Types
 interface IWindow extends Window {
   SpeechRecognition?: any;
@@ -32,6 +35,15 @@ interface LanguageMeta {
   flag: string;
   locale: string;
   aiName: string;
+}
+
+interface VoiceOption {
+  id: string;
+  name: string;
+  language: string;
+  gender: string;
+  category_name: string | null;
+  has_preview: boolean;
 }
 
 /**
@@ -190,9 +202,20 @@ class AIPracticeManager {
   private geminiApiKeyInputEl!: HTMLInputElement;
   private voiceSpeedRangeEl!: HTMLInputElement;
   private voiceSpeedValEl!: HTMLElement;
+  private voiceToneSelectEl!: HTMLSelectElement;
+  private btnPreviewVoiceEl!: HTMLButtonElement;
+  private voiceToneHelpEl!: HTMLElement;
+  private adsupVoices: Record<TargetLang, VoiceOption[]> = { ja: [], en: [], vi: [] };
+  private adsupDefaults: Partial<Record<TargetLang, string>> = {};
+  private voicesReady: boolean = false;
+  private activeAudio: HTMLAudioElement | null = null;
+  private previewAudio: HTMLAudioElement | null = null;
   private engineIndicatorEl!: HTMLElement;
   private toastEl!: HTMLElement;
   private toastMessageEl!: HTMLElement;
+  private headerAvatarImgEl: HTMLImageElement | null = null;
+  private headerUserNameEl: HTMLElement | null = null;
+  private userAvatarUrl: string | null = null;
 
   // AI Character Stage & Comic Speech Bubble Elements
   private freddyVideoEl!: HTMLVideoElement;
@@ -218,6 +241,9 @@ class AIPracticeManager {
     this.bindEvents();
     this.applyCurrentLanguage();
     this.renderWelcomeGreeting();
+    void this.loadVoiceTones();
+    void this.loadOwnProfile();
+    void initializeLearnerHeader({ bindControls: false });
   }
 
   private initDOM(): void {
@@ -250,9 +276,14 @@ class AIPracticeManager {
     this.geminiApiKeyInputEl = document.getElementById('geminiApiKeyInput') as HTMLInputElement;
     this.voiceSpeedRangeEl = document.getElementById('voiceSpeedRange') as HTMLInputElement;
     this.voiceSpeedValEl = document.getElementById('voiceSpeedVal') as HTMLElement;
+    this.voiceToneSelectEl = document.getElementById('voiceToneSelect') as HTMLSelectElement;
+    this.btnPreviewVoiceEl = document.getElementById('btnPreviewVoice') as HTMLButtonElement;
+    this.voiceToneHelpEl = document.getElementById('voiceToneHelp') as HTMLElement;
     this.engineIndicatorEl = document.getElementById('currentEngineIndicator') as HTMLElement;
     this.toastEl = document.getElementById('aiToast') as HTMLElement;
     this.toastMessageEl = document.getElementById('toastMessage') as HTMLElement;
+    this.headerAvatarImgEl = document.getElementById('headerAvatar') as HTMLImageElement | null;
+    this.headerUserNameEl = document.getElementById('headerUserName');
 
     // Initialize Freddy Character & Chroma-Key Canvas
     this.freddyVideoEl = document.getElementById('aiFreddyVideo') as HTMLVideoElement;
@@ -271,26 +302,10 @@ class AIPracticeManager {
   }
 
   private loadUserData(): void {
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-
-    let savedLang = (localStorage.getItem('slanguage_current_lang') || localStorage.getItem('slanguage_active_language') || 'ja') as TargetLang;
-    if (savedLang === nativeLang) {
-      savedLang = (nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja')) as TargetLang;
-      localStorage.setItem('slanguage_current_lang', savedLang);
-      localStorage.setItem('slanguage_active_language', savedLang);
-    }
+    const savedLang = (localStorage.getItem('slanguage_current_lang') || localStorage.getItem('slanguage_active_language') || 'ja') as TargetLang;
     if (savedLang && ['ja', 'en', 'vi'].includes(savedLang)) {
       this.currentLang = savedLang;
     }
-
-    document.querySelectorAll<HTMLElement>('.lang-dropdown-item').forEach(item => {
-      if (item.getAttribute('data-lang') === nativeLang) {
-        item.style.display = 'none';
-      } else {
-        item.style.display = 'flex';
-      }
-    });
 
     // User XP
     const userXP = localStorage.getItem('slanguage_user_xp') || '2,450 XP';
@@ -326,6 +341,26 @@ class AIPracticeManager {
       if (this.radioOfflineEl) this.radioOfflineEl.checked = true;
       if (this.geminiKeyGroupEl) this.geminiKeyGroupEl.style.display = 'none';
       if (this.engineIndicatorEl) this.engineIndicatorEl.textContent = 'Chế độ: Smart AI Offline (Sẵn sàng)';
+    }
+  }
+
+  private async loadOwnProfile(): Promise<void> {
+    try {
+      const response = await slanguageApi<{
+        profile: { display_name?: string | null; email: string; avatar_url?: string | null };
+      }>('/api/v1/me', { method: 'GET' });
+      const profile = response.data?.profile;
+      if (!profile) return;
+      if (this.headerUserNameEl) {
+        this.headerUserNameEl.textContent = profile.display_name || profile.email;
+      }
+      const avatarUrl = profile.avatar_url || '';
+      if (avatarUrl.startsWith('https://')) {
+        this.userAvatarUrl = avatarUrl;
+        if (this.headerAvatarImgEl) this.headerAvatarImgEl.src = avatarUrl;
+      }
+    } catch {
+      // Không tải được hồ sơ thì giữ tên/avatar mặc định
     }
   }
 
@@ -418,10 +453,18 @@ class AIPracticeManager {
       this.voiceSpeedValEl.textContent = `${this.voiceRate.toFixed(1)}x`;
     });
 
+    // Voice Tone (ADSUP) selection & preview
+    this.voiceToneSelectEl.addEventListener('change', () => {
+      if (this.voiceToneSelectEl.value) {
+        localStorage.setItem(`slanguage_ai_voice_${this.currentLang}`, this.voiceToneSelectEl.value);
+      }
+    });
+    this.btnPreviewVoiceEl.addEventListener('click', () => void this.previewSelectedVoice());
+
     // Language Dropdown
     this.langDropdownBtnEl.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.langDropdownEl.classList.toggle('show');
+      this.langDropdownEl.classList.toggle('open');
     });
 
     document.querySelectorAll('.lang-dropdown-item').forEach((item) => {
@@ -436,16 +479,16 @@ class AIPracticeManager {
     // User Dropdown
     this.userDropdownBtnEl.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.userDropdownEl.classList.toggle('show');
+      this.userDropdownEl.classList.toggle('open');
     });
 
     // Close Dropdowns on Click Outside
     document.addEventListener('click', (e) => {
       if (!this.langDropdownEl.contains(e.target as Node)) {
-        this.langDropdownEl.classList.remove('show');
+        this.langDropdownEl.classList.remove('open');
       }
       if (!this.userDropdownEl.contains(e.target as Node)) {
-        this.userDropdownEl.classList.remove('show');
+        this.userDropdownEl.classList.remove('open');
       }
     });
 
@@ -462,31 +505,25 @@ class AIPracticeManager {
     // Logout
     const logoutBtn = document.getElementById('navLogoutItem');
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', () => {
-        localStorage.setItem('slanguage_is_logged_in', 'false');
-        localStorage.removeItem('slanguage_current_user');
+      logoutBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        void logoutLearner();
       });
     }
   }
 
   private switchLanguage(lang: TargetLang): void {
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-    if (lang === nativeLang) {
-      this.showToast(`Bạn không thể chọn ngôn ngữ mẹ đẻ để học!`);
-      this.langDropdownEl.classList.remove('show');
-      return;
-    }
-
     if (this.currentLang === lang) {
-      this.langDropdownEl.classList.remove('show');
+      this.langDropdownEl.classList.remove('open');
       return;
     }
     this.currentLang = lang;
     localStorage.setItem('slanguage_current_lang', lang);
     localStorage.setItem('slanguage_active_language', lang);
+    void slanguageApi('/api/v1/me', { method: 'PATCH', body: { target_language: lang } }).catch(() => {});
     this.applyCurrentLanguage();
-    this.langDropdownEl.classList.remove('show');
+    this.renderVoiceToneOptions();
+    this.langDropdownEl.classList.remove('open');
     this.chatMessagesEl.innerHTML = '';
     this.renderWelcomeGreeting();
     this.showToast(`Đã chuyển mục tiêu luyện tập sang ${this.langMetadata[lang].name}`);
@@ -905,9 +942,11 @@ Respond in ${meta.name} concisely (under 80 words), followed by a brief Vietname
 
     const avatar = document.createElement('div');
     avatar.className = 'msg-avatar';
-    avatar.innerHTML = msg.sender === 'bot' 
-      ? '<i class="fa-solid fa-robot"></i>' 
-      : '<i class="fa-solid fa-user"></i>';
+    avatar.innerHTML = msg.sender === 'bot'
+      ? '<i class="fa-solid fa-robot"></i>'
+      : this.userAvatarUrl
+        ? `<img class="msg-avatar-img" src="${this.escapeHtml(this.userAvatarUrl)}" alt="Bạn">`
+        : '<i class="fa-solid fa-user"></i>';
 
     const body = document.createElement('div');
     body.className = 'msg-body';
@@ -1092,11 +1131,119 @@ Respond in ${meta.name} concisely (under 80 words), followed by a brief Vietname
   }
 
   private speakText(text: string, locale: string): void {
-    if (!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
+    if (!this.voiceEnabled) return;
 
     // Clean text from translation or tags if present
     const clean = text.split('\n')[0].replace(/<[^>]*>?/gm, '');
+    if (this.voicesReady && this.selectedVoiceId()) {
+      void this.speakWithAdsup(clean);
+      return;
+    }
+    this.speakWithBrowser(clean, locale);
+  }
+
+  private async loadVoiceTones(): Promise<void> {
+    try {
+      const res = await slanguageApi<{ voices: VoiceOption[]; defaults: Record<string, string> }>(
+        '/api/v1/chat-ai/tts/voices',
+      );
+      for (const lang of ['ja', 'en', 'vi'] as TargetLang[]) {
+        this.adsupVoices[lang] = res.data.voices.filter(v => v.language === lang);
+      }
+      this.adsupDefaults = res.data.defaults;
+      this.voicesReady = true;
+      this.renderVoiceToneOptions();
+    } catch {
+      this.voicesReady = false;
+      this.voiceToneSelectEl.disabled = true;
+      this.btnPreviewVoiceEl.disabled = true;
+      this.voiceToneHelpEl.textContent = 'Không tải được danh sách giọng ADSUP — AI sẽ đọc bằng giọng trình duyệt.';
+    }
+  }
+
+  private renderVoiceToneOptions(): void {
+    const list = this.adsupVoices[this.currentLang];
+    this.voiceToneSelectEl.innerHTML = '';
+    if (!this.voicesReady || !list.length) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'Giọng trình duyệt (mặc định)';
+      this.voiceToneSelectEl.appendChild(opt);
+      this.voiceToneSelectEl.disabled = true;
+      this.btnPreviewVoiceEl.disabled = true;
+      return;
+    }
+    this.voiceToneSelectEl.disabled = false;
+    this.btnPreviewVoiceEl.disabled = false;
+    for (const voice of list) {
+      const opt = document.createElement('option');
+      opt.value = voice.id;
+      opt.textContent = `${voice.name} • ${voice.gender === 'female' ? 'Nữ' : 'Nam'}${voice.category_name ? ` • ${voice.category_name}` : ''}`;
+      this.voiceToneSelectEl.appendChild(opt);
+    }
+    const saved = localStorage.getItem(`slanguage_ai_voice_${this.currentLang}`);
+    const fallback = this.adsupDefaults[this.currentLang];
+    this.voiceToneSelectEl.value =
+      saved && list.some(v => v.id === saved) ? saved
+      : fallback && list.some(v => v.id === fallback) ? fallback
+      : list[0].id;
+  }
+
+  private selectedVoiceId(): string | null {
+    if (!this.voicesReady) return null;
+    return this.voiceToneSelectEl.value || this.adsupDefaults[this.currentLang] || null;
+  }
+
+  private async previewSelectedVoice(): Promise<void> {
+    const id = this.selectedVoiceId();
+    if (!id) return;
+    try {
+      this.previewAudio?.pause();
+      const blob = await slanguageApiAudio(`/api/v1/chat-ai/tts/voices/${id}/preview`, undefined, 'GET');
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      this.previewAudio = audio;
+      audio.onended = () => URL.revokeObjectURL(url);
+      await audio.play();
+    } catch {
+      this.showToast('Không nghe thử được giọng này, thử lại sau.');
+    }
+  }
+
+  private async speakWithAdsup(clean: string): Promise<void> {
+    const backendLanguage = ({ ja: 'Japanese', en: 'English', vi: 'Vietnamese' } as const)[this.currentLang];
+    try {
+      this.activeAudio?.pause();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      const blob = await slanguageApiAudio('/api/v1/chat-ai/tts', {
+        text: clean,
+        language: backendLanguage,
+        voice_id: this.selectedVoiceId(),
+        speed: this.voiceRate,
+      });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      this.activeAudio = audio;
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        this.stopCharacterTalking();
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        this.stopCharacterTalking();
+      };
+      await audio.play();
+    } catch {
+      this.speakWithBrowser(clean, this.langMetadata[this.currentLang].locale);
+    }
+  }
+
+  private speakWithBrowser(clean: string, locale: string): void {
+    if (!('speechSynthesis' in window)) {
+      this.stopCharacterTalking();
+      return;
+    }
+    window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(clean);
     utter.lang = locale;
     utter.rate = this.voiceRate;

@@ -5,6 +5,8 @@
    hiện ra, nội dung thật chưa render -> không nháy chữ.
    ============================================================ */
 
+import { clearLearnerCache, slanguageApi } from "../shared/api-client";
+
 export const ACCESS_TOKEN_KEY = "slanguage_access_token";
 export const REFRESH_TOKEN_KEY = "slanguage_refresh_token";
 
@@ -46,8 +48,18 @@ export function redirectToLogin(): void {
 }
 
 export function logout(): void {
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (refreshToken) {
+    // Thu hồi phiên phía Supabase; keepalive để request sống qua điều hướng
+    void slanguageApi("/api/v1/auth/logout", {
+      method: "POST",
+      body: { refresh_token: refreshToken },
+      keepalive: true,
+    }).catch(() => {});
+  }
+  clearLearnerCache();
   clearSession();
-  location.assign(LOGIN_PATH);
+  location.replace(LOGIN_PATH);
 }
 
 /**

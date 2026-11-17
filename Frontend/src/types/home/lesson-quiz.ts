@@ -59,6 +59,10 @@ const optionsContainer = document.getElementById("lessonOptions");
 const checkButton = document.getElementById("checkLessonAnswer") as HTMLButtonElement | null;
 const nextButton = document.getElementById("nextLessonQuestion") as HTMLButtonElement | null;
 const exitButton = document.getElementById("exitLesson") as HTMLButtonElement | null;
+const readingPanel = document.getElementById("lessonReading");
+const readingTitle = document.getElementById("lessonReadingTitle");
+const readingText = document.getElementById("lessonReadingText");
+const startQuizButton = document.getElementById("startLessonQuiz") as HTMLButtonElement | null;
 
 let lesson: LessonContent | null = null;
 let questionIndex = 0;
@@ -277,8 +281,22 @@ function renderMatchingOptions(question: Extract<LessonQuestion, { question_type
   };
 }
 
+function showReading(): void {
+  if (!lesson || !readingPanel) {
+    renderQuestion();
+    return;
+  }
+  if (questionPanel) questionPanel.hidden = true;
+  readingPanel.hidden = false;
+  if (readingTitle) readingTitle.textContent = lesson.lesson.title;
+  if (readingText) readingText.textContent = lesson.lesson.description ?? "";
+  setNotice("");
+  startQuizButton?.focus();
+}
+
 function renderQuestion(): void {
   if (!lesson || !optionsContainer) return;
+  if (readingPanel) readingPanel.hidden = true;
   if (questionPanel) questionPanel.hidden = false;
   const question = lesson.questions[questionIndex];
   if (!question) return;
@@ -464,7 +482,7 @@ function selectMatchingCard(card: HTMLButtonElement): void {
   }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
 }
 
-async function openLesson(lessonId: number, pushHistory: boolean): Promise<void> {
+export async function openLesson(lessonId: number, pushHistory: boolean, skipReading = false): Promise<void> {
   if (!isLearnerAuthenticated() || !workspace) return;
   if (activeRequest) return;
   closeResultDialog();
@@ -485,6 +503,8 @@ async function openLesson(lessonId: number, pushHistory: boolean): Promise<void>
   document.getElementById("pathDetailSection")?.toggleAttribute("hidden", true);
   document.querySelector(".learning-actions-grid")?.toggleAttribute("hidden", true);
   workspace.hidden = false;
+  document.body.classList.add("lesson-open");
+  if (readingPanel) readingPanel.hidden = true;
   if (questionPanel) questionPanel.hidden = true;
   if (resultPanel) resultPanel.hidden = true;
   setNotice("Đang tải câu hỏi...");
@@ -495,7 +515,8 @@ async function openLesson(lessonId: number, pushHistory: boolean): Promise<void>
   try {
     lesson = await loadLessonContent(lessonId);
     questionIndex = 0;
-    renderQuestion();
+    if (!skipReading && lesson.lesson.description?.trim()) showReading();
+    else renderQuestion();
   } catch (error) {
     setNotice(error instanceof Error ? error.message : "Không thể tải bài học.", true);
   } finally {
@@ -728,7 +749,7 @@ function renderScoreDelta(score: number, lessonId: number): void {
 
 function hasNextTopic(): boolean {
   if (!lastTopicId) return false;
-  const topicIds = [...document.querySelectorAll<SVGGElement>(".roadmap-node[data-topic-id]")]
+  const topicIds = [...document.querySelectorAll<SVGGElement>(".roadmap-node[data-topic-id], .session-card[data-topic-id]")]
     .map((node) => positiveInt(node.dataset.topicId))
     .filter(Boolean);
   const currentIndex = topicIds.indexOf(lastTopicId);
@@ -861,7 +882,9 @@ function leaveLesson(confirmExit = true): void {
   }
   closeResultDialog();
   if (resultPanel) resultPanel.hidden = true;
+  if (readingPanel) readingPanel.hidden = true;
   if (workspace) workspace.hidden = true;
+  document.body.classList.remove("lesson-open");
   const pathId = positiveInt(new URLSearchParams(window.location.search).get("path_id"));
   document.getElementById("pathCatalogSection")?.toggleAttribute("hidden", pathId > 0);
   document.getElementById("pathDetailSection")?.toggleAttribute("hidden", pathId === 0);
@@ -898,7 +921,10 @@ function topicIdOfLesson(lessonId: number): number {
   ];
   const button = buttons.find((item) => item.offsetParent !== null) ?? buttons[0];
   const list = button?.closest<HTMLElement>(".topic-lesson-list");
-  return positiveInt(list?.dataset.topicId);
+  const fromList = positiveInt(list?.dataset.topicId);
+  if (fromList) return fromList;
+  const openCard = document.querySelector<HTMLElement>(`[data-open-lesson="${lessonId}"]`);
+  return positiveInt(openCard?.closest<HTMLElement>("[data-topic-id]")?.dataset.topicId);
 }
 
 document.addEventListener("click", (event) => {
@@ -915,7 +941,12 @@ nextButton?.addEventListener("click", goToNextQuestion);
 document.getElementById("exitLesson")?.addEventListener("click", () => leaveLesson());
 document.getElementById("returnToTopics")?.addEventListener("click", () => leaveLesson(false));
 document.getElementById("retryLesson")?.addEventListener("click", () => {
-  if (lesson) void openLesson(lesson.lesson.id, false);
+  if (lesson) void openLesson(lesson.lesson.id, false, true);
+});
+startQuizButton?.addEventListener("click", () => {
+  if (!lesson) return;
+  if (readingPanel) readingPanel.hidden = true;
+  renderQuestion();
 });
 document.getElementById("continueToPath")?.addEventListener("click", () => leaveLesson(false));
 document.getElementById("closeLessonResult")?.addEventListener("click", () => leaveLesson(false));

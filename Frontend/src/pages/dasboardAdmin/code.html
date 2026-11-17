@@ -124,6 +124,19 @@
             </span>
           </a>
 
+          <!-- 3. Quản lý Bài đọc theo tầng hầm ngục -->
+          <a
+            href="#readings"
+            data-tab="readings"
+            class="sidebar-nav-item flex items-center gap-3 px-3 py-2.5 text-sm font-medium rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all group/item"
+            title="Quản lý Bài đọc"
+          >
+            <span class="material-symbols-outlined text-xl shrink-0 w-6 text-center">menu_book</span>
+            <span class="whitespace-nowrap transition-all duration-200 opacity-0 md:group-hover/sidebar:opacity-100 max-w-0 md:group-hover/sidebar:max-w-xs overflow-hidden">
+              Quản lý Bài đọc
+            </span>
+          </a>
+
           <!-- 3. Quản lý Tài liệu RAG -->
           <a
             href="#documents"
@@ -530,6 +543,8 @@
               </div>
             </div>
 
+            <!-- Reading manager lives in its own tab: section-readings -->
+
           </div>
 
         </div>
@@ -567,8 +582,31 @@
             </div>
           </div> -->
 
-          <!-- ==================== SECTION 3: QUẢN LÝ TÀI LIỆU RAG ==================== -->
-          <div id="section-documents" class="admin-section hidden space-y-6">
+          <!-- ==================== SECTION: QUẢN LÝ BÀI ĐỌC THEO TẦNG ==================== -->
+          <div id="section-readings" class="admin-section hidden space-y-6">
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+            <div class="pb-3 border-b border-slate-100 mb-4">
+              <h3 class="font-title text-base font-bold text-slate-900">Quản Lý Bài Đọc Theo Tầng Hầm Ngục</h3>
+              <p class="text-xs text-slate-500">Mỗi chủ đề cần đủ 5 bài đọc (tiêu đề + bài đọc + bản dịch), tương ứng 5 tầng của dungeon. Học viên đọc bài của tầng nào khi mở hub tầng đó.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3">
+              <label class="text-sm font-semibold text-slate-800" for="readingsTopicSelect">Chủ đề</label>
+              <select id="readingsTopicSelect" class="h-11 px-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 cursor-pointer min-w-64"></select>
+              <span id="readingsSourceBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">Chưa tải</span>
+            </div>
+            <p id="readingsSourceNote" class="text-xs text-slate-600 mt-3"></p>
+          </div>
+          <div id="readingStagesWrap" class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start"></div>
+          <div class="flex items-center gap-3">
+            <button id="btnSubmitReadings" type="button" class="h-11 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50">
+              <span class="material-symbols-outlined text-base">save</span>
+              Lưu 5 Bài Đọc
+            </button>
+            <span id="readingsSaveState" class="text-xs text-slate-500"></span>
+          </div>
+        </div>
+
+        <div id="section-documents" class="admin-section hidden space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 class="font-title text-xl font-bold text-slate-900">Quản Lý Tài Liệu AI</h2>

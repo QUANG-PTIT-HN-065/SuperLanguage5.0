@@ -11,6 +11,20 @@ export interface TopicItem {
   word_count?: number;
 }
 
+interface TopicReadingEntry {
+  title: string;
+  passage: string;
+  translation: string;
+}
+
+interface TopicReadingsPayload {
+  topic_id: number;
+  topic_name: string;
+  language_code: string;
+  source: "column" | "legacy" | "empty";
+  readings: TopicReadingEntry[];
+}
+
 async function loadDocuments(): Promise<void> {
   try {
     documentsList = await adminApi<RagDocument[]>("/api/v1/admin/rag/documents");
@@ -164,6 +178,7 @@ let documentPage = 1;
 const DOCUMENT_PAGE_SIZE = 5;
 let activeTab = "dashboard";
 let currentTopicFilterLang = "all";
+let readingsTopicId: number | null = null;
 let chartInstance: Chart | null = null;
 
 function getElement<T extends HTMLElement = HTMLElement>(id: string): T | null {
@@ -636,6 +651,201 @@ function resetTopicForm(): void {
 }
 
 /**
+ * TAB QUẢN LÝ BÀI ĐỌC THEO 5 TẦNG HẦM NGỤC
+ */
+async function initReadingsTab(): Promise<void> {
+  const select = getElement<HTMLSelectElement>("readingsTopicSelect");
+  if (!select) return;
+  const badge = getElement("readingsSourceBadge");
+  if (badge) badge.textContent = "Đang tải chủ đề...";
+
+  if (!languagesMap.size) await loadLanguages();
+  let topics: TopicItem[] = [];
+  try {
+    const codes = Array.from(languagesMap.keys());
+    const results = await Promise.allSettled(codes.map(fetchTopicsByLanguage));
+    topics = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  } catch (err) {
+    showApiError(err);
+  }
+
+  select.replaceChildren();
+  if (!topics.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "Chưa có chủ đề nào trong CSDL";
+    select.append(opt);
+    readingsTopicId = null;
+    if (badge) badge.textContent = "Không có chủ đề";
+    const note = getElement("readingsSourceNote");
+    if (note) note.textContent = "Hãy tạo chủ đề ở tab Quản Lý Chủ Đề trước khi soạn bài đọc.";
+    renderReadingStages(null);
+    return;
+  }
+
+  topics.forEach((topic) => {
+    const opt = document.createElement("option");
+    opt.value = String(topic.id);
+    opt.textContent = `${topic.name} (${topic.language_code})`;
+    select.append(opt);
+  });
+  const keep = readingsTopicId !== null && topics.some((t) => t.id === readingsTopicId);
+  const target = keep ? (readingsTopicId as number) : topics[0].id;
+  select.value = String(target);
+  await loadTopicReadings(target);
+}
+
+function renderReadingStages(payload: TopicReadingsPayload | null): void {
+  const wrap = getElement("readingStagesWrap");
+  if (!wrap) return;
+  wrap.replaceChildren();
+  const fieldClass =
+    "w-full px-3 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900";
+  for (let s = 1; s <= 5; s++) {
+    const entry = payload?.readings[s - 1] ?? { title: "", passage: "", translation: "" };
+    const card = document.createElement("div");
+    card.className = "bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3";
+    card.dataset.stage = String(s);
+    card.innerHTML = `
+      <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <span class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-bold text-sm shrink-0">${s}</span>
+          <div>
+            <h4 class="text-sm font-bold text-slate-900">Tầng ${s}${s === 5 ? " · BOSS" : ""}</h4>
+            <p class="text-[11px] text-slate-500">Bài đọc hiển thị ở hub tầng ${s} trong lộ trình</p>
+          </div>
+        </div>
+        <span id="readingStageBadge-${s}" class="text-[11px] font-semibold px-2 py-0.5 rounded-full border"></span>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-1" for="readingTitle-${s}">Tiêu đề bài đọc</label>
+        <input id="readingTitle-${s}" type="text" maxlength="150" class="${fieldClass} h-10" placeholder="VD: Bài đọc tầng ${s} của chủ đề" />
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-xs font-semibold text-slate-700" for="readingPassage-${s}">Bài đọc (ngôn ngữ đích)</label>
+          <span class="text-[11px] text-slate-400"><span id="readingPassageCount-${s}">0</span>/700</span>
+        </div>
+        <textarea id="readingPassage-${s}" rows="5" maxlength="700" class="${fieldClass} py-2 resize-y" placeholder="Đoạn văn học viên sẽ đọc ở tầng ${s}..."></textarea>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="text-xs font-semibold text-slate-700" for="readingTranslation-${s}">Bản dịch</label>
+          <span class="text-[11px] text-slate-400"><span id="readingTranslationCount-${s}">0</span>/1000</span>
+        </div>
+        <textarea id="readingTranslation-${s}" rows="4" maxlength="1000" class="${fieldClass} py-2 resize-y" placeholder="Bản dịch của bài đọc tầng ${s}..."></textarea>
+      </div>
+    `;
+    wrap.append(card);
+    const titleEl = getElement<HTMLInputElement>(`readingTitle-${s}`);
+    const passageEl = getElement<HTMLTextAreaElement>(`readingPassage-${s}`);
+    const translationEl = getElement<HTMLTextAreaElement>(`readingTranslation-${s}`);
+    if (titleEl) titleEl.value = entry.title;
+    if (passageEl) passageEl.value = entry.passage;
+    if (translationEl) translationEl.value = entry.translation;
+    updateReadingStageUI(s);
+  }
+}
+
+function updateReadingStageUI(stage: number): void {
+  const title = getElement<HTMLInputElement>(`readingTitle-${stage}`)?.value.trim() || "";
+  const passage = getElement<HTMLTextAreaElement>(`readingPassage-${stage}`)?.value || "";
+  const translation = getElement<HTMLTextAreaElement>(`readingTranslation-${stage}`)?.value || "";
+  const passageCount = getElement(`readingPassageCount-${stage}`);
+  const translationCount = getElement(`readingTranslationCount-${stage}`);
+  if (passageCount) passageCount.textContent = String(passage.length);
+  if (translationCount) translationCount.textContent = String(translation.length);
+  const badge = getElement(`readingStageBadge-${stage}`);
+  if (!badge) return;
+  const complete = Boolean(title && passage.trim() && translation.trim());
+  badge.textContent = complete ? "Đủ nội dung" : "Chưa đủ";
+  badge.className = complete
+    ? "text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200"
+    : "text-[11px] font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200";
+}
+
+async function loadTopicReadings(topicId: number): Promise<void> {
+  readingsTopicId = topicId;
+  const badge = getElement("readingsSourceBadge");
+  if (badge) badge.textContent = "Đang tải...";
+  try {
+    const res = await adminApi<{ status: string; data: TopicReadingsPayload }>(
+      `/api/v1/admin/topics/${topicId}/readings`,
+    );
+    if (readingsTopicId !== topicId) return;
+    const payload = res.data;
+    renderReadingStages(payload);
+    if (badge) {
+      if (payload.source === "column") {
+        badge.textContent = "Đã lưu trong CSDL";
+        badge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200";
+      } else if (payload.source === "legacy") {
+        badge.textContent = "Kế thừa bài đọc cũ";
+        badge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200";
+      } else {
+        badge.textContent = "Chưa có bài đọc";
+        badge.className = "text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200";
+      }
+    }
+    const note = getElement("readingsSourceNote");
+    if (note) {
+      note.textContent =
+        payload.source === "column"
+          ? `Chủ đề "${payload.topic_name}" đã có đủ 5 bài đọc trong CSDL. Học viên đọc bài tương ứng khi mở hub từng tầng.`
+          : payload.source === "legacy"
+            ? `Chủ đề "${payload.topic_name}" mới có bài đọc cũ (từ mô tả bài quiz đầu tiên), đang hiển thị ở Tầng 1. Các tầng 2–5 còn trống — hãy soạn đủ 5 bài rồi lưu.`
+            : `Chủ đề "${payload.topic_name}" chưa có bài đọc nào. Hãy soạn đủ 5 bài (mỗi tầng một bài) rồi bấm "Lưu 5 Bài Đọc".`;
+    }
+  } catch (error) {
+    if (badge) badge.textContent = "Lỗi tải bài đọc";
+    showApiError(error);
+  }
+}
+
+function collectReadings(): TopicReadingEntry[] | null {
+  const entries: TopicReadingEntry[] = [];
+  for (let s = 1; s <= 5; s++) {
+    const title = (getElement<HTMLInputElement>(`readingTitle-${s}`)?.value || "").trim();
+    const passage = (getElement<HTMLTextAreaElement>(`readingPassage-${s}`)?.value || "").trim();
+    const translation = (getElement<HTMLTextAreaElement>(`readingTranslation-${s}`)?.value || "").trim();
+    if (!title || !passage || !translation) {
+      showToast(`Tầng ${s} còn thiếu nội dung: cần đủ tiêu đề, bài đọc và bản dịch.`, "error");
+      return null;
+    }
+    if (title.length > 150 || passage.length > 700 || translation.length > 1000) {
+      showToast(`Tầng ${s} vượt giới hạn: tiêu đề 150, bài đọc 700, bản dịch 1000 ký tự.`, "error");
+      return null;
+    }
+    entries.push({ title, passage, translation });
+  }
+  return entries;
+}
+
+async function saveReadings(): Promise<void> {
+  if (readingsTopicId === null) return;
+  const entries = collectReadings();
+  if (!entries) return;
+  const button = getElement<HTMLButtonElement>("btnSubmitReadings");
+  const state = getElement("readingsSaveState");
+  if (button) button.disabled = true;
+  if (state) state.textContent = "Đang lưu...";
+  try {
+    await adminApi(`/api/v1/admin/topics/${readingsTopicId}/readings`, {
+      method: "PUT",
+      body: { readings: entries },
+    });
+    showToast("Đã lưu 5 bài đọc! Học viên sẽ thấy bài tương ứng ở từng tầng.", "success");
+    if (state) state.textContent = "";
+    await loadTopicReadings(readingsTopicId);
+  } catch (error) {
+    if (state) state.textContent = "";
+    showApiError(error);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+/**
  * 3. NẠP DANH SÁCH NGƯỜI DÙNG THẬT TỪ CSDL
  */
 async function loadUsers(): Promise<void> {
@@ -801,6 +1011,7 @@ function setupNavigation(): void {
       const titles: Record<string, string> = {
         dashboard: "Tổng Quan Điều Hành Hệ Thống",
         topics: "Quản Lý Chủ Đề Học Tập (Topics)",
+        readings: "Quản Lý Bài Đọc Theo Tầng Hầm Ngục",
         documents: "Quản Lý Tài Liệu AI",
         users: "Quản Trị Học Viên & Người Dùng",
         analytics: "Thống Kê Báo Cáo Chuyên Sâu",
@@ -811,6 +1022,9 @@ function setupNavigation(): void {
 
     if (tabName === "dashboard" && chartInstance) {
       chartInstance.resize();
+    }
+    if (tabName === "readings") {
+      void initReadingsTab();
     }
   };
 
@@ -828,7 +1042,7 @@ function setupNavigation(): void {
   });
 
   const hash = window.location.hash.replace("#", "");
-  if (hash && ["dashboard", "topics", "documents", "users", "analytics", "settings"].includes(hash)) {
+  if (hash && ["dashboard", "topics", "readings", "documents", "users", "analytics", "settings"].includes(hash)) {
     switchTab(hash);
   }
 }
@@ -1026,6 +1240,16 @@ function setupEventListeners(): void {
   });
 
   getElement("btnCancelTopicEdit")?.addEventListener("click", resetTopicForm);
+
+  getElement("readingsTopicSelect")?.addEventListener("change", (event) => {
+    const value = Number((event.target as HTMLSelectElement).value);
+    if (Number.isFinite(value) && value > 0) void loadTopicReadings(value);
+  });
+  getElement("btnSubmitReadings")?.addEventListener("click", () => void saveReadings());
+  getElement("readingStagesWrap")?.addEventListener("input", (event) => {
+    const card = (event.target as HTMLElement).closest<HTMLElement>("[data-stage]");
+    if (card) updateReadingStageUI(Number(card.dataset.stage));
+  });
 
   getElement("learningPathLanguage")?.addEventListener("change", () => {
     renderLearningPathTopicOptions();

@@ -108,6 +108,9 @@ class AudioTranscriptionResponse(BaseModel):
 class TTSRequest(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
     language: Literal["English", "Japanese", "Vietnamese"]
+    voice_id: Optional[str] = None
+    speed: float = Field(default=1.0, ge=0.5, le=2.0)
+    provider: Literal["auto", "edge"] = "auto"
 
     @field_validator("text")
     @classmethod
