@@ -44,14 +44,22 @@ def get_admin_overview_stats() -> Dict[str, Any]:
         return {}
 
 
-def list_admin_topics_full(language_code: Optional[str] = None) -> List[Dict[str, Any]]:
+def list_admin_topics_full(
+    language_code: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> Dict[str, Any]:
     """Lấy danh sách chủ đề và đếm số từ vựng liên kết thực tế."""
     try:
-        query = supabase_admin.table("topics").select("id, language_code, name, description, icon_url, sort_order")
+        query = supabase_admin.table("topics").select(
+            "id, language_code, name, description, icon_url, sort_order",
+            count="exact", # type: ignore
+        )
         if language_code and language_code != "all":
             query = query.eq("language_code", language_code)
         
-        topics = query.order("sort_order").execute().data or []
+        result = query.order("sort_order").range(offset, offset + limit - 1).execute()
+        topics = result.data or []
 
         # Lấy số từ vựng cho từng chủ đề qua bảng word_topics
         topic_ids = [t["id"] for t in topics] # type: ignore
@@ -65,10 +73,50 @@ def list_admin_topics_full(language_code: Optional[str] = None) -> List[Dict[str
         for t in topics:
             t["word_count"] = word_count_map.get(t["id"], 0) # type: ignore
 
-        return topics # type: ignore
+        return {
+            "items": topics,
+            "total": int(result.count or 0),
+            "limit": limit,
+            "offset": offset,
+        } # type: ignore
     except Exception as exc:
         raise_db_error(exc)
-        return []
+        return {"items": [], "total": 0, "limit": limit, "offset": offset}
+
+
+def list_admin_plans(limit: int = 20, offset: int = 0) -> Dict[str, Any]:
+    """Return a bounded page of configurable plan catalog entries."""
+    try:
+        query = supabase_admin.table("plans").select("*", count="exact").order("sort_order").order("id") # type: ignore
+        result = query.range(offset, offset + limit - 1).execute()
+        return {
+            "items": result.data or [],
+            "total": int(result.count or 0),
+            "limit": limit,
+            "offset": offset,
+        }
+    except Exception as exc:
+        raise_db_error(exc)
+        return {"items": [], "total": 0, "limit": limit, "offset": offset}
+
+
+def update_admin_plan(plan_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    """Update only the catalog metadata of an existing plan."""
+    try:
+        result = (
+            supabase_admin.table("plans")
+            .update(data)
+            .eq("id", plan_id)
+            .execute()
+        )
+        if not result.data:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy gói dịch vụ.")
+        return result.data[0]  # type: ignore[index]
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise_db_error(exc)
+        raise
 
 
 def create_admin_topic(data: Dict[str, Any]) -> Dict[str, Any]:

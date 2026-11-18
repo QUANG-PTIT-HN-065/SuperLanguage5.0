@@ -155,6 +155,8 @@ uvicorn app.main:app --reload --port 8000
 
 Chạy migration `Supebase/migrations/04_rag.sql` trong Supabase SQL Editor để tạo vector table và hàm tìm kiếm. Trong `Backend/.env`, cấu hình `RAG_EMBEDDING_API_KEYS` (hoặc dùng `GEMINI_API_KEYS` làm dự phòng); các embedding hiện dùng `gemini-embedding-001` với 768 chiều.
 
+Để quản trị bảng giá Premium theo tháng/năm, chạy thêm migration `Supebase/migrations/10_plan_catalog.sql`. Sau đó admin có thể chỉnh danh mục gói và giá USD trong tab **Cài đặt**; việc này không tự gán gói cho người dùng.
+
 Chat Gemini dùng model `gemini-3.5-flash-lite` mặc định. Có thể đặt `GEMINI_CHAT_MODEL` trong `Backend/.env` để chọn model khác còn được Google hỗ trợ. Không dùng `gemini-2.5-flash` cho dự án mới: Google đã đánh dấu model này deprecated và giới hạn API cho người dùng hiện hữu.
 
 Sau khi đăng nhập bằng tài khoản admin, gọi `POST /api/v1/admin/rag/reindex` để đưa các chủ đề và từ vựng Anh/Nhật hiện có vào Vector DB. Khi thêm nội dung bài học chi tiết, gửi `POST /api/v1/admin/rag/documents` với header `Authorization: Bearer <admin_access_token>` và JSON:

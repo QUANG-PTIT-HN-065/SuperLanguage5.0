@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 
 from app.core.deps import get_current_admin_profile
 from app.schemas.rag import RAGDocumentCreate, RAGDocumentResponse, RAGDocumentSummary
+from app.schemas.plan import PlanUpdate
 from app.schemas.vocabulary import (
     LearningPathCreate,
     LearningPathUpdate,
@@ -17,8 +18,10 @@ from app.services.admin import (
     create_admin_topic,
     delete_admin_topic,
     get_admin_overview_stats,
+    list_admin_plans,
     list_admin_topics_full,
     list_admin_users,
+    update_admin_plan,
     update_admin_topic,
 )
 from app.services.learning_path_service import (
@@ -161,13 +164,22 @@ async def upload_rag_document(
     )
 
 
-@router.get("/rag/documents", response_model=list[RAGDocumentSummary])
+@router.get("/rag/documents")
 def get_rag_documents(
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    language_code: Optional[str] = Query(default=None),
     _: Dict[str, Any] = Depends(get_current_admin_profile),
 ):
     """Liệt kê các tài liệu đang được lập chỉ mục trong Vector DB."""
     try:
-        return list_documents()
+        documents = list_documents(language_code)
+        return {
+            "items": documents[offset : offset + limit],
+            "total": len(documents),
+            "limit": limit,
+            "offset": offset,
+        }
     except RAGError as exc:
         logger.exception("Could not list administrator-provided RAG documents.")
         raise HTTPException(
@@ -211,15 +223,37 @@ def get_users(
     return list_admin_users(limit, offset)
 
 
+@router.get("/plans")
+def get_plans(
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    """List a bounded page of plan catalog entries."""
+    return list_admin_plans(limit, offset)
+
+
+@router.put("/plans/{plan_id}")
+def edit_plan(
+    plan_id: str,
+    body: PlanUpdate,
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    """Update plan catalog metadata without assigning plans to users."""
+    return {"status": "success", "plan": update_admin_plan(plan_id, body.model_dump(mode="json"))}
+
+
 # ==================== TOPICS MANAGEMENT ====================
 
 @router.get("/topics")
 def get_topics(
     language_code: Optional[str] = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
     _: Dict[str, Any] = Depends(get_current_admin_profile),
 ):
     """Lấy danh sách các chủ đề (kèm đếm số từ vựng thật trong từng chủ đề)."""
-    return {"items": list_admin_topics_full(language_code)}
+    return list_admin_topics_full(language_code, limit, offset)
 
 
 @router.post("/topics", status_code=status.HTTP_201_CREATED)

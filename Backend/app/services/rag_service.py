@@ -405,7 +405,7 @@ def upsert_document(
     return len(indexed_chunks)
 
 
-def list_documents() -> list[dict[str, Any]]:
+def list_documents(language_code: str | None = None) -> list[dict[str, Any]]:
     """Return one summary row for each indexed RAG document."""
     rows = _fetch_rows(
         "rag_chunks",
@@ -432,7 +432,10 @@ def list_documents() -> list[dict[str, Any]]:
             f"{' ' if document['content'] else ''}{str(row.get('content') or '')}"
         )
         document["chunks_count"] += 1
-    return list(documents.values())
+    values = list(documents.values())
+    if language_code:
+        values = [document for document in values if document["language_code"] == language_code]
+    return values
 
 
 def delete_document(document_key: str) -> None:

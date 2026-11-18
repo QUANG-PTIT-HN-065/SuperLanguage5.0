@@ -11,13 +11,35 @@ export interface TopicItem {
   word_count?: number;
 }
 
-async function loadDocuments(): Promise<void> {
-  try {
-    documentsList = await adminApi<RagDocument[]>("/api/v1/admin/rag/documents");
-    renderDocumentsTable();
-  } catch (error) {
-    showApiError(error);
-  }
+let documentsLoaded = false;
+let documentsLoadPromise: Promise<void> | null = null;
+
+async function loadDocuments(force = false, page = documentPage): Promise<void> {
+  if (!force && documentsLoaded) return;
+  if (documentsLoadPromise) return documentsLoadPromise;
+
+  documentsLoadPromise = (async () => {
+    try {
+      const filter = getFieldValue("filterDocumentLanguage") || "all";
+      const languageCode = filter === "all" ? "" : filter === "all-language" ? "all" : filter;
+      const language = languageCode ? `&language_code=${encodeURIComponent(languageCode)}` : "";
+      const response = await adminApi<{
+        items: RagDocument[];
+        total: number;
+      }>(`/api/v1/admin/rag/documents?limit=${DOCUMENT_PAGE_SIZE}&offset=${(page - 1) * DOCUMENT_PAGE_SIZE}${language}`);
+      documentsList = response.items || [];
+      documentsTotal = response.total || 0;
+      documentPage = page;
+      documentsLoaded = true;
+      renderDocumentsTable();
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      documentsLoadPromise = null;
+    }
+  })();
+
+  return documentsLoadPromise;
 }
 
 function renderDocumentsTable(): void {
@@ -29,11 +51,11 @@ function renderDocumentsTable(): void {
       || (languageFilter === "all-language" && item.language_code === "all")
       || item.language_code === languageFilter
   ));
-  const totalPages = Math.max(1, Math.ceil(filteredDocuments.length / DOCUMENT_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(documentsTotal / DOCUMENT_PAGE_SIZE));
   documentPage = Math.min(documentPage, totalPages);
   const start = (documentPage - 1) * DOCUMENT_PAGE_SIZE;
   const visibleDocuments = filteredDocuments.slice(start, start + DOCUMENT_PAGE_SIZE);
-  if (badge) badge.textContent = `${filteredDocuments.length}/${documentsList.length} tài liệu`;
+  if (badge) badge.textContent = `${documentsTotal} tài liệu`;
   if (!tbody) return;
   if (!filteredDocuments.length) {
     tbody.innerHTML = '<tr><td colspan="5" class="py-10 text-center text-slate-400">Chưa có tài liệu nào được lập chỉ mục.</td></tr>';
@@ -83,7 +105,7 @@ function renderDocumentsTable(): void {
   const info = getElement("documentPaginationInfo");
   if (info) {
     info.textContent = filteredDocuments.length
-      ? `Hiển thị ${start + 1}-${Math.min(start + DOCUMENT_PAGE_SIZE, filteredDocuments.length)} / ${filteredDocuments.length} tài liệu`
+      ? `Hiển thị ${start + 1}-${start + filteredDocuments.length} / ${documentsTotal} tài liệu`
       : "Không có tài liệu phù hợp";
   }
   const pageNumber = getElement("documentPageNumber");
@@ -99,7 +121,7 @@ async function removeDocument(document: RagDocument): Promise<void> {
   try {
     await adminApi(`/api/v1/admin/rag/documents/${encodeURIComponent(document.document_key)}`, { method: "DELETE" });
     showToast("Đã xóa tài liệu khỏi Vector DB.", "success");
-    await loadDocuments();
+    await loadDocuments(true);
   } catch (error) {
     showApiError(error);
   }
@@ -145,6 +167,19 @@ interface OverviewStats {
   language_distribution: Record<string, number>;
 }
 
+interface PlanItem {
+  id: string;
+  name: string;
+  daily_lesson_limit: number | null;
+  max_hearts: number | null;
+  video_access: boolean;
+  is_active: boolean;
+  sort_order: number;
+  billing_period: "free" | "monthly" | "yearly" | null;
+  price_usd: number;
+  description: string | null;
+}
+
 interface RagDocument {
   document_key: string;
   title: string;
@@ -159,12 +194,106 @@ let topicsList: TopicItem[] = [];
 let learningPaths: LearningPathItem[] = [];
 let selectedLearningPathTopicIds: number[] = [];
 let usersList: UserItem[] = [];
+let usersTotal = 0;
+let usersPage = 1;
+const USERS_PAGE_SIZE = 25;
 let documentsList: RagDocument[] = [];
+let documentsTotal = 0;
+let plansList: PlanItem[] = [];
+let plansLoaded = false;
+let plansLoadPromise: Promise<void> | null = null;
 let documentPage = 1;
 const DOCUMENT_PAGE_SIZE = 5;
 let activeTab = "dashboard";
 let currentTopicFilterLang = "all";
 let chartInstance: Chart | null = null;
+const tabLoadPromises = new Map<string, Promise<void>>();
+
+async function loadPlans(force = false): Promise<void> {
+  if (!force && plansLoaded) return;
+  if (plansLoadPromise) return plansLoadPromise;
+
+  plansLoadPromise = (async () => {
+    try {
+      const response = await adminApi<{
+        items: PlanItem[];
+        total: number;
+        limit: number;
+        offset: number;
+      }>("/api/v1/admin/plans?limit=20&offset=0");
+      plansList = response.items || [];
+      plansLoaded = true;
+      renderPlans();
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      plansLoadPromise = null;
+    }
+  })();
+
+  return plansLoadPromise;
+}
+
+function renderPlans(): void {
+  const body = getElement("plansTableBody");
+  if (!body) return;
+
+  if (!plansList.length) {
+    body.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-500">Chưa có gói dịch vụ.</td></tr>';
+    return;
+  }
+
+  body.replaceChildren(...plansList.map((plan) => {
+    const row = document.createElement("tr");
+    row.className = "border-b border-slate-100";
+    const period = plan.billing_period === "yearly"
+      ? "Năm"
+      : plan.billing_period === "monthly"
+        ? "Tháng"
+        : "Miễn phí";
+    const values = [
+      `${plan.name} (${plan.id})`,
+      period,
+      `$${Number(plan.price_usd || 0).toFixed(2)}`,
+      plan.is_active ? "Đang bật" : "Đã tắt",
+    ];
+    for (const value of values) {
+      const cell = document.createElement("td");
+      cell.className = "p-3 text-xs";
+      cell.textContent = value;
+      row.append(cell);
+    }
+    const actionCell = document.createElement("td");
+    actionCell.className = "p-3 text-right";
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "px-2 py-1 text-blue-700 hover:bg-blue-50 rounded";
+    edit.textContent = "Sửa";
+    edit.addEventListener("click", () => editPlan(plan));
+    actionCell.append(edit);
+    row.append(actionCell);
+    return row;
+  }));
+}
+
+function editPlan(plan: PlanItem): void {
+  const setValue = (id: string, value: string) => {
+    const element = getElement<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id);
+    if (element) element.value = value;
+  };
+  setValue("editPlanId", plan.id);
+  setValue("planName", plan.name);
+  setValue("planPriceUsd", String(plan.price_usd ?? 0));
+  setValue("planBillingPeriod", plan.billing_period || "free");
+  setValue("planDailyLimit", plan.daily_lesson_limit == null ? "" : String(plan.daily_lesson_limit));
+  setValue("planMaxHearts", plan.max_hearts == null ? "" : String(plan.max_hearts));
+  setValue("planDescription", plan.description || "");
+  const videoAccess = getElement<HTMLInputElement>("planVideoAccess");
+  if (videoAccess) videoAccess.checked = plan.video_access;
+  const active = getElement<HTMLInputElement>("planActive");
+  if (active) active.checked = plan.is_active;
+  getElement("planFormContainer")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 function getElement<T extends HTMLElement = HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
@@ -193,15 +322,7 @@ export async function initDashboard(): Promise<void> {
     initEngagementChart();
     setupEventListeners();
 
-    // Nạp dữ liệu thật từ Backend Supabase
-    await loadLanguages();
-    await Promise.all([
-      loadDashboardStats(),
-      loadTopics(),
-      loadUsers(),
-      loadLearningPaths(),
-      loadDocuments(),
-    ]);
+    await loadTabData("dashboard");
   } catch (error) {
     if (error instanceof ForbiddenError) {
       return;
@@ -211,6 +332,32 @@ export async function initDashboard(): Promise<void> {
         ? error.message
         : "Không thể kết nối máy chủ quản trị. Vui lòng thử lại.";
     }
+  }
+}
+
+async function loadTabData(tabName: string): Promise<void> {
+  const existing = tabLoadPromises.get(tabName);
+  if (existing) return existing;
+
+  const load = (async () => {
+    if (tabName === "dashboard" || tabName === "analytics") {
+      await Promise.all([loadLanguages(), loadDashboardStats()]);
+    } else if (tabName === "topics") {
+      await loadLanguages();
+      await loadTopics();
+    } else if (tabName === "users") {
+      await loadUsers();
+    } else if (tabName === "documents") {
+      await loadDocuments();
+    } else if (tabName === "settings") {
+      await loadPlans();
+    }
+  })();
+  tabLoadPromises.set(tabName, load);
+  try {
+    await load;
+  } finally {
+    tabLoadPromises.delete(tabName);
   }
 }
 
@@ -276,8 +423,8 @@ function renderLanguageDistribution(dist: Record<string, number>, total: number)
  * 2. NẠP VÀ THAO TÁC CHỦ ĐỀ THẬT (CRUD)
  */
 async function fetchTopicsByLanguage(code: string): Promise<TopicItem[]> {
-  const res = await adminApi<{ items: TopicItem[] }>(
-    `/api/v1/admin/topics?language_code=${encodeURIComponent(code)}`,
+  const res = await adminApi<{ items: TopicItem[]; total: number }>(
+    `/api/v1/admin/topics?language_code=${encodeURIComponent(code)}&limit=50&offset=0`,
   );
   // API đã lọc theo language_code nên item có thể không trả lại trường này -> gán từ tham số
   return (res.items || []).map((t) => ({ ...t, language_code: t.language_code ?? code }));
@@ -640,8 +787,11 @@ function resetTopicForm(): void {
  */
 async function loadUsers(): Promise<void> {
   try {
-    const res = await adminApi<{ items: UserItem[]; total: number }>("/api/v1/admin/users?limit=50&offset=0");
+    const res = await adminApi<{ items: UserItem[]; total: number }>(
+      `/api/v1/admin/users?limit=${USERS_PAGE_SIZE}&offset=${(usersPage - 1) * USERS_PAGE_SIZE}`,
+    );
     usersList = res.items || [];
+    usersTotal = res.total || 0;
     renderUsersTable();
   } catch (err) {
     console.warn("Không thể tải danh sách người dùng:", err);
@@ -717,6 +867,16 @@ function renderUsersTable(): void {
     tr.append(tdUser, tdLang, tdPlan, tdStats, tdStatus);
     return tr;
   }));
+
+  const badge = getElement("totalUsersBadge");
+  if (badge) badge.textContent = `${usersTotal} người dùng`;
+  const previous = getElement<HTMLButtonElement>("prevUsersPage");
+  const next = getElement<HTMLButtonElement>("nextUsersPage");
+  const pageNumber = getElement("usersPageNumber");
+  const totalPages = Math.max(1, Math.ceil(usersTotal / USERS_PAGE_SIZE));
+  if (previous) previous.disabled = usersPage <= 1;
+  if (next) next.disabled = usersPage >= totalPages;
+  if (pageNumber) pageNumber.textContent = `${usersPage}/${totalPages}`;
 
   const userBadge = getElement("totalUsersBadge");
   if (userBadge) userBadge.textContent = `${usersList.length} tài khoản`;
@@ -812,6 +972,7 @@ function setupNavigation(): void {
     if (tabName === "dashboard" && chartInstance) {
       chartInstance.resize();
     }
+    void loadTabData(tabName);
   };
 
   navLinks.forEach((link) => {
@@ -940,7 +1101,7 @@ function setupEventListeners(): void {
       }
       getElement<HTMLFormElement>("documentForm")?.reset();
       showToast(`Đã lập chỉ mục tài liệu (${result.chunks_indexed} đoạn).`, "success");
-      await loadDocuments();
+      await loadDocuments(true);
     } catch (error) {
       showApiError(error);
     } finally {
@@ -948,39 +1109,87 @@ function setupEventListeners(): void {
     }
   });
 
-  getElement("btnRefreshDocuments")?.addEventListener("click", () => void loadDocuments());
+  getElement("btnRefreshDocuments")?.addEventListener("click", () => void loadDocuments(true));
+  getElement("prevUsersPage")?.addEventListener("click", () => {
+    if (usersPage > 1) {
+      usersPage -= 1;
+      void loadUsers();
+    }
+  });
+  getElement("nextUsersPage")?.addEventListener("click", () => {
+    const totalPages = Math.max(1, Math.ceil(usersTotal / USERS_PAGE_SIZE));
+    if (usersPage < totalPages) {
+      usersPage += 1;
+      void loadUsers();
+    }
+  });
   getElement("filterDocumentLanguage")?.addEventListener("change", () => {
     documentPage = 1;
-    renderDocumentsTable();
+    void loadDocuments(true, 1);
   });
   getElement("prevDocumentPage")?.addEventListener("click", () => {
     if (documentPage > 1) {
-      documentPage -= 1;
-      renderDocumentsTable();
+      void loadDocuments(true, documentPage - 1);
     }
   });
   getElement("nextDocumentPage")?.addEventListener("click", () => {
-    const filter = getFieldValue("filterDocumentLanguage") || "all";
-    const totalPages = Math.max(1, Math.ceil(
-      documentsList.filter((item) => filter === "all" || item.language_code === filter || (filter === "all-language" && item.language_code === "all")).length
-      / DOCUMENT_PAGE_SIZE,
-    ));
-    if (documentPage < totalPages) {
-      documentPage += 1;
-      renderDocumentsTable();
-    }
+    const totalPages = Math.max(1, Math.ceil(documentsTotal / DOCUMENT_PAGE_SIZE));
+    if (documentPage < totalPages) void loadDocuments(true, documentPage + 1);
   });
   getElement("btnReindexDocuments")?.addEventListener("click", async () => {
+    if (!window.confirm(
+      "Đồng bộ lại toàn bộ chủ đề và từ vựng vào Vector DB? Tác vụ này có thể tốn nhiều RAM và thời gian.",
+    )) {
+      return;
+    }
+
     const button = getElement<HTMLButtonElement>("btnReindexDocuments");
     if (button) button.disabled = true;
     try {
       const result = await adminApi<{ message: string; data: { documents_indexed: number } }>("/api/v1/admin/rag/reindex", { method: "POST" });
       showToast(`${result.message} (${result.data.documents_indexed} tài liệu).`, "success");
-      await loadDocuments();
+      await loadDocuments(true);
     } catch (error) {
       showApiError(error);
     } finally {
       if (button) button.disabled = false;
+    }
+  });
+
+  getElement("planForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const planId = getFieldValue("editPlanId");
+    if (!planId) {
+      showToast("Chọn một gói để chỉnh sửa.", "error");
+      return;
+    }
+    const saveButton = getElement<HTMLButtonElement>("savePlanButton");
+    if (saveButton) saveButton.disabled = true;
+    try {
+      await adminApi(`/api/v1/admin/plans/${encodeURIComponent(planId)}`, {
+        method: "PUT",
+        body: {
+          name: getFieldValue("planName"),
+          billing_period: getFieldValue("planBillingPeriod"),
+          price_usd: Number(getFieldValue("planPriceUsd") || 0),
+          daily_lesson_limit: getFieldValue("planDailyLimit")
+            ? Number(getFieldValue("planDailyLimit"))
+            : null,
+          max_hearts: getFieldValue("planMaxHearts")
+            ? Number(getFieldValue("planMaxHearts"))
+            : null,
+          video_access: getElement<HTMLInputElement>("planVideoAccess")?.checked ?? false,
+          is_active: getElement<HTMLInputElement>("planActive")?.checked ?? false,
+          sort_order: plansList.find((plan) => plan.id === planId)?.sort_order ?? 100,
+          description: getFieldValue("planDescription") || null,
+        },
+      });
+      showToast("Đã cập nhật gói dịch vụ.", "success");
+      await loadPlans(true);
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      if (saveButton) saveButton.disabled = false;
     }
   });
 
