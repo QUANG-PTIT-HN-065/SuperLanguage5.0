@@ -23,13 +23,20 @@ from app.core.config import settings
 # httpx mặc định chỉ chờ 5 giây. Đăng ký/OTP phải đợi Supabase gửi email nên
 # dễ bị ReadTimeout; nới lên 30 giây cho các request xác thực.
 AUTH_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
+DB_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
 
 
 def _options(auth_timeout: bool = False) -> ClientOptions:
     kwargs = {}
     # Chỉ truyền httpx_client nếu phiên bản supabase-py đang cài hỗ trợ
-    if auth_timeout and "httpx_client" in getattr(ClientOptions, "__dataclass_fields__", {}):
-        kwargs["httpx_client"] = httpx.Client(timeout=AUTH_TIMEOUT, follow_redirects=True)
+    if "httpx_client" in getattr(ClientOptions, "__dataclass_fields__", {}):
+        # postgrest mặc định bật HTTP/2; Supabase đóng connection (GOAWAY) và
+        # httpx không tự nối lại trên HTTP/2 → RemoteProtocolError hàng loạt.
+        # HTTP/1.1 được connection pool tự reconnect khi connection cũ chết.
+        kwargs["httpx_client"] = httpx.Client(
+            timeout=AUTH_TIMEOUT if auth_timeout else DB_TIMEOUT,
+            follow_redirects=True,
+        )
     return ClientOptions(auto_refresh_token=False, persist_session=False, **kwargs) # type: ignore
 
 

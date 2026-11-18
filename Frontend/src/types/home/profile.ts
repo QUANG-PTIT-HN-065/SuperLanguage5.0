@@ -1,7 +1,7 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader, renderLearnerHeader } from "../shared/learner-header";
 import { mountHeader } from "../ui/header.js";
-import { AvatarUploader } from "../../ts/ui/avatar-upload";
+import { AvatarUploader } from "../ui/avatar-upload";
 import {
   validateUsername,
   validateDisplayName,
@@ -10,7 +10,7 @@ import {
   validateCefrProgression,
   validateLanguages,
   evaluatePasswordStrength,
-} from "../../ts/ui/validators";
+} from "../ui/validators";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -373,21 +373,82 @@ function fillProfile(payload: unknown): void {
     avatarUploader.setAvatarUrl(avatarUrl);
   }
 
-  // Header and Hero UI
+  // Header, Duolingo Banner, and Statistics UI
   const name = stringValue(profile.display_name, stringValue(profile.username, "Học viên"));
+  const username = stringValue(profile.username, "hocvien");
   const email = stringValue(profile.email, "learner@slanguage.edu.vn");
   const displayName = document.getElementById("profileDisplayName");
+  const usernameTag = document.getElementById("profileUsernameTag");
+  const joinedDateEl = document.getElementById("profileJoinedDate");
+  const followingCountEl = document.getElementById("profileFollowingCount");
+  const followersCountEl = document.getElementById("profileFollowersCount");
+  const bannerFlag = document.getElementById("profileBannerFlag") as HTMLImageElement | null;
   const emailElement = document.getElementById("profileEmail");
-  const xpElement = document.getElementById("profileXp");
-  const streakElement = document.getElementById("profileStreak");
   const levelBadge = document.getElementById("profileLevelBadge");
 
   if (displayName) displayName.textContent = name;
+  if (usernameTag) usernameTag.textContent = `@${username}`;
   if (emailElement) emailElement.textContent = email;
+
+  // Joined date
+  if (joinedDateEl) {
+    const createdAtStr = stringValue(profile.created_at);
+    if (createdAtStr) {
+      const d = new Date(createdAtStr);
+      if (!isNaN(d.getTime())) {
+        const month = d.toLocaleDateString("vi-VN", { month: "long" });
+        const year = d.getFullYear();
+        joinedDateEl.innerHTML = `<i class="fa-regular fa-calendar" aria-hidden="true"></i> Đã tham gia ${month}, ${year}`;
+      } else {
+        joinedDateEl.innerHTML = `<i class="fa-regular fa-calendar" aria-hidden="true"></i> Đã tham gia Tháng 7, 2021`;
+      }
+    } else {
+      joinedDateEl.innerHTML = `<i class="fa-regular fa-calendar" aria-hidden="true"></i> Đã tham gia Tháng 7, 2021`;
+    }
+  }
+
+  // Social Stats
+  if (followingCountEl) followingCountEl.textContent = String(stats.following_count ?? 1);
+  if (followersCountEl) followersCountEl.textContent = String(stats.followers_count ?? 3);
+
+  // Target Language Flag
+  if (bannerFlag) {
+    const targetLang = (stringValue(profile.target_language) || "EN").toLowerCase();
+    bannerFlag.src = `/assets/flags/flag-${targetLang}.png`;
+  }
+
+  // XP, Streak, League & Statistics
   const xpTotal = Number(stats.xp_total || 0);
+  const currentStreak = Number(stats.current_streak || 0);
+  const top3Count = Number(stats.top3_count || 0);
+
+  let leagueName = "Đồng";
+  if (xpTotal >= 5000) leagueName = "Kim cương";
+  else if (xpTotal >= 3000) leagueName = "Hồng ngọc";
+  else if (xpTotal >= 1800) leagueName = "Lam ngọc";
+  else if (xpTotal >= 800) leagueName = "Vàng";
+  else if (xpTotal >= 200) leagueName = "Bạc";
+
+  if (levelBadge) {
+    levelBadge.innerHTML = `<i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Hạng ${leagueName}`;
+  }
+
+  // Statistics 2x2 Grid elements (Duolingo layout)
+  const statDayStreak = document.getElementById("statDayStreak");
+  const statTotalXp = document.getElementById("statTotalXp");
+  const statLeagueName = document.getElementById("statLeagueName");
+  const statTop3Count = document.getElementById("statTop3Count");
+
+  if (statDayStreak) statDayStreak.textContent = String(currentStreak);
+  if (statTotalXp) statTotalXp.textContent = xpTotal.toLocaleString("vi-VN");
+  if (statLeagueName) statLeagueName.textContent = leagueName;
+  if (statTop3Count) statTop3Count.textContent = String(top3Count);
+
+  // Backward compatibility IDs
+  const xpElement = document.getElementById("profileXp");
+  const streakElement = document.getElementById("profileStreak");
   if (xpElement) xpElement.textContent = `${xpTotal.toLocaleString("vi-VN")} XP`;
-  if (streakElement) streakElement.textContent = `${Number(stats.current_streak || 0)} Ngày`;
-  if (levelBadge) levelBadge.textContent = `Cấp độ ${Math.floor(xpTotal / 100) + 1}`;
+  if (streakElement) streakElement.textContent = `${currentStreak} Ngày`;
 
   renderLearnerHeader(payload);
   form.hidden = false;
@@ -549,6 +610,13 @@ function initializeAvatarUploader(): void {
       setNotice(err, "error");
     },
   });
+
+  const btnEdit = document.getElementById("btnEditAvatar");
+  if (btnEdit) {
+    btnEdit.addEventListener("click", () => {
+      avatarUploader?.openPicker();
+    });
+  }
 }
 
 async function initializeProfilePage(): Promise<void> {

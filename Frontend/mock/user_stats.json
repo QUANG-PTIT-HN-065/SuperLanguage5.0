@@ -1,0 +1,24 @@
+[
+  {
+    "user_id": "7f1c2b64-9d4a-4d1f-8f2b-3c5a1d6e0b12",
+    "xp_total": 4820,
+    "words_learned": 316,
+    "lessons_completed": 48,
+    "current_streak": 12,
+    "streak_start_date": "2026-10-31",
+    "longest_streak": 41,
+    "last_activity_date": "2026-11-13",
+    "streak_freezes": 2
+  },
+  {
+    "user_id": "a2b9d0e1-4c6f-47a1-9e3d-88bb2f4c1a05",
+    "xp_total": 11930,
+    "words_learned": 902,
+    "lessons_completed": 133,
+    "current_streak": 5,
+    "streak_start_date": "2026-11-09",
+    "longest_streak": 27,
+    "last_activity_date": "2026-11-13",
+    "streak_freezes": 0
+  }
+]

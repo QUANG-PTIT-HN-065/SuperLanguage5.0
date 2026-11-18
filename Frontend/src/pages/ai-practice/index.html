@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Luyện Tập Giao Tiếp Với AI</title>
+  <link rel="icon" type="image/png" href="../../../assets/logo.png">
+  <link rel="apple-touch-icon" href="../../../assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../../styles/ai-practice/style.css">
+  <!-- Auth Guard: Chỉ cho phép truy cập khi đã đăng nhập, ngược lại điều hướng về Trang chủ với vai trò Guest -->
+  <script>
+    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+      window.location.replace('../login/index.html');
+    }
+  </script>
+</head>
+<body class="user-authenticated">
+
+      <!-- ================= TOP NAVBAR ================= -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="nav-left">
+        <a href="../home/index.html" class="brand-logo">
+          <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </a>
+
+        <nav>
+          <ul class="nav-links">
+            <li><a href="../home/index.html">Trang chủ</a></li>
+            <li><a href="../select-lesson/index.html">Học tập</a></li>
+            <li><a href="../vocabulary/index.html">Từ vựng</a></li>
+            <li><a href="../ai-practice/index.html" class="active">Luyện tập AI</a></li>
+            <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="nav-right">
+        <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
+          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <span id="headerStreakVal">0 Ngày</span>
+        </div>
+        <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
+          <i class="fa-solid fa-star"></i>
+          <span id="headerXPVal">0 XP</span>
+        </div>
+        <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
+          <i class="fa-solid fa-heart"></i>
+          <span id="headerHeartsVal">5/5</span>
+        </div>
+
+        <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
+        <div class="lang-dropdown auth-only" id="langDropdown">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
+            <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
+            <i class="fa-solid fa-chevron-down lang-chevron"></i>
+          </button>
+          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
+            <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
+              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon">
+              <span class="lang-name">Tiếng Nhật (日本語)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
+              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon">
+              <span class="lang-name">English (Tiếng Anh)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
+              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon">
+              <span class="lang-name">Tiếng Việt (Vietnamese)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- User Account Dropdown (Shown when logged in) -->
+        <div class="user-dropdown auth-only" id="userDropdown">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
+            <img src="../../../assets/logo.png" alt="Avatar" class="user-avatar-mini" id="headerAvatar">
+            <div class="user-info-text">
+              <div class="name" id="headerUserName">Học viên</div>
+              <div class="role">Học viên</div>
+            </div>
+            <i class="fa-solid fa-chevron-down user-chevron"></i>
+          </button>
+          <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Thông tin cá nhân</span>
+                <span class="sub">Hồ sơ & cài đặt tài khoản</span>
+              </div>
+            </a>
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Tiến độ học tập</span>
+                <span class="sub">Thống kê XP & chuỗi ngày</span>
+              </div>
+            </a>
+                        <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Shop quy đổi</span>
+                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
+              </div>
+            </a>
+            <div class="user-dropdown-divider"></div>
+            <a href="../login/index.html" class="user-dropdown-item logout-item" id="navLogoutItem" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Đăng xuất</span>
+                <span class="sub">Thoát khỏi phiên học</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Guest Auth Buttons (Shown when NOT logged in) -->
+        <div class="guest-nav-auth guest-only" id="guestNavAuth">
+          <a href="../login/index.html" class="nav-auth-login">Đăng nhập</a>
+          <a href="../register/index.html" class="nav-auth-register">Đăng ký</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="ai-practice-main">
+
+    <!-- HERO HEADER CARD -->
+    <section class="ai-hero-card">
+      <div class="ai-hero-content">
+        <div class="ai-badge-row">
+          <span class="ai-chip-pill"><i class="fa-solid fa-wand-magic-sparkles"></i> SLANGUAGE AI TUTOR</span>
+          <span class="ai-chip-pill gold"><i class="fa-solid fa-star"></i> +5 XP MỖI LƯỢT ĐỐI THOẠI</span>
+          <span class="ai-chip-pill live"><i class="fa-solid fa-microphone-lines"></i> GIỌNG NÓI & NHẬN DIỆN MIC</span>
+        </div>
+        <h1 class="ai-hero-title">
+          Luyện Tập Giao Tiếp Cùng <span class="ai-title-gradient">AI Trí Tuệ Nhân Tạo</span>
+        </h1>
+        <p class="ai-hero-desc">
+          Đối thoại phản xạ tức thì, chỉnh sửa ngữ pháp chi tiết, hướng dẫn phát âm chuẩn bản ngữ cho cả 3 ngôn ngữ: 
+          <strong>Tiếng Anh</strong>, <strong>Tiếng Nhật</strong> và <strong>Tiếng Việt</strong>.
+        </p>
+      </div>
+
+      <div class="ai-hero-stats">
+        <div class="ai-stat-box">
+          <div class="stat-number" id="practiceSessionCount">0</div>
+          <div class="stat-label">Lượt trò chuyện hôm nay</div>
+        </div>
+        <div class="ai-stat-box">
+          <div class="stat-number" id="earnedPracticeXP">+0 XP</div>
+          <div class="stat-label">XP nhận từ AI</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRACTICE WORKSPACE -->
+    <section class="ai-workspace-card">
+
+      <!-- TOP TOOLBAR: PRACTICE MODES & CONTROLS -->
+      <div class="ai-toolbar">
+        <div class="ai-mode-selector">
+          <button class="ai-mode-btn active" data-mode="free" title="Trò chuyện đàm thoại tự do">
+            <i class="fa-solid fa-comments"></i>
+            <span>Đàm thoại tự do</span>
+          </button>
+          <button class="ai-mode-btn" data-mode="interview" title="Luyện phỏng vấn xin việc & đàm thoại văn phòng">
+            <i class="fa-solid fa-briefcase"></i>
+            <span>Phỏng vấn & Công sở</span>
+          </button>
+          <button class="ai-mode-btn" data-mode="grammar" title="Nhập câu để AI kiểm tra và sửa lỗi ngữ pháp">
+            <i class="fa-solid fa-spell-check"></i>
+            <span>Sửa lỗi & Ngữ pháp</span>
+          </button>
+          <button class="ai-mode-btn" data-mode="pronounce" title="Luyện phát âm từ vựng, câu thoại & Hán tự Kanji">
+            <i class="fa-solid fa-volume-high"></i>
+            <span>Phát âm & Kanji</span>
+          </button>
+        </div>
+
+        <div class="ai-toolbar-actions">
+          <!-- Voice Output Toggle -->
+          <button class="tool-btn active" id="btnToggleVoice" title="Tự động phát giọng đọc AI khi trả lời">
+            <i class="fa-solid fa-volume-high" id="voiceToggleIcon"></i>
+            <span id="voiceToggleText">Giọng đọc: BẬT</span>
+          </button>
+
+          <!-- Settings Button -->
+          <button class="tool-btn" id="btnOpenSettings" title="Cài đặt mô hình AI & Giọng nói">
+            <i class="fa-solid fa-gear"></i>
+            <span>Cài đặt</span>
+          </button>
+
+          <!-- Clear Chat Button -->
+          <button class="tool-btn danger" id="btnClearChat" title="Xóa toàn bộ tin nhắn để bắt đầu đoạn hội thoại mới">
+            <i class="fa-solid fa-rotate-left"></i>
+            <span>Làm mới</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PRACTICE WORKSPACE BODY: SPLIT VIEW (CHARACTER STAGE + CHAT) -->
+      <div class="ai-workspace-body">
+
+        <!-- LEFT: AI CHARACTER STAGE (Mô hình nhân vật AI Freddy & Hộp thoại truyện tranh) -->
+        <div class="ai-stage-panel" id="aiStagePanel">
+          <div class="ai-stage-room">
+            <!-- Background Image layer (freddy_room_bg.jpg) -->
+            <div class="ai-room-bg-layer"></div>
+
+            <!-- Freddy Character & Comic Speech Bubble Content -->
+            <div class="ai-character-stage-content">
+              
+              <!-- Character Video & Chroma Key Canvas Wrapper -->
+              <div class="ai-character-video-box" id="aiCharacterBox">
+                <video 
+                  id="aiFreddyVideo" 
+                  class="ai-freddy-video" 
+                  src="../../../assets/freddy_talking.mp4#t=0.001" 
+                  muted 
+                  playsinline 
+                  loop 
+                  preload="auto"
+                ></video>
+                <canvas id="aiFreddyCanvas" class="ai-freddy-canvas"></canvas>
+                <div class="character-shadow"></div>
+              </div>
+
+              <!-- Comic Speech Bubble beside Freddy's moving jaw -->
+              <div class="comic-speech-bubble" id="comicSpeechBubble">
+                <div class="comic-bubble-header">
+                  <span class="comic-badge"><i class="fa-solid fa-bolt"></i> Freddy AI Tutor</span>
+                </div>
+                <div class="comic-bubble-body">
+                  <div class="comic-bubble-text" id="comicBubbleText">Xin chào! Tôi là Freddy AI, người bạn đồng hành luyện tập ngoại ngữ cùng bạn!</div>
+                  <div class="comic-bubble-sub" id="comicBubbleSub" style="display: none;"></div>
+                  <div class="comic-bubble-tip" id="comicBubbleTip" style="display: none;"></div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Bottom Stage HUD Status -->
+            <div class="ai-stage-hud">
+              <div class="ai-status-indicator" id="aiStatusIndicator">
+                <span class="status-dot"></span>
+                <span class="status-label" id="aiStatusLabel">Freddy đang sẵn sàng đối thoại</span>
+              </div>
+              <div class="ai-stage-badges">
+                <span class="stage-tag"><i class="fa-solid fa-robot"></i> Mô hình: Freddy Fazbear</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- RIGHT: CHAT INTERFACE -->
+        <div class="ai-chat-container">
+
+        <!-- CHAT STREAM -->
+        <div class="ai-chat-messages" id="chatMessages">
+          <!-- Message elements injected dynamically by ai-practice.ts -->
+        </div>
+
+        <!-- QUICK PROMPT SUGGESTIONS -->
+        <div class="ai-suggestions-row" id="quickSuggestions">
+          <span class="suggestion-label"><i class="fa-solid fa-lightbulb"></i> Gợi ý nhanh:</span>
+          <div class="suggestion-chips" id="suggestionChipsList">
+            <!-- Dynamic chips rendered by TypeScript -->
+          </div>
+        </div>
+
+        <!-- INPUT BAR -->
+        <div class="ai-input-bar">
+          <!-- Audio Wave Visualizer (when mic active) -->
+          <div class="audio-wave-visualizer" id="audioWaveVisualizer" style="display: none;">
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-bar"></span>
+            <span class="wave-label">Đang lắng nghe giọng nói của bạn... Hãy nói vào micro!</span>
+          </div>
+
+          <div class="input-row">
+            <!-- Mic Record Button -->
+            <button class="btn-mic" id="btnMicRecord" title="Nhấn để nói vào Micro (Speech-to-Text)">
+              <i class="fa-solid fa-microphone" id="micIcon"></i>
+            </button>
+
+            <!-- Text Input -->
+            <textarea 
+              id="chatInputText" 
+              class="chat-textarea" 
+              placeholder="Nhập tin nhắn bằng Tiếng Nhật, Tiếng Anh hoặc Tiếng Việt... (Nhấn Enter để gửi, Shift+Enter xuống dòng)" 
+              rows="1"
+            ></textarea>
+
+            <!-- Send Button -->
+            <button class="btn-send" id="btnSendMessage" title="Gửi tin nhắn">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </div>
+          
+          <div class="input-hint">
+            <span><i class="fa-solid fa-circle-info"></i> Bạn có thể gõ câu hỏi hoặc bấm vào biểu tượng Micro để luyện nói trực tiếp.</span>
+            <span id="currentEngineIndicator" class="engine-indicator">Chế độ: Smart AI Offline (Sẵn sàng)</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= SETTINGS MODAL ================= -->
+  <div class="modal-backdrop" id="settingsModal" style="display: none;">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-sliders"></i> Cài Đặt Trợ Lý AI</h3>
+        <button class="modal-close-btn" id="btnCloseSettings"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fa-solid fa-brain"></i> Chế độ xử lý ngôn ngữ
+          </label>
+          <div class="engine-radios">
+            <label class="engine-radio-card active">
+              <input type="radio" name="aiEngine" value="offline" checked id="radioOffline">
+              <div class="radio-info">
+                <strong>Offline Smart Engine (Khuyên dùng)</strong>
+                <span>Kho tri thức đàm thoại & phản xạ chuẩn giáo trình Slanguage, tốc độ phản hồi 0.1s.</span>
+              </div>
+            </label>
+            <label class="engine-radio-card">
+              <input type="radio" name="aiEngine" value="gemini" id="radioGemini">
+              <div class="radio-info">
+                <strong>Google Gemini Cloud API (Trực tuyến)</strong>
+                <span>Kết nối trực tiếp Gemini AI thông qua API Key của bạn để trò chuyện không giới hạn.</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group" id="geminiKeyGroup" style="display: none;">
+          <label class="form-label" for="geminiApiKeyInput">
+            <i class="fa-solid fa-key"></i> Google Gemini API Key
+          </label>
+          <input type="password" id="geminiApiKeyInput" class="form-input" placeholder="Dán mã API Key Gemini (AIzaSy...)">
+          <small class="form-help">Mã API được lưu hoàn toàn trên trình duyệt của bạn (Local Storage) và không bị tải lên máy chủ ngoài.</small>
+        </div>
+
+        <div class="form-group" id="voiceToneGroup">
+          <label class="form-label" for="voiceToneSelect">
+            <i class="fa-solid fa-microphone-lines"></i> Giọng đọc AI (ADSUP Voice):
+          </label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <select id="voiceToneSelect" class="form-input" style="flex: 1;"></select>
+            <button type="button" class="btn-cancel" id="btnPreviewVoice" title="Nghe thử giọng đang chọn">
+              <i class="fa-solid fa-headphones"></i> Nghe thử
+            </button>
+          </div>
+          <small class="form-help" id="voiceToneHelp">Chọn tone giọng cho câu trả lời của AI, lưu riêng theo từng ngôn ngữ.</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="voiceSpeedRange">
+            <i class="fa-solid fa-gauge-high"></i> Tốc độ phát âm giọng đọc: <span id="voiceSpeedVal">1.0x</span>
+          </label>
+          <input type="range" id="voiceSpeedRange" min="0.7" max="1.3" step="0.1" value="1.0" class="form-range">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-cancel" id="btnCancelSettings">Đóng</button>
+        <button class="btn-save" id="btnSaveSettings">Lưu thiết lập</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= GLOBAL TOAST NOTIFICATION ================= -->
+  <div class="ai-toast" id="aiToast" style="display: none;">
+    <i class="fa-solid fa-star toast-icon" id="toastIcon"></i>
+    <span class="toast-text" id="toastMessage">Thông báo</span>
+  </div>
+
+    <footer class="footer">
+    <div class="footer-container">
+      <!-- Cột 1: Giới thiệu thương hiệu -->
+      <div class="footer-col">
+        <div class="brand-logo" style="margin-bottom: 14px;">
+          <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </div>
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
+        </p>
+      </div>
+
+      <!-- Cột 2: Chương trình học -->
+      <div class="footer-col">
+        <h4>Chương trình học</h4>
+        <ul>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
+        </ul>
+      </div>
+
+      <!-- Cột 3: Thông tin liên hệ -->
+      <div class="footer-col">
+        <h4>Thông tin liên hệ</h4>
+        <ul class="footer-contact-list">
+          <li>
+            <i class="fa-solid fa-phone"></i>
+            <div>
+              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <a href="tel:19006868" class="contact-val">1900 6868</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-envelope"></i>
+            <div>
+              <span class="contact-label">Email học vụ:</span>
+              <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-location-dot"></i>
+            <div>
+              <span class="contact-label">Trụ sở học thuật:</span>
+              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-clock"></i>
+            <div>
+              <span class="contact-label">Thời gian làm việc:</span>
+              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Cột 4: Cam kết chất lượng -->
+      <div class="footer-col">
+        <h4>Cam kết chất lượng</h4>
+        <ul class="footer-commit-list">
+          <li>
+            <i class="fa-solid fa-shield-halved"></i>
+            <div>
+              <strong>Chuẩn đầu ra quốc tế</strong>
+              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-rotate-left"></i>
+            <div>
+              <strong>Cam kết hoàn học phí</strong>
+              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-user-graduate"></i>
+            <div>
+              <strong>Đồng hành 1-1 chuyên sâu</strong>
+              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-infinity"></i>
+            <div>
+              <strong>Quyền lợi học trọn đời</strong>
+              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.</div>
+      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
+    </div>
+  </footer>
+
+  <script type="module" src="../../types/ai-practice/ai-practice.ts"></script>
+</body>
+</html>

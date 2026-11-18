@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Slanguage - Đăng Nhập & Đăng Ký Học Viên</title>
-  <link rel="icon" type="image/png" href="../assets/logo.png">
-  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <link rel="icon" type="image/png" href="../../../assets/logo.png">
+  <link rel="apple-touch-icon" href="../../../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="../../css/login/style.css">
-  <link rel="stylesheet" href="../../css/shared/mobile-responsive.css">
+  <link rel="stylesheet" href="../../styles/login/style.css">
+  <link rel="stylesheet" href="../../styles/shared/mobile-responsive.css">
 </head>
 <body>
 
@@ -56,10 +56,10 @@
         <!-- Password -->
         <div class="form-group">
           <div class="input-wrapper">
-            <input type="password" id="regPassword" class="form-input" placeholder="Mật khẩu (từ 8 ký tự) *" required>
+            <input type="password" id="regPassword" class="form-input" placeholder="Mật khẩu (từ 6 ký tự) *" required>
             <i class="fa-solid fa-lock input-icon"></i>
           </div>
-          <div class="error-text" id="passError">Mật khẩu phải có ít nhất 8 ký tự.</div>
+          <div class="error-text" id="passError">Mật khẩu quá ngắn.</div>
         </div>
 
         <!-- Confirm Password -->
@@ -101,11 +101,11 @@
         <h1>Chào mừng trở lại!</h1>
         <span class="form-subtitle">Vui lòng đăng nhập với tài khoản học viên của bạn</span>
 
-        <!-- Email -->
+        <!-- Email/Username -->
         <div class="form-group">
           <div class="input-wrapper">
             <input 
-              type="text" 
+              type="email"
               id="emailOrUser" 
               class="form-input" 
               placeholder="Địa chỉ email *"
@@ -206,7 +206,7 @@
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" muted src="../assets/loading.mp4" loop playsinline></video>
+        <video id="loadingVideoPlayer" muted src="../../../assets/loading.mp4" loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>
@@ -214,7 +214,6 @@
     </div>
   </div>
 
-  <!-- Logic TypeScript cho trang (được Vite biên dịch) -->
   <script type="module" src="../../types/login/login.ts"></script>
 </body>
 </html>

@@ -1,10 +1,3 @@
-import {
-  clearAuthTokens,
-  saveAuthTokens,
-  saveLearnerIdentity,
-  slanguageApi,
-} from "../shared/api-client";
-
 /**
  * ===================================================================
  * SLANGUAGE - DEDICATED LANGUAGE SELECTION CONTROLLER
@@ -12,6 +5,8 @@ import {
  * Purpose: Dedicated page for configuring native language & target language
  * ===================================================================
  */
+
+import { saveAuthTokens, saveLearnerIdentity, slanguageApi } from "../shared/api-client";
 
 type AppLanguage = 'vi' | 'en' | 'ja';
 
@@ -52,6 +47,7 @@ class SelectLanguageController {
   private langConflictAlert: HTMLElement | null = null;
   private langConflictMsg: HTMLElement | null = null;
   private btnProceedToOtp: HTMLButtonElement | null = null;
+  private isSubmitting = false;
   private toastElement: HTMLElement | null = null;
   private toastTimer: number | null = null;
 
@@ -135,7 +131,7 @@ class SelectLanguageController {
     // 3. Confirm & Proceed to OTP Page
     if (this.btnProceedToOtp) {
       this.btnProceedToOtp.addEventListener('click', () => {
-        this.handleProceedToOtp();
+        void this.handleProceedToOtp();
       });
     }
   }
@@ -231,6 +227,7 @@ class SelectLanguageController {
   }
 
   private async handleProceedToOtp(): Promise<void> {
+    if (this.isSubmitting) return;
     if (!this.validateLanguagePair()) {
       const origin = LANGUAGE_MAP[this.originLanguage];
       this.showToast(`⚠️ Ngôn ngữ muốn học không được trùng với ngôn ngữ mẹ đẻ (${origin.name})!`);
@@ -242,19 +239,19 @@ class SelectLanguageController {
       return;
     }
 
-    const fullName = sessionStorage.getItem('slanguage_reg_name');
     const email = sessionStorage.getItem('slanguage_reg_email');
+    const displayName = sessionStorage.getItem('slanguage_reg_name');
     const password = sessionStorage.getItem('slanguage_reg_pass');
-    if (!fullName || !email || !password) {
-      this.showToast('Phiên đăng ký không còn hợp lệ. Vui lòng nhập lại thông tin.');
-      window.location.href = '../register/index.html';
+    if (!email || !displayName || !password) {
+      this.showToast('Phiên đăng ký đã hết hạn. Vui lòng nhập lại thông tin đăng ký.');
+      window.setTimeout(() => window.location.assign('../register/index.html'), 1200);
       return;
     }
 
+    this.isSubmitting = true;
     if (this.btnProceedToOtp) {
       this.btnProceedToOtp.disabled = true;
-      this.btnProceedToOtp.dataset.originalText = this.btnProceedToOtp.innerHTML;
-      this.btnProceedToOtp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi yêu cầu...';
+      this.btnProceedToOtp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo tài khoản...';
     }
 
     try {
@@ -266,15 +263,15 @@ class SelectLanguageController {
         refresh_token?: string;
       }>('/api/v1/auth/register', {
         method: 'POST',
-        anonymous: true,
         body: {
           email,
           password,
-          display_name: fullName,
+          display_name: displayName,
           native_language: this.originLanguage,
           target_language: this.targetLanguage,
-          accept_terms: true
-        }
+          accept_terms: sessionStorage.getItem('slanguage_reg_terms') === 'true',
+        },
+        anonymous: true,
       });
 
       sessionStorage.setItem('slanguage_reg_native', this.originLanguage);
@@ -282,37 +279,51 @@ class SelectLanguageController {
       localStorage.setItem('slanguage_native_language', this.originLanguage);
       localStorage.setItem('slanguage_active_language', this.targetLanguage);
 
-      if (response.data.email_confirmation_required) {
-        clearAuthTokens();
-        localStorage.setItem('slanguage_is_logged_in', 'false');
-        localStorage.removeItem('slanguage_user_id');
-        localStorage.setItem('slanguage_user_name', fullName);
-        localStorage.setItem('slanguage_user_email', response.data.email);
-        this.showToast('Đã gửi mã xác thực. Vui lòng kiểm tra email của bạn.');
-        window.location.href = '../verify-otp/index.html';
+      if (!response.data.email_confirmation_required) {
+        if (!response.data.access_token || !response.data.refresh_token) {
+          throw new Error('Backend không trả về phiên đăng nhập sau khi đăng ký.');
+        }
+        saveAuthTokens({
+          access_token: response.data.access_token,
+          refresh_token: response.data.refresh_token,
+        });
+        saveLearnerIdentity({
+          id: response.data.user_id,
+          email: response.data.email,
+          display_name: displayName,
+        });
+        this.clearRegistrationDraft();
+        window.location.assign('../home/index.html');
         return;
       }
 
-      if (!response.data.access_token || !response.data.refresh_token) {
-        throw new Error('Backend không trả về phiên đăng nhập hợp lệ.');
-      }
-      saveAuthTokens({
-        access_token: response.data.access_token,
-        refresh_token: response.data.refresh_token
-      });
-      saveLearnerIdentity({
-        id: response.data.user_id,
-        email: response.data.email,
-        display_name: fullName
-      });
-      sessionStorage.removeItem('slanguage_reg_pass');
-      window.location.href = '../home/index.html';
+      this.clearRegistrationPassword();
+      window.location.assign('../verify-otp/index.html');
     } catch (error) {
-      this.showToast(error instanceof Error ? error.message : 'Không thể đăng ký lúc này. Vui lòng thử lại.');
+      this.showToast(error instanceof Error ? error.message : 'Không thể tạo tài khoản. Vui lòng thử lại.');
+      this.isSubmitting = false;
       if (this.btnProceedToOtp) {
         this.btnProceedToOtp.disabled = false;
-        this.btnProceedToOtp.innerHTML = this.btnProceedToOtp.dataset.originalText || 'Xác nhận & Nhận mã OTP';
+        this.btnProceedToOtp.innerHTML = '<span>Xác nhận & Nhận mã OTP</span><i class="fa-solid fa-arrow-right"></i>';
       }
+    }
+  }
+
+  private clearRegistrationPassword(): void {
+    sessionStorage.removeItem('slanguage_reg_pass');
+    sessionStorage.removeItem('slanguage_reg_terms');
+  }
+
+  private clearRegistrationDraft(): void {
+    for (const key of [
+      'slanguage_reg_name',
+      'slanguage_reg_email',
+      'slanguage_reg_pass',
+      'slanguage_reg_terms',
+      'slanguage_reg_native',
+      'slanguage_reg_target',
+    ]) {
+      sessionStorage.removeItem(key);
     }
   }
 
@@ -338,5 +349,3 @@ if (document.readyState === 'loading') {
 } else {
   initSelectLanguage();
 }
-
-export {};

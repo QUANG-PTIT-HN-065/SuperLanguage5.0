@@ -28,7 +28,7 @@ def _load_model():
     return whisper.load_model("base")
 
 
-def transcribe_audio(audio_bytes: bytes) -> str:
+def _convert_audio(audio_bytes: bytes, output_format: str) -> bytes:
     try:
         decoded = subprocess.run(
             [
@@ -40,7 +40,7 @@ def transcribe_audio(audio_bytes: bytes) -> str:
                 "-i",
                 "pipe:0",
                 "-f",
-                "s16le",
+                output_format,
                 "-acodec",
                 "pcm_s16le",
                 "-ac",
@@ -60,13 +60,23 @@ def transcribe_audio(audio_bytes: bytes) -> str:
 
     if decoded.returncode != 0 or not decoded.stdout:
         raise InvalidAudioError("Uploaded audio could not be decoded.")
+    return decoded.stdout
 
-    audio = np.frombuffer(decoded.stdout, dtype="<i2").astype(np.float32) / 32768.0
+
+def convert_audio_to_wav(audio_bytes: bytes) -> bytes:
+    return _convert_audio(audio_bytes, "wav")
+
+
+def transcribe_audio(audio_bytes: bytes, language: str | None = None) -> str:
+    pcm_audio = _convert_audio(audio_bytes, "s16le")
+
+    audio = np.frombuffer(pcm_audio, dtype="<i2").astype(np.float32) / 32768.0
     try:
         with _MODEL_LOCK:
             result = _load_model().transcribe(
                 audio,
                 task="transcribe",
+                language=language,
                 fp16=False,
                 verbose=False,
             )

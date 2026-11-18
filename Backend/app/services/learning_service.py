@@ -1,11 +1,16 @@
 import logging
+import random
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 from uuid import UUID
 
+import jwt
 from fastapi import HTTPException, status
+from jwt import PyJWTError
 from pydantic import ValidationError
 
+from app.core.config import settings
 from app.db.supabase import supabase_admin
 from app.schemas.learning import (
     LessonAnswerResult,
@@ -13,23 +18,54 @@ from app.schemas.learning import (
     LessonQuestionPublic,
     VocabularyWordReviewResult,
 )
-from app.services.vocabulary_service import list_topics
+from app.services.ai_service import AIService
+from app.services.vocabulary_service import (
+    _ordered_topic_ids,
+    is_premium_profile,
+    is_topic_free,
+)
 
 logger = logging.getLogger(__name__)
 
+READING_HEADERS = {
+    "ja": ("BÀI ĐỌC TIẾNG NHẬT", "BẢN DỊCH TIẾNG VIỆT"),
+    "en": ("BÀI ĐỌC TIẾNG ANH", "BẢN DỊCH TIẾNG VIỆT"),
+    "vi": ("BÀI ĐỌC TIẾNG VIỆT", "BẢN DỊCH TIẾNG ANH"),
+}
+
+
+def parse_reading_description(
+    description: str | None, language_code: str
+) -> tuple[str, str, bool]:
+    headers = READING_HEADERS.get(language_code)
+    if not description:
+        return "", "", False
+    if not headers:
+        return description, "", False
+    reading_header, translation_header = headers
+    marker = f"\n\n{translation_header}\n"
+    if marker not in description:
+        return description, "", False
+    passage, translation = description.split(marker, 1)
+    prefix = f"{reading_header}\n"
+    if passage.startswith(prefix):
+        passage = passage[len(prefix):]
+    return passage, translation, bool(passage.strip())
+
+
+def compose_reading_description(language_code: str, passage: str, translation: str) -> str:
+    reading_header, translation_header = READING_HEADERS[language_code]
+    return f"{reading_header}\n{passage}\n\n{translation_header}\n{translation}"
+
 
 def _ensure_topic_access(topic_id: int, profile: Dict[str, Any]) -> None:
-    offset = 0
-    while True:
-        page = list_topics(profile, limit=100, offset=offset)
-        if any(topic["id"] == topic_id for topic in page["items"]):
-            return
-        offset += len(page["items"])
-        if not page["items"] or offset >= page["available"]:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN,
-                "Chủ đề này chưa được mở cho tài khoản của bạn.",
-            )
+    if is_premium_profile(profile):
+        return
+    if not is_topic_free(profile["target_language"], topic_id):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Chủ đề này thuộc nửa sau của lộ trình — cần Premium để mở khóa.",
+        )
 
 
 def _rpc_error(exc: Exception) -> HTTPException:
@@ -124,6 +160,7 @@ def get_path_topic_states(
     path_id: int,
     user_id: str,
     topics: list[Dict[str, Any]],
+    is_premium: bool = False,
 ) -> Dict[int, Dict[str, Any]]:
     topic_ids = [topic["id"] for topic in topics]
     if not topic_ids:
@@ -171,18 +208,18 @@ def get_path_topic_states(
         if quiz["id"] in progress_by_quiz
     }
     states: Dict[int, Dict[str, Any]] = {}
-    previous_topics_passed = True
-    for topic in topics:
+    # Nửa đầu chủ đề miễn phí, nửa sau cần Premium — khoá theo vị trí trong lộ trình
+    free_topic_count = (len(topics) + 1) // 2
+    for index, topic in enumerate(topics):
         topic_id = topic["id"]
         quiz = quiz_by_topic.get(topic_id)
         progress = progress_by_quiz.get(quiz["id"]) if quiz else None
         states[topic_id] = {
-            "is_locked": not previous_topics_passed,
+            "is_locked": index >= free_topic_count and not is_premium,
             "is_completed": topic_id in passed_topic_ids,
             "quiz_score": progress["score"] if progress else None,
             "quiz_question_count": progress["question_count"] if progress else None,
         }
-        previous_topics_passed = previous_topics_passed and topic_id in passed_topic_ids
     return states
 
 
@@ -203,19 +240,10 @@ def _path_language_and_topics(
         )
         if not paths or paths[0]["language_code"] != profile["target_language"]:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy lộ trình.")
-        topics = (
-            supabase_admin.table("learning_path_topics")
-            .select("topic_id,sort_order")
-            .eq("learning_path_id", path_id)
-            .order("sort_order")
-            .order("topic_id")
-            .execute()
-            .data
-            or []
-        )
-        if topic_id not in {row["topic_id"] for row in topics}:
+        ordered_ids = _ordered_topic_ids(paths[0]["language_code"])
+        if topic_id not in ordered_ids:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Chủ đề không thuộc lộ trình này.")
-        return paths[0]["language_code"], topics
+        return paths[0]["language_code"], [{"id": tid} for tid in ordered_ids]
     except HTTPException:
         raise
     except Exception as exc:
@@ -231,13 +259,17 @@ def _ensure_path_topic_unlocked(
     topic_id: int,
     profile: Dict[str, Any],
 ) -> str:
-    language_code, links = _path_language_and_topics(path_id, topic_id, profile)
-    ordered_topics = [{"id": link["topic_id"]} for link in links]
-    state = get_path_topic_states(path_id, profile["id"], ordered_topics).get(topic_id)
+    language_code, ordered_topics = _path_language_and_topics(path_id, topic_id, profile)
+    state = get_path_topic_states(
+        path_id,
+        profile["id"],
+        ordered_topics,
+        is_premium=profile.get("plan_id") == "premium",
+    ).get(topic_id)
     if state is None or state["is_locked"]:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
-            "Bạn cần đạt 4/4 ở chủ đề trước để mở chủ đề này.",
+            "Chủ đề này thuộc nửa sau của lộ trình — cần Premium để mở khóa.",
         )
     return language_code
 
@@ -402,6 +434,23 @@ def get_lesson_questions(lesson_id: int, profile: Dict[str, Any]) -> Dict[str, A
         if not lesson_rows:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy bài học.")
         lesson = lesson_rows[0]
+        topic_rows = (
+            supabase_admin.table("topics")
+            .select("language_code,readings")
+            .eq("id", lesson["topic_id"])
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        if topic_rows:
+            stored = topic_rows[0].get("readings")
+            if isinstance(stored, list) and len(stored) == 5 and stored[0].get("passage"):
+                lesson["description"] = compose_reading_description(
+                    topic_rows[0]["language_code"],
+                    stored[0]["passage"],
+                    stored[0]["translation"],
+                )
         _ensure_topic_access(lesson["topic_id"], profile)
         if lesson.get("is_topic_quiz") and lesson.get("learning_path_id"):
             _ensure_path_topic_unlocked(
@@ -545,3 +594,363 @@ def review_vocabulary_word(
         result.data,
         "Máy chủ chưa trả về lịch ôn tập hợp lệ.",
     )
+
+
+def _topic_reading_context(topic_id: int) -> tuple[Dict[str, Any], list[Dict[str, Any]]]:
+    topics = (
+        supabase_admin.table("topics")
+        .select("id,language_code,name")
+        .eq("id", topic_id)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if not topics:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy chủ đề.")
+    links = (
+        supabase_admin.table("learning_path_topics")
+        .select("learning_path_id")
+        .eq("topic_id", topic_id)
+        .execute()
+        .data
+        or []
+    )
+    path_ids = list(dict.fromkeys(link["learning_path_id"] for link in links))
+    paths: list[Dict[str, Any]] = []
+    if path_ids:
+        paths = (
+            supabase_admin.table("learning_paths")
+            .select("id,name")
+            .in_("id", path_ids)
+            .order("id")
+            .execute()
+            .data
+            or []
+        )
+    return topics[0], paths
+
+
+def _topic_quiz_lessons(topic_id: int, path_ids: list[int]) -> list[Dict[str, Any]]:
+    if not path_ids:
+        return []
+    return (
+        supabase_admin.table("lessons")
+        .select("id,learning_path_id,title,description")
+        .eq("topic_id", topic_id)
+        .eq("is_topic_quiz", True)
+        .eq("is_active", True)
+        .in_("learning_path_id", path_ids)
+        .order("id")
+        .execute()
+        .data
+        or []
+    )
+
+
+def get_topic_readings(topic_id: int) -> Dict[str, Any]:
+    try:
+        topics = (
+            supabase_admin.table("topics")
+            .select("id,language_code,name,readings")
+            .eq("id", topic_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        if not topics:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy chủ đề.")
+        topic = topics[0]
+        stored = topic.get("readings")
+        if isinstance(stored, list) and len(stored) == 5:
+            return {
+                "topic_id": topic_id,
+                "topic_name": topic["name"],
+                "language_code": topic["language_code"],
+                "source": "column",
+                "readings": stored,
+            }
+        _, paths = _topic_reading_context(topic_id)
+        lessons = _topic_quiz_lessons(topic_id, [path["id"] for path in paths])
+        passage = translation = ""
+        for lesson in lessons:
+            passage, translation, has_reading = parse_reading_description(
+                lesson.get("description"), topic["language_code"]
+            )
+            if has_reading:
+                break
+        empty = {"title": "", "passage": "", "translation": ""}
+        readings = [dict(empty) for _ in range(5)]
+        source = "empty"
+        if passage:
+            readings[0] = {
+                "title": f"Bài đọc chủ đề: {topic['name']}",
+                "passage": passage,
+                "translation": translation,
+            }
+            source = "legacy"
+        return {
+            "topic_id": topic_id,
+            "topic_name": topic["name"],
+            "language_code": topic["language_code"],
+            "source": source,
+            "readings": readings,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Could not load topic readings.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải bài đọc của chủ đề lúc này. Vui lòng thử lại.",
+        ) from exc
+
+
+def save_topic_readings(topic_id: int, readings: list[Dict[str, Any]]) -> Dict[str, Any]:
+    try:
+        topics = (
+            supabase_admin.table("topics")
+            .select("id")
+            .eq("id", topic_id)
+            .limit(1)
+            .execute()
+            .data
+            or []
+        )
+        if not topics:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy chủ đề.")
+        supabase_admin.table("topics").update({"readings": readings}).eq("id", topic_id).execute()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("Could not save topic readings.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể lưu bài đọc lúc này. Vui lòng thử lại.",
+        ) from exc
+    return get_topic_readings(topic_id)
+
+
+BOSS_QUESTION_COUNT = 25
+BOSS_TOKEN_TTL = timedelta(hours=2)
+_LANGUAGE_NAMES = {"en": "English", "ja": "Japanese", "vi": "Vietnamese"}
+
+
+def _boss_word_pool(language_code: str) -> list[Dict[str, Any]]:
+    topics = (
+        supabase_admin.table("topics")
+        .select("id")
+        .eq("language_code", language_code)
+        .execute()
+        .data
+        or []
+    )
+    topic_ids = [row["id"] for row in topics]
+    if not topic_ids:
+        return []
+    links = (
+        supabase_admin.table("word_topics")
+        .select("word_id")
+        .in_("topic_id", topic_ids)
+        .execute()
+        .data
+        or []
+    )
+    word_ids = list(dict.fromkeys(row["word_id"] for row in links))
+    if not word_ids:
+        return []
+    return (
+        supabase_admin.table("words")
+        .select("id,word,meaning,example_sentence,example_meaning")
+        .in_("id", word_ids)
+        .execute()
+        .data
+        or []
+    )
+
+
+def _decode_boss_token(profile: Dict[str, Any], quiz_token: str) -> Dict[str, Any]:
+    try:
+        # SUPABASE_SECRET_KEY chỉ nằm trên server nên dùng làm khóa ký phiên quiz Boss
+        payload = jwt.decode(quiz_token, settings.SUPABASE_SECRET_KEY, algorithms=["HS256"])
+    except PyJWTError as exc:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Phiên quiz Boss không hợp lệ hoặc đã hết hạn. Hãy mở lại bài kiểm tra.",
+        ) from exc
+    if payload.get("sub") != profile["id"] or not isinstance(payload.get("quiz"), list):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Phiên quiz Boss không thuộc về bạn.")
+    return payload
+
+
+def _public_boss_question(index: int, question: Dict[str, Any]) -> Dict[str, Any]:
+    public: Dict[str, Any] = {
+        "index": index,
+        "question_type": question["question_type"],
+        "prompt": question["prompt"],
+    }
+    if question["question_type"] == "multiple_choice":
+        public["options"] = question["options"]
+    elif question["question_type"] == "match":
+        public["words"] = [pair["word"] for pair in question["pairs"]]
+        public["meanings"] = random.sample(
+            [pair["meaning"] for pair in question["pairs"]],
+            len(question["pairs"]),
+        )
+    return public
+
+
+def generate_boss_quiz(
+    profile: Dict[str, Any], topic_id: int, path_id: int
+) -> Dict[str, Any]:
+    language_code = _ensure_path_topic_unlocked(path_id, topic_id, profile)
+    words = _boss_word_pool(language_code)
+    if len(words) < 8:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Cần ít nhất 8 từ vựng trong các chủ đề của lộ trình để tạo quiz Boss.",
+        )
+    questions = AIService.generate_boss_quiz(
+        words, _LANGUAGE_NAMES.get(language_code, language_code), BOSS_QUESTION_COUNT
+    )
+    quiz_token = jwt.encode(
+        {
+            "sub": profile["id"],
+            "topic_id": topic_id,
+            "path_id": path_id,
+            "language": language_code,
+            "quiz": questions,
+            "exp": datetime.now(timezone.utc) + BOSS_TOKEN_TTL,
+        },
+        settings.SUPABASE_SECRET_KEY,
+        algorithm="HS256",
+    )
+    return {
+        "quiz_token": quiz_token,
+        "questions": [
+            _public_boss_question(index, question)
+            for index, question in enumerate(questions)
+        ],
+        "question_count": len(questions),
+        "topic_id": topic_id,
+        "path_id": path_id,
+    }
+
+
+def _normalized_answer(value: Any) -> str:
+    return " ".join(str(value or "").split()).casefold()
+
+
+def _grade_boss_entry(question: Dict[str, Any], value: Any) -> tuple[bool, str]:
+    kind = question["question_type"]
+    if kind == "multiple_choice":
+        correct = question["correct_option_id"]
+        display = next(
+            (option["text"] for option in question["options"] if option["id"] == correct),
+            correct,
+        )
+        return str(value) == correct, display
+    if kind == "fill_in":
+        answer = question["answer"]
+        return _normalized_answer(value) == _normalized_answer(answer), answer
+    expected = {pair["word"]: pair["meaning"] for pair in question["pairs"]}
+    provided: Dict[str, str] = {}
+    if isinstance(value, dict):
+        provided = {str(key): str(item) for key, item in value.items()}
+    elif isinstance(value, list):
+        for pair in value:
+            if isinstance(pair, dict) and pair.get("word") and pair.get("meaning"):
+                provided[str(pair["word"])] = str(pair["meaning"])
+    display = "; ".join(f"{word} → {meaning}" for word, meaning in expected.items())
+    return provided == expected, display
+
+
+def grade_boss_quiz(
+    profile: Dict[str, Any], quiz_token: str, answers: list[Dict[str, Any]]
+) -> Dict[str, Any]:
+    payload = _decode_boss_token(profile, quiz_token)
+    quiz = payload["quiz"]
+    if not answers:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Chưa có đáp án nào để chấm.")
+    results = []
+    seen: set[int] = set()
+    for entry in answers:
+        index = entry.get("index")
+        if not isinstance(index, int) or index < 0 or index >= len(quiz) or index in seen:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "Đáp án gửi lên không hợp lệ (trùng hoặc ngoài phạm vi câu hỏi).",
+            )
+        seen.add(index)
+        question = quiz[index]
+        is_correct, display = _grade_boss_entry(question, entry.get("value"))
+        results.append({
+            "index": index,
+            "is_correct": is_correct,
+            "correct_answer": display,
+            "explanation": question.get("explanation", ""),
+        })
+    correct_count = sum(1 for row in results if row["is_correct"])
+    passed = len(results) == len(quiz) and correct_count == len(quiz)
+    if passed:
+        _record_boss_pass(profile, payload)
+    return {
+        "results": results,
+        "correct_count": correct_count,
+        "question_count": len(quiz),
+        "passed": passed,
+    }
+
+
+def _record_boss_pass(profile: Dict[str, Any], payload: Dict[str, Any]) -> None:
+    quizzes = (
+        supabase_admin.table("lessons")
+        .select("id")
+        .eq("learning_path_id", payload["path_id"])
+        .eq("topic_id", payload["topic_id"])
+        .eq("is_topic_quiz", True)
+        .eq("is_active", True)
+        .limit(1)
+        .execute()
+        .data
+        or []
+    )
+    if not quizzes:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Chủ đề chưa có bài kiểm tra chính thức để ghi nhận hoàn thành.",
+        )
+    try:
+        supabase_admin.table("lesson_progress").upsert(
+            {
+                "user_id": profile["id"],
+                "lesson_id": quizzes[0]["id"],
+                "score": BOSS_QUESTION_COUNT,
+                "question_count": BOSS_QUESTION_COUNT,
+                "xp_awarded": 0,
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            },
+            on_conflict="user_id,lesson_id",
+        ).execute()
+    except Exception as exc:
+        logger.exception("Could not record boss quiz pass.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể ghi nhận hoàn thành chủ đề lúc này. Vui lòng thử lại.",
+        ) from exc
+
+
+def boss_speak_text(profile: Dict[str, Any], quiz_token: str, index: int) -> tuple[str, str]:
+    payload = _decode_boss_token(profile, quiz_token)
+    quiz = payload["quiz"]
+    if index < 0 or index >= len(quiz):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Câu hỏi không tồn tại.")
+    question = quiz[index]
+    if question["question_type"] != "fill_in":
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Chỉ câu điền từ mới có giọng đọc đáp án.",
+        )
+    language = payload.get("language", "en")
+    return question["answer"], _LANGUAGE_NAMES.get(language, "English")

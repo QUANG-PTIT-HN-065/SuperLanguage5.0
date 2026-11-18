@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 
 from app.core.deps import get_current_admin_profile
 from app.schemas.rag import RAGDocumentCreate, RAGDocumentResponse, RAGDocumentSummary
+from app.schemas.learning import TopicReadingsUpdate
 from app.schemas.vocabulary import (
     LearningPathCreate,
     LearningPathUpdate,
@@ -27,6 +28,7 @@ from app.services.learning_path_service import (
     list_learning_paths,
     update_learning_path,
 )
+from app.services.learning_service import get_topic_readings, save_topic_readings
 from app.services.vocabulary_service import (
     create_word,
     delete_word as delete_word_record,
@@ -251,6 +253,26 @@ def delete_topic(
     """Admin xóa một chủ đề theo ID."""
     delete_admin_topic(topic_id)
     return {"status": "success", "deleted_topic_id": topic_id}
+
+
+@router.get("/topics/{topic_id}/readings")
+def get_topic_readings_route(
+    topic_id: int,
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    """Admin xem 5 bài đọc theo tầng hầm ngục của chủ đề."""
+    return {"status": "success", "data": get_topic_readings(topic_id)}
+
+
+@router.put("/topics/{topic_id}/readings")
+def save_topic_readings_route(
+    topic_id: int,
+    body: TopicReadingsUpdate,
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    """Admin lưu đủ 5 bài đọc (mỗi tầng một bài); không đụng câu hỏi và tiến độ."""
+    readings = save_topic_readings(topic_id, [entry.model_dump() for entry in body.readings])
+    return {"status": "success", "data": readings}
 
 
 @router.get("/learning-paths")

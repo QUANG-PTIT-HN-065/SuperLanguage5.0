@@ -1,13 +1,10 @@
 import {
   isLearnerAuthenticated,
-  readMockData,
   slanguageApi,
-  slanguageApiOrMock,
 } from "../shared/api-client";
 import { initializeLearnerHeader, renderLearnerHeader } from "../shared/learner-header";
 import { mountHeader } from "../ui/header.js";
 import {
-  addLocalDailyXp,
   buildStreakWeek,
   cacheOverview,
   dailyGoalProgress,
@@ -16,17 +13,13 @@ import {
   levelProgress,
   parseLearnerOverview,
   pathProgressPercent,
-  readLocalDailyXp,
   resolveTodayXp,
   ringOffset,
-  shiftActivityToToday,
-  toDateKey,
-  type DailyActivityRow,
   type LearnerOverview,
   type StreakDay,
 } from "./learner-progress";
 import { type LearningPathTopic } from "./learning-path-route";
-import { renderRoadmap, setTopicLessonState } from "../../ts/pages/roadmap";
+import { renderRoadmap, setTopicLessonState } from "./roadmap";
 
 type LearningTopic = LearningPathTopic;
 
@@ -54,12 +47,8 @@ interface LearningPath {
 const SEARCH_DEBOUNCE_MS = 250;
 const RING_RADIUS = 52;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-const PROGRESS_CACHE_KEY = "slanguage_path_progress";
 const LAST_PATH_KEY = "slanguage_last_path";
-const DEMO_TOPICS_KEY = "slanguage_demo_topics";
 const PATH_AUTHOR = "Slanguage";
-const NETWORK_ERROR_MESSAGE =
-  "Không kết nối được máy chủ. Kiểm tra mạng rồi thử lại; bạn vẫn xem được dữ liệu mẫu.";
 const SVG_NS = "http://www.w3.org/2000/svg";
 
 const ARROW_PATHS = ["M5 12h13", "m12 5 7 7-7 7"];
@@ -82,9 +71,6 @@ const FLAG_FILES: Record<string, string> = {
 
 let overview: LearnerOverview | null = null;
 let learningPaths: LearningPath[] = [];
-let progressCache: Record<string, number> = {};
-let demoMode = false;
-let demoTopics = new Set<number>();
 let searchTimer = 0;
 let today = new Date();
 
@@ -175,95 +161,14 @@ function parsePath(value: unknown): LearningPath {
   };
 }
 
-function readProgressCache(): Record<string, number> {
-  try {
-    const raw = localStorage.getItem(PROGRESS_CACHE_KEY);
-    if (!raw) return {};
-    const cache: Record<string, number> = {};
-    for (const [key, value] of Object.entries(asRecord(JSON.parse(raw)))) {
-      cache[key] = clampPercent(value);
-    }
-    return cache;
-  } catch {
-    return {};
-  }
-}
-
-function writeProgressCache(pathId: number, percent: number): void {
-  progressCache[String(pathId)] = clampPercent(percent);
-  localStorage.setItem(PROGRESS_CACHE_KEY, JSON.stringify(progressCache));
-}
-
 function pathPercent(path: LearningPath): number {
   if (path.progress_percent !== null) return path.progress_percent;
   if (path.topics?.length) return pathProgressPercent(path.topics);
-  return progressCache[String(path.id)] ?? 0;
-}
-
-function markDemo(): void {
-  demoMode = true;
-  document.body.dataset.demo = "true";
-}
-
-function readDemoTopics(): Set<number> {
-  try {
-    const raw = localStorage.getItem(DEMO_TOPICS_KEY);
-    if (!raw) return new Set();
-    const list: unknown = JSON.parse(raw);
-    if (!Array.isArray(list)) return new Set();
-    return new Set(list.map(toCount).filter((id) => id > 0));
-  } catch {
-    return new Set();
-  }
-}
-
-function rememberDemoTopic(topicId: number): void {
-  if (!demoMode || topicId <= 0 || demoTopics.has(topicId)) return;
-  demoTopics.add(topicId);
-  localStorage.setItem(DEMO_TOPICS_KEY, JSON.stringify([...demoTopics]));
-}
-
-/** Chế độ xem thử không có máy chủ ghi tiến độ, nên giữ lại chủ đề đã qua ngay tại máy. */
-function applyDemoTopicProgress(path: LearningPath): LearningPath {
-  const topics = path.topics;
-  if (!demoMode || !demoTopics.size || !topics?.length) return path;
-  let previousCompleted = true;
-  const next = topics.map((topic) => {
-    const completed = topic.is_completed || demoTopics.has(topic.id);
-    const locked = completed ? false : topic.is_locked && !previousCompleted;
-    previousCompleted = completed;
-    return completed
-      ? {
-          ...topic,
-          is_completed: true,
-          is_locked: false,
-          progress_percent: 100,
-          mastered_word_count: topic.word_count,
-          quiz_score: topic.quiz_score ?? 4,
-          quiz_question_count: topic.quiz_question_count ?? 4,
-        }
-      : { ...topic, is_locked: locked };
-  });
-  return { ...path, topics: next, progress_percent: pathProgressPercent(next) };
-}
-
-/** Đặt mốc XP/chuỗi ngày cho bài học xem thử cộng dồn, không ghi cờ "đã đồng bộ". */
-function seedDemoProgress(data: LearnerOverview): void {
-  localStorage.setItem("slanguage_user_xp", String(data.stats.xpTotal));
-  localStorage.setItem("slanguage_streak", String(data.stats.currentStreak));
-  if (data.profile.dailyGoalXp > 0) {
-    localStorage.setItem("slanguage_daily_goal", String(data.profile.dailyGoalXp));
-  }
+  return 0;
 }
 
 function friendlyError(error: unknown, fallback: string): string {
-  if (error instanceof TypeError) return NETWORK_ERROR_MESSAGE;
   return error instanceof Error && error.message ? error.message : fallback;
-}
-
-async function demoPayload(file: string, select?: (data: unknown) => unknown): Promise<unknown> {
-  markDemo();
-  return readMockData<unknown>(file, select);
 }
 
 function setAuthState(authenticated: boolean): void {
@@ -552,9 +457,8 @@ function renderStreakWidget(data: LearnerOverview): void {
 }
 
 function renderGoalWidget(data: LearnerOverview): void {
-  const xpToday = resolveTodayXp(data.dailyActivity, today, readLocalDailyXp(today));
-  const goalXp =
-    data.profile.dailyGoalXp || toCount(localStorage.getItem("slanguage_daily_goal")) || 20;
+  const xpToday = resolveTodayXp(data.dailyActivity, today);
+  const goalXp = data.profile.dailyGoalXp;
   const goal = dailyGoalProgress(xpToday, goalXp);
 
   const ring = document.getElementById("goalRingValue");
@@ -633,25 +537,13 @@ async function loadTopicLessons(topic: LearningTopic, pathId: number): Promise<v
     setTopicLessonState(topic.id, { status: "loading" });
     return;
   }
-  const select = (data: unknown): unknown => {
-    const map = asRecord(data);
-    return map[String(topic.id)] ?? map.default;
-  };
   try {
-    const payload = demoMode
-      ? await demoPayload("topic-lessons.json", select)
-      : await slanguageApiOrMock<unknown>(
-          `/api/v1/lessons/topics/${topic.id}/lessons?path_id=${pathId}`,
-          "topic-lessons.json",
-          { onFallback: markDemo },
-          select,
-        );
-    if (!Array.isArray(payload)) throw new Error("Máy chủ trả về danh sách bài học không hợp lệ.");
-    const lessons = payload.map(parseTopicLesson).map((lesson) =>
-      demoMode && demoTopics.has(topic.id)
-        ? { ...lesson, is_completed: true, is_locked: false, can_retake: true }
-        : lesson,
+    const response = await slanguageApi<unknown>(
+      `/api/v1/lessons/topics/${topic.id}/lessons?path_id=${pathId}`,
     );
+    const payload = response.data;
+    if (!Array.isArray(payload)) throw new Error("Máy chủ trả về danh sách bài học không hợp lệ.");
+    const lessons = payload.map(parseTopicLesson);
     if (!lessons.length) {
       setTopicLessonState(topic.id, {
         status: "empty",
@@ -688,19 +580,11 @@ async function loadTopicLessons(topic: LearningTopic, pathId: number): Promise<v
 async function showPath(pathId: number, pushHistory: boolean): Promise<void> {
   showNotice("Đang mở lộ trình...");
   setGridBusy(true);
-  const select = (data: unknown): unknown => asRecord(data)[String(pathId)];
   try {
-    const payload = demoMode
-      ? await demoPayload("learning-path-details.json", select)
-      : await slanguageApiOrMock<unknown>(
-          `/api/v1/vocabulary/learning-paths/${pathId}`,
-          "learning-path-details.json",
-          { onFallback: markDemo },
-          select,
-        );
-    const path = applyDemoTopicProgress(parsePath(payload));
-    const percent = path.topics?.length ? pathProgressPercent(path.topics) : pathPercent(path);
-    writeProgressCache(path.id, percent);
+    const response = await slanguageApi<unknown>(
+      `/api/v1/vocabulary/learning-paths/${pathId}`,
+    );
+    const path = parsePath(response.data);
     localStorage.setItem(LAST_PATH_KEY, String(path.id));
 
     renderPathDetail(path);
@@ -742,35 +626,36 @@ function showCatalog(pushHistory: boolean): void {
 }
 
 async function loadPathList(): Promise<unknown> {
-  return demoMode
-    ? demoPayload("learning-paths.json")
-    : slanguageApiOrMock<unknown>("/api/v1/vocabulary/learning-paths", "learning-paths.json", {
-        onFallback: markDemo,
-      });
+  const response = await slanguageApi<unknown[]>("/api/v1/vocabulary/learning-paths");
+  return response.data;
 }
 
 async function loadLearningProfile(): Promise<void> {
   today = new Date();
-  progressCache = readProgressCache();
-  demoTopics = readDemoTopics();
   const authenticated = isLearnerAuthenticated();
   setAuthState(authenticated);
   hidePathError();
   setGridBusy(true);
   showNotice("");
 
+  if (!authenticated) {
+    learningPaths = [];
+    overview = null;
+    document.getElementById("learningDemoNote")?.toggleAttribute("hidden", true);
+    document.getElementById("pathCatalogSection")?.toggleAttribute("hidden", true);
+    document.getElementById("pathDetailSection")?.toggleAttribute("hidden", true);
+    document.getElementById("lessonWorkspace")?.toggleAttribute("hidden", true);
+    setGridBusy(false);
+    return;
+  }
+
   try {
-    const payload = authenticated
-      ? await slanguageApiOrMock<unknown>("/api/v1/me", "me.json", { onFallback: markDemo })
-      : await demoPayload("me.json");
+    const response = await slanguageApi<unknown>("/api/v1/me");
+    const payload = response.data;
     renderLearnerHeader(payload);
-    const parsed = parseLearnerOverview(payload);
-    overview = demoMode
-      ? { ...parsed, dailyActivity: shiftActivityToToday(parsed.dailyActivity, today) }
-      : parsed;
-    if (demoMode) seedDemoProgress(overview);
-    else cacheOverview(overview);
-    document.getElementById("learningDemoNote")?.toggleAttribute("hidden", !demoMode);
+    overview = parseLearnerOverview(payload);
+    cacheOverview(overview);
+    document.getElementById("learningDemoNote")?.toggleAttribute("hidden", true);
     renderOverview(overview);
 
     const listPayload = await loadPathList();
@@ -788,28 +673,7 @@ async function loadLearningProfile(): Promise<void> {
   }
 }
 
-/** Cộng XP vừa nhận vào dòng daily_activity của hôm nay (chế độ xem thử). */
-function withTodayXp(
-  rows: DailyActivityRow[],
-  dateKey: string,
-  awarded: number,
-  goalXp: number,
-): DailyActivityRow[] {
-  const existing = rows.find((row) => row.activityDate === dateKey);
-  const xpEarned = (existing?.xpEarned ?? 0) + awarded;
-  const next: DailyActivityRow = {
-    activityDate: dateKey,
-    xpEarned,
-    lessonsCompleted: (existing?.lessonsCompleted ?? 0) + 1,
-    goalMet: xpEarned >= Math.max(1, goalXp),
-  };
-  return [...rows.filter((row) => row.activityDate !== dateKey), next].sort((a, b) =>
-    a.activityDate.localeCompare(b.activityDate),
-  );
-}
-
 async function refreshOverview(): Promise<void> {
-  if (demoMode) return;
   try {
     const payload = (await slanguageApi("/api/v1/me", { method: "GET" })).data;
     renderLearnerHeader(payload);
@@ -821,36 +685,8 @@ async function refreshOverview(): Promise<void> {
   }
 }
 
-async function handleLessonCompleted(detail: Record<string, unknown>): Promise<void> {
-  const awarded = toCount(detail.xp_awarded);
-  if (awarded > 0) addLocalDailyXp(awarded, today);
-  rememberDemoTopic(toCount(detail.topic_id));
-
-  if (demoMode && overview && awarded > 0) {
-    const xpTotal = toCount(detail.xp_total) || overview.stats.xpTotal + awarded;
-    overview = {
-      ...overview,
-      stats: {
-        ...overview.stats,
-        xpTotal,
-        lessonsCompleted: overview.stats.lessonsCompleted + 1,
-        studiedToday: true,
-        lastActivityDate: toDateKey(today),
-        currentStreak: overview.stats.studiedToday
-          ? overview.stats.currentStreak
-          : overview.stats.currentStreak + 1,
-      },
-      dailyActivity: withTodayXp(
-        overview.dailyActivity,
-        toDateKey(today),
-        awarded,
-        overview.profile.dailyGoalXp,
-      ),
-    };
-    renderOverview(overview);
-  } else {
-    await refreshOverview();
-  }
+async function handleLessonCompleted(): Promise<void> {
+  await refreshOverview();
 
   const pathId = toCount(new URLSearchParams(window.location.search).get("path_id"));
   if (pathId > 0) {
@@ -930,9 +766,8 @@ window.addEventListener("popstate", () => {
   }
   showCatalog(false);
 });
-window.addEventListener("lesson:completed", (event) => {
-  const detail = event instanceof CustomEvent ? asRecord(event.detail) : {};
-  void handleLessonCompleted(detail);
+window.addEventListener("lesson:completed", () => {
+  void handleLessonCompleted();
 });
 
 async function initializeLearningPage(): Promise<void> {

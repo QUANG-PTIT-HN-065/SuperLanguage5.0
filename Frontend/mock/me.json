@@ -1,0 +1,52 @@
+{
+  "status": "success",
+  "message": "Đã tải hồ sơ học tập.",
+  "data": {
+    "profile": {
+      "id": "7f1c2b64-9d4a-4d1f-8f2b-3c5a1d6e0b12",
+      "email": "minh.duc@example.com",
+      "username": "minhduc",
+      "display_name": "Minh Đức",
+      "avatar_url": null,
+      "native_language": "vi",
+      "target_language": "ja",
+      "current_level": "A2",
+      "target_level": "B1",
+      "learning_goal": "work",
+      "daily_goal_xp": 20,
+      "daily_goal_minutes": 15,
+      "daily_goal_lessons": 1,
+      "plan_id": "free",
+      "timezone": "Asia/Ho_Chi_Minh",
+      "role": "learner",
+      "onboarding_completed_at": "2026-09-02T08:15:00+07:00"
+    },
+    "stats": {
+      "user_id": "7f1c2b64-9d4a-4d1f-8f2b-3c5a1d6e0b12",
+      "xp_total": 4820,
+      "words_learned": 316,
+      "lessons_completed": 48,
+      "current_streak": 6,
+      "streak_start_date": "2026-11-08",
+      "longest_streak": 41,
+      "last_activity_date": "2026-11-13",
+      "streak_freezes": 2,
+      "studied_today": true
+    },
+    "plan": {
+      "id": "free",
+      "name": "Miễn phí",
+      "daily_word_limit": 30
+    },
+    "needs_onboarding": false,
+    "daily_activity": [
+      { "activity_date": "2026-11-07", "xp_earned": 0, "lessons_completed": 0, "goal_met": false },
+      { "activity_date": "2026-11-08", "xp_earned": 20, "lessons_completed": 1, "goal_met": true },
+      { "activity_date": "2026-11-09", "xp_earned": 25, "lessons_completed": 2, "goal_met": true },
+      { "activity_date": "2026-11-10", "xp_earned": 30, "lessons_completed": 2, "goal_met": true },
+      { "activity_date": "2026-11-11", "xp_earned": 20, "lessons_completed": 1, "goal_met": true },
+      { "activity_date": "2026-11-12", "xp_earned": 20, "lessons_completed": 1, "goal_met": true },
+      { "activity_date": "2026-11-13", "xp_earned": 12, "lessons_completed": 1, "goal_met": false }
+    ]
+  }
+}

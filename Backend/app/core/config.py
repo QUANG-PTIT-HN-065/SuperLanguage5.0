@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEYS: str = ""
     OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
     DEEPSEEK_API_KEYS: str = ""
+    EDGE_TTS_BASE_URL: str = ""
+    EDGE_TTS_API_KEY: str = ""
+    ADSUP_TTS_BASE_URL: str = "https://voice.adsup.vn"
+    ADSUP_API_KEYS: str = ""
     RAG_EMBEDDING_API_KEYS: str = ""
     RAG_SIMILARITY_THRESHOLD:  float = 0.45
     RAG_TOP_K: int = 4

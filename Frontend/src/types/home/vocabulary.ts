@@ -1,7 +1,7 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader } from "../shared/learner-header";
 import { mountHeader } from "../ui/header.js";
-import { FlashcardController, FlashcardWord, ReviewRating } from "../../ts/ui/flashcard";
+import { FlashcardController, FlashcardWord, ReviewRating } from "../ui/flashcard";
 
 interface Topic {
   id: number;
@@ -131,6 +131,7 @@ function parseWord(item: Record<string, unknown>): VocabularyWord {
     partOfSpeech: text(item.part_of_speech),
     example: text(item.example_sentence),
     exampleMeaning: text(item.example_meaning),
+    languageCode: text(item.language_code) || "en",
     level: text(item.level) || "A1",
     mastery_level: typeof item.mastery_level === "number" ? item.mastery_level : undefined,
     next_review_at: text(item.next_review_at) || undefined,

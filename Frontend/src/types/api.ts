@@ -1,11 +1,8 @@
-/* ============================================================
-   Slanguage · api.ts
-   Lớp dữ liệu duy nhất cho UI. Có backend thì gọi /api/v1/*,
-   chưa có thì đọc JSON mock đúng cấu trúc ERD (mock/<table>.json).
-   ============================================================ */
+import { slanguageApi } from "./shared/api-client";
 
 export type LanguageCode = "ja" | "en" | "vi";
 export type CefrLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+const CEFR_LEVELS: readonly CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 
 /* ---------- Bảng ERD ---------- */
 export interface ProfileRow {
@@ -90,54 +87,6 @@ export interface HeaderSnapshot {
   stats: UserStatsRow;
 }
 
-const API_BASE = "/api/v1";
-const MOCK_BASE = "/mock";
-
-/** Đổi true khi backend đã chạy thật. */
-export const USE_MOCK = true;
-
-function normalizePath(url: string): string {
-  return url.startsWith("/") ? url : `/${url}`;
-}
-
-/** Endpoint API -> bảng mock tương ứng (tên file trùng tên bảng ERD). */
-const MOCK_TABLES: Record<string, string> = {
-  me: "profiles",
-  topics: "topics",
-  words: "words",
-  user_words: "user_words",
-  conversations: "conversations",
-  messages: "messages",
-};
-
-/** URL mock tương ứng với một endpoint API (bỏ query string). */
-function toMockUrl(url: string): string {
-  const path = normalizePath(url).split("?")[0].replace(API_BASE, "");
-  const key = path.split("/").filter(Boolean)[0] ?? "me";
-  return `${MOCK_BASE}/${MOCK_TABLES[key] ?? key}.json`;
-}
-
-export interface RequestOptions {
-  method?: "GET" | "POST" | "PATCH";
-  body?: string;
-  headers?: Record<string, string>;
-}
-
-/** Đọc JSON có kiểu; ném Error nếu HTTP fail hoặc payload sai shape. */
-export async function fetchJson<T>(url: string, options: RequestOptions = {}): Promise<T> {
-  const target = USE_MOCK && normalizePath(url).startsWith(API_BASE) ? toMockUrl(url) : normalizePath(url);
-  const response = await fetch(target, {
-    method: options.method ?? "GET",
-    body: options.body,
-    headers: { Accept: "application/json", ...(options.headers ?? {}) },
-  });
-  if (!response.ok) {
-    throw new Error(`Không tải được dữ liệu (${response.status}).`);
-  }
-  return (await response.json()) as T;
-}
-
-/** Mock backend không có PATCH: lưu lựa chọn ngôn ngữ vào localStorage. */
 const LANGUAGE_KEY = "slanguage_active_language";
 
 export function readStoredLanguage(): LanguageCode | null {
@@ -149,33 +98,98 @@ export function writeStoredLanguage(code: LanguageCode): void {
   localStorage.setItem(LANGUAGE_KEY, code);
 }
 
-function head<T>(rows: T[]): T {
-  if (rows.length === 0) {
-    throw new Error("Dữ liệu mẫu đang trống.");
+function asRecord(value: unknown, label: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`Backend trả về ${label} không hợp lệ.`);
   }
-  return rows[0];
+  return value as Record<string, unknown>;
+}
+
+function text(value: unknown, label: string): string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`Backend trả về ${label} không hợp lệ.`);
+  }
+  return value.trim();
+}
+
+function count(value: unknown, label: string): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`Backend trả về ${label} không hợp lệ.`);
+  }
+  return value;
+}
+
+function languageCode(value: unknown, label: string): LanguageCode {
+  if (value === "en" || value === "ja" || value === "vi") return value;
+  throw new Error(`Backend trả về ${label} không hợp lệ.`);
+}
+
+function cefrLevel(value: unknown, label: string): CefrLevel | null {
+  if (value === null) return null;
+  const level = CEFR_LEVELS.find((candidate) => candidate === value);
+  if (level) return level;
+  throw new Error(`Backend trả về ${label} không hợp lệ.`);
 }
 
 export async function getHeaderSnapshot(): Promise<HeaderSnapshot> {
-  const [profiles, stats] = await Promise.all([
-    fetchJson<ProfileRow[]>(`${API_BASE}/me`),
-    fetchJson<UserStatsRow[]>(`${API_BASE}/user_stats`),
-  ]);
-  const profile = head(profiles);
-  const statRow = head(stats);
-  const override = readStoredLanguage();
+  const response = await slanguageApi<unknown>("/api/v1/me");
+  const data = asRecord(response.data, "hồ sơ học viên");
+  const profileData = asRecord(data.profile, "hồ sơ học viên");
+  const statsData = asRecord(data.stats, "thống kê học tập");
+  const displayName = text(
+    profileData.display_name || profileData.username,
+    "tên học viên",
+  );
+  const email = text(profileData.email, "email học viên");
+  const learningGoal = profileData.learning_goal;
+  if (
+    learningGoal !== "travel" &&
+    learningGoal !== "work" &&
+    learningGoal !== "study" &&
+    learningGoal !== "exam" &&
+    learningGoal !== "hobby" &&
+    learningGoal !== "other"
+  ) {
+    throw new Error("Backend trả về mục tiêu học tập không hợp lệ.");
+  }
+  if (profileData.role !== "admin" && profileData.role !== "learner") {
+    throw new Error("Backend trả về vai trò học viên không hợp lệ.");
+  }
+  const profile: ProfileRow = {
+    id: text(profileData.id, "mã học viên"),
+    email,
+    username: text(profileData.username, "tên tài khoản"),
+    display_name: displayName,
+    avatar_url: typeof profileData.avatar_url === "string" ? profileData.avatar_url : null,
+    native_language: languageCode(profileData.native_language, "ngôn ngữ mẹ đẻ"),
+    target_language: languageCode(profileData.target_language, "ngôn ngữ đang học"),
+    current_level: cefrLevel(profileData.current_level, "trình độ hiện tại"),
+    target_level: cefrLevel(profileData.target_level, "trình độ mục tiêu"),
+    learning_goal: learningGoal,
+    daily_goal_xp: count(profileData.daily_goal_xp, "mục tiêu XP"),
+    role: profileData.role,
+  };
+  const stats: UserStatsRow = {
+    user_id: profile.id,
+    xp_total: count(statsData.xp_total, "tổng XP"),
+    words_learned: count(statsData.words_learned, "số từ đã học"),
+    lessons_completed: count(statsData.lessons_completed, "số bài đã hoàn thành"),
+    current_streak: count(statsData.current_streak, "chuỗi ngày học"),
+    streak_start_date: typeof statsData.streak_start_date === "string" ? statsData.streak_start_date : null,
+    longest_streak: count(statsData.longest_streak, "chuỗi học dài nhất"),
+    last_activity_date: typeof statsData.last_activity_date === "string" ? statsData.last_activity_date : null,
+    streak_freezes: count(statsData.streak_freezes, "số lần đóng băng chuỗi"),
+  };
   return {
-    profile: override ? { ...profile, target_language: override } : profile,
-    stats: statRow,
+    profile,
+    stats,
   };
 }
 
 export async function updateTargetLanguage(code: LanguageCode): Promise<void> {
-  writeStoredLanguage(code);
-  if (USE_MOCK) return;
-  await fetchJson(`${API_BASE}/me`, {
+  await slanguageApi("/api/v1/me", {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ target_language: code }),
+    body: { target_language: code },
   });
+  writeStoredLanguage(code);
 }
