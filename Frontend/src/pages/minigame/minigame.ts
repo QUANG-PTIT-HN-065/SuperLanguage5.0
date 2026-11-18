@@ -302,6 +302,9 @@ export const game = {
   dataReady: false,
   isGameOver: false,
   isTransitioning: false,
+  isEvaluating: false,
+  isPremium: false,
+  premiumHeartModeSelected: false,
 
   // Animation & VFX
   cat: {
@@ -424,12 +427,20 @@ export async function loadDatabaseGameState(lang?: 'en' | 'ja'): Promise<boolean
     }
 
     // Cập nhật gói cước người chơi (FR-01)
-    if (data.is_unlimited_hearts || data.plan_id === 'premium') {
-      game.isUnlimitedHearts = true;
-      game.maxHearts = 99;
-      game.hearts = 99;
+    game.isPremium = data.is_unlimited_hearts || data.plan_id === 'premium';
+    if (game.isPremium) {
+      if (!game.premiumHeartModeSelected) {
+        game.isUnlimitedHearts = window.confirm(
+          'Tài khoản Premium: chọn OK để dùng vô hạn tim. ' +
+          'Chọn Hủy để chơi chế độ giới hạn 5 tim.',
+        );
+        game.premiumHeartModeSelected = true;
+      }
+      game.maxHearts = game.isUnlimitedHearts ? 99 : 5;
+      game.hearts = game.maxHearts;
     } else {
       game.isUnlimitedHearts = false;
+      game.premiumHeartModeSelected = false;
       game.maxHearts = typeof data.max_hearts === 'number' ? data.max_hearts : 5;
       game.hearts = Math.min(game.hearts, game.maxHearts);
     }
@@ -458,6 +469,72 @@ export async function loadDatabaseGameState(lang?: 'en' | 'ja'): Promise<boolean
     }
     return false;
   }
+}
+
+interface MiniGameEvaluation {
+  accepted: boolean;
+  score: number;
+  grammar_correct: boolean;
+  meaning_correct: boolean;
+  context_appropriate: boolean;
+  reason: string;
+  correction: string;
+  short_hint: string;
+}
+
+function escapeHtml(value: string): string {
+  const element = document.createElement('span');
+  element.textContent = value;
+  return element.innerHTML;
+}
+
+async function evaluateMiniGameAnswer(
+  sentence: string,
+  selectedCards: VocabCard[],
+  rule: GrammarRule,
+): Promise<MiniGameEvaluation> {
+  const token = getAuthToken();
+  const response = await fetch(`${getApiBaseUrl()}/api/v1/minigame/evaluate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      language: game.lang === 'en' ? 'English' : 'Japanese',
+      level: selectedCards[0]?.level || 'A1',
+      sentence,
+      rule_title: rule.title,
+      rule_description: rule.desc,
+      cards: selectedCards.map((card) => ({
+        word: card.word,
+        meaning: card.meaning,
+        part_of_speech: card.pos,
+        example: card.example || '',
+      })),
+    }),
+  });
+
+  const contentType = response.headers.get('content-type') || '';
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(`Bộ chấm AI trả về HTTP ${response.status}`);
+  }
+  if (!contentType.toLowerCase().includes('application/json')) {
+    throw new Error('Bộ chấm AI không trả về JSON hợp lệ.');
+  }
+
+  const payload = JSON.parse(responseText);
+  const evaluation = payload?.data;
+  if (
+    !evaluation ||
+    typeof evaluation.accepted !== 'boolean' ||
+    typeof evaluation.score !== 'number' ||
+    typeof evaluation.reason !== 'string'
+  ) {
+    throw new Error('Bộ chấm AI trả về kết quả không đúng cấu trúc.');
+  }
+  return evaluation as MiniGameEvaluation;
 }
 
 /**
@@ -633,9 +710,10 @@ function dealProceduralHand(count = 6): VocabCard[] {
     usedIds.add(next.id);
   }
 
-  return shuffleArray(chosen).map((w) => ({
+  return shuffleArray(chosen).map((w, index) => ({
     ...w,
-    element: getElementType(w),
+    // Keep every hand tactically varied even when all SRS levels are new.
+    element: (['fire', 'ice', 'neutral'] as const)[index % 3],
     bombTurns: null,
   }));
 }
@@ -668,7 +746,6 @@ export function generateFloor(floorNum: number): void {
   game.hand = dealProceduralHand(6);
 
   // 4. Sinh biến cố phá rối (Mutators - FR-04) từ tầng 2
-  let baseTime = game.buffs.has('frost_clock') ? 51 : 45;
   game.mutator = null;
 
   if (floorNum >= 2) {
@@ -691,7 +768,6 @@ export function generateFloor(floorNum: number): void {
         bombCardId: game.hand[targetIdx].id,
       };
     } else if (picked === 'blitz') {
-      baseTime = game.buffs.has('frost_clock') ? 34 : 28;
       game.mutator = {
         type: 'blitz',
         label: '⚡ Bão Tốc Độ (28s • +35% ST)',
@@ -699,7 +775,7 @@ export function generateFloor(floorNum: number): void {
     }
   }
 
-  game.timeLeft = baseTime;
+  game.timeLeft = getTurnDuration();
   const sentenceInput = document.getElementById('sentence-input') as HTMLInputElement | null;
   if (sentenceInput) sentenceInput.value = '';
   document.getElementById('ai-feedback-panel')?.classList.add('hidden');
@@ -720,11 +796,21 @@ function startTurnTimer(): void {
       clearInterval(game.timerInterval);
       handlePlayerDamage('⏰ Hết thời gian! Hộ Vệ Ngữ Pháp đã phản công.');
       if (!game.isGameOver) {
-        game.timeLeft = game.mutator?.type === 'blitz' ? 28 : 40;
-        startTurnTimer();
+        resetTurnTimer();
       }
     }
   }, 1000);
+}
+
+function getTurnDuration(): number {
+  if (game.mutator?.type === 'blitz') return game.buffs.has('frost_clock') ? 34 : 28;
+  return game.buffs.has('frost_clock') ? 51 : 45;
+}
+
+function resetTurnTimer(): void {
+  game.timeLeft = getTurnDuration();
+  updateTimerHUD();
+  startTurnTimer();
 }
 
 function updateTimerHUD(): void {
@@ -793,11 +879,15 @@ export function rerollUnselectedCards(): void {
   const usedIds = new Set(game.hand.map((c) => c.id));
   const pool = shuffleArray((activeCardsDatabase[game.lang] || []).filter((w) => !usedIds.has(w.id)));
 
-  const refreshed = game.hand.map((card) => {
+  const refreshed = game.hand.map((card, index) => {
     if (game.selectedIds.has(card.id) || card.bombTurns !== null) return card;
     const replacement = pool.pop();
     if (!replacement) return card;
-    return { ...replacement, element: getElementType(replacement), bombTurns: null };
+    return {
+      ...replacement,
+      element: (['fire', 'ice', 'neutral'] as const)[index % 3],
+      bombTurns: null,
+    };
   });
 
   game.hand = refreshed;
@@ -883,9 +973,9 @@ function updateSynergyPreview(): void {
 }
 
 // ==================== ATTACK EVALUATION & COMBAT ====================
-export function handleCastAttack(e: Event): void {
+export async function handleCastAttack(e: Event): Promise<void> {
   e.preventDefault();
-  if (game.isGameOver || game.isTransitioning) return;
+  if (game.isGameOver || game.isTransitioning || game.isEvaluating) return;
 
   const inputEl = document.getElementById('sentence-input') as HTMLInputElement | null;
   const rawInput = inputEl?.value.trim() || '';
@@ -936,13 +1026,44 @@ export function handleCastAttack(e: Event): void {
     return;
   }
 
-  // Kiểm tra quy tắc ngữ pháp / văn hóa
-  if (game.rule && typeof game.rule.check === 'function' && !game.rule.check(rawInput)) {
-    triggerWrongAnswer(`Chưa đạt luật ải (${game.rule.title}): ${game.rule.failHint}`, stats.isAllIn);
+  if (!game.rule) {
+    showJudgeFeedback(false, 'Chưa có luật của tầng để chấm câu.');
     return;
   }
 
-  executeSuccessfulAttack(rawInput, stats);
+  game.isEvaluating = true;
+  clearInterval(game.timerInterval);
+  showJudgeFeedback(false, '🤖 AI đang kiểm tra cấu trúc, nghĩa và ngữ cảnh...');
+  try {
+    const evaluation = await evaluateMiniGameAnswer(rawInput, stats.selectedCards, game.rule);
+    if (!evaluation.accepted) {
+      const details = evaluation.correction || evaluation.short_hint;
+      triggerWrongAnswer(
+        `AI không chấp nhận câu (${evaluation.score}/100): ${escapeHtml(evaluation.reason)}`,
+        stats.isAllIn,
+      );
+      if (details) {
+        showJudgeFeedback(
+          false,
+          `AI không chấp nhận câu (${evaluation.score}/100): ${escapeHtml(evaluation.reason)}`,
+          escapeHtml(details),
+        );
+      }
+      if (!game.isGameOver) startTurnTimer();
+      return;
+    }
+    resetTurnTimer();
+    executeSuccessfulAttack(rawInput, stats);
+  } catch (error) {
+    showJudgeFeedback(
+      false,
+      'Chưa thể chấm lượt này vì AI không phản hồi hợp lệ.',
+      error instanceof Error ? error.message : 'Vui lòng thử lại.',
+    );
+    if (!game.isGameOver) startTurnTimer();
+  } finally {
+    game.isEvaluating = false;
+  }
 }
 
 function executeSuccessfulAttack(sentence: string, stats: ReturnType<typeof calculateSynergyStats>): void {
@@ -980,10 +1101,14 @@ function executeSuccessfulAttack(sentence: string, stats: ReturnType<typeof calc
   const freshPool = shuffleArray((activeCardsDatabase[game.lang] || []).filter((w) => !currentPoolIds.has(w.id)));
 
   let bombExploded = false;
-  game.hand = game.hand.map((card) => {
+  game.hand = game.hand.map((card, index) => {
     if (usedIds.has(card.id)) {
       const replacement = freshPool.pop() || card;
-      return { ...replacement, element: getElementType(replacement), bombTurns: null };
+      return {
+        ...replacement,
+        element: (['fire', 'ice', 'neutral'] as const)[index % 3],
+        bombTurns: null,
+      };
     }
     if (card.bombTurns !== null && typeof card.bombTurns === 'number') {
       card.bombTurns -= 1;

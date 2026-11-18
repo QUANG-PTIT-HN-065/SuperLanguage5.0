@@ -46,54 +46,54 @@ def get_minigame_state(
     if level and raw_words:
         ranked = [
             row for row in raw_words
-            if _level_rank(row.get("level")) <= _level_rank(level)
+            if _level_rank(row.get("level")) <= _level_rank(level) # type: ignore
         ]
         if ranked:
             words = ranked
     if not words:
         raise ValueError(f"Chưa có từ vựng phù hợp cho ngôn ngữ '{language_code}' trong cơ sở dữ liệu.")
 
-    word_ids = [row["id"] for row in words if row.get("id") is not None]
+    word_ids = [row["id"] for row in words if row.get("id") is not None] # type: ignore
     progress_rows = (
         supabase_admin.table("user_words")
         .select("word_id,mastery_level,next_review_at")
         .eq("user_id", str(profile["id"]))
-        .in_("word_id", word_ids)
+        .in_("word_id", word_ids) # type: ignore
         .execute()
         .data
         or []
     )
-    progress = {row["word_id"]: row for row in progress_rows}
+    progress = {row["word_id"]: row for row in progress_rows} # type: ignore
 
     links = (
         supabase_admin.table("word_topics")
         .select("word_id,topic_id")
-        .in_("word_id", word_ids)
+        .in_("word_id", word_ids) # type: ignore
         .execute()
         .data
         or []
     )
-    topic_ids = list({row["topic_id"] for row in links if row.get("topic_id") is not None})
+    topic_ids = list({row["topic_id"] for row in links if row.get("topic_id") is not None}) # type: ignore
     topics = (
         supabase_admin.table("topics")
         .select("id,name")
-        .in_("id", topic_ids)
+        .in_("id", topic_ids) # type: ignore
         .execute()
         .data
         or []
     ) if topic_ids else []
-    topic_names = {row["id"]: row.get("name") or "General" for row in topics}
+    topic_names = {row["id"]: row.get("name") or "General" for row in topics} # type: ignore
     word_topics: Dict[Any, list[str]] = {}
     for row in links:
-        word_topics.setdefault(row["word_id"], []).append(
-            topic_names.get(row["topic_id"], "General")
+        word_topics.setdefault(row["word_id"], []).append( # type: ignore
+            topic_names.get(row["topic_id"], "General") # type: ignore
         )
 
     now = datetime.now(timezone.utc)
     cards = []
     for row in words:
-        state = progress.get(row["id"], {})
-        next_review = state.get("next_review_at")
+        state = progress.get(row["id"], {}) # type: ignore
+        next_review = state.get("next_review_at") # type: ignore
         due = True
         if isinstance(next_review, str):
             try:
@@ -102,18 +102,18 @@ def get_minigame_state(
                 due = True
         cards.append(
             {
-                "id": str(row["id"]),
-                "word": row.get("word") or "",
-                "forms": [row.get("word") or ""],
-                "meaning": row.get("meaning") or "",
-                "pos": row.get("part_of_speech") or "noun",
-                "topic": ", ".join(word_topics.get(row["id"], [])) or "General",
-                "level": row.get("level") or level or "A1",
-                "srs": int(state.get("mastery_level") or 0),
+                "id": str(row["id"]), # type: ignore
+                "word": row.get("word") or "", # type: ignore
+                "forms": [row.get("word") or ""],# type: ignore
+                "meaning": row.get("meaning") or "",# type: ignore
+                "pos": row.get("part_of_speech") or "noun",# type: ignore
+                "topic": ", ".join(word_topics.get(row["id"], [])) or "General",# type: ignore
+                "level": row.get("level") or level or "A1",# type: ignore
+                "srs": int(state.get("mastery_level") or 0),# type: ignore
                 "due": due,
-                "phonetic": row.get("phonetic"),
-                "example": row.get("example_sentence"),
-                "exampleMeaning": row.get("example_meaning"),
+                "phonetic": row.get("phonetic"),# type: ignore
+                "example": row.get("example_sentence"),# type: ignore
+                "exampleMeaning": row.get("example_meaning"),# type: ignore
             }
         )
 
@@ -130,34 +130,15 @@ def get_minigame_state(
         if len(selected_cards) >= card_count:
             break
 
-    rag_rows = (
-        supabase_admin.table("rag_chunks")
-        .select("document_key,title,content,language_code")
-        .in_("language_code", ["all", _language_name(language_code)])
-        .limit(100)
-        .execute()
-        .data
-        or []
-    )
-    rules = [
-        {
-            "id": row.get("document_key") or f"rag-{index}",
-            "category": "RAG • Tri thức học tập",
-            "title": row.get("title") or "Quy tắc ngữ pháp",
-            "desc": row.get("content") or "",
-            "tip": "",
-        }
-        for index, row in enumerate(rag_rows)
-        if row.get("content")
-    ]
-
     plan_id = profile.get("plan_id") or "free"
     is_premium = plan_id == "premium"
     return {
         "language": language_code,
         "level": level,
         "cards": selected_cards,
-        "rules": rules,
+        # Raw RAG chunks are intentionally not sent to the game client. The
+        # dedicated evaluator receives only the selected cards and active rule.
+        "rules": [],
         "plan_id": plan_id,
         "max_hearts": 99 if is_premium else 5,
         "is_unlimited_hearts": is_premium,
