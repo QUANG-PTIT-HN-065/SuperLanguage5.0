@@ -79,7 +79,7 @@ class VerifyOtpController {
     if (savedEmail) this.registeredEmail = savedEmail;
     if (savedNative && LANGUAGE_MAP[savedNative]) this.originLanguage = savedNative;
     if (savedTarget && LANGUAGE_MAP[savedTarget]) this.targetLanguage = savedTarget;
-    if (!this.registeredEmail || !sessionStorage.getItem('slanguage_reg_pass')) {
+    if (!this.registeredEmail) {
       window.location.replace('../register/index.html');
       return;
     }
@@ -334,7 +334,16 @@ class VerifyOtpController {
       localStorage.setItem('slanguage_native_language', this.originLanguage);
       localStorage.setItem('slanguage_active_language', this.targetLanguage);
       localStorage.setItem('slanguage_user_xp', '0');
-      sessionStorage.removeItem('slanguage_reg_pass');
+      for (const key of [
+        'slanguage_reg_name',
+        'slanguage_reg_email',
+        'slanguage_reg_pass',
+        'slanguage_reg_terms',
+        'slanguage_reg_native',
+        'slanguage_reg_target',
+      ]) {
+        sessionStorage.removeItem(key);
+      }
       this.showSuccessModal();
     } catch (error) {
       this.otpBoxes.forEach(b => b.classList.add('error-shake'));

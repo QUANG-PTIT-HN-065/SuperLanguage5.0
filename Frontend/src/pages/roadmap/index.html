@@ -11,11 +11,16 @@
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../styles/roadmap/style.css">
-  <link rel="stylesheet" href="../../styles/shared/mobile-responsive.css">
+  <!-- Auth Guard: Chỉ cho phép truy cập khi đã đăng nhập, ngược lại điều hướng về Trang chủ với vai trò Guest -->
+  <script>
+    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+      window.location.replace('../login/index.html');
+    }
+  </script>
 </head>
-<body>
+<body class="user-authenticated">
 
-  <!-- ================= TOP NAVBAR ================= -->
+      <!-- ================= TOP NAVBAR ================= -->
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
@@ -27,29 +32,30 @@
         <nav>
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="../learning/index.html">Học tập</a></li>
-            <li><a href="../vocabulary/index.html">Luyện từ vựng</a></li>
-            <li><a href="../chat/index.html">Luyện tập với AI</a></li>
+            <li><a href="../select-lesson/index.html" class="active">Học tập</a></li>
+            <li><a href="../vocabulary/index.html">Từ vựng</a></li>
+            <li><a href="../ai-practice/index.html">Luyện tập AI</a></li>
+            <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
           </ul>
         </nav>
       </div>
 
       <div class="nav-right">
-        <div class="stat-chip streak" title="Chuỗi ngày học liên tục">
+        <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
           <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
-          <span>14 Ngày</span>
+          <span id="headerStreakVal">0 Ngày</span>
         </div>
-        <div class="stat-chip xp" title="Điểm kinh nghiệm tích lũy">
+        <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
           <i class="fa-solid fa-star"></i>
-          <span id="navXPVal">2,450 XP</span>
+          <span id="headerXPVal">0 XP</span>
         </div>
-        <div class="stat-chip hearts" title="Năng lượng làm bài (Sinh Mệnh Dungeon)">
-          <i class="fa-solid fa-heart" id="navHeartIcon"></i>
-          <span id="navHeartsVal">5/5</span>
+        <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
+          <i class="fa-solid fa-heart"></i>
+          <span id="headerHeartsVal">5/5</span>
         </div>
 
         <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
-        <div class="lang-dropdown" id="langDropdown">
+        <div class="lang-dropdown auth-only" id="langDropdown">
           <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
             <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
             <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
@@ -74,12 +80,12 @@
           </div>
         </div>
 
-        <!-- User Account Dropdown -->
-        <div class="user-dropdown" id="userDropdown">
+        <!-- User Account Dropdown (Shown when logged in) -->
+        <div class="user-dropdown auth-only" id="userDropdown">
           <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini">
+            <img src="../../../assets/logo.png" alt="Avatar" class="user-avatar-mini">
             <div class="user-info-text">
-              <div class="name">Nhật Anh</div>
+              <div class="name">Học viên</div>
               <div class="role">Học viên</div>
             </div>
             <i class="fa-solid fa-chevron-down user-chevron"></i>
@@ -92,15 +98,22 @@
                 <span class="sub">Hồ sơ & cài đặt tài khoản</span>
               </div>
             </a>
-            <a href="../profile/index.html#statisticsHeading" class="user-dropdown-item" role="menuitem">
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
               <div class="menu-item-text">
                 <span class="title">Tiến độ học tập</span>
                 <span class="sub">Thống kê XP & chuỗi ngày</span>
               </div>
             </a>
+                        <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Shop quy đổi</span>
+                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
+              </div>
+            </a>
             <div class="user-dropdown-divider"></div>
-            <a href="../login/index.html" class="user-dropdown-item logout-item" role="menuitem">
+            <a href="../login/index.html" class="user-dropdown-item logout-item" id="navLogoutItem" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
               <div class="menu-item-text">
                 <span class="title">Đăng xuất</span>
@@ -108,6 +121,12 @@
               </div>
             </a>
           </div>
+        </div>
+
+        <!-- Guest Auth Buttons (Shown when NOT logged in) -->
+        <div class="guest-nav-auth guest-only" id="guestNavAuth">
+          <a href="../login/index.html" class="nav-auth-login">Đăng nhập</a>
+          <a href="../register/index.html" class="nav-auth-register">Đăng ký</a>
         </div>
       </div>
     </div>
@@ -132,36 +151,11 @@
       <div class="tree-hero-header">
         <div class="hero-text-wrap">
           <div class="tree-badge">
-            <i class="fa-solid fa-torii-gate"></i> TỔNG QUAN TIẾNG NHẬT (日本語 - NIHONGO)
+            <i class="fa-solid fa-torii-gate"></i> TỔNG QUAN CHỦ ĐỀ ĐANG HỌC
           </div>
-          <h1 class="tree-title" id="treeMainTitle">Khám Phá Tiếng Nhật: Hành Trình Chinh Phục Ngôn Ngữ Xứ Phù Tang</h1>
+          <h1 class="tree-title" id="treeMainTitle">Đang tải dungeon của chủ đề...</h1>
           <div class="tree-intro-content" id="treeMainSubtitle">
-            <p class="intro-lead">
-              Tiếng Nhật là một ngôn ngữ giàu cảm xúc và tinh tế, kết hợp hài hòa giữa 3 hệ chữ viết: <strong>Hiragana</strong> (chữ mềm thuần Nhật), <strong>Katakana</strong> (chữ cứng cho từ mượn quốc tế) và <strong>Kanji</strong> (Hán tự biểu ý thâm sâu). Với trật tự câu SOV linh hoạt, hệ thống trợ từ chặt chẽ cùng các cấp bậc kính ngữ chuẩn mực, tiếng Nhật phản ánh đậm nét văn hóa khiêm nhường và trọng lễ nghi của xứ sở mặt trời mọc.
-            </p>
-            <div class="intro-pillars-grid">
-              <div class="pillar-item">
-                <i class="fa-solid fa-pen-nib"></i>
-                <div>
-                  <strong>3 Hệ Chữ Viết</strong>
-                  <span>Hiragana mềm mại, Katakana dứt khoát & Kanji biểu ý</span>
-                </div>
-              </div>
-              <div class="pillar-item">
-                <i class="fa-solid fa-shapes"></i>
-                <div>
-                  <strong>Cấu Trúc SOV</strong>
-                  <span>Động từ ở cuối câu, kết nối chặt chẽ bằng trợ từ</span>
-                </div>
-              </div>
-              <div class="pillar-item">
-                <i class="fa-solid fa-award"></i>
-                <div>
-                  <strong>5 Tầng Chinh Phục</strong>
-                  <span>Từ sơ cấp N5 đến đàm thoại thực chiến lưu loát</span>
-                </div>
-              </div>
-            </div>
+            <p class="intro-lead">Đang tải bài đọc và từ vựng của chủ đề từ Database...</p>
           </div>
         </div>
 
@@ -173,13 +167,13 @@
           </div>
           <div class="tree-stat-item">
             <span class="tree-stat-label">Cấp độ kỹ năng</span>
-            <div class="tree-stat-value" style="color: var(--color-topaz);">Level 4</div>
+            <div class="tree-stat-value" style="color: var(--color-topaz);" id="treeLevelVal">Level 1</div>
             <div class="tree-stat-sub">Thám Hiểm Ngôn Ngữ</div>
           </div>
           <div class="tree-stat-item">
             <span class="tree-stat-label">XP Tích Lũy</span>
-            <div class="tree-stat-value" style="color: var(--color-crimson);" id="treeTotalXP">2,450 XP</div>
-            <div class="tree-stat-sub">+150 XP tuần này</div>
+            <div class="tree-stat-value" style="color: var(--color-crimson);" id="treeTotalXP">0 XP</div>
+            <div class="tree-stat-sub" id="treeDungeonXp">Đang tính XP dungeon...</div>
           </div>
         </div>
       </div>
@@ -240,10 +234,12 @@
       </div>
 
       <div class="node-modal-body">
-        <h4 class="section-heading">Mục tiêu bài học đạt được:</h4>
-        <ul class="node-objectives-list" id="modalNodeObjectives">
-          <!-- Objectives injected here -->
-        </ul>
+        <div id="modalObjectivesWrap">
+          <h4 class="section-heading">Mục tiêu bài học đạt được:</h4>
+          <ul class="node-objectives-list" id="modalNodeObjectives">
+            <!-- Objectives injected here -->
+          </ul>
+        </div>
 
         <div class="node-skill-preview" id="modalNodePreview">
           <!-- Key phrases / examples preview -->
@@ -264,12 +260,13 @@
         <div class="dungeon-trial-box" id="modalTrialBox">
           <div class="trial-title-wrap">
             <i class="fa-solid fa-shield-halved" style="color: #4ADE80;"></i>
-            <span>Thử Thách Giải Mã Dungeon (Chọn đáp án đúng):</span>
-            <span class="trial-step-badge" id="modalTrialStepBadge">Câu 1/3</span>
+            <span>Thử Thách Giải Mã Dungeon:</span>
+            <span class="trial-step-badge" id="modalTrialStepBadge">Câu 1/15</span>
           </div>
           <div class="trial-progress-track" id="modalTrialProgressTrack">
-            <div class="trial-progress-fill" id="modalTrialProgressFill" style="width: 33%;"></div>
+            <div class="trial-progress-fill" id="modalTrialProgressFill" style="width: 6%;"></div>
           </div>
+          <div class="trial-hearts" id="modalTrialHearts"></div>
           <div class="trial-prompt" id="modalTrialPrompt">
             <!-- Question prompt injected here -->
           </div>
@@ -291,7 +288,6 @@
   <!-- TOAST NOTIFICATION -->
   <div class="roadmap-toast" id="roadmapToast"></div>
 
-  <!-- ================= FOOTER ================= -->
     <footer class="footer">
     <div class="footer-container">
       <!-- Cột 1: Giới thiệu thương hiệu -->

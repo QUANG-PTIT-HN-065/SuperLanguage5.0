@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, NoReturn, Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -122,6 +122,21 @@ def get_profile(user_id: str) -> Optional[Dict[str, Any]]:
 def get_stats(user_id: str) -> Dict[str, Any]:
     rows = supabase_admin.table("user_stats").select("*").eq("user_id", user_id).limit(1).execute().data
     return rows[0] if rows else {}  # type: ignore[return-value]
+
+
+def get_recent_daily_activity(user_id: str, tz_name: str) -> list[Dict[str, Any]]:
+    today = user_today(tz_name)
+    week_start = today - timedelta(days=today.weekday())
+    return (
+        supabase_admin.table("daily_activity")
+        .select("activity_date,xp_earned,lessons_completed,goal_met")
+        .eq("user_id", user_id)
+        .gte("activity_date", week_start.isoformat())
+        .lte("activity_date", today.isoformat())
+        .execute()
+        .data
+        or []
+    )
 
 
 def get_plan(plan_id: str) -> Optional[Dict[str, Any]]:

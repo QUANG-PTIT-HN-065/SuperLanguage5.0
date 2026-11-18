@@ -5,6 +5,24 @@ const API_BASE_URL = (
 const ACCESS_TOKEN_KEY = "slanguage_access_token";
 const REFRESH_TOKEN_KEY = "slanguage_refresh_token";
 
+const LOGIN_PAGE_URL = "../login/index.html";
+const SESSION_EXPIRED_MESSAGE = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+// Trang công khai (không ép đăng nhập) + trang quản trị tự quản phiên riêng
+const PUBLIC_PAGE_DIRS = [
+  "/login/",
+  "/register/",
+  "/forgot-password/",
+  "/verify-otp/",
+  "/select-language/",
+  "/terms/",
+  "/minigame/",
+  "/LoginAdmin/",
+  "/dasboardAdmin/",
+  "/vocabularyAdmin/",
+];
+
+let sessionExpiryPopupShown = false;
+
 export interface AuthTokens {
   access_token: string;
   refresh_token: string;
@@ -79,6 +97,20 @@ export function clearAuthTokens(): void {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
+// Key giữ lại khi đăng xuất: email cho tính năng "Ghi nhớ đăng nhập".
+const KEEP_ON_LOGOUT_KEYS = new Set(["slanguage_remembered_email"]);
+
+// Quét sạch dữ liệu học tập/cache trên thiết bị (kể cả key có hậu tố động
+// như lesson_last_score_38) — thu thập trước rồi mới xoá để không lệch index.
+export function clearLearnerCache(): void {
+  const stale: string[] = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (key?.startsWith("slanguage_") && !KEEP_ON_LOGOUT_KEYS.has(key)) stale.push(key);
+  }
+  for (const key of stale) localStorage.removeItem(key);
+}
+
 export function saveLearnerIdentity(user: {
   id?: string;
   email: string;
@@ -90,10 +122,68 @@ export function saveLearnerIdentity(user: {
   localStorage.setItem("slanguage_user_email", user.email);
 }
 
-async function refreshAccessToken(): Promise<string> {
+function isPublicAuthPage(): boolean {
+  const path = window.location.pathname;
+  return PUBLIC_PAGE_DIRS.some((dir) => path.includes(dir));
+}
+
+function redirectToLoginPage(): void {
+  window.location.replace(LOGIN_PAGE_URL);
+}
+
+export function handleSessionExpired(): void {
+  clearAuthTokens();
+  clearLearnerCache();
+  localStorage.removeItem("slanguage_is_logged_in");
+  localStorage.removeItem("slanguage_user_id");
+  localStorage.removeItem("slanguage_user_name");
+  localStorage.removeItem("slanguage_user_email");
+  if (sessionExpiryPopupShown) return;
+  sessionExpiryPopupShown = true;
+  showSessionExpiredModal();
+}
+
+function showSessionExpiredModal(): void {
+  if (document.getElementById("slanguage-session-expired-overlay")) return;
+  const overlay = document.createElement("div");
+  overlay.id = "slanguage-session-expired-overlay";
+  overlay.setAttribute("role", "alertdialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.style.cssText =
+    "position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;background:rgba(2,6,23,0.72);backdrop-filter:blur(6px);font-family:'Be Vietnam Pro','Segoe UI',system-ui,sans-serif;";
+  overlay.innerHTML = `
+    <div style="background:#ffffff;border-radius:18px;max-width:420px;width:calc(100% - 40px);padding:30px 26px 26px;text-align:center;box-shadow:0 24px 64px rgba(2,6,23,0.45);">
+      <div style="width:64px;height:64px;margin:0 auto;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15.5 14"></polyline></svg>
+      </div>
+      <h3 style="margin:14px 0 8px;font-size:1.15rem;color:#0f172a;">Phiên đăng nhập đã hết hạn</h3>
+      <p style="margin:0 0 20px;color:#475569;font-size:0.92rem;line-height:1.55;">Hệ thống đã tự động đăng xuất để bảo mật tài khoản của bạn. Vui lòng đăng nhập lại để tiếp tục học tập.</p>
+      <button type="button" id="slanguage-session-relogin-btn" style="width:100%;padding:12px 16px;border:none;border-radius:10px;background:linear-gradient(135deg,#0077B6 0%,#00B4D8 100%);color:#ffffff;font-size:0.98rem;font-weight:600;cursor:pointer;">Đăng nhập lại</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.body.style.overflow = "hidden";
+  overlay
+    .querySelector("#slanguage-session-relogin-btn")
+    ?.addEventListener("click", redirectToLoginPage);
+}
+
+async function refreshAccessToken(previousAccessToken?: string): Promise<string> {
+  const baselineToken = previousAccessToken ?? localStorage.getItem(ACCESS_TOKEN_KEY);
+  // Nhiều request song song có thể cùng gặp 401; request nào refresh xong trước
+  // sẽ lưu token mới — request sau dùng lại thay vì POST trùng hoặc kết luận
+  // nhầm phiên đã chết (Supabase xoay refresh token, lần gọi sau có thể bị chặn).
+  const newerSavedToken = (): string | null => {
+    const current = localStorage.getItem(ACCESS_TOKEN_KEY);
+    return current && current !== baselineToken ? current : null;
+  };
+
+  const savedByParallelCall = newerSavedToken();
+  if (savedByParallelCall) return savedByParallelCall;
+
   const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
   if (!refreshToken) {
-    throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+    handleSessionExpired();
+    throw new Error(SESSION_EXPIRED_MESSAGE);
   }
 
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
@@ -101,6 +191,13 @@ async function refreshAccessToken(): Promise<string> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refresh_token: refreshToken }),
   });
+  if (response.status === 401 || response.status === 403) {
+    // Refresh token cũng đã chết/thu hồi: phiên không thể cứu, đăng xuất bắt buộc
+    const savedByParallelCallAfterFailure = newerSavedToken();
+    if (savedByParallelCallAfterFailure) return savedByParallelCallAfterFailure;
+    handleSessionExpired();
+    throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
   const result = await parseResponse<{
     access_token: string;
     refresh_token: string;
@@ -111,44 +208,6 @@ async function refreshAccessToken(): Promise<string> {
   }
   saveAuthTokens(result.data);
   return result.data.access_token;
-}
-
-const MOCK_BASE_URL = "/mock";
-
-/** Đọc một file mock có cùng dạng BaseResponse của backend. */
-export async function readMockData<T = unknown>(
-  file: string,
-  select?: (data: unknown) => unknown,
-): Promise<T> {
-  const response = await fetch(`${MOCK_BASE_URL}/${file}`, {
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) {
-    throw new Error("Không tải được dữ liệu mẫu của trang học tập.");
-  }
-  const payload = (await response.json()) as ApiResponse<unknown>;
-  if (typeof payload?.status !== "string" || !("data" in payload)) {
-    throw new Error("Dữ liệu mẫu không đúng định dạng BaseResponse.");
-  }
-  return (select ? select(payload.data) : payload.data) as T;
-}
-
-/** Gọi API thật; chỉ rơi về mock khi backend không reachable (lỗi mạng). */
-export async function slanguageApiOrMock<T = unknown>(
-  path: string,
-  file: string,
-  options: ApiRequestOptions & { onFallback?: () => void } = {},
-  select?: (data: unknown) => unknown,
-): Promise<T> {
-  const { onFallback, ...requestOptions } = options;
-  try {
-    const response = await slanguageApi<T>(path, requestOptions);
-    return response.data;
-  } catch (error) {
-    if (!(error instanceof TypeError)) throw error;
-    onFallback?.();
-    return readMockData<T>(file, select);
-  }
 }
 
 function isFormData(value: unknown): value is FormData {
@@ -178,38 +237,46 @@ export async function slanguageApi<T = unknown>(
           : JSON.stringify(requestOptions.body),
   });
 
-  if (response.status === 401 && allowRefresh && token && !anonymous) {
-    const refreshedToken = await refreshAccessToken();
-    return slanguageApi<T>(
-      path,
-      {
-        ...requestOptions,
-        headers: { ...requestOptions.headers, Authorization: `Bearer ${refreshedToken}` },
-      },
-      false,
-    );
+  if (response.status === 401 && !anonymous) {
+    if (!token) {
+      handleSessionExpired();
+      throw new Error(SESSION_EXPIRED_MESSAGE);
+    }
+    if (allowRefresh) {
+      const refreshedToken = await refreshAccessToken(token);
+      return slanguageApi<T>(
+        path,
+        {
+          ...requestOptions,
+          headers: { ...requestOptions.headers, Authorization: `Bearer ${refreshedToken}` },
+        },
+        false,
+      );
+    }
   }
   return parseResponse<T>(response);
 }
 
-export async function slanguageApiAudio(path: string, body: unknown): Promise<Blob> {
+export async function slanguageApiAudio(
+  path: string,
+  body?: unknown,
+  method: "POST" | "GET" = "POST",
+): Promise<Blob> {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const send = (accessToken: string | null) => {
-    const headers = new Headers({
-      Accept: "audio/mpeg",
-      "Content-Type": "application/json",
-    });
+    const headers = new Headers({ Accept: "audio/*" });
+    if (method === "POST") headers.set("Content-Type", "application/json");
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     return fetch(`${API_BASE_URL}${path}`, {
-      method: "POST",
+      method,
       headers,
-      body: JSON.stringify(body),
+      body: method === "POST" ? JSON.stringify(body) : undefined,
     });
   };
 
   let response = await send(token);
   if (response.status === 401 && token) {
-    response = await send(await refreshAccessToken());
+    response = await send(await refreshAccessToken(token));
   }
   if (!response.ok) {
     let payload: unknown;
@@ -230,3 +297,21 @@ export async function slanguageApiAudio(path: string, body: unknown): Promise<Bl
   if (!audio.size) throw new Error("Backend trả về file giọng đọc trống.");
   return audio;
 }
+
+// Trang learner luôn import api-client trước khi chạy logic riêng, nên dùng
+// thời điểm import để chặn truy cập trang protected khi đã mất phiên.
+if (
+  window.location.pathname.includes("/src/pages/") &&
+  !isPublicAuthPage() &&
+  !isLearnerAuthenticated()
+) {
+  redirectToLoginPage();
+}
+
+// Back/bfcache khôi phục trang protected từ bộ nhớ đệm mà không chạy lại JS
+// (token đã bị xóa khi hết phiên) → đưa về login, không cho quay lại trang cũ.
+window.addEventListener("pageshow", (event) => {
+  if (!(event as PageTransitionEvent).persisted) return;
+  if (isLearnerAuthenticated() || isPublicAuthPage()) return;
+  redirectToLoginPage();
+});

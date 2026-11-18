@@ -10,7 +10,7 @@
  * Không tạo số liệu, cấp độ hay mục tiêu nếu API không trả về.
  */
 
-import { slanguageApi, slanguageApiOrMock } from "../shared/api-client";
+import { slanguageApi } from "../shared/api-client";
 
 export const XP_PER_LEVEL = 100;
 
@@ -45,13 +45,6 @@ export interface LearnerOverview {
   xpIntoLevel: number;
   needsOnboarding: boolean;
   dailyActivity: DailyActivityRow[];
-}
-
-export interface CachedProgress {
-  name: string;
-  xp: number;
-  streak: number;
-  syncedAt: string;
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -120,14 +113,13 @@ export function parseLearnerOverview(value: unknown): LearnerOverview {
   const displayName =
     toText(profile.display_name) ||
     toText(profile.username) ||
-    localStorage.getItem("slanguage_user_name") ||
     "Học viên";
 
   return {
     profile: {
       displayName,
-      email: toText(profile.email) || localStorage.getItem("slanguage_user_email") || "",
-      userId: toText(profile.id) || localStorage.getItem("slanguage_user_id") || "",
+      email: toText(profile.email),
+      userId: toText(profile.id),
       targetLanguage: toText(profile.target_language),
       currentLevel: toText(profile.current_level),
       targetLevel: toText(profile.target_level),
@@ -153,15 +145,9 @@ export function parseLearnerOverview(value: unknown): LearnerOverview {
   };
 }
 
-/**
- * GET /api/v1/me. `allowMock` chỉ bật ở chế độ xem thử (backend chưa chạy);
- * lỗi HTTP/xác thực vẫn được ném ra để trang hiện trạng thái lỗi + Thử lại.
- */
-export async function fetchLearnerOverview(allowMock = false): Promise<LearnerOverview> {
-  const payload = allowMock
-    ? await slanguageApiOrMock<unknown>("/api/v1/me", "me.json")
-    : (await slanguageApi("/api/v1/me", { method: "GET" })).data;
-  return parseLearnerOverview(payload);
+export async function fetchLearnerOverview(): Promise<LearnerOverview> {
+  const response = await slanguageApi("/api/v1/me", { method: "GET" });
+  return parseLearnerOverview(response.data);
 }
 
 /**
@@ -183,28 +169,6 @@ export function cacheOverview(overview: LearnerOverview): void {
   localStorage.setItem("slanguage_streak", String(overview.stats.currentStreak));
   localStorage.setItem("slanguage_stats_synced", "true");
   localStorage.setItem("slanguage_stats_synced_at", new Date().toISOString());
-}
-
-export function readCachedProgress(): CachedProgress | null {
-  if (localStorage.getItem("slanguage_stats_synced") !== "true") return null;
-
-  const xp = Number.parseInt(localStorage.getItem("slanguage_user_xp") ?? "", 10);
-  const streak = Number.parseInt(localStorage.getItem("slanguage_streak") ?? "", 10);
-  if (!Number.isFinite(xp)) return null;
-
-  return {
-    name: localStorage.getItem("slanguage_user_name") || "Học viên",
-    xp,
-    streak: Number.isFinite(streak) ? streak : 0,
-    syncedAt: localStorage.getItem("slanguage_stats_synced_at") || "",
-  };
-}
-
-export function clearProgressCache(): void {
-  localStorage.removeItem("slanguage_user_xp");
-  localStorage.removeItem("slanguage_user_streak");
-  localStorage.removeItem("slanguage_stats_synced");
-  localStorage.removeItem("slanguage_stats_synced_at");
 }
 
 /** Một dòng của bảng daily_activity (ERD). Backend chưa có endpoint riêng. */
@@ -242,8 +206,6 @@ export interface StreakDay {
 }
 
 const WEEKDAY_LABELS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-const DAY_IN_MS = 86_400_000;
-const DAILY_XP_KEY = "slanguage_daily_xp";
 
 export function toDateKey(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -298,19 +260,6 @@ export function parseDailyActivity(value: unknown): DailyActivityRow[] {
     .sort((a, b) => a.activityDate.localeCompare(b.activityDate));
 }
 
-/** Dời cửa sổ dữ liệu mẫu để ngày mới nhất trùng hôm nay (chỉ dùng cho mock). */
-export function shiftActivityToToday(rows: DailyActivityRow[], today: Date): DailyActivityRow[] {
-  if (!rows.length) return rows;
-  const newest = new Date(`${rows[rows.length - 1].activityDate}T00:00:00`);
-  const delta = Math.round((today.getTime() - newest.getTime()) / DAY_IN_MS);
-  if (!delta) return rows;
-  return rows.map((row) => {
-    const shifted = new Date(`${row.activityDate}T00:00:00`);
-    shifted.setDate(shifted.getDate() + delta);
-    return { ...row, activityDate: toDateKey(shifted) };
-  });
-}
-
 /**
  * Bảy ngày của tuần hiện tại (Thứ Hai → Chủ Nhật).
  * Có daily_activity thì đọc trực tiếp; không thì suy ra từ cửa sổ streak.
@@ -354,32 +303,14 @@ export function buildStreakWeek(
   });
 }
 
-/** XP hôm nay: ưu tiên daily_activity, sau đó bộ đếm cục bộ của thiết bị. */
+/** XP hôm nay từ dữ liệu daily_activity do backend trả về. */
 export function resolveTodayXp(
   rows: DailyActivityRow[],
   today: Date,
-  localXp: number,
 ): number {
   const key = toDateKey(today);
   const row = rows.find((entry) => entry.activityDate === key);
-  return row ? row.xpEarned : Math.max(0, localXp);
-}
-
-export function readLocalDailyXp(today: Date): number {
-  try {
-    const raw = localStorage.getItem(DAILY_XP_KEY);
-    if (!raw) return 0;
-    const parsed = asRecord(JSON.parse(raw));
-    return parsed.date === toDateKey(today) ? Math.max(0, toInt(parsed.xp)) : 0;
-  } catch {
-    return 0;
-  }
-}
-
-export function addLocalDailyXp(amount: number, today: Date): number {
-  const next = readLocalDailyXp(today) + Math.max(0, Math.trunc(amount));
-  localStorage.setItem(DAILY_XP_KEY, JSON.stringify({ date: toDateKey(today), xp: next }));
-  return next;
+  return row?.xpEarned ?? 0;
 }
 
 /** Trung bình tiến độ các chủ đề — dùng cho thanh tiến độ trên card lộ trình. */

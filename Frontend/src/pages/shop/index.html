@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Shop Quy Đổi XP & Cửa Hàng Vật Phẩm</title>
+  <link rel="icon" type="image/png" href="../../../assets/logo.png">
+  <link rel="apple-touch-icon" href="../../../assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="../../styles/shop/style.css">
+  <!-- Auth Guard: Chỉ cho phép truy cập khi đã đăng nhập, ngược lại điều hướng về Trang chủ với vai trò Guest -->
+  <script>
+    if (!localStorage.getItem('slanguage_access_token')) {
+      window.location.replace('../login/index.html');
+    }
+  </script>
+</head>
+<body class="user-authenticated">
+
+  <!-- ================= TOP NAVBAR ================= -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="nav-left">
+        <a href="../home/index.html" class="brand-logo">
+          <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </a>
+
+        <nav>
+          <ul class="nav-links">
+            <li><a href="../home/index.html">Trang chủ</a></li>
+            <li><a href="../select-lesson/index.html">Học tập</a></li>
+            <li><a href="../vocabulary/index.html">Từ vựng</a></li>
+            <li><a href="../ai-practice/index.html">Luyện tập AI</a></li>
+            <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="nav-right">
+        <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
+          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <span id="headerStreakVal">—</span>
+        </div>
+        <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
+          <i class="fa-solid fa-star"></i>
+          <span id="headerXPVal">—</span>
+        </div>
+        <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
+        <div class="lang-dropdown auth-only" id="langDropdown">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+            <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
+            <i class="fa-solid fa-chevron-down lang-chevron"></i>
+          </button>
+          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
+            <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
+              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <span class="lang-name">Tiếng Nhật (日本語)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
+              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <span class="lang-name">English (Tiếng Anh)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
+              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <span class="lang-name">Tiếng Việt (Vietnamese)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- User Account Dropdown -->
+        <div class="user-dropdown auth-only" id="userDropdown">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
+            <img alt="Ảnh đại diện" class="user-avatar-mini">
+            <div class="user-info-text">
+              <div class="name"></div>
+              <div class="role">Học viên</div>
+            </div>
+            <i class="fa-solid fa-chevron-down user-chevron"></i>
+          </button>
+          <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Thông tin cá nhân</span>
+                <span class="sub">Hồ sơ & cài đặt tài khoản</span>
+              </div>
+            </a>
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Tiến độ học tập</span>
+                <span class="sub">Thống kê XP & chuỗi ngày</span>
+              </div>
+            </a>
+            <a href="./index.html" class="user-dropdown-item active-page" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Shop quy đổi</span>
+                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
+              </div>
+            </a>
+            <div class="user-dropdown-divider"></div>
+            <a href="../login/index.html" class="user-dropdown-item logout-item" id="navLogoutItem" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Đăng xuất</span>
+                <span class="sub">Thoát khỏi phiên học</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Guest Auth Buttons -->
+        <div class="guest-nav-auth guest-only" id="guestNavAuth">
+          <a href="../login/index.html" class="nav-auth-login">Đăng nhập</a>
+          <a href="../register/index.html" class="nav-auth-register">Đăng ký</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="shop-main">
+
+    <!-- 1. HERO BANNER & LIVE WALLET -->
+    <section class="shop-hero-card">
+      <div class="hero-top-info">
+        <span class="hero-badge-tag"><i class="fa-solid fa-coins"></i> CỬA HÀNG QUY ĐỔI COIN & VẬT PHẨM TRỢ LỰC</span>
+        <h1 class="hero-title">
+          Trạm Quy Đổi Điểm Thưởng & <span class="highlight">Tiệm Tạp Hóa Slanguage</span> 🪙
+        </h1>
+        <p class="hero-desc">
+          Quy đổi XP đã tích lũy thành Coin theo tỷ lệ <strong>5 XP = 1 Coin</strong>. Số dư, vật phẩm và lịch sử giao dịch được đồng bộ từ tài khoản của bạn.
+        </p>
+      </div>
+
+      <!-- 3 Live Balance Cards -->
+      <div class="wallet-balance-grid">
+        <div class="wallet-card gold">
+          <div class="wallet-icon-box">
+            <i class="fa-solid fa-coins"></i>
+          </div>
+          <div class="wallet-info">
+            <span class="wallet-label">Ví Tiền Vàng Slanguage</span>
+            <span class="wallet-val" id="userCoinsDisplay">—</span>
+            <span class="wallet-sub">Dùng để mua sắm vật phẩm trợ lực</span>
+          </div>
+        </div>
+
+        <div class="wallet-card blue">
+          <div class="wallet-icon-box">
+            <i class="fa-solid fa-star"></i>
+          </div>
+          <div class="wallet-info">
+            <span class="wallet-label">Điểm Kinh Nghiệm (XP)</span>
+            <span class="wallet-val" id="userXPDisplay">—</span>
+            <span class="wallet-sub">Số dư XP khả dụng để quy đổi</span>
+          </div>
+        </div>
+
+        <div class="wallet-card red">
+          <div class="wallet-icon-box">
+            <i class="fa-solid fa-heart-pulse"></i>
+          </div>
+          <div class="wallet-info">
+            <span class="wallet-label">Tổng XP đã tích lũy</span>
+            <span class="wallet-val" id="userHeartsDisplay">—</span>
+            <span class="wallet-sub">XP chưa quy đổi vẫn có thể dùng để học</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. SECTION: BỘ QUY ĐỔI 5 XP ➔ 1 COIN -->
+    <section class="exchange-hub-section" id="exchangeHubCard">
+      <div class="section-title-bar">
+        <div class="title-with-icon">
+          <i class="fa-solid fa-arrow-right-arrow-left"></i>
+          <h2>Cỗ Máy Quy Đổi Điểm Thưởng (5 XP = 1 Coin)</h2>
+        </div>
+        <div class="rate-badge">
+          <span>Tỷ giá: <strong>5 XP</strong> = <strong>1 Coin 🪙</strong></span>
+        </div>
+      </div>
+
+      <div class="exchange-machine-grid">
+        <!-- Cột Nguồn: Điểm XP Bạn Đổi -->
+        <div class="exchange-col source">
+          <div class="col-head">
+            <span class="lbl"><i class="fa-solid fa-star"></i> Bạn Dùng (Điểm XP)</span>
+            <span class="sub">Tối thiểu: 5 XP</span>
+          </div>
+
+          <div class="stepper-wrap">
+            <button type="button" class="stepper-btn" id="btnMinusXP" title="Giảm 5 XP">
+              <i class="fa-solid fa-minus"></i>
+            </button>
+            <input type="number" id="xpExchangeInput" class="stepper-input" value="50" min="5" step="5">
+            <button type="button" class="stepper-btn" id="btnPlusXP" title="Tăng 5 XP">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+
+          <!-- Phím chọn nhanh -->
+          <div class="quick-xp-group">
+            <button type="button" class="quick-xp-btn" data-xp="25">+25 XP</button>
+            <button type="button" class="quick-xp-btn" data-xp="50">+50 XP</button>
+            <button type="button" class="quick-xp-btn" data-xp="100">+100 XP</button>
+            <button type="button" class="quick-xp-btn" data-xp="250">+250 XP</button>
+            <button type="button" class="quick-xp-btn max" data-xp="max">Tất Cả (Max)</button>
+          </div>
+        </div>
+
+        <!-- Mũi tên chuyển đổi trung tâm -->
+        <div class="exchange-divider-arrow">
+          <div class="arrow-circle">
+            <i class="fa-solid fa-right-long"></i>
+          </div>
+          <span class="formula-tag">÷ 5</span>
+        </div>
+
+        <!-- Cột Đích: Coin Nhận Được -->
+        <div class="exchange-col result">
+          <div class="col-head">
+            <span class="lbl"><i class="fa-solid fa-coins"></i> Bạn Sẽ Nhận Được</span>
+            <span class="sub">Cộng ngay vào ví Coin</span>
+          </div>
+
+          <div class="result-box">
+            <div class="coins-earned">
+              <i class="fa-solid fa-coins" style="color: #FFB703;"></i>
+              <span id="previewCoinsVal">+10</span>
+              <span class="unit">Coin</span>
+            </div>
+            <div class="residual-note" id="previewResidualVal" style="display: none;"></div>
+          </div>
+
+          <!-- Nút bấm xác nhận quy đổi -->
+          <button type="button" class="btn-execute-exchange" id="btnExecuteExchange">
+            <i class="fa-solid fa-bolt"></i>
+            <span>Xác Nhận Đổi XP Lấy Coin</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. SECTION: DANH MỤC VẬT PHẨM TRỢ LỰC -->
+    <section class="shop-catalog-section">
+      <div class="section-title-bar">
+        <div class="title-with-icon">
+          <i class="fa-solid fa-bag-shopping"></i>
+          <h2>Cửa Hàng Vật Phẩm & Bổ Trợ Trợ Lực</h2>
+        </div>
+        <span class="catalog-hint">Vật phẩm được lưu vào kho sau khi mua</span>
+      </div>
+
+      <!-- Items Grid (Rendered dynamically by shop.ts) -->
+      <div class="shop-items-grid" id="shopItemsGrid">
+        <!-- Rendered by SlanguageShopApp -->
+      </div>
+    </section>
+
+    <!-- 4. SECTION: TỦ ĐỒ CÁ NHÂN & LỊCH SỬ GIAO DỊCH -->
+    <div class="bottom-split-grid">
+      <!-- Cột Trái: Tủ đồ & Buffs đang hoạt động -->
+      <section class="inventory-section">
+        <div class="section-title-bar compact">
+          <div class="title-with-icon">
+            <i class="fa-solid fa-box-archive"></i>
+            <h3>Tủ Đồ & Vật Phẩm Đã Sở Hữu</h3>
+          </div>
+        </div>
+
+        <div class="inventory-list" id="inventoryList">
+          <!-- Rendered by SlanguageShopApp -->
+        </div>
+      </section>
+
+      <!-- Cột Phải: Lịch sử quy đổi & mua sắm -->
+      <section class="history-section">
+        <div class="section-title-bar compact">
+          <div class="title-with-icon">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+            <h3>Nhật Ký Giao Dịch Gần Đây</h3>
+          </div>
+        </div>
+
+        <div class="history-table-wrap">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Loại</th>
+                <th>Chi tiết giao dịch</th>
+                <th>Biến động số dư</th>
+                <th>Thời gian</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <!-- Rendered by SlanguageShopApp -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="footer">
+    <div class="footer-container">
+      <!-- Cột 1: Giới thiệu thương hiệu -->
+      <div class="footer-col">
+        <div class="brand-logo" style="margin-bottom: 14px;">
+          <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </div>
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
+        </p>
+      </div>
+
+      <!-- Cột 2: Chương trình học -->
+      <div class="footer-col">
+        <h4>Chương trình học</h4>
+        <ul>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
+        </ul>
+      </div>
+
+      <!-- Cột 3: Thông tin liên hệ -->
+      <div class="footer-col">
+        <h4>Thông tin liên hệ</h4>
+        <ul class="footer-contact-list">
+          <li>
+            <i class="fa-solid fa-phone"></i>
+            <div>
+              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <a href="tel:19006868" class="contact-val">1900 6868</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-envelope"></i>
+            <div>
+              <span class="contact-label">Email học vụ:</span>
+              <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-location-dot"></i>
+            <div>
+              <span class="contact-label">Trụ sở học thuật:</span>
+              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-clock"></i>
+            <div>
+              <span class="contact-label">Thời gian làm việc:</span>
+              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Cột 4: Cam kết chất lượng -->
+      <div class="footer-col">
+        <h4>Cam kết chất lượng</h4>
+        <ul class="footer-commit-list">
+          <li>
+            <i class="fa-solid fa-shield-halved"></i>
+            <div>
+              <strong>Chuẩn đầu ra quốc tế</strong>
+              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-rotate-left"></i>
+            <div>
+              <strong>Cam kết hoàn học phí</strong>
+              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-user-graduate"></i>
+            <div>
+              <strong>Đồng hành 1-1 chuyên sâu</strong>
+              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-infinity"></i>
+            <div>
+              <strong>Quyền lợi học trọn đời</strong>
+              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu.</div>
+      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
+    </div>
+  </footer>
+
+  <script type="module" src="../../types/shop/shop.ts"></script>
+</body>
+</html>

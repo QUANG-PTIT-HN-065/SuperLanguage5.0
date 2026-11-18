@@ -1,12 +1,15 @@
-export {};
-
 /**
  * Slanguage - Select Lesson Module (Lựa chọn buổi học / Session)
- * 16-Session Grid System (4x4) with Gatekeeper for Learning Roadmap
+ * Session Grid from Database topics with Premium gate for Learning Roadmap
  */
 
+import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { initializeLearnerHeader, logoutLearner, renderLearnerHeader } from "../shared/learner-header";
+import { readHearts } from "../shared/hearts";
+import "../home/lesson-quiz";
+
 type TargetLang = 'ja' | 'en' | 'vi';
-type SessionTier = 'basic' | 'intermediate' | 'advanced' | 'master';
+type SessionTier = 'basic' | 'intermediate' | 'advanced' | 'master' | 'extension';
 
 interface SessionData {
   id: number;
@@ -19,6 +22,9 @@ interface SessionData {
   vocabCount: number;
   grammarCount: number;
   xpReward: number;
+  topicId?: number;
+  locked?: boolean;
+  completed?: boolean;
 }
 
 interface LanguageMeta {
@@ -30,337 +36,20 @@ interface LanguageMeta {
 class SelectLessonManager {
   private currentLang: TargetLang = 'ja';
   private selectedLessonId: number | null = null;
+  private dbPathId: number | null = null;
+  private isPremiumUser = false;
+  // Số chủ đề nửa đầu miễn phí — nửa sau cần Premium
+  private freeSessionCount = 0;
   private currentFilter: string = 'all';
   private searchQuery: string = '';
 
   private readonly langMetadata: Record<TargetLang, LanguageMeta> = {
-    ja: { code: 'ja', name: 'Tiếng Nhật', flag: '../assets/flags/flag-jp.png' },
-    en: { code: 'en', name: 'English', flag: '../assets/flags/flag-en.png' },
-    vi: { code: 'vi', name: 'Tiếng Việt', flag: '../assets/flags/flag-vn.png' }
+    ja: { code: 'ja', name: 'Tiếng Nhật', flag: '../../../assets/flags/flag-jp.png' },
+    en: { code: 'en', name: 'English', flag: '../../../assets/flags/flag-en.png' },
+    vi: { code: 'vi', name: 'Tiếng Việt', flag: '../../../assets/flags/flag-vn.png' }
   };
 
-  private readonly sessionsList: SessionData[] = [
-    {
-      id: 1,
-      numStr: '01',
-      tier: 'basic',
-      tierLabel: 'Cơ bản',
-      icon: 'fa-pen-nib',
-      title: {
-        ja: 'Bảng Chữ Cái & Phát Âm Căn Bản',
-        en: 'Alphabet & Phonics Essentials',
-        vi: 'Bảng Chữ Cái & 6 Dấu Thanh Điệu'
-      },
-      desc: {
-        ja: 'Làm quen Hiragana, Katakana & quy tắc phát âm trường âm, âm ngắt.',
-        en: 'Master phonics, vowels, consonants, and phonetic building blocks.',
-        vi: 'Nắm vững 29 chữ cái, phụ âm ghép và 6 dấu thanh điệu tiếng Việt.'
-      },
-      vocabCount: 25,
-      grammarCount: 3,
-      xpReward: 50
-    },
-    {
-      id: 2,
-      numStr: '02',
-      tier: 'basic',
-      tierLabel: 'Cơ bản',
-      icon: 'fa-handshake',
-      title: {
-        ja: 'Chào Hỏi & Tự Giới Thiệu',
-        en: 'Greetings & Self-Introductions',
-        vi: 'Chào Hỏi & Tự Giới Thiệu Bản Thân'
-      },
-      desc: {
-        ja: 'Chào theo buổi trong ngày, giới thiệu tên, quê quán & nghề nghiệp.',
-        en: 'Everyday greetings, breaking the ice, stating name and background.',
-        vi: 'Lời chào thân mật, phép tắc xưng hô và chia sẻ thông tin cá nhân.'
-      },
-      vocabCount: 30,
-      grammarCount: 4,
-      xpReward: 60
-    },
-    {
-      id: 3,
-      numStr: '03',
-      tier: 'basic',
-      tierLabel: 'Cơ bản',
-      icon: 'fa-clock',
-      title: {
-        ja: 'Số Đếm, Thời Gian & Ngày Tháng',
-        en: 'Numbers, Time & Daily Calendar',
-        vi: 'Số Đếm, Giờ Giấc & Lịch Trình'
-      },
-      desc: {
-        ja: 'Đếm số, hỏi giờ, các ngày trong tuần và lịch hẹn thường nhật.',
-        en: 'Telling time, dates, ordinal numbers, and scheduling daily routines.',
-        vi: 'Cách đọc giờ, thứ ngày tháng năm và sắp xếp lịch làm việc.'
-      },
-      vocabCount: 35,
-      grammarCount: 3,
-      xpReward: 70
-    },
-    {
-      id: 4,
-      numStr: '04',
-      tier: 'basic',
-      tierLabel: 'Cơ bản',
-      icon: 'fa-people-roof',
-      title: {
-        ja: 'Gia Đình & Đại Từ Xưng Hô',
-        en: 'Family Members & Personal Pronouns',
-        vi: 'Gia Đình & Thứ Bậc Xưng Hô'
-      },
-      desc: {
-        ja: 'Gọi tên thành viên gia đình mình vs gia đình người khác lịch sự.',
-        en: 'Kinship terms, relational pronouns, and talking about relatives.',
-        vi: 'Hệ thống đại từ xưng hô tôn trọng theo vai vế gia đình Việt.'
-      },
-      vocabCount: 28,
-      grammarCount: 4,
-      xpReward: 80
-    },
-    {
-      id: 5,
-      numStr: '05',
-      tier: 'intermediate',
-      tierLabel: 'Giao tiếp',
-      icon: 'fa-cart-shopping',
-      title: {
-        ja: 'Mua Sắm, Tiền Tệ & Mặc Cả',
-        en: 'Shopping, Currency & Bargaining',
-        vi: 'Mua Sắm, Giá Cả & Thanh Toán'
-      },
-      desc: {
-        ja: 'Hỏi giá tiền Yên, phương thức thanh toán & hỏi mua đồ tại siêu thị.',
-        en: 'Asking prices, paying via card/cash, discounts, and store dialogue.',
-        vi: 'Hỏi giá, đổi trả hàng, thanh toán tiền mặt và chuyển khoản.'
-      },
-      vocabCount: 32,
-      grammarCount: 4,
-      xpReward: 90
-    },
-    {
-      id: 6,
-      numStr: '06',
-      tier: 'intermediate',
-      tierLabel: 'Giao tiếp',
-      icon: 'fa-utensils',
-      title: {
-        ja: 'Ẩm Thực, Nhà Hàng & Gọi Món',
-        en: 'Food, Dining Out & Ordering',
-        vi: 'Ẩm Thực, Quán Ăn & Kỹ Năng Gọi Món'
-      },
-      desc: {
-        ja: 'Văn hóa Itadakimasu, gọi món ăn Nhật, hỏi thực đơn & tính tiền.',
-        en: 'Restaurant etiquette, dietary preferences, ordering courses and bill.',
-        vi: 'Khám phá món ăn vùng miền, dặn dò khẩu vị và thanh toán hóa đơn.'
-      },
-      vocabCount: 36,
-      grammarCount: 4,
-      xpReward: 100
-    },
-    {
-      id: 7,
-      numStr: '07',
-      tier: 'intermediate',
-      tierLabel: 'Giao tiếp',
-      icon: 'fa-map-location-dot',
-      title: {
-        ja: 'Phương Tiện & Hỏi Đường Đi',
-        en: 'Transportation & Asking Directions',
-        vi: 'Phương Tiện, Đi Lại & Hỏi Đường'
-      },
-      desc: {
-        ja: 'Đi tàu điện ngầm Shinkansen, xe buýt và chỉ dẫn phương hướng.',
-        en: 'Navigating subway/bus systems, asking directions, catching a cab.',
-        vi: 'Bắt xe công nghệ, hỏi đường phố, ngõ ngách và khoảng cách di chuyển.'
-      },
-      vocabCount: 30,
-      grammarCount: 3,
-      xpReward: 110
-    },
-    {
-      id: 8,
-      numStr: '08',
-      tier: 'intermediate',
-      tierLabel: 'Giao tiếp',
-      icon: 'fa-icons',
-      title: {
-        ja: 'Sở Thích, Giải Trí & Cuối Tuần',
-        en: 'Hobbies, Entertainment & Weekends',
-        vi: 'Sở Thích, Thể Thao & Cuối Tuần'
-      },
-      desc: {
-        ja: 'Chia sẻ sở thích âm nhạc, anime, thể thao & kế hoạch nghỉ ngơi.',
-        en: 'Discussing pastimes, favorite movies, outdoor adventures, leisure.',
-        vi: 'Trò chuyện về sở thích cá nhân, dã ngoại và hoạt động thư giãn.'
-      },
-      vocabCount: 34,
-      grammarCount: 4,
-      xpReward: 120
-    },
-    {
-      id: 9,
-      numStr: '09',
-      tier: 'advanced',
-      tierLabel: 'Nâng cao',
-      icon: 'fa-briefcase',
-      title: {
-        ja: 'Công Sở & Đàm Thoại Văn Phòng',
-        en: 'Office Workplace & Business Talk',
-        vi: 'Môi Trường Công Sở & Đàm Thoại IT'
-      },
-      desc: {
-        ja: 'Kính ngữ Keigo văn phòng, trao đổi công việc và văn hóa báo cáo.',
-        en: 'Professional workplace communication, project updates, meetings.',
-        vi: 'Trao đổi công việc chuyên nghiệp, họp nhóm và cộng tác dự án.'
-      },
-      vocabCount: 38,
-      grammarCount: 5,
-      xpReward: 130
-    },
-    {
-      id: 10,
-      numStr: '10',
-      tier: 'advanced',
-      tierLabel: 'Nâng cao',
-      icon: 'fa-cloud-sun',
-      title: {
-        ja: 'Thời Tiết, Khí Hậu & Bốn Mùa',
-        en: 'Weather, Climate & Four Seasons',
-        vi: 'Thời Tiết, Khí Hậu & Bốn Mùa'
-      },
-      desc: {
-        ja: 'Miêu tả mùa hoa anh đào, lá đỏ thu, bão tuyết & dự báo thời tiết.',
-        en: 'Describing forecasts, climate changes, weather phenomena, seasons.',
-        vi: 'Khí hậu nhiệt đới 4 mùa, mùa mưa nắng và cảnh sắc thiên nhiên.'
-      },
-      vocabCount: 28,
-      grammarCount: 3,
-      xpReward: 140
-    },
-    {
-      id: 11,
-      numStr: '11',
-      tier: 'advanced',
-      tierLabel: 'Nâng cao',
-      icon: 'fa-face-smile-beam',
-      title: {
-        ja: 'Cảm Xúc & Miêu Tả Ngoại Hình',
-        en: 'Feelings, Moods & Appearance',
-        vi: 'Cảm Xúc, Tâm Trạng & Miêu Tả Người'
-      },
-      desc: {
-        ja: 'Diễn tả cảm xúc vui buồn, bất ngờ và tính từ miêu tả tính cách.',
-        en: 'Expressing nuance, personality traits, physical descriptions.',
-        vi: 'Từ láy tượng thanh, tượng hình biểu cảm tâm trạng sâu sắc.'
-      },
-      vocabCount: 32,
-      grammarCount: 4,
-      xpReward: 150
-    },
-    {
-      id: 12,
-      numStr: '12',
-      tier: 'advanced',
-      tierLabel: 'Nâng cao',
-      icon: 'fa-heart-pulse',
-      title: {
-        ja: 'Sức Khỏe, Bệnh Viện & Thăm Khám',
-        en: 'Healthcare, Symptoms & Pharmacy',
-        vi: 'Sức Khỏe, Nhà Thuốc & Bệnh Viện'
-      },
-      desc: {
-        ja: 'Nêu triệu chứng cảm sốt, mua thuốc tại hiệu và bảo hiểm y tế.',
-        en: 'Describing aches, visiting a doctor, prescriptions and wellness.',
-        vi: 'Mô tả triệu chứng bệnh, mua thuốc và lối sống lành mạnh.'
-      },
-      vocabCount: 30,
-      grammarCount: 3,
-      xpReward: 160
-    },
-    {
-      id: 13,
-      numStr: '13',
-      tier: 'master',
-      tierLabel: 'Chuyên sâu',
-      icon: 'fa-envelope-open-text',
-      title: {
-        ja: 'Điện Thoại, Email & Thư Từ',
-        en: 'Phone Calls, Formal Emails & Notes',
-        vi: 'Điện Thoại, Soạn Email & Văn Bản'
-      },
-      desc: {
-        ja: 'Mẫu thư tín trang trọng, cấu trúc email Nhật chuẩn mực mở đầu/kết.',
-        en: 'Drafting polite emails, professional call etiquette, follow-ups.',
-        vi: 'Soạn thảo thư điện tử công việc, lời chúc và phản hồi tin nhắn.'
-      },
-      vocabCount: 35,
-      grammarCount: 5,
-      xpReward: 170
-    },
-    {
-      id: 14,
-      numStr: '14',
-      tier: 'master',
-      tierLabel: 'Chuyên sâu',
-      icon: 'fa-torii-gate',
-      title: {
-        ja: 'Lễ Hội Truyền Thống & Văn Hóa',
-        en: 'Cultural Festivals & Traditions',
-        vi: 'Lễ Hội Truyền Thống & Phong Tục'
-      },
-      desc: {
-        ja: 'Lễ hội Matsuri, phong tục Tết Oshougatsu & ứng xử chuẩn mực.',
-        en: 'Holidays, traditions, cultural heritage, cross-cultural etiquette.',
-        vi: 'Tết cổ truyền, lễ hội dân gian và nét đẹp phong tục người Việt.'
-      },
-      vocabCount: 36,
-      grammarCount: 4,
-      xpReward: 180
-    },
-    {
-      id: 15,
-      numStr: '15',
-      tier: 'master',
-      tierLabel: 'Chuyên sâu',
-      icon: 'fa-fire',
-      title: {
-        ja: 'Thành Ngữ, Từ Lóng & Đàm Thoại Nhanh',
-        en: 'Idioms, Slang & Fluent Reflexes',
-        vi: 'Thành Ngữ, Ca Dao & Phản Xạ Nhanh'
-      },
-      desc: {
-        ja: 'Yojijukugo (Thành ngữ 4 chữ), tiếng lóng giới trẻ Tokyo thực chiến.',
-        en: 'Common idioms, natural phrasal verbs, fluent native expressions.',
-        vi: 'Kho tàng thành ngữ dân gian, cách nói ẩn dụ và biến tấu hiện đại.'
-      },
-      vocabCount: 40,
-      grammarCount: 4,
-      xpReward: 190
-    },
-    {
-      id: 16,
-      numStr: '16',
-      tier: 'master',
-      tierLabel: 'Chuyên sâu',
-      icon: 'fa-crown',
-      title: {
-        ja: 'Tổng Kết Cấp Độ & Đấu Trường Boss',
-        en: 'Final Level Mastery & Boss Arena',
-        vi: 'Tổng Kết Toàn Diện & Đấu Trường Master'
-      },
-      desc: {
-        ja: 'Tổng duyệt toàn bộ kiến thức N5/N4, sẵn sàng chinh phục đấu trường.',
-        en: 'Comprehensive milestone test, testing all 4 core language pillars.',
-        vi: 'Đánh giá tổng thể trình độ, tổng kết từ vựng và cấp chứng nhận.'
-      },
-      vocabCount: 50,
-      grammarCount: 6,
-      xpReward: 250
-    }
-  ];
+  private sessionsList: SessionData[] = [];
 
   // DOM Elements
   private sessionsGridEl!: HTMLElement;
@@ -373,8 +62,6 @@ class SelectLessonManager {
   private filterTabsEl!: HTMLElement;
   private toastEl!: HTMLElement;
   private toastTextEl!: HTMLElement;
-  private loadingOverlayEl!: HTMLElement;
-  private loadingVideoEl!: HTMLVideoElement | null;
   private currentLangFlagEl!: HTMLImageElement;
   private currentLangLabelEl!: HTMLElement;
   private langDropdownEl!: HTMLElement;
@@ -383,12 +70,95 @@ class SelectLessonManager {
   private userDropdownBtnEl!: HTMLButtonElement;
 
   constructor() {
+    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+      window.location.replace('../login/index.html');
+      return;
+    }
     this.initDOM();
     this.loadUserData();
     this.bindEvents();
     this.applyCurrentLanguage();
     this.renderSessions();
     this.updateStatusCard();
+    if (isLearnerAuthenticated()) void this.loadDatabaseCatalog();
+    void initializeLearnerHeader({ bindControls: false, loadProfile: false });
+    document.body.dataset.pageState = "ready";
+    window.dispatchEvent(new Event("learning:ready"));
+  }
+
+  private async loadDatabaseCatalog(): Promise<void> {
+    try {
+      const me = await slanguageApi('/api/v1/me');
+      renderLearnerHeader(me.data);
+      const meData = (me.data ?? {}) as Record<string, unknown>;
+      const profile = (meData.profile ?? meData) as Record<string, unknown>;
+      const profileLang = String(profile.target_language ?? '') as TargetLang;
+      if (['ja', 'en', 'vi'].includes(profileLang) && profileLang !== this.currentLang) {
+        this.currentLang = profileLang;
+        this.applyCurrentLanguage();
+      }
+      this.isPremiumUser = String(profile.plan_id ?? '') === 'premium' || localStorage.getItem('slanguage_is_premium') === 'true';
+      const pathsResponse = await slanguageApi('/api/v1/vocabulary/learning-paths');
+      const paths = Array.isArray(pathsResponse.data) ? pathsResponse.data as Record<string, unknown>[] : [];
+      const path = paths.find((item) => item.language_code === this.currentLang) ?? paths[0];
+      const pathId = Number(path?.id);
+      if (!pathId) {
+        this.showToast('Database chưa có lộ trình cho ngôn ngữ này. Hãy nạp SeedData/<lang>/import.sql vào Supabase.');
+        return;
+      }
+      const detail = await slanguageApi(`/api/v1/vocabulary/learning-paths/${pathId}`);
+      const detailData = (detail.data ?? {}) as Record<string, unknown>;
+      const topics = Array.isArray(detailData.topics) ? detailData.topics as Record<string, unknown>[] : [];
+      if (!topics.length) {
+        this.showToast('Lộ trình chưa có chủ đề nào trong Database. Hãy nạp SeedData/<lang>/import.sql vào Supabase.');
+        return;
+      }
+      this.dbPathId = pathId;
+      this.sessionsList = topics.map((topic) => this.sessionFromTopic(topic, topics.length));
+      // Nửa đầu miễn phí, nửa sau cần Premium — khoá theo vị trí, không theo tiến độ quiz
+      this.freeSessionCount = Math.ceil(this.sessionsList.length / 2);
+      this.sessionsList.forEach((session, index) => {
+        session.locked = !this.isPremiumUser && index >= this.freeSessionCount;
+      });
+      this.renderFilterTabs();
+      this.updateSessionCount();
+      this.selectedLessonId = null;
+      this.renderSessions();
+      this.updateStatusCard();
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : 'Không thể tải lộ trình từ Database.');
+    }
+  }
+
+  private sessionFromTopic(topic: Record<string, unknown>, total: number): SessionData {
+    const order = Number(topic.sort_order) || 0;
+    const num = Math.max(1, Math.round(order / 10));
+    // Chia nhóm theo số chủ đề thật của lộ trình, không cố định 4/8/12/16
+    const groups = total > 16 ? 5 : 4;
+    const groupSize = Math.max(1, Math.ceil(total / groups));
+    const tierOrder: SessionTier[] = groups === 5
+      ? ['basic', 'intermediate', 'advanced', 'master', 'extension']
+      : ['basic', 'intermediate', 'advanced', 'master'];
+    const tier = tierOrder[Math.min(groups - 1, Math.floor((num - 1) / groupSize))];
+    const tierLabel = { basic: 'Cơ bản', intermediate: 'Giao tiếp', advanced: 'Nâng cao', master: 'Chuyên sâu', extension: 'Mở rộng' }[tier];
+    const icon = { basic: 'fa-pen-nib', intermediate: 'fa-comments', advanced: 'fa-briefcase', master: 'fa-crown', extension: 'fa-rocket' }[tier];
+    const name = String(topic.name ?? `Chủ đề ${num}`);
+    const desc = String(topic.description ?? '');
+    return {
+      id: Number(topic.id),
+      numStr: String(num).padStart(2, '0'),
+      tier,
+      tierLabel,
+      icon,
+      title: { ja: name, en: name, vi: name },
+      desc: { ja: desc, en: desc, vi: desc },
+      vocabCount: Number(topic.word_count) || 0,
+      grammarCount: 0,
+      xpReward: 0,
+      topicId: Number(topic.id),
+      locked: topic.is_locked === true,
+      completed: topic.is_completed === true,
+    };
   }
 
   private initDOM(): void {
@@ -402,8 +172,6 @@ class SelectLessonManager {
     this.filterTabsEl = document.getElementById('filterTabs') as HTMLElement;
     this.toastEl = document.getElementById('sessionToast') as HTMLElement;
     this.toastTextEl = document.getElementById('toastText') as HTMLElement;
-    this.loadingOverlayEl = document.getElementById('slanguageLoadingOverlay') as HTMLElement;
-    this.loadingVideoEl = document.getElementById('loadingVideoPlayer') as HTMLVideoElement | null;
 
     this.currentLangFlagEl = document.getElementById('currentLangFlag') as HTMLImageElement;
     this.currentLangLabelEl = document.getElementById('currentLangLabel') as HTMLElement;
@@ -414,11 +182,26 @@ class SelectLessonManager {
   }
 
   private loadUserData(): void {
-    // Current Target Language
-    const savedLang = localStorage.getItem('slanguage_current_lang') as TargetLang;
+    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
+    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
+
+    let savedLang = (localStorage.getItem('slanguage_current_lang') || localStorage.getItem('slanguage_active_language') || 'ja') as TargetLang;
+    if (savedLang === nativeLang) {
+      savedLang = (nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja')) as TargetLang;
+      localStorage.setItem('slanguage_current_lang', savedLang);
+      localStorage.setItem('slanguage_active_language', savedLang);
+    }
     if (savedLang && ['ja', 'en', 'vi'].includes(savedLang)) {
       this.currentLang = savedLang;
     }
+
+    document.querySelectorAll<HTMLElement>('.lang-dropdown-item').forEach(item => {
+      if (item.getAttribute('data-lang') === nativeLang) {
+        item.style.display = 'none';
+      } else {
+        item.style.display = 'flex';
+      }
+    });
 
     // Header XP
     const userXP = localStorage.getItem('slanguage_user_xp') || '2,450 XP';
@@ -426,7 +209,7 @@ class SelectLessonManager {
     if (xpEl) xpEl.textContent = userXP.includes('XP') ? userXP : `${userXP} XP`;
 
     // Header Hearts
-    const userHearts = localStorage.getItem('slanguage_user_hearts') || '5';
+    const userHearts = String(readHearts());
     const heartsEl = document.getElementById('headerHeartsVal');
     if (heartsEl) heartsEl.textContent = `${userHearts}/5`;
 
@@ -490,16 +273,15 @@ class SelectLessonManager {
       }
     });
 
-    // Filter Buttons
-    this.filterTabsEl.querySelectorAll('.filter-btn').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement;
-        const filter = target.getAttribute('data-filter') || 'all';
-        this.filterTabsEl.querySelectorAll('.filter-btn').forEach((b) => b.classList.remove('active'));
-        target.classList.add('active');
-        this.currentFilter = filter;
-        this.renderSessions();
-      });
+    // Filter Buttons (uỷ quyền sự kiện — tab được sinh động từ dữ liệu Database)
+    this.filterTabsEl.addEventListener('click', (e) => {
+      const target = (e.target as HTMLElement).closest('.filter-btn') as HTMLElement | null;
+      if (!target) return;
+      const filter = target.getAttribute('data-filter') || 'all';
+      this.filterTabsEl.querySelectorAll('.filter-btn').forEach((b) => b.classList.remove('active'));
+      target.classList.add('active');
+      this.currentFilter = filter;
+      this.renderSessions();
     });
 
     // Search Input
@@ -508,29 +290,52 @@ class SelectLessonManager {
       this.renderSessions();
     });
 
-    // Proceed to Roadmap Button
+    // Proceed to lesson reading + quiz
     this.btnProceedRoadmapEl.addEventListener('click', () => {
       if (this.selectedLessonId !== null) {
-        this.navigateToRoadmap();
+        void this.proceedToLesson();
       }
     });
+
+    // Auth state synchronization
+    const isLoggedIn = localStorage.getItem('slanguage_is_logged_in') === 'true';
+    if (isLoggedIn) {
+      document.body.classList.add('user-authenticated');
+      document.body.classList.remove('user-guest');
+    } else {
+      document.body.classList.add('user-guest');
+      document.body.classList.remove('user-authenticated');
+    }
 
     // Logout
     const logoutBtn = document.getElementById('navLogoutItem');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('slanguage_current_user');
+        void logoutLearner();
       });
     }
   }
 
   private switchLanguage(lang: TargetLang): void {
+    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
+    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
+    if (lang === nativeLang) {
+      this.showToast(`Bạn không thể chọn ngôn ngữ mẹ đẻ để học!`);
+      this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
+      return;
+    }
+
     if (this.currentLang === lang) {
       this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
       return;
     }
+    if (isLearnerAuthenticated()) {
+      void this.changeProfileLanguage(lang);
+      return;
+    }
     this.currentLang = lang;
     localStorage.setItem('slanguage_current_lang', lang);
+    localStorage.setItem('slanguage_active_language', lang);
     this.applyCurrentLanguage();
     this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
     this.renderSessions();
@@ -561,6 +366,15 @@ class SelectLessonManager {
   private renderSessions(): void {
     this.sessionsGridEl.innerHTML = '';
 
+    if (!this.sessionsList.length) {
+      this.sessionsGridEl.innerHTML = `
+        <div class="sessions-empty">
+          <i class="fa-solid fa-database"></i>
+          <p>Chưa tải được danh sách chủ đề từ Database. Vui lòng nạp SeedData rồi tải lại trang.</p>
+        </div>`;
+      return;
+    }
+
     const filtered = this.sessionsList.filter((s) => {
       // Filter by tier
       if (this.currentFilter !== 'all' && s.tier !== this.currentFilter) {
@@ -590,11 +404,19 @@ class SelectLessonManager {
     filtered.forEach((session) => {
       const isSelected = this.selectedLessonId === session.id;
       const card = document.createElement('div');
-      card.className = `session-card ${isSelected ? 'selected' : ''}`;
+      card.className = `session-card ${isSelected ? 'selected' : ''} ${session.locked ? 'is-locked' : ''}`;
       card.setAttribute('data-id', session.id.toString());
+      if (session.topicId) card.setAttribute('data-topic-id', session.topicId.toString());
 
       const title = session.title[this.currentLang] || session.title.ja;
       const desc = session.desc[this.currentLang] || session.desc.ja;
+      const metaPills = [
+        session.vocabCount > 0 ? `<span class="meta-pill"><i class="fa-solid fa-book-open"></i> ${session.vocabCount} Từ vựng</span>` : '',
+        session.grammarCount > 0 ? `<span class="meta-pill"><i class="fa-solid fa-spell-check"></i> ${session.grammarCount} Ngữ pháp</span>` : '',
+        session.xpReward > 0 ? `<span class="meta-pill xp"><i class="fa-solid fa-star"></i> +${session.xpReward} XP</span>` : '',
+        session.completed ? '<span class="meta-pill xp"><i class="fa-solid fa-circle-check"></i> Hoàn thành</span>' : '',
+        session.locked ? '<span class="meta-pill premium"><i class="fa-solid fa-crown"></i> Premium</span>' : '',
+      ].join('');
 
       card.innerHTML = `
         <div class="card-header-row">
@@ -614,15 +436,15 @@ class SelectLessonManager {
           </div>
 
           <div class="card-meta-pills">
-            <span class="meta-pill"><i class="fa-solid fa-book-open"></i> ${session.vocabCount} Từ vựng</span>
-            <span class="meta-pill"><i class="fa-solid fa-spell-check"></i> ${session.grammarCount} Ngữ pháp</span>
-            <span class="meta-pill xp"><i class="fa-solid fa-star"></i> +${session.xpReward} XP</span>
+            ${metaPills}
           </div>
         </div>
 
         <div class="card-action-bar">
           <button type="button" class="btn-card-select">
-            ${isSelected ? '<i class="fa-solid fa-circle-check"></i> Đang Chọn' : '<i class="fa-solid fa-arrow-pointer"></i> Chọn Buổi Này'}
+            ${session.locked
+              ? '<i class="fa-solid fa-crown"></i> Cần Premium'
+              : isSelected ? '<i class="fa-solid fa-circle-check"></i> Đang Chọn' : '<i class="fa-solid fa-arrow-pointer"></i> Chọn Buổi Này'}
           </button>
         </div>
       `;
@@ -636,6 +458,10 @@ class SelectLessonManager {
   }
 
   private selectSession(session: SessionData): void {
+    if (session.locked) {
+      this.showPremiumModal();
+      return;
+    }
     this.selectedLessonId = session.id;
 
     const savedPayload = {
@@ -645,6 +471,8 @@ class SelectLessonManager {
       tierLabel: session.tierLabel,
       title: session.title[this.currentLang],
       lang: this.currentLang,
+      topicId: session.topicId ?? null,
+      pathId: this.dbPathId,
       timestamp: Date.now()
     };
 
@@ -677,18 +505,114 @@ class SelectLessonManager {
     this.btnProceedRoadmapEl.title = 'Vui lòng chọn 1 buổi học để tiếp tục';
   }
 
-  private navigateToRoadmap(): void {
-    if (this.loadingOverlayEl) {
-      this.loadingOverlayEl.classList.add('active');
-      if (this.loadingVideoEl) {
-        this.loadingVideoEl.muted = true;
-        this.loadingVideoEl.play().catch(() => {});
-      }
+  private async changeProfileLanguage(lang: TargetLang): Promise<void> {
+    this.langDropdownBtnEl.disabled = true;
+    try {
+      await slanguageApi('/api/v1/me', { method: 'PATCH', body: { target_language: lang } });
+      localStorage.setItem('slanguage_current_lang', lang);
+      localStorage.setItem('slanguage_active_language', lang);
+      window.location.reload();
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : 'Không thể cập nhật ngôn ngữ.');
+    } finally {
+      this.langDropdownBtnEl.disabled = false;
     }
+  }
 
-    setTimeout(() => {
-      window.location.href = '../roadmap/index.html';
-    }, 600);
+  private async proceedToLesson(): Promise<void> {
+    const session = this.sessionsList.find((s) => s.id === this.selectedLessonId);
+    if (!session) return;
+    if (!session.topicId || !this.dbPathId) {
+      if (!isLearnerAuthenticated()) {
+        this.showToast('Cần đăng nhập tài khoản học viên để tải bài đọc từ Database.');
+        window.location.assign('../login/index.html');
+      } else {
+        this.showToast('Chưa tải được lộ trình từ Database. Kiểm tra nạp SeedData hoặc ngôn ngữ trong hồ sơ.');
+      }
+      return;
+    }
+    if (session.locked) {
+      this.showPremiumModal();
+      return;
+    }
+    window.location.assign('../roadmap/index.html');
+  }
+
+  private renderFilterTabs(): void {
+    if (!this.filterTabsEl) return;
+    const counts = new Map<string, number>();
+    this.sessionsList.forEach((session) => {
+      counts.set(session.tier, (counts.get(session.tier) || 0) + 1);
+    });
+    const order: SessionTier[] = ['basic', 'intermediate', 'advanced', 'master', 'extension'];
+    const labels: Record<SessionTier, string> = {
+      basic: 'Cơ bản',
+      intermediate: 'Giao tiếp',
+      advanced: 'Nâng cao',
+      master: 'Chuyên sâu',
+      extension: 'Mở rộng'
+    };
+    const tabs = order
+      .filter((tier) => counts.has(tier))
+      .map((tier) => `<button class="filter-btn" data-filter="${tier}">${labels[tier]} (${counts.get(tier)})</button>`)
+      .join('');
+    this.filterTabsEl.querySelectorAll('.filter-btn:not([data-filter="all"])').forEach((btn) => btn.remove());
+    const allBtn = this.filterTabsEl.querySelector('.filter-btn[data-filter="all"]');
+    if (allBtn) allBtn.insertAdjacentHTML('afterend', tabs);
+  }
+
+  private updateSessionCount(): void {
+    const el = document.getElementById('sessionCountText');
+    if (el) el.textContent = `${this.sessionsList.length} Buổi Học (Session)`;
+  }
+
+  private showPremiumModal(): void {
+    let overlay = document.getElementById('premiumModalOverlay');
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'premiumModalOverlay';
+      overlay.className = 'premium-modal-overlay';
+      overlay.innerHTML = `
+        <div class="premium-modal-card">
+          <div class="premium-modal-icon"><i class="fa-solid fa-crown"></i></div>
+          <h3>Nâng cấp Premium</h3>
+          <p class="premium-modal-lead">Nửa sau của lộ trình (từ Session ${String(this.freeSessionCount + 1).padStart(2, '0')}) cần Premium để mở khóa. Nâng cấp để học toàn bộ chủ đề còn lại ngay lập tức.</p>
+          <div class="premium-plan-row">
+            <div class="premium-plan-card">
+              <div class="premium-plan-name">Premium Tháng</div>
+              <div class="premium-plan-price">99.000đ</div>
+              <div class="premium-plan-note">/ 30 ngày</div>
+            </div>
+            <div class="premium-plan-card featured">
+              <div class="premium-plan-badge">Tiết kiệm nhất</div>
+              <div class="premium-plan-name">Premium Vĩnh Viễn</div>
+              <div class="premium-plan-price">999.000đ</div>
+              <div class="premium-plan-note">không giới hạn</div>
+            </div>
+          </div>
+          <button type="button" id="premiumActivateBtn" class="premium-activate-btn"><i class="fa-solid fa-bolt"></i> Kích hoạt Premium (Demo)</button>
+          <button type="button" id="premiumCloseBtn" class="premium-later-btn">Để sau</button>
+        </div>`;
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) this.closePremiumModal();
+      });
+      document.getElementById('premiumCloseBtn')?.addEventListener('click', () => this.closePremiumModal());
+      document.getElementById('premiumActivateBtn')?.addEventListener('click', () => {
+        localStorage.setItem('slanguage_is_premium', 'true');
+        this.isPremiumUser = true;
+        this.sessionsList.forEach((session) => { session.locked = false; });
+        this.renderSessions();
+        this.updateStatusCard();
+        this.closePremiumModal();
+        this.showToast('Kích hoạt Premium thành công! Toàn bộ chủ đề đã mở khóa 👑');
+      });
+    }
+    overlay.classList.add('active');
+  }
+
+  private closePremiumModal(): void {
+    document.getElementById('premiumModalOverlay')?.classList.remove('active');
   }
 
   private showToast(msg: string): void {
@@ -717,3 +641,4 @@ if (document.readyState === 'loading') {
 } else {
   initSelectLessonManager();
 }
+export {};

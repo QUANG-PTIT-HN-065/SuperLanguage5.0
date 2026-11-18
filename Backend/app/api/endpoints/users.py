@@ -3,10 +3,13 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends
 
 from app.core.deps import get_current_profile
+from app.schemas.dashboard import LearnerDashboard
 from app.schemas.reponse import BaseResponse
 from app.schemas.profile import OnboardingRequest, ProfileUpdate
+from app.services.dashboard_service import get_learner_dashboard
 from app.services.profile_service import (
     complete_onboarding as complete_onboarding_profile,
+    get_recent_daily_activity,
     get_plan,
     get_stats,
     update_profile,
@@ -25,6 +28,7 @@ def _me_payload(profile: Dict[str, Any]) -> BaseResponse[Dict[str, Any]]:
         data={
             "profile": profile,
             "stats": stats,
+            "daily_activity": get_recent_daily_activity(profile["id"], profile["timezone"]),
             "plan": get_plan(profile["plan_id"]),
             "needs_onboarding": profile["onboarding_completed_at"] is None,
         },
@@ -52,6 +56,15 @@ def get_progress(profile: Dict[str, Any] = Depends(get_current_profile)):
             "lessons_completed": int(stats.get("lessons_completed") or 0),
             "current_streak": int(stats.get("current_streak") or 0),
         },
+    )
+
+
+@router.get("/dashboard", response_model=BaseResponse[LearnerDashboard])
+def get_dashboard(profile: Dict[str, Any] = Depends(get_current_profile)):
+    return BaseResponse(
+        status="success",
+        message="Đã tải dữ liệu bảng điều khiển.",
+        data=get_learner_dashboard(profile),
     )
 
 

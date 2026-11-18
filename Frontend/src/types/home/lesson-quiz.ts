@@ -1,13 +1,8 @@
-import { isLearnerAuthenticated, readMockData, slanguageApi } from "../shared/api-client";
-import { XP_PER_LEVEL, levelFromXp } from "./learner-progress";
-import {
-  generateMockPractice,
-  MOCK_PRACTICE_TOPIC_IDS,
-  parseTopicVocabulary,
-  type LessonContent,
-  type LessonMatchingPair,
-  type LessonOption,
-  type LessonQuestion,
+import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import type {
+  LessonContent,
+  LessonMatchingPair,
+  LessonQuestion,
 } from "./lesson-practice-generator";
 import { launchConfetti } from "../ui/confetti";
 import { showToast } from "../ui/toast";
@@ -38,12 +33,6 @@ interface AnswerReview {
   explanation: string | null;
 }
 
-/** Khoá đáp án chỉ có trong mock/lesson-questions.json, dùng khi backend chưa chạy. */
-interface DemoAnswerKey {
-  correct_option_id: string;
-  explanation: string | null;
-}
-
 interface MatchingMistake {
   key: string;
   word: string;
@@ -60,8 +49,6 @@ interface MatchingState {
   status: HTMLElement;
 }
 
-const DEMO_XP_PER_LESSON = 20;
-
 const workspace = document.getElementById("lessonWorkspace");
 const questionPanel = document.getElementById("lessonQuestion");
 const resultPanel = document.getElementById("lessonResult") as HTMLDialogElement | null;
@@ -72,6 +59,10 @@ const optionsContainer = document.getElementById("lessonOptions");
 const checkButton = document.getElementById("checkLessonAnswer") as HTMLButtonElement | null;
 const nextButton = document.getElementById("nextLessonQuestion") as HTMLButtonElement | null;
 const exitButton = document.getElementById("exitLesson") as HTMLButtonElement | null;
+const readingPanel = document.getElementById("lessonReading");
+const readingTitle = document.getElementById("lessonReadingTitle");
+const readingText = document.getElementById("lessonReadingText");
+const startQuizButton = document.getElementById("startLessonQuiz") as HTMLButtonElement | null;
 
 let lesson: LessonContent | null = null;
 let questionIndex = 0;
@@ -80,19 +71,12 @@ let checkedAnswer: CheckedAnswer | null = null;
 let matchingState: MatchingState | null = null;
 let activeRequest = false;
 let completed = false;
-let demoScore = 0;
 let lastXpAwarded = 0;
 let lastXpTotal = 0;
 let lastLessonId = 0;
 let lastTopicId = 0;
 let intentionalDialogClose = false;
 const answerReviews: AnswerReview[] = [];
-const demoAnswerKeys = new Map<number, DemoAnswerKey>();
-
-function isDemoMode(): boolean {
-  return document.body.dataset.demo === "true";
-}
-
 function asRecord(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object"
     ? (value as Record<string, unknown>)
@@ -116,100 +100,12 @@ function setNotice(message: string, isError = false): void {
   lessonNotice.dataset.state = isError ? "error" : "";
 }
 
-/** Mock có sẵn đáp án để chấm tại chỗ; API thật không bao giờ trả về trường này. */
-function collectDemoAnswerKeys(value: unknown): void {
-  demoAnswerKeys.clear();
-  const questions = asRecord(value).questions;
-  if (!Array.isArray(questions)) return;
-  for (const item of questions) {
-    const question = asRecord(item);
-    const id = positiveInt(question.id);
-    const correct = typeof question.correct_option_id === "string"
-      ? question.correct_option_id.trim()
-      : "";
-    if (!id || !correct) continue;
-    demoAnswerKeys.set(id, {
-      correct_option_id: correct,
-      explanation: typeof question.explanation === "string" ? question.explanation : null,
-    });
-  }
-}
-
-async function findDemoTopicId(lessonId: number): Promise<number> {
-  const payload = await readMockData<unknown>("topic-lessons.json");
-  for (const [topicId, value] of Object.entries(asRecord(payload))) {
-    if (!Array.isArray(value)) continue;
-    if (value.some((item) => positiveInt(asRecord(item).id) === lessonId)) {
-      return positiveInt(topicId);
-    }
-  }
-  return 0;
-}
-
 async function loadLessonContent(lessonId: number): Promise<LessonContent> {
-  if (isDemoMode()) {
-    const topicId = topicIdOfLesson(lessonId) || await findDemoTopicId(lessonId);
-    if (MOCK_PRACTICE_TOPIC_IDS.has(topicId)) {
-      const [lessonPayload, vocabularyPayload] = await Promise.all([
-        readMockData<unknown>("lesson-questions.json", (data) => {
-          const map = asRecord(data);
-          return map[String(lessonId)] ?? map.default;
-        }),
-        readMockData<unknown>("topic-vocabulary.json"),
-      ]);
-      const lessonData = parseLessonContent(lessonPayload);
-      const vocabularyTopics = asRecord(asRecord(vocabularyPayload).topics);
-      if (!Object.prototype.hasOwnProperty.call(vocabularyTopics, String(topicId))) {
-        throw new Error(`Chủ đề ${topicId} chưa có bộ từ vựng thử nghiệm.`);
-      }
-      const topic = parseTopicVocabulary(vocabularyPayload, topicId);
-      const storageKey = `slanguage_mock_practice_recent_${topicId}`;
-      const recentValue = localStorage.getItem(storageKey);
-      const recentKeys: string[] = recentValue === null
-        ? []
-        : JSON.parse(recentValue) as string[];
-      if (!Array.isArray(recentKeys) || recentKeys.some((key) => typeof key !== "string")) {
-        throw new Error("Lịch sử đề thử không hợp lệ. Hãy xóa dữ liệu trang rồi thử lại.");
-      }
-      const generated = generateMockPractice(
-        lessonId,
-        lessonData.lesson.title,
-        topic,
-        recentKeys,
-      );
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify([...recentKeys, ...generated.questionKeys].slice(-60)),
-      );
-      collectDemoAnswerKeys(generated.content);
-      return generated.content;
-    }
-
-    const payload = await readMockData<unknown>("lesson-questions.json", (data) => {
-      const map = asRecord(data);
-      return map[String(lessonId)] ?? map.default;
-    });
-    collectDemoAnswerKeys(payload);
-    const content = parseLessonContent(payload);
-    content.lesson.id = lessonId;
-    return content;
-  }
   const response = await slanguageApi(`/api/v1/lessons/${lessonId}/questions`);
   return parseLessonContent(response.data);
 }
 
 async function requestAnswer(questionId: number, selected: string): Promise<CheckedAnswer> {
-  if (isDemoMode()) {
-    const key = demoAnswerKeys.get(questionId);
-    if (!key) throw new Error("Dữ liệu mẫu chưa có đáp án cho câu hỏi này.");
-    const normalize = (text: string): string => text.trim().toLocaleLowerCase("vi-VN");
-    return {
-      selected_option_id: selected,
-      correct_option_id: key.correct_option_id,
-      is_correct: normalize(selected) === normalize(key.correct_option_id),
-      explanation: key.explanation,
-    };
-  }
   const response = await slanguageApi(`/api/v1/lessons/questions/${questionId}/answer`, {
     method: "POST",
     body: { selected_option_id: selected },
@@ -228,31 +124,7 @@ async function requestAnswer(questionId: number, selected: string): Promise<Chec
   };
 }
 
-async function requestCompletion(content: LessonContent, score: number): Promise<LessonCompletion> {
-  const questionCount = content.questions.length;
-  if (isDemoMode()) {
-    const passed = score === questionCount;
-    const previousXp = nonNegativeInt(localStorage.getItem("slanguage_user_xp"));
-    const previousStreak = nonNegativeInt(localStorage.getItem("slanguage_user_streak"));
-    const xpTotal = previousXp < 0 ? 0 : previousXp;
-    const currentStreak = previousStreak < 0 ? 0 : previousStreak;
-    const xpAwarded = content.generation?.source === "mock"
-      ? 0
-      : passed
-        ? DEMO_XP_PER_LESSON
-        : 0;
-    return {
-      score,
-      question_count: questionCount,
-      passed,
-      xp_awarded: xpAwarded,
-      xp_total: xpTotal + xpAwarded,
-      level: levelFromXp(xpTotal),
-      xp_into_level: xpTotal % XP_PER_LEVEL,
-      current_streak: currentStreak,
-      already_completed: false,
-    };
-  }
+async function requestCompletion(content: LessonContent): Promise<LessonCompletion> {
   const response = await slanguageApi(`/api/v1/lessons/${content.lesson.id}/complete`, {
     method: "POST",
   });
@@ -409,8 +281,22 @@ function renderMatchingOptions(question: Extract<LessonQuestion, { question_type
   };
 }
 
+function showReading(): void {
+  if (!lesson || !readingPanel) {
+    renderQuestion();
+    return;
+  }
+  if (questionPanel) questionPanel.hidden = true;
+  readingPanel.hidden = false;
+  if (readingTitle) readingTitle.textContent = lesson.lesson.title;
+  if (readingText) readingText.textContent = lesson.lesson.description ?? "";
+  setNotice("");
+  startQuizButton?.focus();
+}
+
 function renderQuestion(): void {
   if (!lesson || !optionsContainer) return;
+  if (readingPanel) readingPanel.hidden = true;
   if (questionPanel) questionPanel.hidden = false;
   const question = lesson.questions[questionIndex];
   if (!question) return;
@@ -422,14 +308,10 @@ function renderQuestion(): void {
   if (questionCount) questionCount.textContent = `Câu ${questionIndex + 1} trên ${lesson.questions.length}`;
   if (prompt) prompt.textContent = question.prompt;
   const questionType = document.getElementById("lessonQuestionType");
-  const isEnglishFillIn = question.question_type === "fill_in"
-    && lesson.generation?.language_code === "en";
-  const fillInLabel = isEnglishFillIn ? "Nhập nghĩa tiếng Việt" : "Nhập cách đọc";
+  const fillInLabel = "Nhập đáp án";
   if (questionType) {
     questionType.textContent = question.question_type === "fill_in"
-      ? isEnglishFillIn
-        ? "Điền nghĩa"
-        : "Điền cách đọc"
+      ? "Điền đáp án"
       : question.question_type === "matching"
         ? "Ghép từ với nghĩa"
         : "Chọn một đáp án";
@@ -474,14 +356,6 @@ function renderQuestion(): void {
       button.append(letter, text);
       optionsContainer.append(button);
     }
-  }
-
-  const generationNotice = document.getElementById("lessonGenerationNotice");
-  if (generationNotice) {
-    generationNotice.hidden = lesson.generation?.source !== "mock";
-    generationNotice.textContent = lesson.generation?.source === "mock"
-      ? `Đề mock theo mẫu ngẫu nhiên từ từ vựng chủ đề ${lesson.generation.topic_name}; chưa gọi AI, không lưu XP hay tiến độ.`
-      : "";
   }
 
   const progressText = document.getElementById("lessonProgressText");
@@ -608,8 +482,8 @@ function selectMatchingCard(card: HTMLButtonElement): void {
   }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 380);
 }
 
-async function openLesson(lessonId: number, pushHistory: boolean): Promise<void> {
-  if ((!isLearnerAuthenticated() && !isDemoMode()) || !workspace) return;
+export async function openLesson(lessonId: number, pushHistory: boolean, skipReading = false): Promise<void> {
+  if (!isLearnerAuthenticated() || !workspace) return;
   if (activeRequest) return;
   closeResultDialog();
   if (resultPanel) resultPanel.hidden = true;
@@ -617,7 +491,6 @@ async function openLesson(lessonId: number, pushHistory: boolean): Promise<void>
   completed = false;
   lesson = null;
   clearMatchingState();
-  demoScore = 0;
   answerReviews.length = 0;
   lastLessonId = lessonId;
   lastTopicId = topicIdOfLesson(lessonId);
@@ -630,6 +503,8 @@ async function openLesson(lessonId: number, pushHistory: boolean): Promise<void>
   document.getElementById("pathDetailSection")?.toggleAttribute("hidden", true);
   document.querySelector(".learning-actions-grid")?.toggleAttribute("hidden", true);
   workspace.hidden = false;
+  document.body.classList.add("lesson-open");
+  if (readingPanel) readingPanel.hidden = true;
   if (questionPanel) questionPanel.hidden = true;
   if (resultPanel) resultPanel.hidden = true;
   setNotice("Đang tải câu hỏi...");
@@ -639,9 +514,9 @@ async function openLesson(lessonId: number, pushHistory: boolean): Promise<void>
 
   try {
     lesson = await loadLessonContent(lessonId);
-    if (lesson.generation) lastTopicId = lesson.generation.topic_id;
     questionIndex = 0;
-    renderQuestion();
+    if (!skipReading && lesson.lesson.description?.trim()) showReading();
+    else renderQuestion();
   } catch (error) {
     setNotice(error instanceof Error ? error.message : "Không thể tải bài học.", true);
   } finally {
@@ -691,8 +566,7 @@ async function checkAnswer(): Promise<void> {
     const selected = answer.selected_option_id;
     const correct = answer.correct_option_id;
     checkedAnswer = answer;
-    if (answer.is_correct) demoScore += 1;
-    else if (question.question_type === "matching" && matchingState) {
+    if (!answer.is_correct && question.question_type === "matching" && matchingState) {
       for (const mistake of matchingState.mistakes) {
         answerReviews.push({
           prompt: `Ghép từ “${mistake.word}” với nghĩa tương ứng.`,
@@ -853,10 +727,6 @@ function animateXp(amount: number): void {
 function renderScoreDelta(score: number, lessonId: number): void {
   const element = document.getElementById("lessonScoreDelta");
   if (!element) return;
-  if (lesson?.generation?.source === "mock") {
-    element.hidden = true;
-    return;
-  }
   const key = `slanguage_lesson_last_score_${lessonId}`;
   const storedScore = localStorage.getItem(key);
   const previous = storedScore === null ? -1 : nonNegativeInt(storedScore);
@@ -879,7 +749,7 @@ function renderScoreDelta(score: number, lessonId: number): void {
 
 function hasNextTopic(): boolean {
   if (!lastTopicId) return false;
-  const topicIds = [...document.querySelectorAll<SVGGElement>(".roadmap-node[data-topic-id]")]
+  const topicIds = [...document.querySelectorAll<SVGGElement>(".roadmap-node[data-topic-id], .session-card[data-topic-id]")]
     .map((node) => positiveInt(node.dataset.topicId))
     .filter(Boolean);
   const currentIndex = topicIds.indexOf(lastTopicId);
@@ -896,7 +766,6 @@ function closeResultDialog(): void {
 function renderResult(result: LessonCompletion, lessonId: number): void {
   if (!resultPanel || !lesson) return;
   const { score, question_count: count, passed, xp_awarded: xpAwarded, current_streak: streak } = result;
-  const mockGenerated = lesson.generation?.source === "mock";
   const xpReceived = result.already_completed ? 0 : xpAwarded;
   const headline = document.getElementById("lessonResultHeadline");
   const titleElement = document.getElementById("lessonResultTitle");
@@ -909,32 +778,26 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
   const returnButton = document.getElementById("returnToTopics") as HTMLButtonElement | null;
   const streakElement = document.getElementById("lessonResultStreak");
 
-  completed = passed && !mockGenerated;
+  completed = passed;
   lastXpTotal = result.xp_total;
   headline?.setAttribute("data-state", passed ? "passed" : "failed");
-  if (eyebrow) eyebrow.textContent = mockGenerated
-    ? "Kết quả dữ liệu thử"
-    : passed
-      ? "Một bước tiến mới"
-      : "Thêm một lượt luyện nữa";
+  if (eyebrow) eyebrow.textContent = passed
+    ? "Một bước tiến mới"
+    : "Thêm một lượt luyện nữa";
   if (titleElement) {
-    titleElement.textContent = mockGenerated
-      ? "Lượt luyện đã xong"
-      : passed
-        ? "Quá đã! Bạn làm được rồi"
-        : `Chưa đủ ${count}/${count} lần này`;
+    titleElement.textContent = passed
+      ? "Quá đã! Bạn làm được rồi"
+      : `Chưa đủ ${count}/${count} lần này`;
   }
   if (textElement) {
-    textElement.textContent = mockGenerated
-      ? `${formatScore(score, count)} câu đúng · Bộ câu hỏi này dùng dữ liệu mock, không cập nhật XP hay tiến độ.`
-      : passed
-        ? result.already_completed
-          ? `${formatScore(score, count)} câu đúng · Kết quả này đã được ghi nhận trước đó.`
-          : `${formatScore(score, count)} câu đúng · Bạn vừa tiến thêm một bước trên lộ trình.`
-        : `${formatScore(score, count)} câu đúng — vài từ đang chơi trốn tìm thôi. Mình xem lại rồi thử thêm lượt nữa nhé!`;
+    textElement.textContent = passed
+      ? result.already_completed
+        ? `${formatScore(score, count)} câu đúng · Kết quả này đã được ghi nhận trước đó.`
+        : `${formatScore(score, count)} câu đúng · Bạn vừa tiến thêm một bước trên lộ trình.`
+      : `${formatScore(score, count)} câu đúng — vài từ đang chơi trốn tìm thôi. Mình xem lại rồi thử thêm lượt nữa nhé!`;
   }
   if (unlock) {
-    unlock.hidden = mockGenerated || !passed;
+    unlock.hidden = !passed;
     const message = unlock.querySelector("span");
     if (message) {
       message.textContent = hasNextTopic()
@@ -943,16 +806,16 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
     }
   }
   if (rule) {
-    rule.hidden = passed || mockGenerated;
+    rule.hidden = passed;
     rule.textContent = `Cần đạt ${count}/${count} để mở khóa chủ đề tiếp theo.`;
   }
   if (retryButton) {
-    retryButton.hidden = mockGenerated ? false : passed;
-    retryButton.textContent = mockGenerated ? "Tạo đề khác" : `Thử lại ${count} câu`;
+    retryButton.hidden = passed;
+    retryButton.textContent = `Thử lại ${count} câu`;
   }
-  if (continueButton) continueButton.hidden = mockGenerated || !passed;
+  if (continueButton) continueButton.hidden = !passed;
   if (returnButton) returnButton.textContent = "Để sau";
-  if (returnButton) returnButton.hidden = passed && !mockGenerated;
+  if (returnButton) returnButton.hidden = passed;
   if (streakElement) streakElement.textContent = `${streak} ngày`;
 
   renderAnswerReviews();
@@ -960,14 +823,12 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
   animateScore(score, count);
   animateXp(xpReceived);
 
-  if (!mockGenerated) {
-    localStorage.setItem("slanguage_user_xp", String(result.xp_total));
-    localStorage.setItem("slanguage_user_streak", String(streak));
-    const headerXp = document.getElementById("headerXPVal");
-    if (headerXp) headerXp.textContent = `${result.xp_total.toLocaleString("vi-VN")} XP`;
-    const headerStreak = document.getElementById("headerStreakVal");
-    if (headerStreak) headerStreak.textContent = String(streak);
-  }
+  localStorage.setItem("slanguage_user_xp", String(result.xp_total));
+  localStorage.setItem("slanguage_user_streak", String(streak));
+  const headerXp = document.getElementById("headerXPVal");
+  if (headerXp) headerXp.textContent = `${result.xp_total.toLocaleString("vi-VN")} XP`;
+  const headerStreak = document.getElementById("headerStreakVal");
+  if (headerStreak) headerStreak.textContent = String(streak);
   lastXpAwarded = xpReceived;
 
   resultPanel.hidden = false;
@@ -976,7 +837,7 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
     (passed ? continueButton : retryButton)?.focus();
   });
 
-  if (passed && !result.already_completed && !mockGenerated) {
+  if (passed && !result.already_completed) {
     launchConfetti(resultPanel);
   }
 }
@@ -988,7 +849,7 @@ async function finishLesson(): Promise<void> {
   if (exitButton) exitButton.disabled = true;
   setNotice("");
   try {
-    const result = await requestCompletion(lesson, demoScore);
+    const result = await requestCompletion(lesson);
     if (questionPanel) questionPanel.hidden = true;
     renderResult(result, lesson.lesson.id);
   } catch (error) {
@@ -1021,7 +882,9 @@ function leaveLesson(confirmExit = true): void {
   }
   closeResultDialog();
   if (resultPanel) resultPanel.hidden = true;
+  if (readingPanel) readingPanel.hidden = true;
   if (workspace) workspace.hidden = true;
+  document.body.classList.remove("lesson-open");
   const pathId = positiveInt(new URLSearchParams(window.location.search).get("path_id"));
   document.getElementById("pathCatalogSection")?.toggleAttribute("hidden", pathId > 0);
   document.getElementById("pathDetailSection")?.toggleAttribute("hidden", pathId === 0);
@@ -1058,7 +921,10 @@ function topicIdOfLesson(lessonId: number): number {
   ];
   const button = buttons.find((item) => item.offsetParent !== null) ?? buttons[0];
   const list = button?.closest<HTMLElement>(".topic-lesson-list");
-  return positiveInt(list?.dataset.topicId);
+  const fromList = positiveInt(list?.dataset.topicId);
+  if (fromList) return fromList;
+  const openCard = document.querySelector<HTMLElement>(`[data-open-lesson="${lessonId}"]`);
+  return positiveInt(openCard?.closest<HTMLElement>("[data-topic-id]")?.dataset.topicId);
 }
 
 document.addEventListener("click", (event) => {
@@ -1075,7 +941,12 @@ nextButton?.addEventListener("click", goToNextQuestion);
 document.getElementById("exitLesson")?.addEventListener("click", () => leaveLesson());
 document.getElementById("returnToTopics")?.addEventListener("click", () => leaveLesson(false));
 document.getElementById("retryLesson")?.addEventListener("click", () => {
-  if (lesson) void openLesson(lesson.lesson.id, false);
+  if (lesson) void openLesson(lesson.lesson.id, false, true);
+});
+startQuizButton?.addEventListener("click", () => {
+  if (!lesson) return;
+  if (readingPanel) readingPanel.hidden = true;
+  renderQuestion();
 });
 document.getElementById("continueToPath")?.addEventListener("click", () => leaveLesson(false));
 document.getElementById("closeLessonResult")?.addEventListener("click", () => leaveLesson(false));

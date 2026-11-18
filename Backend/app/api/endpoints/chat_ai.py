@@ -1,9 +1,11 @@
+import asyncio
 import json
 import logging
 from pathlib import PurePath
 from typing import Any, Dict
 from uuid import UUID, uuid4
 
+import edge_tts
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import Response
@@ -55,10 +57,34 @@ _CHAT_ASR_LANGUAGE_CODES = {
     "Japanese": "ja",
 }
 _CHAT_TTS_VOICES = {
-    "English": "en-US-AriaNeural",
-    "Japanese": "ja-JP-NanamiNeural",
-    "Vietnamese": "vi-VN-HoaiMyNeural",
+    "English": "en-GB-RyanNeural",
+    "Japanese": "ja-JP-KeitaNeural",
+    "Vietnamese": "vi-VN-NamMinhNeural",
 }
+_CHAT_TTS_LANGUAGE_CODES = {"English": "en", "Japanese": "ja", "Vietnamese": "vi"}
+# Giọng mặc định từ thư viện công khai ADSUP (voice.adsup.vn/demo/voices)
+_ADSUP_DEFAULT_VOICES = {
+    "vi": "e79a7e29-37e7-43bb-95ce-a5526876c6f6",  # Adam
+    "en": "4ceed7a4-55b3-4c44-8e75-1e080a7c142d",  # Levi Ackerman
+    "ja": "b7e9c5e7-15d7-46d0-b853-5044e9c0c224",  # Kuon - 明るく明瞭で安定した声
+}
+_ADSUP_VOICE_FIELDS = ("id", "name", "language", "gender", "category_name", "has_preview")
+# Hết hạn mức / key bị từ chối / rate-limit → thử key kế tiếp trong pool
+_ADSUP_KEY_ERROR_CODES = {401, 402, 403, 429}
+
+
+def _adsup_keys() -> list[str]:
+    return [key.strip() for key in (settings.ADSUP_API_KEYS or "").split(",") if key.strip()]
+
+
+def _adsup_client() -> httpx.AsyncClient:
+    # Cloudflare chặn TLS fingerprint Python (UA curl để vượt); trust_env=False
+    # vì NO_PROXY chứa "::1" khiến httpx ném InvalidURL khi parse proxy.
+    return httpx.AsyncClient(
+        trust_env=False,
+        timeout=60.0,
+        headers={"User-Agent": "curl/8.7.1"},
+    )
 
 
 def _is_missing_conversation_column(exc: Exception, column: str) -> bool:
@@ -1136,6 +1162,11 @@ async def synthesize_chat_audio(
     data: TTSRequest,
     _profile: Dict[str, Any] = Depends(get_current_profile),
 ) -> Response:
+    if data.provider == "auto" and _adsup_keys():
+        return await _synthesize_with_adsup(data)
+    if data.provider == "edge":
+        return await _synthesize_with_edge_library(data)
+
     service_url = settings.EDGE_TTS_BASE_URL.strip().rstrip("/")
     if not service_url:
         raise HTTPException(
@@ -1193,4 +1224,191 @@ async def synthesize_chat_audio(
         content=response.content,
         media_type="audio/mpeg",
         headers={"Cache-Control": "no-store"},
+    )
+
+
+async def _synthesize_with_edge_library(data: TTSRequest) -> Response:
+    voice = _CHAT_TTS_VOICES[data.language]
+    rate = f"{round((data.speed - 1.0) * 100):+d}%"
+
+    async def collect() -> bytes:
+        communicate = edge_tts.Communicate(data.text, voice, rate=rate)
+        chunks = [
+            chunk["data"]
+            async for chunk in communicate.stream()
+            if chunk["type"] == "audio"
+        ]
+        return b"".join(chunks)
+
+    try:
+        content = await asyncio.wait_for(collect(), timeout=30.0)
+    except asyncio.TimeoutError as exc:
+        logger.warning("Edge TTS library timed out.")
+        raise HTTPException(
+            status.HTTP_504_GATEWAY_TIMEOUT,
+            "Dịch vụ giọng đọc phản hồi quá chậm.",
+        ) from exc
+    except Exception as exc:
+        logger.warning("Edge TTS library failed (%s).", type(exc).__name__)
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Dịch vụ giọng đọc Edge hiện không khả dụng.",
+        ) from exc
+
+    if not content:
+        logger.warning("Edge TTS library returned no audio.")
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Dịch vụ giọng đọc trả về dữ liệu không hợp lệ.",
+        )
+
+    return Response(
+        content=content,
+        media_type="audio/mpeg",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+async def _synthesize_with_adsup(data: TTSRequest) -> Response:
+    language = _CHAT_TTS_LANGUAGE_CODES[data.language]
+    payload = {
+        "text": data.text,
+        "voice_id": data.voice_id or _ADSUP_DEFAULT_VOICES[language],
+        "language": language,
+        "speed": data.speed,
+    }
+    # ADSUP chỉ nhận JSON escape \uXXXX; UTF-8 thô bị báo lỗi parse body
+    body = json.dumps(payload, ensure_ascii=True).encode("utf-8")
+    keys = _adsup_keys()
+    url = f"{settings.ADSUP_TTS_BASE_URL.strip().rstrip('/')}/api/external/tts"
+
+    for key_index, key in enumerate(keys, start=1):
+        try:
+            async with _adsup_client() as client:
+                response = await client.post(
+                    url,
+                    headers={
+                        "X-API-Key": key,
+                        "Idempotency-Key": uuid4().hex,
+                        "Content-Type": "application/json",
+                    },
+                    content=body,
+                )
+                response.raise_for_status()
+        except httpx.TimeoutException as exc:
+            logger.warning("ADSUP TTS request timed out.")
+            raise HTTPException(
+                status.HTTP_504_GATEWAY_TIMEOUT,
+                "Dịch vụ giọng đọc phản hồi quá chậm.",
+            ) from exc
+        except httpx.HTTPStatusError as exc:
+            code = exc.response.status_code
+            if code in _ADSUP_KEY_ERROR_CODES:
+                logger.warning(
+                    "ADSUP key %d/%d bị từ chối hoặc hết hạn mức (HTTP %d) — thử key kế tiếp.",
+                    key_index,
+                    len(keys),
+                    code,
+                )
+                continue
+            logger.warning("ADSUP TTS returned HTTP %d.", code)
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                "Dịch vụ giọng đọc hiện không khả dụng.",
+            ) from exc
+        except httpx.HTTPError as exc:
+            logger.warning("ADSUP TTS connection failed (%s).", type(exc).__name__)
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                "Không kết nối được với dịch vụ giọng đọc.",
+            ) from exc
+
+        content_type = response.headers.get("content-type", "").split(";", maxsplit=1)[0].lower()
+        if not response.content or content_type not in {"audio/wav", "audio/x-wav", "application/octet-stream"}:
+            logger.warning("ADSUP TTS returned an empty or non-audio response.")
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                "Dịch vụ giọng đọc trả về dữ liệu không hợp lệ.",
+            )
+
+        return Response(
+            content=response.content,
+            media_type=content_type,
+            headers={"Cache-Control": "no-store"},
+        )
+
+    raise HTTPException(
+        status.HTTP_502_BAD_GATEWAY,
+        "Tất cả key ADSUP đều hết hạn mức hoặc bị từ chối.",
+    )
+
+
+@router.get("/tts/voices")
+async def list_chat_voices(
+    _profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[Dict[str, Any]]:
+    """Danh sách giọng (tone) công khai ADSUP cho 3 ngôn ngữ của app."""
+    try:
+        async with _adsup_client() as client:
+            response = await client.get(
+                f"{settings.ADSUP_TTS_BASE_URL.strip().rstrip('/')}/demo/voices"
+            )
+            response.raise_for_status()
+            payload = response.json()
+    except httpx.TimeoutException as exc:
+        raise HTTPException(
+            status.HTTP_504_GATEWAY_TIMEOUT,
+            "Dịch vụ giọng đọc phản hồi quá chậm.",
+        ) from exc
+    except httpx.HTTPStatusError as exc:
+        logger.warning("ADSUP voices returned HTTP %d.", exc.response.status_code)
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Dịch vụ giọng đọc hiện không khả dụng.",
+        ) from exc
+    except httpx.HTTPError as exc:
+        logger.warning("ADSUP voices connection failed (%s).", type(exc).__name__)
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không kết nối được với dịch vụ giọng đọc.",
+        ) from exc
+
+    voices = [
+        {field: voice.get(field) for field in _ADSUP_VOICE_FIELDS}
+        for voice in payload.get("voices", [])
+        if voice.get("language") in _ADSUP_DEFAULT_VOICES
+    ]
+    return BaseResponse(data={"voices": voices, "defaults": _ADSUP_DEFAULT_VOICES})
+
+
+@router.get("/tts/voices/{voice_id}/preview")
+async def preview_chat_voice(
+    voice_id: str,
+    _profile: Dict[str, Any] = Depends(get_current_profile),
+) -> Response:
+    try:
+        UUID(voice_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "voice_id không hợp lệ.",
+        ) from exc
+
+    try:
+        async with _adsup_client() as client:
+            response = await client.get(
+                f"{settings.ADSUP_TTS_BASE_URL.strip().rstrip('/')}/demo/voices/{voice_id}/preview-audio"
+            )
+            response.raise_for_status()
+    except httpx.HTTPError as exc:
+        logger.warning("ADSUP preview failed (%s).", type(exc).__name__)
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Không tải được bản nghe thử của giọng này.",
+        ) from exc
+
+    return Response(
+        content=response.content,
+        media_type=response.headers.get("content-type", "audio/mpeg").split(";", maxsplit=1)[0],
+        headers={"Cache-Control": "public, max-age=86400"},
     )

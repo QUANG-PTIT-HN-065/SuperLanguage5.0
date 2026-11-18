@@ -6,6 +6,8 @@
  * ===================================================================
  */
 
+import { saveAuthTokens, saveLearnerIdentity, slanguageApi } from "../shared/api-client";
+
 type AppLanguage = 'vi' | 'en' | 'ja';
 
 interface LanguageDetail {
@@ -45,6 +47,7 @@ class SelectLanguageController {
   private langConflictAlert: HTMLElement | null = null;
   private langConflictMsg: HTMLElement | null = null;
   private btnProceedToOtp: HTMLButtonElement | null = null;
+  private isSubmitting = false;
   private toastElement: HTMLElement | null = null;
   private toastTimer: number | null = null;
 
@@ -128,7 +131,7 @@ class SelectLanguageController {
     // 3. Confirm & Proceed to OTP Page
     if (this.btnProceedToOtp) {
       this.btnProceedToOtp.addEventListener('click', () => {
-        this.handleProceedToOtp();
+        void this.handleProceedToOtp();
       });
     }
   }
@@ -223,7 +226,8 @@ class SelectLanguageController {
     this.updateTranslationStreamUI();
   }
 
-  private handleProceedToOtp(): void {
+  private async handleProceedToOtp(): Promise<void> {
+    if (this.isSubmitting) return;
     if (!this.validateLanguagePair()) {
       const origin = LANGUAGE_MAP[this.originLanguage];
       this.showToast(`⚠️ Ngôn ngữ muốn học không được trùng với ngôn ngữ mẹ đẻ (${origin.name})!`);
@@ -235,15 +239,92 @@ class SelectLanguageController {
       return;
     }
 
-    // Persist language choices to sessionStorage & localStorage
-    sessionStorage.setItem('slanguage_reg_native', this.originLanguage);
-    sessionStorage.setItem('slanguage_reg_target', this.targetLanguage);
+    const email = sessionStorage.getItem('slanguage_reg_email');
+    const displayName = sessionStorage.getItem('slanguage_reg_name');
+    const password = sessionStorage.getItem('slanguage_reg_pass');
+    if (!email || !displayName || !password) {
+      this.showToast('Phiên đăng ký đã hết hạn. Vui lòng nhập lại thông tin đăng ký.');
+      window.setTimeout(() => window.location.assign('../register/index.html'), 1200);
+      return;
+    }
 
-    localStorage.setItem('slanguage_native_language', this.originLanguage);
-    localStorage.setItem('slanguage_active_language', this.targetLanguage);
+    this.isSubmitting = true;
+    if (this.btnProceedToOtp) {
+      this.btnProceedToOtp.disabled = true;
+      this.btnProceedToOtp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo tài khoản...';
+    }
 
-    // Navigate to dedicated OTP Verification Page
-    window.location.href = '../verify-otp/index.html';
+    try {
+      const response = await slanguageApi<{
+        user_id: string;
+        email: string;
+        email_confirmation_required: boolean;
+        access_token?: string;
+        refresh_token?: string;
+      }>('/api/v1/auth/register', {
+        method: 'POST',
+        body: {
+          email,
+          password,
+          display_name: displayName,
+          native_language: this.originLanguage,
+          target_language: this.targetLanguage,
+          accept_terms: sessionStorage.getItem('slanguage_reg_terms') === 'true',
+        },
+        anonymous: true,
+      });
+
+      sessionStorage.setItem('slanguage_reg_native', this.originLanguage);
+      sessionStorage.setItem('slanguage_reg_target', this.targetLanguage);
+      localStorage.setItem('slanguage_native_language', this.originLanguage);
+      localStorage.setItem('slanguage_active_language', this.targetLanguage);
+
+      if (!response.data.email_confirmation_required) {
+        if (!response.data.access_token || !response.data.refresh_token) {
+          throw new Error('Backend không trả về phiên đăng nhập sau khi đăng ký.');
+        }
+        saveAuthTokens({
+          access_token: response.data.access_token,
+          refresh_token: response.data.refresh_token,
+        });
+        saveLearnerIdentity({
+          id: response.data.user_id,
+          email: response.data.email,
+          display_name: displayName,
+        });
+        this.clearRegistrationDraft();
+        window.location.assign('../home/index.html');
+        return;
+      }
+
+      this.clearRegistrationPassword();
+      window.location.assign('../verify-otp/index.html');
+    } catch (error) {
+      this.showToast(error instanceof Error ? error.message : 'Không thể tạo tài khoản. Vui lòng thử lại.');
+      this.isSubmitting = false;
+      if (this.btnProceedToOtp) {
+        this.btnProceedToOtp.disabled = false;
+        this.btnProceedToOtp.innerHTML = '<span>Xác nhận & Nhận mã OTP</span><i class="fa-solid fa-arrow-right"></i>';
+      }
+    }
+  }
+
+  private clearRegistrationPassword(): void {
+    sessionStorage.removeItem('slanguage_reg_pass');
+    sessionStorage.removeItem('slanguage_reg_terms');
+  }
+
+  private clearRegistrationDraft(): void {
+    for (const key of [
+      'slanguage_reg_name',
+      'slanguage_reg_email',
+      'slanguage_reg_pass',
+      'slanguage_reg_terms',
+      'slanguage_reg_native',
+      'slanguage_reg_target',
+    ]) {
+      sessionStorage.removeItem(key);
+    }
   }
 
   private showToast(message: string): void {

@@ -1,6 +1,8 @@
 import json
 import logging
+import re
 from collections import Counter
+from typing import Any
 
 from fastapi import HTTPException, status
 from google import genai
@@ -272,6 +274,226 @@ def _parse_response(full_text: str) -> tuple[str, str]:
     return ai_reply, ai_feedback
 
 
+def _complete_with_providers(
+    system_instruction: str,
+    user_message: str,
+    history_messages: list[dict[str, str]] | None = None,
+) -> str:
+    history_messages = history_messages or []
+    full_text = ""
+    provider_failures: Counter[str] = Counter()
+    gemini_keys = [key.strip() for key in settings.GEMINI_API_KEYS.split(",") if key.strip()]
+    gemini_chat_model = (
+        (settings.GEMINI_CHAT_MODEL or "").strip() or _DEFAULT_GEMINI_CHAT_MODEL
+    )
+    openai_keys = [key.strip() for key in settings.OPENAI_API_KEYS.split(",") if key.strip()]
+    deepseek_keys = [key.strip() for key in settings.DEEPSEEK_API_KEYS.split(",") if key.strip()]
+
+    for key_index, key in enumerate(gemini_keys, start=1):
+        try:
+            client = genai.Client(api_key=key)
+            contents: str | list[types.Content] = user_message
+            if history_messages:
+                contents = [
+                    types.Content(
+                        role="model" if turn["role"] == "assistant" else "user",
+                        parts=[types.Part.from_text(text=turn["content"])],
+                    )
+                    for turn in history_messages
+                ]
+                contents.append(
+                    types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(text=user_message)],
+                    )
+                )
+            response = client.models.generate_content(
+                model=gemini_chat_model,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                ),
+            )
+            if response and response.text:
+                full_text = response.text
+                break
+            _log_empty_provider_response("Gemini", key_index, provider_failures)
+        except Exception as exc:
+            _log_provider_failure("Gemini", key_index, exc, provider_failures)
+            continue
+
+    if not full_text:
+        for key_index, key in enumerate(openai_keys, start=1):
+            try:
+                client = OpenAI(api_key=key)
+                completion = client.chat.completions.create(
+                    model=settings.OPENAI_CHAT_MODEL,
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        *history_messages,
+                        {"role": "user", "content": user_message},
+                    ],
+                    stream=False,
+                )
+                full_text = completion.choices[0].message.content or ""
+                if full_text:
+                    break
+                _log_empty_provider_response("OpenAI", key_index, provider_failures)
+            except Exception as exc:
+                _log_provider_failure("OpenAI", key_index, exc, provider_failures)
+
+    if not full_text:
+        for key_index, key in enumerate(deepseek_keys, start=1):
+            try:
+                client = OpenAI(api_key=key, base_url="https://api.deepseek.com")
+                completion = client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=[
+                        {"role": "system", "content": system_instruction},
+                        *history_messages,
+                        {"role": "user", "content": user_message},
+                    ],
+                    stream=False,
+                )
+                full_text = completion.choices[0].message.content or ""
+                if full_text:
+                    break
+                _log_empty_provider_response("DeepSeek", key_index, provider_failures)
+            except Exception as exc:
+                _log_provider_failure("DeepSeek", key_index, exc, provider_failures)
+
+    if not full_text:
+        if not (gemini_keys or openai_keys or deepseek_keys):
+            logger.error("No AI chat provider API keys are configured.")
+        else:
+            logger.error(
+                "All AI chat providers failed. attempts=%d failures=%s",
+                sum(provider_failures.values()),
+                _provider_error_summary(provider_failures),
+            )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=_PROVIDER_UNAVAILABLE_DETAIL,
+        )
+
+    return full_text
+
+
+def _boss_quiz_instruction(language: str, count: int) -> str:
+    return (
+        "Bạn là máy ra đề kiểm tra từ vựng cho ứng dụng học ngôn ngữ Slanguage. "
+        f"Ngôn ngữ mục tiêu: {language}. Nghĩa và câu dẫn viết bằng tiếng Việt. "
+        f"Dựa CHÍNH XÁC vào danh sách từ vựng người dùng gửi (JSON), hãy tạo {count} câu hỏi "
+        "trộn đều ba dạng: multiple_choice, fill_in, match. "
+        "Chỉ trả về MỘT mảng JSON thuần, không markdown, không giải thích ngoài JSON. "
+        "Mỗi phần tử theo một trong ba khuôn:\n"
+        '{"question_type":"multiple_choice","prompt":"câu hỏi tiếng Việt",'
+        '"options":[{"id":"a","text":"..."},{"id":"b","text":"..."},{"id":"c","text":"..."},{"id":"d","text":"..."}],'
+        '"correct_option_id":"a","explanation":"giải thích tiếng Việt"}\n'
+        '{"question_type":"fill_in","prompt":"Nghĩa tiếng Việt của từ cần điền (không lộ từ)",'
+        '"answer":"từ vựng đúng chính tả","explanation":"giải thích tiếng Việt"}\n'
+        '{"question_type":"match","prompt":"Nối từ với nghĩa",'
+        '"pairs":[{"word":"...","meaning":"..."},{"word":"...","meaning":"..."},'
+        '{"word":"...","meaning":"..."},{"word":"...","meaning":"..."}],'
+        '"explanation":"giải thích tiếng Việt"}\n'
+        "Ràng buộc: multiple_choice luôn đủ 4 lựa chọn khác nhau và correct_option_id tồn tại; "
+        "fill_in dùng từ có trong danh sách, prompt nêu nghĩa hoặc ngữ cảnh chứ không chứa từ đáp án; "
+        "match gồm đúng 4 cặp từ-nghĩa khác nhau lấy từ danh sách; "
+        f"tổng đúng {count} câu, phủ rộng nhiều chủ đề khác nhau trong danh sách."
+    )
+
+
+def _normalize_boss_quiz(full_text: str, count: int) -> list[dict[str, Any]]:
+    text = full_text.strip()
+    if text.startswith("```"):
+        text = re.sub(r"^```[a-zA-Z]*\s*", "", text)
+        text = re.sub(r"\s*```$", "", text)
+    start, end = text.find("["), text.rfind("]")
+    if start == -1 or end <= start:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "AI không trả về bộ câu hỏi Boss hợp lệ. Vui lòng thử lại.",
+        )
+    try:
+        raw = json.loads(text[start : end + 1])
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "AI không trả về bộ câu hỏi Boss hợp lệ. Vui lòng thử lại.",
+        ) from exc
+    if not isinstance(raw, list) or len(raw) != count:
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            f"AI trả về không đủ {count} câu hỏi Boss. Vui lòng thử lại.",
+        )
+
+    questions: list[dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Câu hỏi Boss không hợp lệ.")
+        kind = item.get("question_type")
+        prompt = str(item.get("prompt") or "").strip()
+        explanation = str(item.get("explanation") or "").strip()
+        if not prompt:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Câu hỏi Boss thiếu nội dung.")
+        if kind == "multiple_choice":
+            options = item.get("options")
+            if not isinstance(options, list) or len(options) != 4:
+                raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Câu trắc nghiệm Boss cần 4 lựa chọn.")
+            cleaned = []
+            for index, option in enumerate(options):
+                if not isinstance(option, dict):
+                    raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Lựa chọn Boss không hợp lệ.")
+                text_value = str(option.get("text") or "").strip()
+                if not text_value:
+                    raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Lựa chọn Boss trống.")
+                cleaned.append({"id": str(option.get("id") or chr(97 + index)), "text": text_value})
+            correct = str(item.get("correct_option_id") or "")
+            if correct not in {option["id"] for option in cleaned}:
+                raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Đáp án trắc nghiệm Boss không hợp lệ.")
+            questions.append({
+                "question_type": kind,
+                "prompt": prompt,
+                "options": cleaned,
+                "correct_option_id": correct,
+                "explanation": explanation,
+            })
+        elif kind == "fill_in":
+            answer = str(item.get("answer") or "").strip()
+            if not answer:
+                raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Câu điền từ Boss thiếu đáp án.")
+            questions.append({
+                "question_type": kind,
+                "prompt": prompt,
+                "answer": answer,
+                "explanation": explanation,
+            })
+        elif kind == "match":
+            pairs = item.get("pairs")
+            if not isinstance(pairs, list) or len(pairs) != 4:
+                raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Câu nối từ Boss cần 4 cặp.")
+            cleaned_pairs = []
+            for pair in pairs:
+                if not isinstance(pair, dict):
+                    raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Cặp nối từ Boss không hợp lệ.")
+                word = str(pair.get("word") or "").strip()
+                meaning = str(pair.get("meaning") or "").strip()
+                if not word or not meaning:
+                    raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Cặp nối từ Boss trống.")
+                cleaned_pairs.append({"word": word, "meaning": meaning})
+            if len({pair["word"] for pair in cleaned_pairs}) != 4:
+                raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Cặp nối từ Boss bị trùng từ.")
+            questions.append({
+                "question_type": kind,
+                "prompt": prompt,
+                "pairs": cleaned_pairs,
+                "explanation": explanation,
+            })
+        else:
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Dạng câu hỏi Boss không hỗ trợ.")
+    return questions
+
+
 class AIService:
     @staticmethod
     async def evaluate_reading_practice_audio(
@@ -410,100 +632,22 @@ class AIService:
             for turn in conversation_history or []
             if turn.get("role") in {"user", "assistant"} and turn.get("content", "").strip()
         ]
-        full_text = ""
-        provider_failures: Counter[str] = Counter()
-        gemini_keys = [key.strip() for key in settings.GEMINI_API_KEYS.split(",") if key.strip()]
-        gemini_chat_model = (
-            (settings.GEMINI_CHAT_MODEL or "").strip() or _DEFAULT_GEMINI_CHAT_MODEL
-        )
-        openai_keys = [key.strip() for key in settings.OPENAI_API_KEYS.split(",") if key.strip()]
-        deepseek_keys = [key.strip() for key in settings.DEEPSEEK_API_KEYS.split(",") if key.strip()]
-
-        for key_index, key in enumerate(gemini_keys, start=1):
-            try:
-                client = genai.Client(api_key=key)
-                contents: str | list[types.Content] = user_message
-                if history_messages:
-                    contents = [
-                        types.Content(
-                            role="model" if turn["role"] == "assistant" else "user",
-                            parts=[types.Part.from_text(text=turn["content"])],
-                        )
-                        for turn in history_messages
-                    ]
-                    contents.append(
-                        types.Content(
-                            role="user",
-                            parts=[types.Part.from_text(text=user_message)],
-                        )
-                    )
-                response = client.models.generate_content(
-                    model=gemini_chat_model,
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                    ),
-                )
-                if response and response.text:
-                    full_text = response.text
-                    break
-                _log_empty_provider_response("Gemini", key_index, provider_failures)
-            except Exception as exc:
-                _log_provider_failure("Gemini", key_index, exc, provider_failures)
-                continue
-
-        if not full_text:
-            for key_index, key in enumerate(openai_keys, start=1):
-                try:
-                    client = OpenAI(api_key=key)
-                    completion = client.chat.completions.create(
-                        model=settings.OPENAI_CHAT_MODEL,
-                        messages=[
-                            {"role": "system", "content": system_instruction},
-                            *history_messages,
-                            {"role": "user", "content": user_message},
-                        ],
-                        stream=False,
-                    )
-                    full_text = completion.choices[0].message.content or ""
-                    if full_text:
-                        break
-                    _log_empty_provider_response("OpenAI", key_index, provider_failures)
-                except Exception as exc:
-                    _log_provider_failure("OpenAI", key_index, exc, provider_failures)
-
-        if not full_text:
-            for key_index, key in enumerate(deepseek_keys, start=1):
-                try:
-                    client = OpenAI(api_key=key, base_url="https://api.deepseek.com")
-                    completion = client.chat.completions.create(
-                        model="deepseek-chat",
-                        messages=[
-                            {"role": "system", "content": system_instruction},
-                            *history_messages,
-                            {"role": "user", "content": user_message},
-                        ],
-                        stream=False,
-                    )
-                    full_text = completion.choices[0].message.content or ""
-                    if full_text:
-                        break
-                    _log_empty_provider_response("DeepSeek", key_index, provider_failures)
-                except Exception as exc:
-                    _log_provider_failure("DeepSeek", key_index, exc, provider_failures)
-
-        if not full_text:
-            if not (gemini_keys or openai_keys or deepseek_keys):
-                logger.error("No AI chat provider API keys are configured.")
-            else:
-                logger.error(
-                    "All AI chat providers failed. attempts=%d failures=%s",
-                    sum(provider_failures.values()),
-                    _provider_error_summary(provider_failures),
-                )
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=_PROVIDER_UNAVAILABLE_DETAIL,
-            )
-
+        full_text = _complete_with_providers(system_instruction, user_message, history_messages)
         return _parse_response(full_text)
+
+    @staticmethod
+    def generate_boss_quiz(
+        words: list[dict[str, Any]], language: str, count: int = 25
+    ) -> list[dict[str, Any]]:
+        catalog = [
+            {
+                "word": item["word"],
+                "meaning": item["meaning"],
+                "example_sentence": item.get("example_sentence") or "",
+            }
+            for item in words[:120]
+        ]
+        system_instruction = _boss_quiz_instruction(language, count)
+        user_message = json.dumps(catalog, ensure_ascii=False)
+        full_text = _complete_with_providers(system_instruction, user_message)
+        return _normalize_boss_quiz(full_text, count)
