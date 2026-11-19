@@ -8,8 +8,6 @@ from app.core.deps import get_current_admin_profile
 from app.schemas.rag import RAGDocumentCreate, RAGDocumentResponse, RAGDocumentSummary
 from app.schemas.learning import TopicReadingsUpdate
 from app.schemas.vocabulary import (
-    LearningPathCreate,
-    LearningPathUpdate,
     TopicCreate,
     TopicUpdate,
     WordCreate,
@@ -21,12 +19,6 @@ from app.services.admin import (
     list_admin_topics_full,
     list_admin_users,
     update_admin_topic,
-)
-from app.services.learning_path_service import (
-    create_learning_path,
-    delete_learning_path,
-    list_learning_paths,
-    update_learning_path,
 )
 from app.services.learning_service import get_topic_readings, save_topic_readings
 from app.services.vocabulary_service import (
@@ -66,7 +58,7 @@ def reindex_rag_documents(
     message = (
         "Đã đồng bộ chủ đề và từ vựng vào Vector DB."
         if stats["documents_indexed"]
-        else "Chưa có chủ đề hoặc từ vựng tiếng Anh/Nhật để lập chỉ mục. Hãy thêm tài liệu học tập hoặc kiểm tra ngôn ngữ dữ liệu."
+        else "Chưa có chủ đề hoặc từ vựng tiếng Anh/Nhật/Việt để lập chỉ mục. Hãy thêm tài liệu học tập hoặc kiểm tra ngôn ngữ dữ liệu."
     )
     return {"status": "success", "message": message, "data": stats}
 
@@ -273,49 +265,6 @@ def save_topic_readings_route(
     """Admin lưu đủ 5 bài đọc (mỗi tầng một bài); không đụng câu hỏi và tiến độ."""
     readings = save_topic_readings(topic_id, [entry.model_dump() for entry in body.readings])
     return {"status": "success", "data": readings}
-
-
-@router.get("/learning-paths")
-def get_learning_paths(
-    language_code: Optional[str] = Query(default=None),
-    _: Dict[str, Any] = Depends(get_current_admin_profile),
-):
-    if language_code and language_code != "all":
-        return {"items": list_learning_paths(language_code)}
-    languages = list_admin_languages()
-    paths = [
-        path
-        for language in languages
-        for path in list_learning_paths(language["code"])
-    ]
-    return {"items": paths}
-
-
-@router.post("/learning-paths", status_code=status.HTTP_201_CREATED)
-def add_learning_path(
-    body: LearningPathCreate,
-    _: Dict[str, Any] = Depends(get_current_admin_profile),
-):
-    return {"status": "success", "path": create_learning_path(body.model_dump(mode="json"))}
-
-
-@router.put("/learning-paths/{path_id}")
-def edit_learning_path(
-    path_id: int,
-    body: LearningPathUpdate,
-    _: Dict[str, Any] = Depends(get_current_admin_profile),
-):
-    data = body.model_dump(mode="json", exclude_unset=True)
-    return {"status": "success", "path": update_learning_path(path_id, data)}
-
-
-@router.delete("/learning-paths/{path_id}")
-def remove_learning_path(
-    path_id: int,
-    _: Dict[str, Any] = Depends(get_current_admin_profile),
-):
-    delete_learning_path(path_id)
-    return {"status": "success", "deleted_path_id": path_id}
 
 
 # ==================== WORDS & LANGUAGES ====================

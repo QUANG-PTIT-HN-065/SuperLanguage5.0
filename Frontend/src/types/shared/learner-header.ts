@@ -1,5 +1,6 @@
 import { clearAuthTokens, clearLearnerCache, isLearnerAuthenticated, slanguageApi } from "./api-client";
 import { formatHeartLock, heartLockRemainingMs, isHeartsLocked, readHearts } from "./hearts";
+import { showToast } from "../ui/toast";
 
 interface LearnerHeaderOptions {
   loadProfile?: boolean;
@@ -129,6 +130,8 @@ export function renderLearnerHeader(payload: unknown): void {
   localStorage.setItem("slanguage_user_email", email);
   localStorage.setItem("slanguage_user_xp", String(xp));
   if (languageCode) localStorage.setItem("slanguage_active_language", languageCode);
+
+  maybeWarnStreakExpiring(payload);
 }
 
 function showHeaderMessage(message: string): void {
@@ -139,6 +142,23 @@ function showHeaderMessage(message: string): void {
   }
   element.textContent = message;
   element.hidden = false;
+}
+
+const STREAK_WARN_HOUR = 20;
+
+function maybeWarnStreakExpiring(payload: unknown): void {
+  const stats = asRecord(asRecord(payload).stats);
+  if (count(stats.current_streak) <= 0 || stats.studied_today === true) return;
+  const now = new Date();
+  if (now.getHours() < STREAK_WARN_HOUR) return;
+  const todayKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
+  if (localStorage.getItem("slanguage_streak_warn_date") === todayKey) return;
+  localStorage.setItem("slanguage_streak_warn_date", todayKey);
+  showToast({
+    type: "info",
+    duration: 9000,
+    message: "Chuỗi học tập của bạn sắp hết hãy chủ động học tập hôm nay hoặc có thể sử dụng vật phẩm đóng băng để giữ chuỗi học tập",
+  });
 }
 
 async function changeLearningLanguage(languageCode: string, button: HTMLButtonElement): Promise<void> {

@@ -49,12 +49,16 @@ _CHAT_LANGUAGE_NAMES = {
     "English": "English",
     "ja": "Japanese",
     "Japanese": "Japanese",
+    "vi": "Vietnamese",
+    "Vietnamese": "Vietnamese",
 }
 _CHAT_ASR_LANGUAGE_CODES = {
     "en": "en",
     "English": "en",
     "ja": "ja",
     "Japanese": "ja",
+    "vi": "vi",
+    "Vietnamese": "vi",
 }
 _CHAT_TTS_VOICES = {
     "English": "en-GB-RyanNeural",
@@ -65,7 +69,7 @@ _CHAT_TTS_LANGUAGE_CODES = {"English": "en", "Japanese": "ja", "Vietnamese": "vi
 # Giọng mặc định từ thư viện công khai ADSUP (voice.adsup.vn/demo/voices)
 _ADSUP_DEFAULT_VOICES = {
     "vi": "e79a7e29-37e7-43bb-95ce-a5526876c6f6",  # Adam
-    "en": "4ceed7a4-55b3-4c44-8e75-1e080a7c142d",  # Levi Ackerman
+    "en": "b062b5dd-2536-4162-9433-16f42e06aa7d",  # Freddy Fazbear
     "ja": "b7e9c5e7-15d7-46d0-b853-5044e9c0c224",  # Kuon - 明るく明瞭で安定した声
 }
 _ADSUP_VOICE_FIELDS = ("id", "name", "language", "gender", "category_name", "has_preview")
@@ -1077,7 +1081,6 @@ async def _send_message(
             _CHAT_LANGUAGE_NAMES[language_code],
             profile.get("current_level") or "A1",
             conversation_history=conversation_history,
-            free_conversation=True,
         )
     except HTTPException as exc:
         if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:

@@ -1,0 +1,162 @@
+/* ============================================================
+   Slanguage · Loading skeletons
+   Khung xương shimmer dùng chung cho mọi trang.
+   Tone màu đặt theo nền từng trang:
+   - cream (mặc định): nền kem của Học tập
+   - amethyst: nền #F8F6FD của Trang chủ / Hồ sơ
+   - cool: nền xanh nhạt của Từ vựng / Admin
+   - dark: nền navy của Xếp hạng / Cửa hàng / Dungeon
+   ============================================================ */
+
+.sk-wrap {
+  --sk-base: #e7e2d9;
+  --sk-shine: #f6f3ec;
+  --sk-card-bg: rgba(255, 255, 255, 0.55);
+  --sk-card-border: rgba(22, 50, 74, 0.08);
+  --sk-overlay-bg: rgba(251, 249, 243, 0.92);
+  width: 100%;
+  grid-column: 1 / -1;
+  animation: sk-enter 0.35s ease both;
+}
+
+.sk-tone-amethyst {
+  --sk-base: #e9e1f4;
+  --sk-shine: #f8f4fd;
+  --sk-card-bg: #ffffff;
+  --sk-card-border: #e6dcf5;
+  --sk-overlay-bg: rgba(248, 246, 253, 0.92);
+}
+
+.sk-tone-cool {
+  --sk-base: #dfe7ef;
+  --sk-shine: #f2f7fb;
+  --sk-card-bg: #ffffff;
+  --sk-card-border: #dbe4ec;
+  --sk-overlay-bg: rgba(241, 246, 250, 0.92);
+}
+
+.sk-dark {
+  --sk-base: rgba(255, 255, 255, 0.09);
+  --sk-shine: rgba(255, 255, 255, 0.2);
+  --sk-card-bg: rgba(255, 255, 255, 0.03);
+  --sk-card-border: rgba(255, 255, 255, 0.1);
+  --sk-overlay-bg: rgba(8, 20, 32, 0.88);
+}
+
+.sk {
+  display: block;
+  border-radius: 8px;
+  background: linear-gradient(100deg, var(--sk-base) 32%, var(--sk-shine) 50%, var(--sk-base) 68%);
+  background-size: 200% 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+}
+
+.sk-circle { border-radius: 50%; flex: none; }
+.sk-pill { border-radius: 999px; }
+.sk-block { border-radius: 12px; }
+.sk-ml-auto { margin-left: auto; }
+
+.sk-row { display: flex; align-items: center; gap: 12px; }
+.sk-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
+.sk-grow { flex: 1; }
+.sk-center { align-items: center; text-align: center; }
+
+.sk-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.sk-card {
+  background: var(--sk-card-bg);
+  border: 1.5px solid var(--sk-card-border);
+  border-radius: 20px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sk-cards > .sk-card:nth-child(2n) .sk { animation-delay: 0.2s; }
+.sk-cards > .sk-card:nth-child(3n) .sk { animation-delay: 0.35s; }
+
+.sk-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sk-overlay-bg);
+  border-radius: inherit;
+  padding: 24px;
+}
+
+/* Trang chủ · nhiệm vụ / xếp hạng thu nhỏ */
+.sk-streak { display: flex; justify-content: space-between; gap: 10px; width: 100%; }
+.sk-streak .sk-col { flex: none; align-items: center; gap: 6px; }
+
+/* Xếp hạng · podium */
+.sk-podium {
+  background: var(--sk-card-bg);
+  border: 1.5px solid var(--sk-card-border);
+  border-radius: 24px;
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-height: 300px;
+}
+
+/* Xếp hạng · hàng bảng (grid giống .table-row thật) */
+.sk-lb-rows { display: flex; flex-direction: column; gap: 10px; }
+.sk-lb-row {
+  display: grid;
+  grid-template-columns: 80px 2.2fr 1.3fr 1.3fr 1.4fr 1.8fr 60px;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: var(--sk-card-bg);
+  border: 1.5px solid var(--sk-card-border);
+}
+
+/* Học tập · lưới buổi học 4 cột */
+.sk-sessions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+
+/* Dungeon · 5 tầng */
+.sk-dungeon { display: flex; flex-direction: column; align-items: center; gap: 36px; width: 100%; padding: 10px 0; }
+.sk-dungeon-stage { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.sk-dungeon-branches { display: flex; gap: 26px; }
+
+/* Từ vựng · flashcard / quiz overlay */
+.sk-flashcard { display: flex; flex-direction: column; align-items: center; gap: 16px; width: min(420px, 90%); }
+.sk-quiz { display: flex; flex-direction: column; gap: 14px; width: min(560px, 95%); }
+
+/* Bảng thật (admin, lịch sử cửa hàng, hoạt động hồ sơ) */
+.sk-tr td { padding: 14px 16px; }
+
+@keyframes sk-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes sk-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 1100px) {
+  .sk-sessions { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .sk-sessions { grid-template-columns: 1fr; }
+  .sk-lb-row { grid-template-columns: 48px 2fr 1fr 1fr; }
+  .sk-lb-row > :nth-child(n + 5) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk, .sk-wrap { animation: none; }
+}

@@ -1,5 +1,6 @@
 import { initializeLearnerHeader } from "../shared/learner-header";
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 
 interface ShopItem {
   id: string;
@@ -99,12 +100,18 @@ class SlanguageShopApp {
 
   private async loadState(): Promise<void> {
     this.setBusy(true);
+    showSkeleton(this.itemsGrid, "shop-cards", { tone: "dark", count: 6 });
+    showSkeleton(this.inventoryList, "inventory-rows", { tone: "dark", count: 3 });
+    showSkeleton(this.historyBody, "table-rows", { tone: "dark", cols: 4, count: 4 });
     try {
       const response = await slanguageApi<ShopState>("/api/v1/shop");
       this.state = response.data;
       this.render();
       this.loadingMessage.textContent = "";
     } catch (error) {
+      clearSkeleton(this.itemsGrid);
+      clearSkeleton(this.inventoryList);
+      clearSkeleton(this.historyBody);
       this.showMessage(error instanceof Error ? error.message : "Không thể tải dữ liệu cửa hàng.");
     } finally {
       this.setBusy(false);
@@ -195,6 +202,7 @@ class SlanguageShopApp {
   }
 
   private renderItems(): void {
+    clearSkeleton(this.itemsGrid);
     if (!this.itemsGrid || !this.state) return;
     this.itemsGrid.innerHTML = this.state.items.map((item) => {
       const unavailable = item.remaining_limit === 0 || item.cost_coins > this.state!.coin_balance;
@@ -222,6 +230,7 @@ class SlanguageShopApp {
   }
 
   private renderInventory(): void {
+    clearSkeleton(this.inventoryList);
     if (!this.inventoryList || !this.state) return;
     this.inventoryList.innerHTML = this.state.inventory.length
       ? this.state.inventory.map((item) => `<div class="inventory-item-row">
@@ -232,6 +241,7 @@ class SlanguageShopApp {
   }
 
   private renderHistory(): void {
+    clearSkeleton(this.historyBody);
     if (!this.historyBody || !this.state) return;
     this.historyBody.innerHTML = this.state.transactions.length
       ? this.state.transactions.map((transaction) => `<tr>

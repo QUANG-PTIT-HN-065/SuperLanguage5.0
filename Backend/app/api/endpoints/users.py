@@ -12,6 +12,7 @@ from app.services.profile_service import (
     get_recent_daily_activity,
     get_plan,
     get_stats,
+    get_streak_freeze_count,
     update_profile,
     with_effective_streak,
 )
@@ -21,7 +22,11 @@ XP_PER_LEVEL = 100
 
 
 def _me_payload(profile: Dict[str, Any]) -> BaseResponse[Dict[str, Any]]:
-    stats = with_effective_streak(get_stats(profile["id"]), profile["timezone"])
+    stats = with_effective_streak(
+        get_stats(profile["id"]),
+        profile["timezone"],
+        get_streak_freeze_count(profile["id"]),
+    )
     return BaseResponse(
         status="success",
         message="Đã tải hồ sơ học tập.",
@@ -43,7 +48,11 @@ def get_me(profile: Dict[str, Any] = Depends(get_current_profile)):
 
 @router.get("/progress", response_model=BaseResponse[Dict[str, Any]])
 def get_progress(profile: Dict[str, Any] = Depends(get_current_profile)):
-    stats = with_effective_streak(get_stats(profile["id"]), profile["timezone"])
+    stats = with_effective_streak(
+        get_stats(profile["id"]),
+        profile["timezone"],
+        get_streak_freeze_count(profile["id"]),
+    )
     xp_total = max(0, int(stats.get("xp_total") or 0))
     return BaseResponse(
         status="success",

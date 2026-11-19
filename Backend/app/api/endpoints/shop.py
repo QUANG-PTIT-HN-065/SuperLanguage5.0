@@ -4,8 +4,22 @@ from fastapi import APIRouter, Depends
 
 from app.core.deps import get_current_profile
 from app.schemas.reponse import BaseResponse
-from app.schemas.shop import ShopExchangeRequest, ShopPurchaseRequest, ShopState
-from app.services.shop_service import exchange_xp, get_shop_state, purchase_item
+from app.schemas.shop import (
+    ShopBoostActivateRequest,
+    ShopBoostActivation,
+    ShopExchangeRequest,
+    ShopItemUsageResult,
+    ShopPurchaseRequest,
+    ShopState,
+    ShopUseItemRequest,
+)
+from app.services.shop_service import (
+    activate_boost,
+    exchange_xp,
+    get_shop_state,
+    purchase_item,
+    use_item,
+)
 
 router = APIRouter()
 
@@ -40,4 +54,30 @@ def purchase_shop_item(
         status="success",
         message="Đã mua vật phẩm.",
         data=purchase_item(profile, str(body.request_id), body.item_id),
+    )
+
+
+@router.post("/boost/activate", response_model=BaseResponse[ShopBoostActivation | None])
+def activate_shop_boost(
+    body: ShopBoostActivateRequest,
+    profile: dict[str, Any] = Depends(get_current_profile),
+):
+    """Vào bài học: tự dùng vật phẩm tăng XP mạnh nhất trong kho (thắng/thua đều tính đã dùng)."""
+    data = activate_boost(profile, str(body.request_id))
+    return BaseResponse(
+        status="success",
+        message="Đã kích hoạt vật phẩm tăng XP." if data else "Không có vật phẩm tăng XP trong kho.",
+        data=data,
+    )
+
+
+@router.post("/items/use", response_model=BaseResponse[ShopItemUsageResult])
+def use_shop_item(
+    body: ShopUseItemRequest,
+    profile: dict[str, Any] = Depends(get_current_profile),
+):
+    return BaseResponse(
+        status="success",
+        message="Đã sử dụng vật phẩm.",
+        data=use_item(profile, str(body.request_id), body.item_id, body.context),
     )

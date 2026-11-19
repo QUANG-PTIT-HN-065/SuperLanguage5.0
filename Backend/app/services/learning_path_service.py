@@ -1,45 +1,39 @@
-from collections import Counter
 from typing import Any, Dict, List
-
-from fastapi import HTTPException, status
 
 from app.db.supabase import supabase_admin
 from app.services.profile_service import raise_db_error
 
 
-def _validate_topic_ids(language_code: str, topic_ids: List[int]) -> None:
-    if not topic_ids:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "Vui lòng chọn ít nhất một chủ đề cho lộ trình.",
-        )
-    rows = (
+def _auto_path_from_topics(language_code: str) -> List[Dict[str, Any]]:
+    # Chưa có lộ trình riêng: dựng lộ trình mặc định từ chủ đề theo sort_order.
+    topics = (
         supabase_admin.table("topics")
         .select("id")
         .eq("language_code", language_code)
-        .in_("id", topic_ids)
-        .execute()
-        .data
-    )
-    if len(rows or []) != len(set(topic_ids)):
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "Mọi chủ đề trong lộ trình phải thuộc cùng một ngôn ngữ.",
-        )
-    word_links = (
-        supabase_admin.table("word_topics")
-        .select("topic_id,word_id")
-        .in_("topic_id", topic_ids)
+        .order("sort_order")
+        .order("id")
         .execute()
         .data
         or []
     )
-    word_counts = Counter(link["topic_id"] for link in word_links)
-    if any(word_counts[topic_id] < 4 for topic_id in topic_ids):
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            "Mỗi chủ đề trong lộ trình cần ít nhất 4 từ vựng được liên kết.",
-        )
+    if not topics:
+        return []
+    path = (
+        supabase_admin.table("learning_paths")
+        .insert({
+            "language_code": language_code,
+            "name": f"Lộ trình tự động · {language_code.upper()}",
+            "description": "Tự dựng từ các chủ đề theo thứ tự hiển thị.",
+            "sort_order": 100,
+        })
+        .execute()
+        .data[0]
+    )
+    supabase_admin.table("learning_path_topics").insert([
+        {"learning_path_id": path["id"], "topic_id": topic["id"], "sort_order": index + 1}
+        for index, topic in enumerate(topics)
+    ]).execute()
+    return [path]
 
 
 def list_learning_paths(language_code: str) -> List[Dict[str, Any]]:
@@ -54,6 +48,8 @@ def list_learning_paths(language_code: str) -> List[Dict[str, Any]]:
             .data
             or []
         )
+        if not paths:
+            paths = _auto_path_from_topics(language_code)
         path_ids = [path["id"] for path in paths]
         topic_links = []
         if path_ids:
@@ -90,101 +86,3 @@ def list_learning_paths(language_code: str) -> List[Dict[str, Any]]:
     except Exception as exc:
         raise_db_error(exc)
         raise
-
-
-def create_learning_path(data: Dict[str, Any]) -> Dict[str, Any]:
-    topic_ids = list(dict.fromkeys(data["topic_ids"]))
-    try:
-        _validate_topic_ids(data["language_code"], topic_ids)
-        result = supabase_admin.rpc(
-            "admin_save_learning_path",
-            {
-                "p_path_id": None,
-                "p_language_code": data["language_code"],
-                "p_name": data["name"],
-                "p_description": data.get("description"),
-                "p_sort_order": data.get("sort_order", 100),
-                "p_topic_ids": topic_ids,
-            },
-        ).execute()
-        if not isinstance(result.data, dict) or not result.data:
-            raise HTTPException(
-                status.HTTP_502_BAD_GATEWAY,
-                "Cơ sở dữ liệu không trả về thông tin lộ trình.",
-            )
-        return {**result.data, "topic_ids": topic_ids}
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise_db_error(exc)
-        raise
-
-
-def update_learning_path(path_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
-    try:
-        current = (
-            supabase_admin.table("learning_paths")
-            .select("id,language_code,name,description,sort_order")
-            .eq("id", path_id)
-            .limit(1)
-            .execute()
-            .data
-        )
-        if not current:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy lộ trình.")
-
-        current_path = current[0]
-        language_code = data.get("language_code", current_path["language_code"])
-        topic_ids = data.get("topic_ids")
-        if topic_ids is None:
-            existing_links = (
-                supabase_admin.table("learning_path_topics")
-                .select("topic_id")
-                .eq("learning_path_id", path_id)
-                .order("sort_order")
-                .execute()
-                .data
-                or []
-            )
-            topic_ids = [link["topic_id"] for link in existing_links]
-        topic_ids = list(dict.fromkeys(topic_ids))
-        _validate_topic_ids(language_code, topic_ids)
-
-        result = supabase_admin.rpc(
-            "admin_save_learning_path",
-            {
-                "p_path_id": path_id,
-                "p_language_code": language_code,
-                "p_name": data.get("name", current_path["name"]),
-                "p_description": data.get("description", current_path["description"]),
-                "p_sort_order": data.get("sort_order", current_path["sort_order"]),
-                "p_topic_ids": topic_ids,
-            },
-        ).execute()
-        if not isinstance(result.data, dict) or not result.data:
-            raise HTTPException(
-                status.HTTP_502_BAD_GATEWAY,
-                "Cơ sở dữ liệu không trả về thông tin lộ trình.",
-            )
-        return {**result.data, "topic_ids": topic_ids}
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise_db_error(exc)
-        raise
-
-
-def delete_learning_path(path_id: int) -> None:
-    try:
-        result = (
-            supabase_admin.table("learning_paths")
-            .delete()
-            .eq("id", path_id)
-            .execute()
-        )
-        if not result.data:
-            raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy lộ trình.")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise_db_error(exc)

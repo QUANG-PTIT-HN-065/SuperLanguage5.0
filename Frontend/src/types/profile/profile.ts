@@ -6,6 +6,7 @@
 
 import { slanguageApi } from '../shared/api-client';
 import { initializeLearnerHeader, renderLearnerHeader } from '../shared/learner-header';
+import { clearSkeleton, showSkeleton } from '../shared/skeleton';
 
 interface ActivityDay {
   activity_date: string;
@@ -127,6 +128,9 @@ class SlanguageProfile {
   }
 
   private async loadAll(): Promise<void> {
+    showSkeleton('activityTableBody', 'table-rows', { tone: 'amethyst', cols: 5, count: 5 });
+    showSkeleton('badgesGrid', 'badge-cards', { tone: 'amethyst', count: 8 });
+    showSkeleton('certGrid', 'cert-cards', { tone: 'dark', count: 3 });
     try {
       const [meResponse, progressResponse, boardResponse, pathsResponse] = await Promise.all([
         slanguageApi('/api/v1/me'),
@@ -169,6 +173,9 @@ class SlanguageProfile {
       renderLearnerHeader(meResponse.data);
       this.renderAll();
     } catch (error) {
+      clearSkeleton('activityTableBody');
+      clearSkeleton('badgesGrid');
+      clearSkeleton('certGrid');
       this.showToast(error instanceof Error ? error.message : 'Không thể tải hồ sơ từ máy chủ.');
     }
   }
@@ -356,6 +363,7 @@ class SlanguageProfile {
   private renderActivityTable(profile: Record<string, unknown>): void {
     const body = document.getElementById('activityTableBody');
     if (!body) return;
+    clearSkeleton(body);
     body.replaceChildren();
     const goal = asCount(profile.daily_goal_xp) || 20;
     const timezone = asText(profile.timezone, 'Asia/Ho_Chi_Minh');
@@ -459,6 +467,7 @@ class SlanguageProfile {
 
     const grid = document.getElementById('badgesGrid');
     if (grid) {
+      clearSkeleton(grid);
       grid.replaceChildren();
       for (const badge of badges) {
         const isUnlocked = badge.value >= badge.target;
@@ -493,6 +502,7 @@ class SlanguageProfile {
     setText('habitCertsCount', `${certUnlocked} Chứng chỉ`);
     const certGrid = document.getElementById('certGrid');
     if (certGrid) {
+      clearSkeleton(certGrid);
       certGrid.replaceChildren();
       const profile = asRecord(this.me.profile);
       const name = asText(profile.display_name, asText(profile.username, 'Học viên'));

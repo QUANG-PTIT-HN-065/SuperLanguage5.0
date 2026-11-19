@@ -66,3 +66,13 @@ export function gainHearts(amount: number): number {
   localStorage.setItem(HEARTS_KEY, String(next));
   return next;
 }
+
+/** Hồi máu bằng vật phẩm: xóa khóa 24 giờ rồi cộng máu. */
+export function refillHearts(amount: number): number {
+  localStorage.removeItem(LOCK_KEY);
+  const raw = parseInt(localStorage.getItem(HEARTS_KEY) ?? '0', 10);
+  const current = Number.isFinite(raw) ? Math.max(0, raw) : 0;
+  const next = Math.min(MAX_HEARTS, current + amount);
+  localStorage.setItem(HEARTS_KEY, String(next));
+  return next;
+}

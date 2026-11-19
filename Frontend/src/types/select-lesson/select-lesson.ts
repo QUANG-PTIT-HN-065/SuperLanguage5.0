@@ -6,6 +6,7 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader, logoutLearner, renderLearnerHeader } from "../shared/learner-header";
 import { readHearts } from "../shared/hearts";
+import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import "../home/lesson-quiz";
 
 type TargetLang = 'ja' | 'en' | 'vi';
@@ -78,9 +79,13 @@ class SelectLessonManager {
     this.loadUserData();
     this.bindEvents();
     this.applyCurrentLanguage();
-    this.renderSessions();
+    if (isLearnerAuthenticated()) {
+      showSkeleton(this.sessionsGridEl, 'session-cards', { tone: 'dark', count: 8 });
+      void this.loadDatabaseCatalog();
+    } else {
+      this.renderSessions();
+    }
     this.updateStatusCard();
-    if (isLearnerAuthenticated()) void this.loadDatabaseCatalog();
     void initializeLearnerHeader({ bindControls: false, loadProfile: false });
     document.body.dataset.pageState = "ready";
     window.dispatchEvent(new Event("learning:ready"));
@@ -103,14 +108,16 @@ class SelectLessonManager {
       const path = paths.find((item) => item.language_code === this.currentLang) ?? paths[0];
       const pathId = Number(path?.id);
       if (!pathId) {
-        this.showToast('Database chưa có lộ trình cho ngôn ngữ này. Hãy nạp SeedData/<lang>/import.sql vào Supabase.');
+        this.showToast('Chưa có lộ trình để học');
+        this.renderSessions();
         return;
       }
       const detail = await slanguageApi(`/api/v1/vocabulary/learning-paths/${pathId}`);
       const detailData = (detail.data ?? {}) as Record<string, unknown>;
       const topics = Array.isArray(detailData.topics) ? detailData.topics as Record<string, unknown>[] : [];
       if (!topics.length) {
-        this.showToast('Lộ trình chưa có chủ đề nào trong Database. Hãy nạp SeedData/<lang>/import.sql vào Supabase.');
+        this.showToast('Chưa có lộ trình để học');
+        this.renderSessions();
         return;
       }
       this.dbPathId = pathId;
@@ -127,6 +134,7 @@ class SelectLessonManager {
       this.updateStatusCard();
     } catch (error) {
       this.showToast(error instanceof Error ? error.message : 'Không thể tải lộ trình từ Database.');
+      this.renderSessions();
     }
   }
 
@@ -364,13 +372,14 @@ class SelectLessonManager {
   }
 
   private renderSessions(): void {
+    clearSkeleton(this.sessionsGridEl);
     this.sessionsGridEl.innerHTML = '';
 
     if (!this.sessionsList.length) {
       this.sessionsGridEl.innerHTML = `
         <div class="sessions-empty">
-          <i class="fa-solid fa-database"></i>
-          <p>Chưa tải được danh sách chủ đề từ Database. Vui lòng nạp SeedData rồi tải lại trang.</p>
+          <i class="fa-solid fa-route"></i>
+          <p>Chưa có lộ trình để học</p>
         </div>`;
       return;
     }
@@ -527,7 +536,7 @@ class SelectLessonManager {
         this.showToast('Cần đăng nhập tài khoản học viên để tải bài đọc từ Database.');
         window.location.assign('../login/index.html');
       } else {
-        this.showToast('Chưa tải được lộ trình từ Database. Kiểm tra nạp SeedData hoặc ngôn ngữ trong hồ sơ.');
+        this.showToast('Chưa có lộ trình để học');
       }
       return;
     }

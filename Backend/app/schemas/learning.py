@@ -30,6 +30,12 @@ class LessonAnswerResult(BaseModel):
     already_checked: bool
 
 
+class LessonBoostInfo(BaseModel):
+    item_id: str
+    title: str
+    multiplier: float
+
+
 class LessonCompletionResult(BaseModel):
     lesson_id: int
     score: int
@@ -41,6 +47,7 @@ class LessonCompletionResult(BaseModel):
     xp_into_level: int
     current_streak: int
     already_completed: bool
+    boost: LessonBoostInfo | None = None
 
 
 class VocabularyWordReview(BaseModel):

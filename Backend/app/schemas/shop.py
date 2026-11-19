@@ -62,3 +62,31 @@ class ShopPurchaseRequest(BaseModel):
 
     request_id: UUID
     item_id: str = Field(min_length=1, max_length=80)
+
+
+class ShopBoostActivateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    request_id: UUID
+
+
+class ShopBoostActivation(BaseModel):
+    item_id: str
+    title: str
+    multiplier: float = Field(gt=1)
+    already_active: bool = False
+
+
+class ShopUseItemRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    request_id: UUID
+    item_id: str = Field(min_length=1, max_length=80)
+    context: str = Field(default="", max_length=80)
+
+
+class ShopItemUsageResult(BaseModel):
+    item_id: str
+    title: str
+    quantity_left: int = Field(ge=0)
+    already_used: bool = False
