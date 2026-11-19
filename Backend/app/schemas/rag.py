@@ -7,7 +7,7 @@ class RAGDocumentCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     title: str = Field(min_length=1, max_length=150)
-    language_code: Literal["English", "Japanese", "all"]
+    language_code: Literal["English", "Japanese", "Vietnamese", "all"]
     content: str = Field(min_length=1, max_length=20_000)
 
     @field_validator("title", "content")

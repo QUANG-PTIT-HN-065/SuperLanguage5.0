@@ -1,5 +1,6 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { renderLearnerHeader } from "../shared/learner-header";
+import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 
 interface DailyQuest {
   id: string;
@@ -78,18 +79,22 @@ function clearServerData(message: string): void {
   setText("headerStreakVal", "—");
   setText("headerHeartsVal", "—");
   setText("sidebarStreakValue", "— Ngày");
+  clearSkeleton("homeDailyQuests");
   document.getElementById("homeDailyQuests")?.replaceChildren(
     document.createTextNode(message),
   );
+  clearSkeleton("homeRankingList");
   document.getElementById("homeRankingList")?.replaceChildren(
     document.createTextNode(message),
   );
+  clearSkeleton(document.querySelector(".streak-days"));
   document.querySelector(".streak-days")?.replaceChildren();
 }
 
 function renderDailyQuests(quests: DailyQuest[]): void {
   const container = document.getElementById("homeDailyQuests");
   if (!container) return;
+  clearSkeleton(container);
   container.replaceChildren();
 
   if (!quests.length) {
@@ -137,6 +142,7 @@ function renderDailyQuests(quests: DailyQuest[]): void {
 function renderStreakWeek(days: StreakDay[]): void {
   const container = document.querySelector(".streak-days");
   if (!container) return;
+  clearSkeleton(container);
   container.replaceChildren();
   const labels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
   const today = getTodayKey();
@@ -174,6 +180,7 @@ function renderStreakWeek(days: StreakDay[]): void {
 function renderLeaderboard(entries: WeeklyLeaderboardEntry[]): void {
   const container = document.getElementById("homeRankingList");
   if (!container) return;
+  clearSkeleton(container);
   container.replaceChildren();
 
   if (!entries.length) {
@@ -238,6 +245,9 @@ async function loadLearnerDashboard(): Promise<void> {
   }
 
   showStatus("Đang tải dữ liệu học tập từ máy chủ.");
+  showSkeleton("homeDailyQuests", "quest-rows", { tone: "amethyst" });
+  showSkeleton(document.querySelector(".streak-days"), "streak-week", { tone: "amethyst" });
+  showSkeleton("homeRankingList", "rank-rows", { tone: "amethyst" });
   try {
     const [overviewResponse, dashboardResponse] = await Promise.all([
       slanguageApi<unknown>("/api/v1/me"),

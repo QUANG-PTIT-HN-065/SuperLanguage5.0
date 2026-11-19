@@ -130,6 +130,23 @@ class AIServiceTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, ("Hello!", "Tốt."))
 
+    def test_retrieved_document_is_not_returned_when_provider_echoes_it(self):
+        context = [
+            "Source: grammar\n"
+            "A long grammar document with rules and examples that must remain internal "
+            "to the assistant and must not be shown verbatim to the learner."
+        ]
+        result = _parse_response(
+            "[IN_SCOPE]\n[AI Response]\n"
+            "A long grammar document with rules and examples that must remain internal "
+            "to the assistant and must not be shown verbatim to the learner.\n"
+            "Use a before a consonant sound.\n"
+            "---\n[Feedback in Vietnamese]\nTốt.",
+            context,
+        )
+
+        self.assertEqual(result, ("Use a before a consonant sound.", "Tốt."))
+
     @patch("app.services.ai_service.genai.Client")
     @patch("app.services.ai_service.settings")
     async def test_translation_request_works_without_a_vector_match(

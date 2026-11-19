@@ -1,3 +1,5 @@
+import "../../styles/shared/toast.css";
+
 export type ToastType = "success" | "error" | "info";
 
 export interface ToastOptions {

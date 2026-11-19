@@ -11,6 +11,7 @@
 
 import { slanguageApi, slanguageApiAudio } from "../shared/api-client";
 import { initializeLearnerHeader, logoutLearner } from "../shared/learner-header";
+import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import {
   formatHeartLock,
   gainHearts,
@@ -19,6 +20,7 @@ import {
   readHearts,
   spendHearts,
 } from "../shared/hearts";
+import { activateBestBoost, tryHealHearts } from "../shared/shop-items";
 
 type DungeonDifficulty = 'easy' | 'normal' | 'hard';
 type TargetLang = 'ja' | 'en' | 'vi';
@@ -112,7 +114,6 @@ interface DungeonNode {
   xpReward: number;
   heartPenalty: number;
   status: 'mastered' | 'current' | 'available' | 'locked';
-  premiumLocked?: boolean;
   parents: string[];
   objectives: string[];
   preview: string;
@@ -190,9 +191,6 @@ class SlanguageDungeonTree {
   private totalXP: number = 0;
   private currentHearts: number = 5;
   private maxHearts: number = 5;
-  // Số tầng miễn phí; các tầng sau là khu vực Premium
-  private readonly FREE_TIERS = 2;
-  private isPremiumUser = false;
   private selectedNode: DungeonNode | null = null;
   private selectedChoiceIdx: number | null = null;
 
@@ -292,6 +290,7 @@ class SlanguageDungeonTree {
         this.updateStatsDisplays();
       }
     });
+    showSkeleton(this.treeNodesFlow, 'dungeon', { tone: 'dark' });
     void this.loadDungeon();
   }
 
@@ -343,7 +342,6 @@ class SlanguageDungeonTree {
     if (savedXP) {
       this.totalXP = parseInt(savedXP, 10) || 0;
     }
-    this.isPremiumUser = localStorage.getItem('slanguage_is_premium') === 'true';
     this.currentHearts = readHearts();
   }
 
@@ -543,6 +541,7 @@ class SlanguageDungeonTree {
       this.applyStatuses();
       this.renderTree();
     } catch (error) {
+      clearSkeleton(this.treeNodesFlow);
       this.showToast(error instanceof Error ? error.message : 'Không thể tải dungeon của chủ đề từ Database.');
       window.setTimeout(() => window.location.replace('../select-lesson/index.html'), 3000);
     }
@@ -675,10 +674,9 @@ class SlanguageDungeonTree {
         .filter((node) => node.stage === stage - 1 && !node.isHub)
         .some((node) => this.mastered.has(node.id));
     for (const node of this.nodes) {
-      node.premiumLocked = !this.isPremiumUser && node.stage > this.FREE_TIERS && !this.mastered.has(node.id);
       if (this.mastered.has(node.id)) {
         node.status = 'mastered';
-      } else if (node.premiumLocked || !stageOpen(node.stage) || (!node.isHub && !this.mastered.has(this.hubId(node.stage)))) {
+      } else if (!stageOpen(node.stage) || (!node.isHub && !this.mastered.has(this.hubId(node.stage)))) {
         node.status = 'locked';
       } else {
         node.status = 'available';
@@ -708,7 +706,6 @@ class SlanguageDungeonTree {
           Mỗi tầng gồm một mốc <strong>bài đọc riêng</strong> tải từ Database (5 bài/chủ đề) và 3 nhánh thử thách
           <strong>Dễ / Vừa / Khó</strong> sinh câu hỏi ngẫu nhiên từ từ vựng của chủ đề.
           Đọc xong mốc để mở nhánh, vượt tầng trước để mở tầng sau; tầng 5 có Boss quiz AI 25 câu mở chủ đề kế tiếp.
-          ${this.isPremiumUser ? '' : `Tầng ${this.FREE_TIERS + 1} trở lên là <strong>khu vực Premium 👑</strong> — cần nâng cấp để học tiếp.`}
         </p>`;
     }
 
@@ -736,6 +733,7 @@ class SlanguageDungeonTree {
       }
     });
 
+    clearSkeleton(this.treeNodesFlow);
     this.treeNodesFlow.innerHTML = '';
     for (let s = 1; s <= 5; s++) {
       const stageData = stages[s];
@@ -745,8 +743,7 @@ class SlanguageDungeonTree {
 
       const stagePill = document.createElement('div');
       stagePill.className = 'dungeon-stage-pill';
-      const premiumTag = !this.isPremiumUser && s > this.FREE_TIERS ? ' <i class="fa-solid fa-crown"></i>' : '';
-      stagePill.innerHTML = `<i class="fa-solid fa-dungeon"></i> TẦNG ${s}: ${stageData.hub ? stageData.hub.stageName : `CHỦ ĐỀ ${s}`}${premiumTag}`;
+      stagePill.innerHTML = `<i class="fa-solid fa-dungeon"></i> TẦNG ${s}: ${stageData.hub ? stageData.hub.stageName : `CHỦ ĐỀ ${s}`}`;
       stageEl.appendChild(stagePill);
 
       if (stageData.hub) {
@@ -785,9 +782,6 @@ class SlanguageDungeonTree {
     if (node.status === 'mastered') {
       statusBadgeHtml = `<div class="node-status-badge mastered"><i class="fa-solid fa-check"></i></div>`;
       statusText = node.isHub ? 'Đã đọc bài 📖' : (node.official ? 'Đã hạ Boss 🌟' : 'Đã vượt ải 🌟');
-    } else if (node.premiumLocked) {
-      statusBadgeHtml = `<div class="node-status-badge locked premium"><i class="fa-solid fa-crown"></i></div>`;
-      statusText = node.isHub ? 'Mốc Premium 👑 — cần nâng cấp' : 'Ải Premium 👑 — cần nâng cấp';
     } else if (node.status === 'current') {
       statusBadgeHtml = `<div class="node-status-badge current"><i class="fa-solid fa-play"></i></div>`;
       statusText = node.isHub ? 'Đang đọc 📖' : 'Đang mở ⚡';
@@ -879,15 +873,18 @@ class SlanguageDungeonTree {
     `;
 
     el.addEventListener('click', () => {
-      if (node.premiumLocked) {
-        this.showPremiumModal();
-        return;
-      }
-      if (!node.isHub && isHeartsLocked()) {
-        this.showToast(`💔 Hết máu! Sinh lực bị khóa hồi 24 giờ — còn ${formatHeartLock(heartLockRemainingMs())} nữa mới hồi đầy.`);
-        return;
-      }
-      void this.openModal(node);
+      void (async () => {
+        if (!node.isHub && isHeartsLocked()) {
+          const healed = await tryHealHearts();
+          if (!healed) {
+            this.showToast(`💔 Hết máu! Sinh lực bị khóa hồi 24 giờ — còn ${formatHeartLock(heartLockRemainingMs())} nữa mới hồi đầy. Mua Hồi Phục Máu Siêu Tốc trong Cửa hàng để chơi tiếp ngay.`);
+            return;
+          }
+          this.currentHearts = readHearts();
+          this.updateStatsDisplays();
+        }
+        void this.openModal(node);
+      })();
     });
 
     return el;
@@ -1139,6 +1136,7 @@ class SlanguageDungeonTree {
       this.currentQuestionIdx = 0;
       await this.ensureExtendedPool();
       this.currentQuestionsList = this.generateTrials(node);
+      if (node.status !== 'locked') void activateBestBoost();
       this.renderCurrentQuestion();
     }
 
@@ -1588,54 +1586,6 @@ class SlanguageDungeonTree {
     this.stopAudio();
   }
 
-  private showPremiumModal(): void {
-    let overlay = document.getElementById('premiumModalOverlay');
-    if (!overlay) {
-      overlay = document.createElement('div');
-      overlay.id = 'premiumModalOverlay';
-      overlay.className = 'node-modal-overlay active';
-      overlay.innerHTML = `
-        <div class="premium-modal-card">
-          <div class="premium-modal-icon"><i class="fa-solid fa-crown"></i></div>
-          <h3>Nâng cấp Premium 👑</h3>
-          <p class="premium-modal-lead">Nửa còn lại của hành trình (Tầng ${this.FREE_TIERS + 1} → Tầng 5) là khu vực dành riêng cho thành viên Premium. Nâng cấp để mở khoá toàn bộ bài đọc, ải thử thách và XP phía sau.</p>
-          <div class="premium-plan-row">
-            <div class="premium-plan-card">
-              <div class="premium-plan-name">Premium Tháng</div>
-              <div class="premium-plan-price">99.000đ</div>
-              <div class="premium-plan-note">/ 30 ngày</div>
-            </div>
-            <div class="premium-plan-card featured">
-              <div class="premium-plan-badge">Tiết kiệm nhất</div>
-              <div class="premium-plan-name">Premium Vĩnh Viễn</div>
-              <div class="premium-plan-price">999.000đ</div>
-              <div class="premium-plan-note">không giới hạn</div>
-            </div>
-          </div>
-          <button type="button" id="premiumActivateBtn" class="premium-activate-btn"><i class="fa-solid fa-bolt"></i> Kích hoạt Premium (Demo)</button>
-          <button type="button" id="premiumCloseBtn" class="premium-later-btn">Để sau</button>
-        </div>`;
-      document.body.appendChild(overlay);
-      overlay.addEventListener('click', (event) => {
-        if (event.target === overlay) this.closePremiumModal();
-      });
-      document.getElementById('premiumCloseBtn')?.addEventListener('click', () => this.closePremiumModal());
-      document.getElementById('premiumActivateBtn')?.addEventListener('click', () => {
-        localStorage.setItem('slanguage_is_premium', 'true');
-        this.isPremiumUser = true;
-        this.applyStatuses();
-        this.renderTree();
-        this.closePremiumModal();
-        this.showToast('Kích hoạt Premium thành công! Toàn bộ hành trình đã mở khoá 👑');
-      });
-    }
-    overlay.classList.add('active');
-  }
-
-  private closePremiumModal(): void {
-    document.getElementById('premiumModalOverlay')?.classList.remove('active');
-  }
-
   private async handleTrialSubmission(): Promise<void> {
     if (!this.selectedNode || this.grading) return;
     const node = this.selectedNode;
@@ -1749,21 +1699,36 @@ class SlanguageDungeonTree {
         `;
 
         if (this.currentHearts === 0) {
-          this.currentTrialPhase = 'failed';
-          this.failReason = 'hearts';
-          this.modalTrialResult!.innerHTML = `
-            <div class="result-icon"><i class="fa-solid fa-heart-crack"></i></div>
-            <div class="result-text">
-              <strong>HẾT MÁU — THẤT BẠI!</strong>
-              <p>Bạn đã dùng hết sinh lực của bài học này. Sinh lực bị <strong>khóa hồi trong 24 giờ</strong> (còn ${formatHeartLock(heartLockRemainingMs())}). Bấm <strong>Thoát khỏi bài học</strong> để rời ải.</p>
-            </div>
-          `;
-          if (this.btnExecuteTrial) {
-            this.btnExecuteTrial.disabled = false;
-            this.btnExecuteTrial.className = 'btn-trial-action retry-action';
-            this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-door-open"></i> Thoát khỏi bài học`;
+          const healed = await tryHealHearts();
+          if (healed) {
+            this.currentHearts = readHearts();
+            this.updateStatsDisplays();
+            this.renderTrialHearts();
+            this.modalTrialResult!.className = 'modal-trial-result success';
+            this.modalTrialResult!.innerHTML = `
+              <div class="result-icon"><i class="fa-solid fa-heart-pulse"></i></div>
+              <div class="result-text">
+                <strong>HẾT MÁU — ĐÃ HỒI PHỤC +5 ❤️!</strong>
+                <p>Vật phẩm Hồi Phục Máu Siêu Tốc đã được dùng từ kho. Đáp án đúng: <strong>${escapeHtml(verdict.correctDisplay)}</strong>. Tiếp tục chinh phục các câu hỏi tiếp theo nào!</p>
+              </div>
+            `;
+          } else {
+            this.currentTrialPhase = 'failed';
+            this.failReason = 'hearts';
+            this.modalTrialResult!.innerHTML = `
+              <div class="result-icon"><i class="fa-solid fa-heart-crack"></i></div>
+              <div class="result-text">
+                <strong>HẾT MÁU — THẤT BẠI!</strong>
+                <p>Bạn đã dùng hết sinh lực của bài học này. Sinh lực bị <strong>khóa hồi trong 24 giờ</strong> (còn ${formatHeartLock(heartLockRemainingMs())}). Mua Hồi Phục Máu Siêu Tốc trong Cửa hàng để chơi tiếp ngay, hoặc bấm <strong>Thoát khỏi bài học</strong> để rời ải.</p>
+              </div>
+            `;
+            if (this.btnExecuteTrial) {
+              this.btnExecuteTrial.disabled = false;
+              this.btnExecuteTrial.className = 'btn-trial-action retry-action';
+              this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-door-open"></i> Thoát khỏi bài học`;
+            }
+            return;
           }
-          return;
         }
       }
 
@@ -1791,46 +1756,38 @@ class SlanguageDungeonTree {
         await this.finishBossQuiz(node);
         return;
       }
-      this.completeTrialNode(node);
+      await this.completeTrialNode(node);
     }
   }
 
-  private completeTrialNode(node: DungeonNode): void {
+  private async completeTrialNode(node: DungeonNode): Promise<void> {
     this.markMastered(node);
 
     let awardedXP = node.xpReward;
-    const activeExpBoost = localStorage.getItem('slanguage_active_exp_boost');
     let boostNote = '';
-    if (activeExpBoost === 'double_xp') {
-      awardedXP = node.xpReward * 2;
-      boostNote = ' (x2 XP Gấp Đôi!)';
-      localStorage.removeItem('slanguage_active_exp_boost');
-      localStorage.removeItem('slanguage_xp_boost_active');
-    } else if (activeExpBoost === 'boost_10') {
-      awardedXP = Math.round(node.xpReward * 1.1);
-      boostNote = ' (+10% Boost XP!)';
-      localStorage.removeItem('slanguage_active_exp_boost');
-      localStorage.removeItem('slanguage_xp_boost_active');
+    try {
+      const response = await slanguageApi('/api/v1/minigame/progress', {
+        method: 'POST',
+        body: { xp: node.xpReward, word_ids: [], use_boost: true },
+      });
+      const data = asRecord(response.data);
+      const finalXp = Number(data.xp);
+      if (Number.isFinite(finalXp) && finalXp >= 0) awardedXP = finalXp;
+      const boost = asRecord(data.boost);
+      if (typeof boost.title === 'string' && boost.title) boostNote = ` (${boost.title}!)`;
+    } catch {
+      // Không lưu được server: vẫn cộng XP gốc cục bộ như hành vi cũ.
     }
 
     this.totalXP += awardedXP;
     localStorage.setItem('slanguage_user_xp', this.totalXP.toString());
-    void slanguageApi('/api/v1/minigame/progress', {
-      method: 'POST',
-      body: { xp: awardedXP, word_ids: [] },
-    }).catch(() => undefined);
 
     const restoredHearts = gainHearts(1);
     if (restoredHearts > 0) this.currentHearts = restoredHearts;
     this.updateStatsDisplays();
     this.renderTree();
 
-    const hitPremiumWall = !this.isPremiumUser && node.stage >= this.FREE_TIERS && node.stage < 5;
-    if (hitPremiumWall) {
-      this.showToast(`Hoàn thành ải, nhận +${awardedXP} XP! Các tầng tiếp theo là khu vực Premium 👑 — nâng cấp để học tiếp.`);
-    } else {
-      this.showToast(`Tuyệt đỉnh! Đã hoàn thành ải, nhận +${awardedXP} XP${boostNote}. Các nhánh đường tiếp theo đã mở khóa!`);
-    }
+    this.showToast(`Tuyệt đỉnh! Đã hoàn thành ải, nhận +${awardedXP} XP${boostNote}. Các nhánh đường tiếp theo đã mở khóa!`);
     this.closeModal();
   }
 
@@ -1878,6 +1835,7 @@ class SlanguageDungeonTree {
         throw new Error('Máy chủ chưa trả về bộ câu hỏi Boss.');
       }
       this.currentQuestionsList = this.bossQuestions.map((question) => this.bossToTrial(question));
+      void activateBestBoost();
       this.renderCurrentQuestion();
     } catch (error) {
       this.currentTrialPhase = 'failed';
@@ -1917,7 +1875,7 @@ class SlanguageDungeonTree {
       this.grading = false;
       if (data.passed === true) {
         this.quizCompleted = true;
-        this.completeTrialNode(node);
+        await this.completeTrialNode(node);
         this.showToast(`🐉 Đã hạ Boss với 25/25 câu đúng! Chủ đề kế tiếp đã mở khóa.`);
       } else {
         const correctCount = Number(data.correct_count) || 0;
