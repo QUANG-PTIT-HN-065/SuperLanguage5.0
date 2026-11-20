@@ -102,6 +102,7 @@ class SlanguageProfile {
     this.bindTabs();
     this.bindForm();
     this.bindAvatarUpload();
+    this.bindPasswordForm();
     this.bindCertificates();
     this.bindPageTransitions();
     void initializeLearnerHeader({ loadProfile: false });
@@ -630,26 +631,185 @@ class SlanguageProfile {
   }
 
   private bindAvatarUpload(): void {
-    document.getElementById('btnChangeAvatar')?.addEventListener('click', () => {
-      void this.changeAvatar();
+    const button = document.getElementById('btnChangeAvatar');
+    const fileInput = document.getElementById('avatarFileInput') as HTMLInputElement | null;
+    if (!button || !fileInput) return;
+    button.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = '';
+      if (file) void this.uploadAvatar(file);
     });
   }
 
-  private async changeAvatar(): Promise<void> {
-    const newUrl = prompt('Nhập URL ảnh đại diện mới (bắt đầu bằng https://, để trống để hủy):');
-    if (!newUrl) return;
-    if (!newUrl.startsWith('https://')) {
-      this.showToast('URL ảnh đại diện phải bắt đầu bằng https://');
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('Không thể đọc file ảnh.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private async uploadAvatar(file: File): Promise<void> {
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      this.showToast('Chỉ chấp nhận ảnh JPG hoặc PNG.');
       return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      this.showToast('Ảnh vượt quá giới hạn 10MB.');
+      return;
+    }
+    const preview = document.getElementById('profileAvatarImg') as HTMLImageElement | null;
+    const previousSrc = preview?.src ?? '';
+    const button = document.getElementById('btnChangeAvatar') as HTMLButtonElement | null;
+    if (button) button.disabled = true;
     try {
-      const response = await slanguageApi('/api/v1/me', { method: 'PATCH', body: { avatar_url: newUrl } });
+      if (preview) preview.src = await this.readFileAsDataUrl(file);
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await slanguageApi('/api/v1/me/avatar', { method: 'POST', body: formData });
       this.me = asRecord(response.data);
       renderLearnerHeader(response.data);
-      this.populateFormFields();
-      this.showToast('Đã cập nhật ảnh đại diện học viên!');
+      const urlInput = document.getElementById('profAvatarUrl') as HTMLInputElement | null;
+      if (urlInput) urlInput.value = asText(asRecord(this.me.profile).avatar_url);
+      this.showToast('✅ Đã cập nhật ảnh đại diện!');
     } catch (error) {
-      this.showToast(error instanceof Error ? error.message : 'Không thể cập nhật ảnh đại diện.');
+      if (preview) preview.src = previousSrc;
+      this.showToast(error instanceof Error ? error.message : 'Không thể tải ảnh đại diện lên.');
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  private bindPasswordForm(): void {
+    const form = document.getElementById('passwordChangeForm') as HTMLFormElement | null;
+    if (!form) return;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      void this.changePassword();
+    });
+    form.querySelectorAll<HTMLButtonElement>('.pwd-toggle').forEach((toggle) => {
+      toggle.addEventListener('click', () => {
+        const input = document.getElementById(toggle.dataset.target ?? '') as HTMLInputElement | null;
+        if (!input) return;
+        const reveal = input.type === 'password';
+        input.type = reveal ? 'text' : 'password';
+        toggle.innerHTML = reveal
+          ? '<i class="fa-solid fa-eye-slash"></i>'
+          : '<i class="fa-solid fa-eye"></i>';
+      });
+    });
+    document.getElementById('pwdNew')?.addEventListener('input', () => this.renderPasswordStrength());
+    document.getElementById('pwdConfirm')?.addEventListener('input', () => this.renderPasswordMatch());
+  }
+
+  private renderPasswordStrength(): void {
+    const value = (document.getElementById('pwdNew') as HTMLInputElement | null)?.value ?? '';
+    const wrap = document.getElementById('pwdStrength');
+    const bar = document.getElementById('pwdStrengthBar');
+    const label = document.getElementById('pwdStrengthLabel');
+    if (!wrap || !bar || !label) return;
+    if (!value) {
+      wrap.hidden = true;
+      bar.style.width = '0%';
+      label.textContent = '';
+      this.renderPasswordMatch();
+      return;
+    }
+    wrap.hidden = false;
+    let score = 0;
+    if (value.length >= 8) score += 1;
+    if (value.length >= 12) score += 1;
+    if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
+    if (/\d/.test(value)) score += 1;
+    if (/[^A-Za-z0-9]/.test(value)) score += 1;
+    const levels = [
+      { width: '20%', color: '#ef4444', text: 'Rất yếu' },
+      { width: '40%', color: '#f97316', text: 'Yếu' },
+      { width: '60%', color: '#f59e0b', text: 'Trung bình' },
+      { width: '80%', color: '#10b981', text: 'Mạnh' },
+      { width: '100%', color: '#059669', text: 'Rất mạnh' },
+    ];
+    const level = levels[Math.max(0, Math.min(score, levels.length) - 1)];
+    bar.style.width = level.width;
+    bar.style.background = level.color;
+    label.textContent = `Độ mạnh: ${level.text}`;
+    label.style.color = level.color;
+    this.renderPasswordMatch();
+  }
+
+  private renderPasswordMatch(): void {
+    const newPassword = (document.getElementById('pwdNew') as HTMLInputElement | null)?.value ?? '';
+    const confirm = (document.getElementById('pwdConfirm') as HTMLInputElement | null)?.value ?? '';
+    const hint = document.getElementById('pwdMatchHint');
+    if (!hint) return;
+    if (!confirm) {
+      hint.textContent = '';
+      return;
+    }
+    const match = confirm === newPassword;
+    hint.textContent = match ? '✓ Mật khẩu xác nhận khớp' : '✗ Mật khẩu xác nhận chưa khớp';
+    hint.style.color = match ? '#059669' : '#b91c1c';
+  }
+
+  private showPasswordMessage(message: string, isError: boolean): void {
+    const element = document.getElementById('pwdMessage');
+    if (!element) return;
+    element.textContent = message;
+    element.hidden = false;
+    element.classList.toggle('is-error', isError);
+    element.classList.toggle('is-success', !isError);
+  }
+
+  private async changePassword(): Promise<void> {
+    const oldInput = document.getElementById('pwdOld') as HTMLInputElement | null;
+    const newInput = document.getElementById('pwdNew') as HTMLInputElement | null;
+    const confirmInput = document.getElementById('pwdConfirm') as HTMLInputElement | null;
+    const button = document.getElementById('btnChangePassword') as HTMLButtonElement | null;
+    const oldPassword = oldInput?.value ?? '';
+    const newPassword = newInput?.value ?? '';
+    const confirm = confirmInput?.value ?? '';
+
+    if (!oldPassword) {
+      this.showPasswordMessage('Vui lòng nhập mật khẩu hiện tại.', true);
+      return;
+    }
+    if (newPassword.length < 8) {
+      this.showPasswordMessage('Mật khẩu mới phải có ít nhất 8 ký tự.', true);
+      return;
+    }
+    if (newPassword !== confirm) {
+      this.showPasswordMessage('Mật khẩu xác nhận chưa khớp.', true);
+      return;
+    }
+    if (newPassword === oldPassword) {
+      this.showPasswordMessage('Mật khẩu mới phải khác mật khẩu cũ.', true);
+      return;
+    }
+
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang cập nhật...';
+    }
+    try {
+      await slanguageApi('/api/v1/me/password', {
+        method: 'POST',
+        body: { old_password: oldPassword, new_password: newPassword },
+      });
+      if (oldInput) oldInput.value = '';
+      if (newInput) newInput.value = '';
+      if (confirmInput) confirmInput.value = '';
+      this.renderPasswordStrength();
+      this.showPasswordMessage('✅ Đổi mật khẩu thành công!', false);
+      this.showToast('✅ Đã đổi mật khẩu thành công!');
+    } catch (error) {
+      this.showPasswordMessage(error instanceof Error ? error.message : 'Không thể đổi mật khẩu.', true);
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = '<i class="fa-solid fa-key"></i> Cập nhật mật khẩu';
+      }
     }
   }
 
