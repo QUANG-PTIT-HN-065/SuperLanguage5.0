@@ -1,31 +1,21 @@
 import { clearAuthTokens, clearLearnerCache, isLearnerAuthenticated, slanguageApi } from "./api-client";
 import { formatHeartLock, heartLockRemainingMs, isHeartsLocked, readHearts } from "./hearts";
 import { showToast } from "../ui/toast";
+import { applyI18n, getLocale, initI18n, localeLabel, setLocale, t, translateShell, LOCALE_EVENT, type UiLocale } from "./i18n";
 
 interface LearnerHeaderOptions {
   loadProfile?: boolean;
   bindControls?: boolean;
 }
 
-interface LanguageOption {
-  label: string;
-  flag: string;
-}
-
-const languages: Record<string, LanguageOption> = {
-  en: {
-    label: "Tiếng Anh",
-    flag: new URL("../../../assets/flags/flag-en.png", import.meta.url).href,
-  },
-  ja: {
-    label: "Tiếng Nhật",
-    flag: new URL("../../../assets/flags/flag-jp.png", import.meta.url).href,
-  },
-  vi: {
-    label: "Tiếng Việt",
-    flag: new URL("../../../assets/flags/flag-vn.png", import.meta.url).href,
-  },
+const FLAGS: Record<string, string> = {
+  en: new URL("../../../assets/flags/flag-en.png", import.meta.url).href,
+  ja: new URL("../../../assets/flags/flag-jp.png", import.meta.url).href,
+  vi: new URL("../../../assets/flags/flag-vn.png", import.meta.url).href,
 };
+
+// Navbar hiển thị ngôn ngữ GIAO DIỆN (i18n), tách khỏi ngôn ngữ học (target_language).
+let lastHeaderPayload: unknown = null;
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object"
@@ -42,18 +32,18 @@ function count(value: unknown): number {
   return Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0;
 }
 
-function updateLanguageDisplay(languageCode: string): void {
-  const language = languages[languageCode];
-  const label = language?.label || languageCode.toUpperCase() || "Chưa chọn";
+function updateLanguageDisplay(): void {
+  const locale = getLocale();
+  const label = localeLabel(locale);
   const currentLabel = document.getElementById("currentLangLabel");
   const currentFlag = document.getElementById("currentLangFlag");
   if (currentLabel) currentLabel.textContent = label;
-  if (currentFlag instanceof HTMLImageElement && language) {
-    currentFlag.src = language.flag;
+  if (currentFlag instanceof HTMLImageElement) {
+    currentFlag.src = FLAGS[locale] ?? FLAGS.vi;
     currentFlag.alt = label;
   }
   document.querySelectorAll<HTMLButtonElement>(".lang-dropdown-item, .menu-item[data-lang]").forEach((item) => {
-    const selected = item.dataset.lang === languageCode;
+    const selected = item.dataset.lang === locale;
     item.classList.toggle("active", selected);
     item.classList.toggle("is-selected", selected);
     if (selected) item.setAttribute("aria-current", "true");
@@ -77,6 +67,7 @@ function initialsAvatar(name: string): string {
 }
 
 export function renderLearnerHeader(payload: unknown): void {
+  lastHeaderPayload = payload;
   const data = asRecord(payload);
   const profile = asRecord(data.profile);
   const stats = asRecord(data.stats);
@@ -93,23 +84,24 @@ export function renderLearnerHeader(payload: unknown): void {
     element.textContent = name;
   });
   document.querySelectorAll<HTMLElement>(".user-info-text .role").forEach((element) => {
-    element.textContent = text(profile.role) === "admin" ? "Quản trị viên" : "Học viên";
+    element.textContent = text(profile.role) === "admin" ? t("role.admin") : t("role.learner");
   });
   const emailElement = document.querySelector<HTMLElement>("[data-learner-email], #profileEmail");
   if (emailElement) emailElement.textContent = email;
 
+  const localeTag = getLocale() === "en" ? "en-US" : getLocale() === "ja" ? "ja-JP" : "vi-VN";
   const xpElement = document.getElementById("headerXPVal")
     || document.getElementById("studyXp")
     || document.getElementById("vocabularyXp");
   if (xpElement) {
     xpElement.textContent = xpElement.closest(".hud-chip--xp")
-      ? xp.toLocaleString("vi-VN")
-      : `${xp.toLocaleString("vi-VN")} XP`;
+      ? xp.toLocaleString(localeTag)
+      : `${xp.toLocaleString(localeTag)} ${t("unit.xp")}`;
   }
   document.querySelectorAll<HTMLElement>("[data-learner-streak], .stat-chip.streak span").forEach((element) => {
     element.textContent = element.closest(".hud-chip--streak")
       ? String(streak)
-      : `${streak} Ngày`;
+      : `${streak} ${t("unit.day")}`;
   });
   document.querySelectorAll<HTMLElement>("#headerHeartsVal, .stat-chip.hearts span").forEach((element) => {
     element.textContent = `${hearts}/${maxHearts}`;
@@ -124,7 +116,7 @@ export function renderLearnerHeader(payload: unknown): void {
   document.querySelectorAll<HTMLImageElement>(".user-avatar-mini, #headerAvatar, #profileAvatarImg").forEach((img) => {
     img.src = avatarSrc;
   });
-  updateLanguageDisplay(languageCode);
+  updateLanguageDisplay();
 
   localStorage.setItem("slanguage_user_name", name);
   localStorage.setItem("slanguage_user_email", email);
@@ -159,23 +151,6 @@ function maybeWarnStreakExpiring(payload: unknown): void {
     duration: 9000,
     message: "Chuỗi học tập của bạn sắp hết hãy chủ động học tập hôm nay hoặc có thể sử dụng vật phẩm đóng băng để giữ chuỗi học tập",
   });
-}
-
-async function changeLearningLanguage(languageCode: string, button: HTMLButtonElement): Promise<void> {
-  if (!isLearnerAuthenticated()) return;
-  button.disabled = true;
-  try {
-    const response = await slanguageApi("/api/v1/me", {
-      method: "PATCH",
-      body: { target_language: languageCode },
-    });
-    renderLearnerHeader(response.data);
-    window.location.reload();
-  } catch (error) {
-    showHeaderMessage(error instanceof Error ? error.message : "Không thể cập nhật ngôn ngữ.");
-  } finally {
-    button.disabled = false;
-  }
 }
 
 export async function logoutLearner(): Promise<void> {
@@ -237,9 +212,10 @@ function bindHeaderControls(): void {
 
   document.querySelectorAll<HTMLButtonElement>(".lang-dropdown-item, .menu-item[data-lang]").forEach((button) => {
     button.addEventListener("click", () => {
-      const code = button.dataset.lang;
-      if (code && !button.classList.contains("active")) {
-        void changeLearningLanguage(code, button);
+      const code = button.dataset.lang as UiLocale | undefined;
+      if (code && code !== getLocale()) {
+        setLocale(code);
+        updateLanguageDisplay();
       }
       closeDropdowns();
     });
@@ -255,7 +231,15 @@ export async function initializeLearnerHeader(options: LearnerHeaderOptions = {}
   const authenticated = isLearnerAuthenticated();
   document.body.classList.toggle("user-authenticated", authenticated);
   document.body.classList.toggle("user-guest", !authenticated);
-  updateLanguageDisplay(localStorage.getItem("slanguage_active_language") || "ja");
+  initI18n();
+  updateLanguageDisplay();
+
+  window.addEventListener(LOCALE_EVENT, () => {
+    translateShell();
+    applyI18n();
+    updateLanguageDisplay();
+    if (lastHeaderPayload) renderLearnerHeader(lastHeaderPayload);
+  });
 
   if (options.bindControls !== false) bindHeaderControls();
   if (!authenticated || options.loadProfile === false) return;

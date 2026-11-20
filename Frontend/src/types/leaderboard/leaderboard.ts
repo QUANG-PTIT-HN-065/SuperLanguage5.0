@@ -1,6 +1,7 @@
 import { initializeLearnerHeader } from "../shared/learner-header";
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
+import { applyI18n, localeLabel, t, LOCALE_EVENT } from "../shared/i18n";
 
 type Period = "today" | "week" | "month" | "all";
 type Sort = "xp" | "streak" | "lessons" | "accuracy";
@@ -47,7 +48,20 @@ class LeaderboardApp {
     }
 
     void initializeLearnerHeader();
+    window.addEventListener(LOCALE_EVENT, () => {
+      applyI18n();
+      this.renderFilterLabels();
+      if (this.result) {
+        this.render();
+      } else {
+        const sticky = document.getElementById("stickyUserText");
+        if (sticky) sticky.textContent = t("lb.stickyLoading");
+      }
+    });
     this.bindEvents();
+    this.renderFilterLabels();
+    const sticky = document.getElementById("stickyUserText");
+    if (sticky) sticky.textContent = t("lb.stickyLoading");
     void this.load();
   }
 
@@ -55,7 +69,7 @@ class LeaderboardApp {
     const status = document.createElement("p");
     status.id = "leaderboardStatus";
     status.setAttribute("role", "status");
-    status.textContent = "Đang tải bảng xếp hạng…";
+    status.textContent = t("lb.loading");
     document.querySelector(".leaderboard-main")?.prepend(status);
     return status;
   }
@@ -115,7 +129,7 @@ class LeaderboardApp {
         this.search = name;
         this.refreshFromFirstPage();
       } else {
-        this.showMessage("Vị trí của bạn không nằm trong trang đang hiển thị.");
+        this.showMessage(t("lb.notOnPage"));
       }
     });
   }
@@ -145,7 +159,7 @@ class LeaderboardApp {
       for (const id of ["podiumTop1", "podiumTop2", "podiumTop3"]) {
         clearSkeleton(id);
       }
-      this.showMessage(error instanceof Error ? error.message : "Không thể tải bảng xếp hạng.");
+      this.showMessage(error instanceof Error ? error.message : t("lb.loadError"));
     } finally {
       this.setLoading(false);
     }
@@ -181,9 +195,9 @@ class LeaderboardApp {
               <span class="podium-title-tag">${this.languageName(entry.target_language)}</span>
               <span class="podium-xp-pill">${this.format(entry.xp)} XP</span>
               <div class="podium-stats-grid">
-                <span class="p-stat"><strong class="p-val">${this.format(entry.current_streak)}</strong><small class="p-lbl">ngày streak</small></span>
-                <span class="p-stat"><strong class="p-val">${this.format(entry.lessons_completed)}</strong><small class="p-lbl">bài học</small></span>
-                <span class="p-stat"><strong class="p-val">${this.format(entry.accuracy)}%</strong><small class="p-lbl">chính xác</small></span>
+                <span class="p-stat"><strong class="p-val">${this.format(entry.current_streak)}</strong><small class="p-lbl">${t("lb.streakDays")}</small></span>
+                <span class="p-stat"><strong class="p-val">${this.format(entry.lessons_completed)}</strong><small class="p-lbl">${t("lb.lessonsLabel")}</small></span>
+                <span class="p-stat"><strong class="p-val">${this.format(entry.accuracy)}%</strong><small class="p-lbl">${t("lb.accuracyLabel")}</small></span>
               </div>
             </div>
           </article>`
@@ -207,49 +221,53 @@ class LeaderboardApp {
             </div>
           </div>
           <div class="col-language"><span class="language-pill-tag">${this.languageName(entry.target_language)}</span></div>
-          <div class="col-level"><span class="level-chip">${this.format(entry.lessons_completed)} bài</span></div>
+          <div class="col-level"><span class="level-chip">${t("lb.lessonsCount", { count: this.format(entry.lessons_completed) })}</span></div>
           <div class="col-streak">
             <span class="streak-chip-mini"><i class="fa-solid fa-fire fire-icon"></i>${this.format(entry.current_streak)}</span>
             <span class="accuracy-score">${this.format(entry.accuracy)}%</span>
           </div>
           <div class="col-xp"><span class="xp-number">${this.format(entry.xp)} XP</span></div>
-          <div class="col-action">${entry.is_current_user ? "Bạn" : "—"}</div>
+          <div class="col-action">${entry.is_current_user ? t("lb.you") : "—"}</div>
         </div>`).join("")
-      : '<p class="empty-state">Chưa có học viên phù hợp với bộ lọc này.</p>';
+      : `<p class="empty-state">${t("lb.empty")}</p>`;
   }
 
   private renderSummary(items: LeaderboardEntry[]): void {
     const leader = this.page === 0 ? items[0] : undefined;
     this.setText(
       "championNameVal",
-      leader?.display_name || (this.page === 0 ? "Chưa có dữ liệu" : "—"),
+      leader?.display_name || (this.page === 0 ? t("lb.noData") : "—"),
     );
     const metric = leader
       ? {
           xp: `${this.format(leader.xp)} XP`,
-          streak: `${this.format(leader.current_streak)} ngày`,
-          lessons: `${this.format(leader.lessons_completed)} bài`,
+          streak: t("lb.daysCount", { count: this.format(leader.current_streak) }),
+          lessons: t("lb.lessonsCount", { count: this.format(leader.lessons_completed) }),
           accuracy: `${this.format(leader.accuracy)}%`,
         }[this.sort]
       : "—";
     this.setText("topScoreVal", metric);
-    this.setText("totalParticipantsVal", `${this.format(this.result?.total ?? 0)} học viên`);
+    this.setText("totalParticipantsVal", t("lb.learnersCount", { count: this.format(this.result?.total ?? 0) }));
     const championSubtitle = document.querySelector<HTMLElement>("#championNameVal + .summary-sub");
     if (championSubtitle) {
       championSubtitle.textContent = leader ? this.languageName(leader.target_language) : "—";
     }
     const scoreSubtitle = document.querySelector<HTMLElement>("#topScoreVal + .summary-sub");
-    if (scoreSubtitle) scoreSubtitle.textContent = leader ? `Theo tiêu chí ${this.sortLabel()}` : "—";
+    if (scoreSubtitle) scoreSubtitle.textContent = leader ? t("lb.byCriteria", { sort: this.sortLabel() }) : "—";
+    this.renderFilterLabels();
+  }
+
+  private renderFilterLabels(): void {
     const sectionTitle = document.querySelector<HTMLElement>(".detailed-table-section .section-header-title span");
-    if (sectionTitle) sectionTitle.textContent = `Bảng Xếp Hạng · ${this.sortLabel()}`;
+    if (sectionTitle) sectionTitle.textContent = t("lb.tableTitle", { sort: this.sortLabel() });
+    const labels: Record<Language, string> = {
+      all: t("lb.langAll"),
+      ja: t("lb.langJa"),
+      en: t("lb.langEn"),
+      vi: t("lb.langVi"),
+    };
     document.querySelectorAll<HTMLElement>("[data-lang-tab]").forEach((button) => {
-      const labels: Record<Language, string> = {
-        all: "Tất cả",
-        ja: "🇯🇵 Tiếng Nhật",
-        en: "🇺🇸 English",
-        vi: "🇻🇳 Tiếng Việt",
-      };
-      button.textContent = labels[button.dataset.langTab as Language] ?? "Tất cả";
+      button.textContent = labels[button.dataset.langTab as Language] ?? t("lb.langAll");
     });
   }
 
@@ -258,8 +276,12 @@ class LeaderboardApp {
     if (!sticky || !this.result) return;
     const currentUser = this.result.current_user;
     sticky.textContent = currentUser
-      ? `Hạng #${currentUser.rank} · ${localStorage.getItem("slanguage_user_name") || "Bạn"} · ${this.format(currentUser.xp)} XP`
-      : "Bạn chưa xuất hiện trong bảng xếp hạng này.";
+      ? t("lb.stickyRank", {
+          rank: currentUser.rank,
+          name: localStorage.getItem("slanguage_user_name") || t("lb.you"),
+          xp: this.format(currentUser.xp),
+        })
+      : t("lb.stickyNone");
   }
 
   private renderPagination(): void {
@@ -306,16 +328,15 @@ class LeaderboardApp {
   }
 
   private languageName(code: string): string {
-    const names: Record<string, string> = { ja: "Tiếng Nhật", en: "English", vi: "Tiếng Việt" };
-    return names[code] || code.toUpperCase();
+    return ["ja", "en", "vi"].includes(code) ? localeLabel(code) : code.toUpperCase();
   }
 
   private sortLabel(): string {
     const labels: Record<Sort, string> = {
-      xp: "XP",
-      streak: "Streak",
-      lessons: "bài hoàn thành",
-      accuracy: "độ chính xác",
+      xp: t("lb.sortLabelXp"),
+      streak: t("lb.sortLabelStreak"),
+      lessons: t("lb.sortLabelLessons"),
+      accuracy: t("lb.sortLabelAccuracy"),
     };
     return labels[this.sort];
   }

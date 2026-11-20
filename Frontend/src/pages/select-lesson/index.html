@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Lựa Chọn Buổi Học (Session)</title>
+  <title data-i18n="sl.docTitle">Slanguage - Lựa Chọn Buổi Học (Session)</title>
   <link rel="icon" type="image/png" href="../../../../../assets/logo.png">
   <link rel="apple-touch-icon" href="../../../../../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -141,14 +141,14 @@
     <section class="lesson-hero-card">
       <div class="hero-content">
         <div class="hero-badge-row">
-          <span class="hero-chip-pill"><i class="fa-solid fa-layer-group"></i> LỰA CHỌN BUỔI HỌC (SESSION)</span>
+          <span class="hero-chip-pill" data-i18n="sl.heroBadge"><i class="fa-solid fa-layer-group"></i> LỰA CHỌN BUỔI HỌC (SESSION)</span>
           <span class="hero-chip-pill gold" id="targetLangChip"><i class="fa-solid fa-language"></i> Mục tiêu: Tiếng Nhật</span>
-          <span class="hero-chip-pill red"><i class="fa-solid fa-lock"></i> BẮT BUỘC CHỌN TRƯỚC KHI VÀO HỌC</span>
+          <span class="hero-chip-pill red" data-i18n="sl.heroRequired"><i class="fa-solid fa-lock"></i> BẮT BUỘC CHỌN TRƯỚC KHI VÀO HỌC</span>
         </div>
         <h1 class="hero-title">
-          Danh Sách <span class="title-highlight" id="sessionCountText">Buổi Học (Session)</span>
+          <span data-i18n="sl.heroTitlePrefix">Danh Sách</span> <span class="title-highlight" id="sessionCountText" data-i18n="sl.sessionCountLabel">Buổi Học (Session)</span>
         </h1>
-        <p class="hero-desc">
+        <p class="hero-desc" data-i18n="sl.heroDesc">
           Vui lòng lựa chọn 1 buổi học bên dưới để mở khóa bản đồ hầm ngục và nội dung bài tập tương ứng. 
           Hệ thống sẽ dẫn bạn đến trang học tập với lộ trình được tối ưu riêng biệt.
         </p>
@@ -161,13 +161,13 @@
             <i class="fa-solid fa-circle-exclamation"></i>
           </div>
           <div class="status-info">
-            <span class="status-label">Trạng thái lựa chọn</span>
+            <span class="status-label" data-i18n="sl.statusLabel">Trạng thái lựa chọn</span>
             <div class="status-text" id="statusLessonText">Chưa chọn buổi học nào</div>
           </div>
         </div>
 
         <button type="button" class="btn-proceed-roadmap" id="btnProceedRoadmap" disabled title="Chọn 1 buổi học bên dưới để kích hoạt">
-          <span>Vào Trang Học Tập</span>
+          <span data-i18n="sl.proceed">Vào Trang Học Tập</span>
           <i class="fa-solid fa-arrow-right"></i>
         </button>
       </div>
@@ -176,13 +176,13 @@
     <!-- WORKSPACE CONTROLS: FILTERS & SEARCH -->
     <section class="lesson-controls-bar">
       <div class="filter-tabs" id="filterTabs">
-        <button class="filter-btn active" data-filter="all">Tất cả</button>
+        <button class="filter-btn active" data-filter="all" data-i18n="sl.filterAll">Tất cả</button>
         <!-- Các tab phân loại được sinh động từ dữ liệu Database bởi select-lesson.ts -->
       </div>
 
       <div class="search-box-wrap">
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
-        <input type="text" id="lessonSearchInput" class="search-input" placeholder="Tìm kiếm buổi học, chủ đề, từ khóa...">
+        <input type="text" id="lessonSearchInput" class="search-input" placeholder="Tìm kiếm buổi học, chủ đề, từ khóa..." data-i18n-placeholder="sl.searchPlaceholder">
       </div>
     </section>
 
@@ -198,7 +198,7 @@
   <!-- ================= LESSON WORKSPACE: READING + QUIZ (DATABASE) ================= -->
       <section class="lesson-workspace" id="lessonWorkspace" hidden aria-labelledby="lessonTitle">
         <div class="lesson-toolbar">
-          <button type="button" class="study-text-button" id="exitLesson">
+          <button type="button" class="study-text-button" id="exitLesson" data-i18n="sl.exitLesson">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H6"/><path d="m12 19-7-7 7-7"/></svg>
             Thoát bài học
           </button>
@@ -209,17 +209,18 @@
           id="lessonProgressTrack"
           role="progressbar"
           aria-label="Tiến độ bài học"
+          data-i18n-aria-label="sl.progressAria"
           aria-valuemin="0"
           aria-valuemax="100"
           aria-valuenow="0"
         ><span id="lessonProgressFill"></span></div>
         <p class="lesson-generation-notice" id="lessonGenerationNotice" role="status" aria-live="polite" hidden></p>
         <section class="lesson-reading" id="lessonReading" hidden aria-labelledby="lessonReadingTitle">
-          <p class="lesson-reading__eyebrow">Bài đọc chủ đề · tải từ Database</p>
+          <p class="lesson-reading__eyebrow" data-i18n="sl.readingEyebrow">Bài đọc chủ đề · tải từ Database</p>
           <h2 id="lessonReadingTitle" tabindex="-1"></h2>
           <div class="lesson-reading__text" id="lessonReadingText"></div>
           <div class="lesson-actions">
-            <button type="button" class="study-primary-button" id="startLessonQuiz">
+            <button type="button" class="study-primary-button" id="startLessonQuiz" data-i18n="sl.startQuiz">
               Làm bài kiểm tra
             </button>
           </div>
@@ -232,10 +233,10 @@
           <div class="lesson-options" id="lessonOptions" role="group" aria-label="Chọn một đáp án"></div>
           <p class="lesson-feedback" id="lessonFeedback" role="status" aria-live="polite"></p>
           <div class="lesson-actions">
-            <button type="button" class="study-primary-button" id="checkLessonAnswer" disabled>
+            <button type="button" class="study-primary-button" id="checkLessonAnswer" disabled data-i18n="sl.checkAnswer">
               Kiểm tra đáp án
             </button>
-            <button type="button" class="study-primary-button" id="nextLessonQuestion" hidden>
+            <button type="button" class="study-primary-button" id="nextLessonQuestion" hidden data-i18n="sl.nextQuestion">
               Câu tiếp theo
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
@@ -243,7 +244,7 @@
         </article>
         <dialog class="lesson-result" id="lessonResult" aria-labelledby="lessonResultTitle">
           <div class="lesson-result__content">
-            <button type="button" class="lesson-result__close" id="closeLessonResult" aria-label="Đóng tổng kết">
+            <button type="button" class="lesson-result__close" id="closeLessonResult" aria-label="Đóng tổng kết" data-i18n-aria-label="sl.closeResultAria">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
             </button>
             <div class="lesson-result__headline" id="lessonResultHeadline">
@@ -268,11 +269,11 @@
             <p class="lesson-result__delta" id="lessonScoreDelta" hidden></p>
             <div class="lesson-result__rewards" id="lessonResultRewards">
               <div class="lesson-result__reward">
-                <span>XP nhận được</span>
+                <span data-i18n="sl.rewardXp">XP nhận được</span>
                 <strong id="lessonResultXp">+0 XP</strong>
               </div>
               <div class="lesson-result__reward">
-                <span>Chuỗi học hiện tại</span>
+                <span data-i18n="sl.rewardStreak">Chuỗi học hiện tại</span>
                 <strong id="lessonResultStreak">0 ngày</strong>
               </div>
             </div>
@@ -299,7 +300,7 @@
               <button type="button" class="study-primary-button" id="retryLesson" hidden>
                 Thử lại bài học
               </button>
-              <button type="button" class="study-primary-button" id="continueToPath" hidden>
+              <button type="button" class="study-primary-button" id="continueToPath" hidden data-i18n="sl.continue">
                 Tiếp tục
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m12 5 7 7-7 7"/></svg>
               </button>
@@ -321,7 +322,7 @@
         <video id="loadingVideoPlayer" muted src="../../../../../assets/loading.mp4" loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
-        <span class="loading-title" id="loadingOverlayTitle">Đang chuẩn bị buổi học...</span>
+        <span class="loading-title" id="loadingOverlayTitle" data-i18n="sl.loadingTitle">Đang chuẩn bị buổi học...</span>
       </div>
     </div>
   </div>
@@ -340,52 +341,52 @@
           <img src="../../../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
-        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;" data-i18n="sl.footerIntro">
           Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
         </p>
       </div>
 
       <!-- Cột 2: Chương trình học -->
       <div class="footer-col">
-        <h4>Chương trình học</h4>
+        <h4 data-i18n="sl.footerPrograms">Chương trình học</h4>
         <ul>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
-          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()" data-i18n="sl.footerProgEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()" data-i18n="sl.footerProgJa">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()" data-i18n="sl.footerProgVi">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)" data-i18n="sl.footerProgAi">Luyện ngữ âm với AI</a></li>
         </ul>
       </div>
 
       <!-- Cột 3: Thông tin liên hệ -->
       <div class="footer-col">
-        <h4>Thông tin liên hệ</h4>
+        <h4 data-i18n="sl.footerContact">Thông tin liên hệ</h4>
         <ul class="footer-contact-list">
           <li>
             <i class="fa-solid fa-phone"></i>
             <div>
-              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <span class="contact-label" data-i18n="sl.footerHotline">Hotline tư vấn & hỗ trợ:</span>
               <a href="tel:19006868" class="contact-val">1900 6868</a>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-envelope"></i>
             <div>
-              <span class="contact-label">Email học vụ:</span>
+              <span class="contact-label" data-i18n="sl.footerEmail">Email học vụ:</span>
               <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-location-dot"></i>
             <div>
-              <span class="contact-label">Trụ sở học thuật:</span>
-              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+              <span class="contact-label" data-i18n="sl.footerAddress">Trụ sở học thuật:</span>
+              <span class="contact-val" data-i18n="sl.footerAddressVal">Giữa cầu Vĩnh Tuy, Hà Nội</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-clock"></i>
             <div>
-              <span class="contact-label">Thời gian làm việc:</span>
-              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+              <span class="contact-label" data-i18n="sl.footerHours">Thời gian làm việc:</span>
+              <span class="contact-val" data-i18n="sl.footerHoursVal">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
             </div>
           </li>
         </ul>
@@ -393,34 +394,34 @@
 
       <!-- Cột 4: Cam kết chất lượng -->
       <div class="footer-col">
-        <h4>Cam kết chất lượng</h4>
+        <h4 data-i18n="sl.footerCommit">Cam kết chất lượng</h4>
         <ul class="footer-commit-list">
           <li>
             <i class="fa-solid fa-shield-halved"></i>
             <div>
-              <strong>Chuẩn đầu ra quốc tế</strong>
-              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+              <strong data-i18n="sl.footerC1t">Chuẩn đầu ra quốc tế</strong>
+              <span data-i18n="sl.footerC1d">Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-rotate-left"></i>
             <div>
-              <strong>Cam kết hoàn học phí</strong>
-              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+              <strong data-i18n="sl.footerC2t">Cam kết hoàn học phí</strong>
+              <span data-i18n="sl.footerC2d">Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-user-graduate"></i>
             <div>
-              <strong>Đồng hành 1-1 chuyên sâu</strong>
-              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+              <strong data-i18n="sl.footerC3t">Đồng hành 1-1 chuyên sâu</strong>
+              <span data-i18n="sl.footerC3d">Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-infinity"></i>
             <div>
-              <strong>Quyền lợi học trọn đời</strong>
-              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+              <strong data-i18n="sl.footerC4t">Quyền lợi học trọn đời</strong>
+              <span data-i18n="sl.footerC4d">Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
             </div>
           </li>
         </ul>
@@ -428,8 +429,8 @@
     </div>
 
     <div class="footer-bottom">
-      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.</div>
-      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
+      <div data-i18n="sl.footerCopyright">&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.</div>
+      <div data-i18n="sl.footerTagline">Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
     </div>
   </footer>
 

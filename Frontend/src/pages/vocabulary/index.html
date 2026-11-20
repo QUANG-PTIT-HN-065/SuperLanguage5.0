@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Luyện Từ Vựng Thông Minh</title>
+  <title data-i18n="vc.pageTitle">Slanguage - Luyện Từ Vựng Thông Minh</title>
   <link rel="icon" type="image/png" href="../../../assets/logo.png">
   <link rel="apple-touch-icon" href="../../../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -82,7 +82,7 @@
 
         <!-- User Account Dropdown (Shown when logged in) -->
         <div class="user-dropdown auth-only" id="userDropdown">
-          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="vc.userMenuTitle">
             <img src="../../../assets/logo.png" alt="Avatar" class="user-avatar-mini">
             <div class="user-info-text">
               <div class="name">Học viên</div>
@@ -147,19 +147,19 @@
       <div class="vocab-hero-stats">
         <div class="stat-box">
           <span class="stat-number" id="statTotalWords">0</span>
-          <span class="stat-label">Tổng từ đã nạp</span>
+          <span class="stat-label" data-i18n="vc.statTotal">Tổng từ đã nạp</span>
         </div>
         <div class="stat-box highlight">
           <span class="stat-number" id="statMasteredWords">0</span>
-          <span class="stat-label">Đã thuộc</span>
+          <span class="stat-label" data-i18n="vc.statMastered">Đã thuộc</span>
         </div>
         <div class="stat-box urgent">
           <span class="stat-number" id="statReviewWords">0</span>
-          <span class="stat-label">Chưa thuộc</span>
+          <span class="stat-label" data-i18n="vc.statUnmastered">Chưa thuộc</span>
         </div>
         <div class="stat-box">
           <span class="stat-number" id="statRetentionRate">0%</span>
-          <span class="stat-label">Tỷ lệ ghi nhớ</span>
+          <span class="stat-label" data-i18n="vc.statRetention">Tỷ lệ ghi nhớ</span>
         </div>
       </div>
     </section>
@@ -167,21 +167,15 @@
     <!-- SECTION NAVIGATION TABS -->
     <section class="mode-nav-bar">
       <div class="mode-tabs">
-        <button type="button" class="mode-tab active" data-tab="flashcard">
-          <i class="fa-solid fa-layer-group"></i> Thẻ Flashcard 3D
-        </button>
-        <button type="button" class="mode-tab" data-tab="quiz">
-          <i class="fa-solid fa-bolt-lightning"></i> Luyện tập từ vựng
-        </button>
-        <button type="button" class="mode-tab" data-tab="vault">
-          <i class="fa-solid fa-book-bookmark"></i> Sổ Tay Từ Vựng
-        </button>
+        <button type="button" class="mode-tab active" data-tab="flashcard" data-i18n="vc.tabFlashcard"><i class="fa-solid fa-layer-group"></i> Thẻ Flashcard 3D</button>
+        <button type="button" class="mode-tab" data-tab="quiz" data-i18n="vc.tabQuiz"><i class="fa-solid fa-bolt-lightning"></i> Luyện tập từ vựng</button>
+        <button type="button" class="mode-tab" data-tab="vault" data-i18n="vc.tabVault"><i class="fa-solid fa-book-bookmark"></i> Sổ Tay Từ Vựng</button>
       </div>
 
       <div class="deck-filter-wrap">
-        <span class="deck-label"><i class="fa-solid fa-filter"></i> Chủ đề:</span>
+        <span class="deck-label" data-i18n="vc.deckLabel"><i class="fa-solid fa-filter"></i> Chủ đề:</span>
         <select id="deckSelect" class="deck-select">
-          <option value="all">Đang tải chủ đề...</option>
+          <option value="all" data-i18n="vc.deckLoading">Đang tải chủ đề...</option>
         </select>
       </div>
     </section>
@@ -193,7 +187,7 @@
         <!-- Header deck info & Progress -->
         <div class="deck-status-bar">
           <div class="deck-counter">
-            <span class="label">Tiến trình thẻ:</span>
+            <span class="label" data-i18n="vc.cardProgress">Tiến trình thẻ:</span>
             <strong id="cardIndexLabel">0</strong> / <span id="cardTotalLabel">0</span>
           </div>
 
@@ -202,10 +196,10 @@
           </div>
 
           <div class="deck-actions">
-            <button type="button" class="deck-tool-btn" id="btnShuffle" title="Xáo trộn thứ tự thẻ">
+            <button type="button" class="deck-tool-btn" id="btnShuffle" title="Xáo trộn thứ tự thẻ" data-i18n-title="vc.shuffleTitle">
               <i class="fa-solid fa-shuffle"></i>
             </button>
-            <button type="button" class="deck-tool-btn" id="btnSpeakerPrompt" title="Phát âm từ vựng">
+            <button type="button" class="deck-tool-btn" id="btnSpeakerPrompt" title="Phát âm từ vựng" data-i18n-title="vc.speakTitle">
               <i class="fa-solid fa-volume-high"></i>
             </button>
           </div>
@@ -213,12 +207,12 @@
 
         <!-- 3D Card Stage with Side Arrow Navigation -->
         <div class="flashcard-stage-wrapper">
-          <button type="button" class="card-side-arrow-btn prev" id="btnPrevCard" title="Thẻ trước (Phím mũi tên trái ←)" aria-label="Thẻ trước">
+          <button type="button" class="card-side-arrow-btn prev" id="btnPrevCard" title="Thẻ trước (Phím mũi tên trái ←)" aria-label="Thẻ trước" data-i18n-title="vc.prevTitle" data-i18n-aria-label="vc.prevAria">
             <i class="fa-solid fa-chevron-left"></i>
           </button>
 
           <div class="flashcard-stage">
-            <div class="flashcard-3d-box" id="flashcardBox" title="Chạm vào thẻ hoặc nhấn Phím Space để lật mặt sau">
+            <div class="flashcard-3d-box" id="flashcardBox" title="Chạm vào thẻ hoặc nhấn Phím Space để lật mặt sau" data-i18n-title="vc.flipTitle">
               <div class="flashcard-inner">
                 
                 <!-- FRONT FACE -->
@@ -231,7 +225,7 @@
                     <div class="fc-main-word" id="fcWord">…</div>
                     <div class="fc-phonetic-wrap">
                       <span class="fc-phonetic" id="fcPhonetic"></span>
-                      <button type="button" class="fc-sound-btn" id="fcSoundBtnFront" title="Nghe phát âm chuẩn">
+                      <button type="button" class="fc-sound-btn" id="fcSoundBtnFront" title="Nghe phát âm chuẩn" data-i18n-title="vc.listenWordTitle">
                         <i class="fa-solid fa-volume-high"></i>
                       </button>
                     </div>
@@ -248,12 +242,10 @@
                     <div class="fc-meaning" id="fcMeaning">Đang tải dữ liệu...</div>
                     
                     <div class="fc-example-card">
-                      <div class="example-label"><i class="fa-solid fa-quote-left"></i> Câu ví dụ giao tiếp:</div>
+                      <div class="example-label" data-i18n="vc.exampleLabel"><i class="fa-solid fa-quote-left"></i> Câu ví dụ giao tiếp:</div>
                       <div class="example-target" id="fcExampleTarget"></div>
                       <div class="example-meaning" id="fcExampleMeaning"></div>
-                      <button type="button" class="fc-example-sound-btn" id="fcSoundBtnBack" title="Nghe câu ví dụ">
-                        <i class="fa-solid fa-volume-high"></i> Nghe đọc mẫu câu
-                      </button>
+                      <button type="button" class="fc-example-sound-btn" id="fcSoundBtnBack" title="Nghe câu ví dụ" data-i18n-title="vc.listenExampleTitle" data-i18n="vc.listenExample"><i class="fa-solid fa-volume-high"></i> Nghe đọc mẫu câu</button>
                     </div>
 
                     <div class="fc-nuance-box" id="fcNuance"></div>
@@ -264,7 +256,7 @@
             </div>
           </div>
 
-          <button type="button" class="card-side-arrow-btn next" id="btnNextCard" title="Thẻ kế tiếp (Phím mũi tên phải →)" aria-label="Thẻ kế tiếp">
+          <button type="button" class="card-side-arrow-btn next" id="btnNextCard" title="Thẻ kế tiếp (Phím mũi tên phải →)" aria-label="Thẻ kế tiếp" data-i18n-title="vc.nextTitle" data-i18n-aria-label="vc.nextAria">
             <i class="fa-solid fa-chevron-right"></i>
           </button>
         </div>
@@ -277,12 +269,8 @@
       <div class="quiz-arena-container">
         
         <div class="quiz-status-header">
-          <div class="quiz-streak-box">
-            <img src="../../../assets/streak-flame.gif?v=4" alt="Streak flame" class="streak-flame-img streak-flame-chip"> Chuỗi đúng: <strong id="quizStreakCount">0</strong>
-          </div>
-          <div class="quiz-score-box">
-            <i class="fa-solid fa-star"></i> Điểm tích lũy: <strong id="quizScoreCount">0 XP</strong>
-          </div>
+          <div class="quiz-streak-box" data-i18n="vc.quizStreakLabel"><img src="../../../assets/streak-flame.gif?v=4" alt="Streak flame" class="streak-flame-img streak-flame-chip"> Chuỗi đúng: <strong id="quizStreakCount">0</strong></div>
+          <div class="quiz-score-box" data-i18n="vc.quizScoreLabel"><i class="fa-solid fa-star"></i> Điểm tích lũy: <strong id="quizScoreCount">0 XP</strong></div>
           <div class="quiz-timer-box">
             <i class="fa-solid fa-stopwatch"></i> <span id="quizTimerText">15s</span>
           </div>
@@ -290,9 +278,7 @@
 
         <div class="quiz-card-box">
           <div class="quiz-question-type">
-            <button type="button" class="quiz-sound-btn" id="quizPlaySound" title="Nghe phát âm">
-              <i class="fa-solid fa-volume-high"></i> Nghe từ
-            </button>
+            <button type="button" class="quiz-sound-btn" id="quizPlaySound" title="Nghe phát âm" data-i18n-title="vc.quizListenTitle" data-i18n="vc.quizListen"><i class="fa-solid fa-volume-high"></i> Nghe từ</button>
           </div>
 
           <div class="quiz-target-word" id="quizTargetWord">…</div>
@@ -305,7 +291,7 @@
 
         <div class="quiz-feedback-banner" id="quizFeedbackBanner">
           <div class="feedback-msg" id="quizFeedbackMsg">Chính xác! +20 XP 🔥</div>
-          <button type="button" class="quiz-next-btn" id="quizNextBtn">
+          <button type="button" class="quiz-next-btn" id="quizNextBtn" data-i18n="vc.quizNext">
             Câu tiếp theo <i class="fa-solid fa-arrow-right"></i>
           </button>
         </div>
@@ -320,13 +306,13 @@
         <div class="vault-controls-bar">
           <div class="search-input-wrap">
             <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="vaultSearchInput" placeholder="Tìm kiếm từ vựng, phiên âm, hoặc nghĩa tiếng Việt...">
+            <input type="text" id="vaultSearchInput" placeholder="Tìm kiếm từ vựng, phiên âm, hoặc nghĩa tiếng Việt..." data-i18n-placeholder="vc.searchPlaceholder">
           </div>
 
           <div class="vault-filter-pills" id="vaultFilterPills">
-            <button type="button" class="vault-pill active" data-filter="all">Tất cả (<span id="vaultCountAll">0</span>)</button>
-            <button type="button" class="vault-pill" data-filter="mastered">Đã thuộc (<span id="vaultCountMastered">0</span>)</button>
-            <button type="button" class="vault-pill" data-filter="unmastered">Chưa thuộc (<span id="vaultCountUnmastered">0</span>)</button>
+            <button type="button" class="vault-pill active" data-filter="all"><span data-i18n="vc.pillAll">Tất cả</span> (<span id="vaultCountAll">0</span>)</button>
+            <button type="button" class="vault-pill" data-filter="mastered"><span data-i18n="vc.pillMastered">Đã thuộc</span> (<span id="vaultCountMastered">0</span>)</button>
+            <button type="button" class="vault-pill" data-filter="unmastered"><span data-i18n="vc.pillUnmastered">Chưa thuộc</span> (<span id="vaultCountUnmastered">0</span>)</button>
           </div>
         </div>
 
@@ -347,52 +333,52 @@
           <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
-        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;" data-i18n="vc.footerIntro">
           Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
         </p>
       </div>
 
       <!-- Cột 2: Chương trình học -->
       <div class="footer-col">
-        <h4>Chương trình học</h4>
+        <h4 data-i18n="vc.footerPrograms">Chương trình học</h4>
         <ul>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
-          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()" data-i18n="vc.footerProgEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()" data-i18n="vc.footerProgJa">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()" data-i18n="vc.footerProgVi">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)" data-i18n="vc.footerProgAi">Luyện ngữ âm với AI</a></li>
         </ul>
       </div>
 
       <!-- Cột 3: Thông tin liên hệ -->
       <div class="footer-col">
-        <h4>Thông tin liên hệ</h4>
+        <h4 data-i18n="vc.footerContact">Thông tin liên hệ</h4>
         <ul class="footer-contact-list">
           <li>
             <i class="fa-solid fa-phone"></i>
             <div>
-              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <span class="contact-label" data-i18n="vc.footerHotline">Hotline tư vấn & hỗ trợ:</span>
               <a href="tel:19006868" class="contact-val">1900 6868</a>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-envelope"></i>
             <div>
-              <span class="contact-label">Email học vụ:</span>
+              <span class="contact-label" data-i18n="vc.footerEmail">Email học vụ:</span>
               <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-location-dot"></i>
             <div>
-              <span class="contact-label">Trụ sở học thuật:</span>
-              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+              <span class="contact-label" data-i18n="vc.footerAddress">Trụ sở học thuật:</span>
+              <span class="contact-val" data-i18n="vc.footerAddressVal">Giữa cầu Vĩnh Tuy, Hà Nội</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-clock"></i>
             <div>
-              <span class="contact-label">Thời gian làm việc:</span>
-              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+              <span class="contact-label" data-i18n="vc.footerHours">Thời gian làm việc:</span>
+              <span class="contact-val" data-i18n="vc.footerHoursVal">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
             </div>
           </li>
         </ul>
@@ -400,34 +386,34 @@
 
       <!-- Cột 4: Cam kết chất lượng -->
       <div class="footer-col">
-        <h4>Cam kết chất lượng</h4>
+        <h4 data-i18n="vc.footerCommit">Cam kết chất lượng</h4>
         <ul class="footer-commit-list">
           <li>
             <i class="fa-solid fa-shield-halved"></i>
             <div>
-              <strong>Chuẩn đầu ra quốc tế</strong>
-              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+              <strong data-i18n="vc.footerC1t">Chuẩn đầu ra quốc tế</strong>
+              <span data-i18n="vc.footerC1d">Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-rotate-left"></i>
             <div>
-              <strong>Cam kết hoàn học phí</strong>
-              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+              <strong data-i18n="vc.footerC2t">Cam kết hoàn học phí</strong>
+              <span data-i18n="vc.footerC2d">Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-user-graduate"></i>
             <div>
-              <strong>Đồng hành 1-1 chuyên sâu</strong>
-              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+              <strong data-i18n="vc.footerC3t">Đồng hành 1-1 chuyên sâu</strong>
+              <span data-i18n="vc.footerC3d">Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-infinity"></i>
             <div>
-              <strong>Quyền lợi học trọn đời</strong>
-              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+              <strong data-i18n="vc.footerC4t">Quyền lợi học trọn đời</strong>
+              <span data-i18n="vc.footerC4d">Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
             </div>
           </li>
         </ul>
@@ -435,8 +421,8 @@
     </div>
 
     <div class="footer-bottom">
-      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu.</div>
-      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
+      <div data-i18n="vc.footerCopyright">&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu.</div>
+      <div data-i18n="vc.footerTagline">Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
     </div>
   </footer>
 
@@ -450,7 +436,7 @@
         <video id="loadingVideoPlayer" muted src="../../../assets/loading.mp4" loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
-        <span class="loading-title">Đang tải, hãy đợi...</span>
+        <span class="loading-title" data-i18n="vc.loading">Đang tải, hãy đợi...</span>
       </div>
     </div>
   </div>

@@ -133,11 +133,11 @@
     <!-- 1. HERO BANNER & STATS -->
     <section class="leaderboard-hero-card">
       <div class="hero-top-info">
-        <span class="hero-badge-tag"><i class="fa-solid fa-trophy"></i> BẢNG VINH DANH HỌC VIÊN XUẤT SẮC</span>
+        <span class="hero-badge-tag" data-i18n="lb.heroBadge"><i class="fa-solid fa-trophy"></i> BẢNG VINH DANH HỌC VIÊN XUẤT SẮC</span>
         <h1 class="hero-title">
-          Bảng Xếp Hạng <span class="highlight">Chiến Binh Slanguage</span> 👑
+          <span data-i18n="lb.heroTitleLead">Bảng Xếp Hạng</span> <span class="highlight" data-i18n="lb.heroTitleHighlight">Chiến Binh Slanguage</span> 👑
         </h1>
-        <p class="hero-desc">
+        <p class="hero-desc" data-i18n="lb.heroDesc">
           Thống kê thành tích học tập theo thời gian, ngôn ngữ và tiêu chí bạn chọn. Thứ hạng được tính từ dữ liệu học tập thực tế.
         </p>
       </div>
@@ -149,7 +149,7 @@
             <i class="fa-solid fa-crown"></i>
           </div>
           <div class="summary-content">
-            <span class="summary-label">Dẫn đầu bộ lọc</span>
+            <span class="summary-label" data-i18n="lb.summaryLeader">Dẫn đầu bộ lọc</span>
             <span class="summary-val" id="championNameVal">—</span>
             <span class="summary-sub">—</span>
           </div>
@@ -160,7 +160,7 @@
             <i class="fa-solid fa-bolt"></i>
           </div>
           <div class="summary-content">
-            <span class="summary-label">Thành tích dẫn đầu</span>
+            <span class="summary-label" data-i18n="lb.summaryTopScore">Thành tích dẫn đầu</span>
             <span class="summary-val" id="topScoreVal">—</span>
             <span class="summary-sub">—</span>
           </div>
@@ -171,9 +171,9 @@
             <i class="fa-solid fa-users"></i>
           </div>
           <div class="summary-content">
-            <span class="summary-label">Tổng người tham gia</span>
+            <span class="summary-label" data-i18n="lb.summaryParticipants">Tổng người tham gia</span>
             <span class="summary-val" id="totalParticipantsVal">—</span>
-            <span class="summary-sub">Theo bộ lọc hiện tại</span>
+            <span class="summary-sub" data-i18n="lb.summaryParticipantsSub">Theo bộ lọc hiện tại</span>
           </div>
         </div>
       </div>
@@ -184,18 +184,18 @@
       <div class="controls-row-top">
         <!-- Time Filter Pills -->
         <div class="filter-btn-group">
-          <button type="button" class="filter-pill-btn" data-time-filter="today"><i class="fa-solid fa-calendar-day"></i> Hôm nay</button>
-          <button type="button" class="filter-pill-btn active" data-time-filter="week"><i class="fa-solid fa-calendar-week"></i> Tuần này</button>
-          <button type="button" class="filter-pill-btn" data-time-filter="month"><i class="fa-solid fa-calendar"></i> Tháng này</button>
-          <button type="button" class="filter-pill-btn" data-time-filter="all"><i class="fa-solid fa-infinity"></i> Toàn thời gian</button>
+          <button type="button" class="filter-pill-btn" data-time-filter="today" data-i18n="lb.periodToday"><i class="fa-solid fa-calendar-day"></i> Hôm nay</button>
+          <button type="button" class="filter-pill-btn active" data-time-filter="week" data-i18n="lb.periodWeek"><i class="fa-solid fa-calendar-week"></i> Tuần này</button>
+          <button type="button" class="filter-pill-btn" data-time-filter="month" data-i18n="lb.periodMonth"><i class="fa-solid fa-calendar"></i> Tháng này</button>
+          <button type="button" class="filter-pill-btn" data-time-filter="all" data-i18n="lb.periodAll"><i class="fa-solid fa-infinity"></i> Toàn thời gian</button>
         </div>
 
         <!-- Sort Criteria Pills -->
         <div class="sort-btn-group">
-          <button type="button" class="sort-pill-btn active" data-sort-filter="xp"><i class="fa-solid fa-star"></i> Sắp xếp: Điểm XP</button>
-          <button type="button" class="sort-pill-btn" data-sort-filter="streak"><i class="fa-solid fa-fire"></i> Chuỗi Streak</button>
-          <button type="button" class="sort-pill-btn" data-sort-filter="lessons"><i class="fa-solid fa-book-open"></i> Bài hoàn thành</button>
-          <button type="button" class="sort-pill-btn" data-sort-filter="accuracy"><i class="fa-solid fa-bullseye"></i> Độ chính xác</button>
+          <button type="button" class="sort-pill-btn active" data-sort-filter="xp" data-i18n="lb.sortXp"><i class="fa-solid fa-star"></i> Sắp xếp: Điểm XP</button>
+          <button type="button" class="sort-pill-btn" data-sort-filter="streak" data-i18n="lb.sortStreak"><i class="fa-solid fa-fire"></i> Chuỗi Streak</button>
+          <button type="button" class="sort-pill-btn" data-sort-filter="lessons" data-i18n="lb.sortLessons"><i class="fa-solid fa-book-open"></i> Bài hoàn thành</button>
+          <button type="button" class="sort-pill-btn" data-sort-filter="accuracy" data-i18n="lb.sortAccuracy"><i class="fa-solid fa-bullseye"></i> Độ chính xác</button>
         </div>
       </div>
 
@@ -211,7 +211,7 @@
         <!-- Search Input Box -->
         <div class="search-box-wrap">
           <i class="fa-solid fa-magnifying-glass search-icon"></i>
-          <input type="text" id="leaderboardSearchInput" class="search-input" placeholder="Tìm kiếm tên học viên, danh hiệu...">
+          <input type="text" id="leaderboardSearchInput" class="search-input" placeholder="Tìm kiếm tên học viên, danh hiệu..." data-i18n-placeholder="lb.searchPlaceholder">
         </div>
       </div>
     </section>
@@ -220,7 +220,7 @@
     <section class="podium-section">
       <div class="section-header-title">
         <i class="fa-solid fa-crown"></i>
-        <span>Top 3 Chiến Binh Dẫn Đầu Bảng Vàng</span>
+        <span data-i18n="lb.podiumTitle">Top 3 Chiến Binh Dẫn Đầu Bảng Vàng</span>
       </div>
 
       <div class="podium-grid">
@@ -244,20 +244,20 @@
         </div>
         <div class="live-indicator-chip">
           <i class="fa-solid fa-circle-dot"></i>
-          <span>Dữ liệu từ hệ thống</span>
+          <span data-i18n="lb.liveData">Dữ liệu từ hệ thống</span>
         </div>
       </div>
 
       <div class="table-container">
         <!-- Table Head -->
         <div class="table-head-row">
-          <div>Thứ Hạng</div>
-          <div>Học Viên</div>
-          <div>Ngôn Ngữ</div>
-          <div>Bài Hoàn Thành</div>
-          <div>Streak & Đánh Giá</div>
-          <div>Điểm Kinh Nghiệm (XP)</div>
-          <div>Xem</div>
+          <div data-i18n="lb.thRank">Thứ Hạng</div>
+          <div data-i18n="lb.thLearner">Học Viên</div>
+          <div data-i18n="lb.thLanguage">Ngôn Ngữ</div>
+          <div data-i18n="lb.thLessons">Bài Hoàn Thành</div>
+          <div data-i18n="lb.thStreak">Streak & Đánh Giá</div>
+          <div data-i18n="lb.thXp">Điểm Kinh Nghiệm (XP)</div>
+          <div data-i18n="lb.thView">Xem</div>
         </div>
 
         <!-- Table Body (Rendered dynamically by TypeScript) -->
@@ -267,11 +267,11 @@
 
         <!-- Table Pagination Controls -->
         <div class="table-pagination" id="tablePagination">
-          <button type="button" class="page-nav-btn" id="prevPageBtn" title="Trang trước">
+          <button type="button" class="page-nav-btn" id="prevPageBtn" title="Trang trước" data-i18n-title="lb.prevPage">
             <i class="fa-solid fa-chevron-left"></i>
           </button>
           <div class="page-numbers-group" id="pageNumbersGroup"></div>
-          <button type="button" class="page-nav-btn" id="nextPageBtn" title="Trang sau">
+          <button type="button" class="page-nav-btn" id="nextPageBtn" title="Trang sau" data-i18n-title="lb.nextPage">
             <i class="fa-solid fa-chevron-right"></i>
           </button>
         </div>
@@ -288,7 +288,7 @@
       </div>
       <button type="button" class="btn-scroll-to-me" id="btnScrollToMe">
         <i class="fa-solid fa-location-crosshairs"></i>
-        <span>Vị trí của tôi</span>
+        <span data-i18n="lb.myPosition">Vị trí của tôi</span>
       </button>
     </aside>
 
@@ -302,52 +302,52 @@
           <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
-        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;" data-i18n="lb.footerAbout">
           Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
         </p>
       </div>
 
       <!-- Cột 2: Chương trình học -->
       <div class="footer-col">
-        <h4>Chương trình học</h4>
+        <h4 data-i18n="lb.footerPrograms">Chương trình học</h4>
         <ul>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
-          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()" data-i18n="lb.footerCourseEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()" data-i18n="lb.footerCourseJa">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()" data-i18n="lb.footerCourseVi">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)" data-i18n="lb.footerCourseAi">Luyện ngữ âm với AI</a></li>
         </ul>
       </div>
 
       <!-- Cột 3: Thông tin liên hệ -->
       <div class="footer-col">
-        <h4>Thông tin liên hệ</h4>
+        <h4 data-i18n="lb.footerContact">Thông tin liên hệ</h4>
         <ul class="footer-contact-list">
           <li>
             <i class="fa-solid fa-phone"></i>
             <div>
-              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <span class="contact-label" data-i18n="lb.footerHotline">Hotline tư vấn & hỗ trợ:</span>
               <a href="tel:19006868" class="contact-val">1900 6868</a>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-envelope"></i>
             <div>
-              <span class="contact-label">Email học vụ:</span>
+              <span class="contact-label" data-i18n="lb.footerEmail">Email học vụ:</span>
               <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-location-dot"></i>
             <div>
-              <span class="contact-label">Trụ sở học thuật:</span>
-              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+              <span class="contact-label" data-i18n="lb.footerAddress">Trụ sở học thuật:</span>
+              <span class="contact-val" data-i18n="lb.footerAddressVal">Giữa cầu Vĩnh Tuy, Hà Nội</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-clock"></i>
             <div>
-              <span class="contact-label">Thời gian làm việc:</span>
-              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+              <span class="contact-label" data-i18n="lb.footerHours">Thời gian làm việc:</span>
+              <span class="contact-val" data-i18n="lb.footerHoursVal">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
             </div>
           </li>
         </ul>
@@ -355,34 +355,34 @@
 
       <!-- Cột 4: Cam kết chất lượng -->
       <div class="footer-col">
-        <h4>Cam kết chất lượng</h4>
+        <h4 data-i18n="lb.footerQuality">Cam kết chất lượng</h4>
         <ul class="footer-commit-list">
           <li>
             <i class="fa-solid fa-shield-halved"></i>
             <div>
-              <strong>Chuẩn đầu ra quốc tế</strong>
-              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+              <strong data-i18n="lb.footerQ1Title">Chuẩn đầu ra quốc tế</strong>
+              <span data-i18n="lb.footerQ1Desc">Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-rotate-left"></i>
             <div>
-              <strong>Cam kết hoàn học phí</strong>
-              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+              <strong data-i18n="lb.footerQ2Title">Cam kết hoàn học phí</strong>
+              <span data-i18n="lb.footerQ2Desc">Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-user-graduate"></i>
             <div>
-              <strong>Đồng hành 1-1 chuyên sâu</strong>
-              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+              <strong data-i18n="lb.footerQ3Title">Đồng hành 1-1 chuyên sâu</strong>
+              <span data-i18n="lb.footerQ3Desc">Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-infinity"></i>
             <div>
-              <strong>Quyền lợi học trọn đời</strong>
-              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+              <strong data-i18n="lb.footerQ4Title">Quyền lợi học trọn đời</strong>
+              <span data-i18n="lb.footerQ4Desc">Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
             </div>
           </li>
         </ul>
@@ -390,8 +390,8 @@
     </div>
 
     <div class="footer-bottom">
-      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu.</div>
-      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
+      <div data-i18n="lb.footerCopyright">&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu.</div>
+      <div data-i18n="lb.footerTagline">Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
     </div>
   </footer>
 

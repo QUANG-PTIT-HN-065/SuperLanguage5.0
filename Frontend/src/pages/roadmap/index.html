@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Cây Lộ Trình Học Tập Phân Nhánh</title>
+  <title data-i18n="rm.docTitle">Slanguage - Cây Lộ Trình Học Tập Phân Nhánh</title>
   <link rel="icon" type="image/png" href="../../../assets/logo.png">
   <link rel="apple-touch-icon" href="../../../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -82,7 +82,7 @@
 
         <!-- User Account Dropdown (Shown when logged in) -->
         <div class="user-dropdown auth-only" id="userDropdown">
-          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="rm.userMenuTitle">
             <img src="../../../assets/logo.png" alt="Avatar" class="user-avatar-mini">
             <div class="user-info-text">
               <div class="name">Học viên</div>
@@ -141,16 +141,16 @@
       <div class="active-lesson-bar" id="activeLessonBar">
         <div class="active-lesson-info">
           <i class="fa-solid fa-graduation-cap"></i>
-          <span>Buổi học đang chọn: <strong id="activeLessonTitle">Session 01 - Bảng Chữ Cái & Phát Âm Căn Bản</strong></span>
+          <span><span data-i18n="rm.activeLessonPrefix">Buổi học đang chọn: </span><strong id="activeLessonTitle">Session 01 - Bảng Chữ Cái & Phát Âm Căn Bản</strong></span>
         </div>
-        <a href="../select-lesson/index.html" class="btn-change-lesson" title="Chọn buổi học khác">
+        <a href="../select-lesson/index.html" class="btn-change-lesson" title="Chọn buổi học khác" data-i18n-title="rm.changeLessonTitle" data-i18n="rm.changeLesson">
           <i class="fa-solid fa-arrows-rotate"></i> Đổi buổi học
         </a>
       </div>
 
       <div class="tree-hero-header">
         <div class="hero-text-wrap">
-          <div class="tree-badge">
+          <div class="tree-badge" data-i18n="rm.heroBadge">
             <i class="fa-solid fa-torii-gate"></i> TỔNG QUAN CHỦ ĐỀ ĐANG HỌC
           </div>
           <h1 class="tree-title" id="treeMainTitle">Đang tải dungeon của chủ đề...</h1>
@@ -161,17 +161,17 @@
 
         <div class="tree-summary-stats">
           <div class="tree-stat-item">
-            <span class="tree-stat-label">Tiến độ mở cây</span>
+            <span class="tree-stat-label" data-i18n="rm.statProgress">Tiến độ mở cây</span>
             <div class="tree-stat-value" id="treeProgressPercent">62%</div>
             <div class="tree-stat-sub" id="treeNodesRatio">8 / 13 Nút đã mở</div>
           </div>
           <div class="tree-stat-item">
-            <span class="tree-stat-label">Cấp độ kỹ năng</span>
+            <span class="tree-stat-label" data-i18n="rm.statLevel">Cấp độ kỹ năng</span>
             <div class="tree-stat-value" style="color: var(--color-topaz);" id="treeLevelVal">Level 1</div>
-            <div class="tree-stat-sub">Thám Hiểm Ngôn Ngữ</div>
+            <div class="tree-stat-sub" data-i18n="rm.levelSub">Thám Hiểm Ngôn Ngữ</div>
           </div>
           <div class="tree-stat-item">
-            <span class="tree-stat-label">XP Tích Lũy</span>
+            <span class="tree-stat-label" data-i18n="rm.statXp">XP Tích Lũy</span>
             <div class="tree-stat-value" style="color: var(--color-crimson);" id="treeTotalXP">0 XP</div>
             <div class="tree-stat-sub" id="treeDungeonXp">Đang tính XP dungeon...</div>
           </div>
@@ -189,7 +189,7 @@
     <!-- TREE VIEW CONTAINER (INTERACTIVE CANVAS) -->
     <section class="tree-viewport-section">
       <div class="tree-controls-bar">
-        <div class="tree-helper-text">
+        <div class="tree-helper-text" data-i18n="rm.helperText">
           <i class="fa-solid fa-wand-magic-sparkles"></i> Nhấn vào từng ải theo đường dẫn để khiêu chiến câu hỏi • Thắng nhận XP, thua bị trừ Máu
         </div>
       </div>
@@ -213,7 +213,7 @@
   <!-- ================= NODE LESSON DETAILS MODAL ================= -->
   <div class="node-modal-overlay" id="nodeModalOverlay">
     <div class="node-modal-box">
-      <button class="node-modal-close" id="btnCloseNodeModal" title="Đóng cửa sổ">
+      <button class="node-modal-close" id="btnCloseNodeModal" title="Đóng cửa sổ" data-i18n-title="rm.closeTitle">
         <i class="fa-solid fa-xmark"></i>
       </button>
 
@@ -235,7 +235,7 @@
 
       <div class="node-modal-body">
         <div id="modalObjectivesWrap">
-          <h4 class="section-heading">Mục tiêu bài học đạt được:</h4>
+          <h4 class="section-heading" data-i18n="rm.objectivesHead">Mục tiêu bài học đạt được:</h4>
           <ul class="node-objectives-list" id="modalNodeObjectives">
             <!-- Objectives injected here -->
           </ul>
@@ -248,7 +248,7 @@
         <!-- HUB READING PASSAGE BOX (Displayed only for Milestone Hub cards) -->
         <div class="hub-reading-box" id="modalHubReadingBox" style="display: none;">
           <div class="reading-article-header">
-            <div class="reading-article-badge"><i class="fa-solid fa-book-open"></i> BÀI ĐỌC TỔNG QUAN CHỦ ĐỀ</div>
+            <div class="reading-article-badge" data-i18n="rm.readingBadge"><i class="fa-solid fa-book-open"></i> BÀI ĐỌC TỔNG QUAN CHỦ ĐỀ</div>
             <h3 class="reading-article-title" id="readingArticleTitle">Tiêu đề bài đọc</h3>
           </div>
           <div class="reading-article-content" id="readingArticleContent">
@@ -260,7 +260,7 @@
         <div class="dungeon-trial-box" id="modalTrialBox">
           <div class="trial-title-wrap">
             <i class="fa-solid fa-shield-halved" style="color: #4ADE80;"></i>
-            <span>Thử Thách Giải Mã Dungeon:</span>
+            <span data-i18n="rm.trialTitle">Thử Thách Giải Mã Dungeon:</span>
             <span class="trial-step-badge" id="modalTrialStepBadge">Câu 1/15</span>
           </div>
           <div class="trial-progress-track" id="modalTrialProgressTrack">
@@ -296,52 +296,52 @@
           <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
-        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;" data-i18n="rm.footAbout">
           Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
         </p>
       </div>
 
       <!-- Cột 2: Chương trình học -->
       <div class="footer-col">
-        <h4>Chương trình học</h4>
+        <h4 data-i18n="rm.footPrograms">Chương trình học</h4>
         <ul>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
-          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
+          <li><a href="javascript:void(0)" onclick="window.roadmapApp && window.roadmapApp.switchLanguage('en')" data-i18n="rm.footEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="window.roadmapApp && window.roadmapApp.switchLanguage('ja')" data-i18n="rm.footJa">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="window.roadmapApp && window.roadmapApp.switchLanguage('vi')" data-i18n="rm.footVi">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)" data-i18n="rm.footAi">Luyện ngữ âm với AI</a></li>
         </ul>
       </div>
 
       <!-- Cột 3: Thông tin liên hệ -->
       <div class="footer-col">
-        <h4>Thông tin liên hệ</h4>
+        <h4 data-i18n="rm.footContact">Thông tin liên hệ</h4>
         <ul class="footer-contact-list">
           <li>
             <i class="fa-solid fa-phone"></i>
             <div>
-              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <span class="contact-label" data-i18n="rm.footHotline">Hotline tư vấn & hỗ trợ:</span>
               <a href="tel:19006868" class="contact-val">1900 6868</a>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-envelope"></i>
             <div>
-              <span class="contact-label">Email học vụ:</span>
+              <span class="contact-label" data-i18n="rm.footEmail">Email học vụ:</span>
               <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-location-dot"></i>
             <div>
-              <span class="contact-label">Trụ sở học thuật:</span>
-              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+              <span class="contact-label" data-i18n="rm.footAddress">Trụ sở học thuật:</span>
+              <span class="contact-val" data-i18n="rm.footAddressVal">Giữa cầu Vĩnh Tuy, Hà Nội</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-clock"></i>
             <div>
-              <span class="contact-label">Thời gian làm việc:</span>
-              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+              <span class="contact-label" data-i18n="rm.footHours">Thời gian làm việc:</span>
+              <span class="contact-val" data-i18n="rm.footHoursVal">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
             </div>
           </li>
         </ul>
@@ -349,34 +349,34 @@
 
       <!-- Cột 4: Cam kết chất lượng -->
       <div class="footer-col">
-        <h4>Cam kết chất lượng</h4>
+        <h4 data-i18n="rm.footQuality">Cam kết chất lượng</h4>
         <ul class="footer-commit-list">
           <li>
             <i class="fa-solid fa-shield-halved"></i>
             <div>
-              <strong>Chuẩn đầu ra quốc tế</strong>
-              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+              <strong data-i18n="rm.footQ1t">Chuẩn đầu ra quốc tế</strong>
+              <span data-i18n="rm.footQ1d">Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-rotate-left"></i>
             <div>
-              <strong>Cam kết hoàn học phí</strong>
-              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+              <strong data-i18n="rm.footQ2t">Cam kết hoàn học phí</strong>
+              <span data-i18n="rm.footQ2d">Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-user-graduate"></i>
             <div>
-              <strong>Đồng hành 1-1 chuyên sâu</strong>
-              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+              <strong data-i18n="rm.footQ3t">Đồng hành 1-1 chuyên sâu</strong>
+              <span data-i18n="rm.footQ3d">Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-infinity"></i>
             <div>
-              <strong>Quyền lợi học trọn đời</strong>
-              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+              <strong data-i18n="rm.footQ4t">Quyền lợi học trọn đời</strong>
+              <span data-i18n="rm.footQ4d">Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
             </div>
           </li>
         </ul>
@@ -384,8 +384,8 @@
     </div>
 
     <div class="footer-bottom">
-      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.</div>
-      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
+      <div data-i18n="rm.footCopyright">&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.</div>
+      <div data-i18n="rm.footTagline">Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
     </div>
   </footer>
 
@@ -396,7 +396,7 @@
         <video id="loadingVideoPlayer" muted src="../../../assets/loading.mp4" loop playsinline></video>
       </div>
       <div class="loading-text-wrap">
-        <span class="loading-title">Đang tải, hãy đợi...</span>
+        <span class="loading-title" data-i18n="rm.loadingOverlay">Đang tải, hãy đợi...</span>
       </div>
     </div>
   </div>

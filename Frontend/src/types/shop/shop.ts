@@ -1,5 +1,6 @@
 import { initializeLearnerHeader } from "../shared/learner-header";
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { applyI18n, t, LOCALE_EVENT } from "../shared/i18n";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 
 interface ShopItem {
@@ -59,15 +60,27 @@ class SlanguageShopApp {
     }
 
     void initializeLearnerHeader();
+    document.title = t("sh.pageTitle");
     this.bindEvents();
     void this.loadState();
+
+    window.addEventListener(LOCALE_EVENT, () => {
+      applyI18n();
+      document.title = t("sh.pageTitle");
+      if (this.state) {
+        this.renderItems();
+        this.renderInventory();
+        this.renderHistory();
+        this.updateExchangePreview();
+      }
+    });
   }
 
   private createMessageElement(): HTMLElement {
     const message = document.createElement("p");
     message.id = "shopStatusMessage";
     message.setAttribute("role", "status");
-    message.textContent = "Đang tải dữ liệu cửa hàng…";
+    message.textContent = t("sh.loading");
     document.querySelector(".shop-main")?.prepend(message);
     return message;
   }
@@ -112,7 +125,7 @@ class SlanguageShopApp {
       clearSkeleton(this.itemsGrid);
       clearSkeleton(this.inventoryList);
       clearSkeleton(this.historyBody);
-      this.showMessage(error instanceof Error ? error.message : "Không thể tải dữ liệu cửa hàng.");
+      this.showMessage(error instanceof Error ? error.message : t("sh.loadError"));
     } finally {
       this.setBusy(false);
     }
@@ -121,11 +134,11 @@ class SlanguageShopApp {
   private async exchangeXP(): Promise<void> {
     const amount = Number(this.xpInput?.value);
     if (!Number.isInteger(amount) || amount < 5 || amount % 5 !== 0) {
-      this.showMessage("Số XP quy đổi phải là bội số của 5 và tối thiểu 5 XP.");
+      this.showMessage(t("sh.invalidAmount"));
       return;
     }
     if (amount > (this.state?.xp_balance ?? 0)) {
-      this.showMessage("Số XP khả dụng không đủ để quy đổi.");
+      this.showMessage(t("sh.insufficientXp"));
       return;
     }
 
@@ -139,10 +152,10 @@ class SlanguageShopApp {
     const item = this.state?.items.find((entry) => entry.id === itemId);
     if (!item || item.remaining_limit < 1) return;
     if (item.cost_coins > (this.state?.coin_balance ?? 0)) {
-      this.showMessage("Số dư Coin không đủ để mua vật phẩm.");
+      this.showMessage(t("sh.insufficientCoins"));
       return;
     }
-    if (!window.confirm(`Xác nhận mua "${item.title}" với ${item.cost_coins} Coin?`)) return;
+    if (!window.confirm(t("sh.confirmPurchase", { title: item.title, coins: item.cost_coins }))) return;
 
     await this.runTransaction("/api/v1/shop/purchase", {
       request_id: crypto.randomUUID(),
@@ -158,7 +171,7 @@ class SlanguageShopApp {
       this.render();
       this.showMessage(response.message);
     } catch (error) {
-      this.showMessage(error instanceof Error ? error.message : "Giao dịch thất bại.");
+      this.showMessage(error instanceof Error ? error.message : t("sh.transactionFailed"));
     } finally {
       this.setBusy(false);
     }
@@ -206,7 +219,7 @@ class SlanguageShopApp {
     if (!this.itemsGrid || !this.state) return;
     this.itemsGrid.innerHTML = this.state.items.map((item) => {
       const unavailable = item.remaining_limit === 0 || item.cost_coins > this.state!.coin_balance;
-      const limit = item.limit_period === "daily" ? "hôm nay" : "tháng này";
+      const limit = item.limit_period === "daily" ? t("sh.limitDaily") : t("sh.limitMonthly");
       return `<article class="shop-item-card${unavailable ? " cannot-afford" : ""}" data-item-id="${this.escape(item.id)}">
         <div class="item-card-top">
           <div class="item-icon-box"><i class="${this.escape(item.icon)}"></i></div>
@@ -217,8 +230,8 @@ class SlanguageShopApp {
           <p class="item-desc">${this.escape(item.description)}</p>
         </div>
         <div class="item-meta-badges">
-          <span class="item-limit-tag${item.remaining_limit === 0 ? " exhausted" : ""}">Còn ${item.remaining_limit}/${item.limit_count} lượt ${limit}</span>
-          ${item.non_stacking ? '<span class="item-non-stack-note">Không cộng dồn</span>' : ""}
+          <span class="item-limit-tag${item.remaining_limit === 0 ? " exhausted" : ""}">${this.escape(t("sh.itemLimit", { remaining: item.remaining_limit, count: item.limit_count, period: limit }))}</span>
+          ${item.non_stacking ? `<span class="item-non-stack-note">${this.escape(t("sh.nonStacking"))}</span>` : ""}
         </div>
         <div class="item-card-footer">
           <button type="button" class="btn-buy-card${unavailable ? " disabled" : ""}" data-purchase-item="${this.escape(item.id)}" ${unavailable ? "disabled" : ""}>
@@ -237,7 +250,7 @@ class SlanguageShopApp {
           <span><i class="${this.escape(item.icon)}"></i> ${this.escape(item.title)}</span>
           <strong>×${this.format(item.quantity)}</strong>
         </div>`).join("")
-      : '<p class="empty-state">Kho đồ hiện chưa có vật phẩm.</p>';
+      : `<p class="empty-state">${this.escape(t("sh.emptyInventory"))}</p>`;
   }
 
   private renderHistory(): void {
@@ -245,12 +258,12 @@ class SlanguageShopApp {
     if (!this.historyBody || !this.state) return;
     this.historyBody.innerHTML = this.state.transactions.length
       ? this.state.transactions.map((transaction) => `<tr>
-          <td>${transaction.type === "exchange" ? "Quy đổi" : "Mua vật phẩm"}</td>
+          <td>${this.escape(transaction.type === "exchange" ? t("sh.txExchange") : t("sh.txPurchase"))}</td>
           <td><strong>${this.escape(transaction.title)}</strong><br><small>${this.escape(transaction.details)}</small></td>
           <td>${transaction.xp_delta ? `${this.format(transaction.xp_delta)} XP` : ""} ${transaction.coin_delta > 0 ? "+" : ""}${this.format(transaction.coin_delta)} Coin</td>
           <td>${this.escape(new Date(transaction.created_at).toLocaleString("vi-VN"))}</td>
         </tr>`).join("")
-      : '<tr><td colspan="4" class="empty-state">Chưa có giao dịch.</td></tr>';
+      : `<tr><td colspan="4" class="empty-state">${this.escape(t("sh.emptyHistory"))}</td></tr>`;
   }
 
   private setBusy(busy: boolean): void {

@@ -5,6 +5,7 @@
 
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader, logoutLearner, renderLearnerHeader } from "../shared/learner-header";
+import { applyI18n, localeLabel, setLocale, t, LOCALE_EVENT, type UiLocale } from "../shared/i18n";
 import { readHearts } from "../shared/hearts";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import "../home/lesson-quiz";
@@ -43,6 +44,8 @@ class SelectLessonManager {
   private freeSessionCount = 0;
   private currentFilter: string = 'all';
   private searchQuery: string = '';
+  // Đã tải xong catalog từ Database (thành công hoặc lỗi) — dùng để re-render khi đổi locale
+  private catalogLoaded = false;
 
   private readonly langMetadata: Record<TargetLang, LanguageMeta> = {
     ja: { code: 'ja', name: 'Tiếng Nhật', flag: '../../../assets/flags/flag-jp.png' },
@@ -63,8 +66,6 @@ class SelectLessonManager {
   private filterTabsEl!: HTMLElement;
   private toastEl!: HTMLElement;
   private toastTextEl!: HTMLElement;
-  private currentLangFlagEl!: HTMLImageElement;
-  private currentLangLabelEl!: HTMLElement;
   private langDropdownEl!: HTMLElement;
   private langDropdownBtnEl!: HTMLButtonElement;
   private userDropdownEl!: HTMLElement;
@@ -87,6 +88,21 @@ class SelectLessonManager {
     }
     this.updateStatusCard();
     void initializeLearnerHeader({ bindControls: false, loadProfile: false });
+    // Đổi locale GIAO DIỆN: chỉ dịch UI + re-render từ dữ liệu đã cache, không gọi lại API
+    window.addEventListener(LOCALE_EVENT, () => {
+      applyI18n();
+      this.applyCurrentLanguage();
+      if (this.catalogLoaded) {
+        this.renderFilterTabs();
+        if (this.sessionsList.length) this.updateSessionCount();
+        this.renderSessions();
+        this.updateStatusCard();
+      }
+      const lead = document.querySelector('#premiumModalOverlay .premium-modal-lead');
+      if (lead) {
+        lead.textContent = t('sl.premiumLead', { num: String(this.freeSessionCount + 1).padStart(2, '0') });
+      }
+    });
     document.body.dataset.pageState = "ready";
     window.dispatchEvent(new Event("learning:ready"));
   }
@@ -108,7 +124,8 @@ class SelectLessonManager {
       const path = paths.find((item) => item.language_code === this.currentLang) ?? paths[0];
       const pathId = Number(path?.id);
       if (!pathId) {
-        this.showToast('Chưa có lộ trình để học');
+        this.showToast(t('sl.noPath'));
+        this.catalogLoaded = true;
         this.renderSessions();
         return;
       }
@@ -116,7 +133,8 @@ class SelectLessonManager {
       const detailData = (detail.data ?? {}) as Record<string, unknown>;
       const topics = Array.isArray(detailData.topics) ? detailData.topics as Record<string, unknown>[] : [];
       if (!topics.length) {
-        this.showToast('Chưa có lộ trình để học');
+        this.showToast(t('sl.noPath'));
+        this.catalogLoaded = true;
         this.renderSessions();
         return;
       }
@@ -130,10 +148,12 @@ class SelectLessonManager {
       this.renderFilterTabs();
       this.updateSessionCount();
       this.selectedLessonId = null;
+      this.catalogLoaded = true;
       this.renderSessions();
       this.updateStatusCard();
     } catch (error) {
-      this.showToast(error instanceof Error ? error.message : 'Không thể tải lộ trình từ Database.');
+      this.showToast(error instanceof Error ? error.message : t('sl.loadFail'));
+      this.catalogLoaded = true;
       this.renderSessions();
     }
   }
@@ -148,9 +168,11 @@ class SelectLessonManager {
       ? ['basic', 'intermediate', 'advanced', 'master', 'extension']
       : ['basic', 'intermediate', 'advanced', 'master'];
     const tier = tierOrder[Math.min(groups - 1, Math.floor((num - 1) / groupSize))];
+    // tierLabel giữ tiếng Việt vì được lưu vào payload localStorage cho trang khác;
+    // phần hiển thị UI dùng t('sl.tier.*') tại chỗ render.
     const tierLabel = { basic: 'Cơ bản', intermediate: 'Giao tiếp', advanced: 'Nâng cao', master: 'Chuyên sâu', extension: 'Mở rộng' }[tier];
     const icon = { basic: 'fa-pen-nib', intermediate: 'fa-comments', advanced: 'fa-briefcase', master: 'fa-crown', extension: 'fa-rocket' }[tier];
-    const name = String(topic.name ?? `Chủ đề ${num}`);
+    const name = String(topic.name ?? t('sl.topicFallback', { n: num }));
     const desc = String(topic.description ?? '');
     return {
       id: Number(topic.id),
@@ -181,8 +203,6 @@ class SelectLessonManager {
     this.toastEl = document.getElementById('sessionToast') as HTMLElement;
     this.toastTextEl = document.getElementById('toastText') as HTMLElement;
 
-    this.currentLangFlagEl = document.getElementById('currentLangFlag') as HTMLImageElement;
-    this.currentLangLabelEl = document.getElementById('currentLangLabel') as HTMLElement;
     this.langDropdownEl = document.getElementById('langDropdown') as HTMLElement;
     this.langDropdownBtnEl = document.getElementById('langDropdownBtn') as HTMLButtonElement;
     this.userDropdownEl = document.getElementById('userDropdown') as HTMLElement;
@@ -203,13 +223,7 @@ class SelectLessonManager {
       this.currentLang = savedLang;
     }
 
-    document.querySelectorAll<HTMLElement>('.lang-dropdown-item').forEach(item => {
-      if (item.getAttribute('data-lang') === nativeLang) {
-        item.style.display = 'none';
-      } else {
-        item.style.display = 'flex';
-      }
-    });
+    // Navbar dropdown là bộ chọn ngôn ngữ GIAO DIỆN (i18n) — không ẩn mục theo tiếng mẹ đẻ.
 
     // Header XP
     const userXP = localStorage.getItem('slanguage_user_xp') || '2,450 XP';
@@ -256,12 +270,15 @@ class SelectLessonManager {
       this.langDropdownEl.classList.toggle('open'); this.langDropdownEl.classList.toggle('show');
     });
 
+    // Navbar dropdown: CHỈ đổi locale giao diện (setLocale), không PATCH hồ sơ,
+    // không ghi slanguage_active_language, không tải lại danh sách buổi học.
     document.querySelectorAll('.lang-dropdown-item').forEach((item) => {
       item.addEventListener('click', (e) => {
-        const lang = (e.currentTarget as HTMLElement).getAttribute('data-lang') as TargetLang;
-        if (lang) {
-          this.switchLanguage(lang);
+        const code = (e.currentTarget as HTMLElement).getAttribute('data-lang') as UiLocale | null;
+        if (code === 'vi' || code === 'en' || code === 'ja') {
+          setLocale(code);
         }
+        this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
       });
     });
 
@@ -328,7 +345,7 @@ class SelectLessonManager {
     const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
     const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
     if (lang === nativeLang) {
-      this.showToast(`Bạn không thể chọn ngôn ngữ mẹ đẻ để học!`);
+      this.showToast(t('sl.nativeBlocked'));
       this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
       return;
     }
@@ -348,27 +365,15 @@ class SelectLessonManager {
     this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
     this.renderSessions();
     this.updateStatusCard();
-    this.showToast(`Đã chuyển mục tiêu sang ${this.langMetadata[lang].name}`);
+    this.showToast(t('sl.switchedTarget', { lang: this.langMetadata[lang].name }));
   }
 
   private applyCurrentLanguage(): void {
-    const meta = this.langMetadata[this.currentLang];
-    this.currentLangFlagEl.src = meta.flag;
-    this.currentLangFlagEl.alt = meta.name;
-    this.currentLangLabelEl.textContent = meta.name;
-
+    // Chip "Mục tiêu" phản ánh ngôn ngữ HỌC (không phải locale giao diện).
+    // Flag/nhãn/selected của navbar do translateShell + updateLanguageDisplay quản lý.
     if (this.targetLangChipEl) {
-      this.targetLangChipEl.innerHTML = `<i class="fa-solid fa-language"></i> Mục tiêu: ${meta.name}`;
+      this.targetLangChipEl.innerHTML = `<i class="fa-solid fa-language"></i> ${t('sl.targetChip', { lang: localeLabel(this.currentLang) })}`;
     }
-
-    document.querySelectorAll('.lang-dropdown-item').forEach((item) => {
-      const l = item.getAttribute('data-lang');
-      if (l === this.currentLang) {
-        item.classList.add('active');
-      } else {
-        item.classList.remove('active');
-      }
-    });
   }
 
   private renderSessions(): void {
@@ -379,7 +384,7 @@ class SelectLessonManager {
       this.sessionsGridEl.innerHTML = `
         <div class="sessions-empty">
           <i class="fa-solid fa-route"></i>
-          <p>Chưa có lộ trình để học</p>
+          <p>${t('sl.noPath')}</p>
         </div>`;
       return;
     }
@@ -403,8 +408,8 @@ class SelectLessonManager {
       this.sessionsGridEl.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 48px 20px; background: rgba(12, 26, 41, 0.7); border-radius: 20px; border: 1px dashed rgba(255,255,255,0.15);">
           <i class="fa-solid fa-magnifying-glass" style="font-size: 2.2rem; color: #64748b; margin-bottom: 12px; display: block;"></i>
-          <h3 style="color: #fff; font-size: 1.2rem; margin-bottom: 6px;">Không tìm thấy buổi học phù hợp</h3>
-          <p style="color: #94a3b8; font-size: 0.9rem;">Vui lòng thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc.</p>
+          <h3 style="color: #fff; font-size: 1.2rem; margin-bottom: 6px;">${t('sl.noResults')}</h3>
+          <p style="color: #94a3b8; font-size: 0.9rem;">${t('sl.noResultsHint')}</p>
         </div>
       `;
       return;
@@ -420,17 +425,17 @@ class SelectLessonManager {
       const title = session.title[this.currentLang] || session.title.ja;
       const desc = session.desc[this.currentLang] || session.desc.ja;
       const metaPills = [
-        session.vocabCount > 0 ? `<span class="meta-pill"><i class="fa-solid fa-book-open"></i> ${session.vocabCount} Từ vựng</span>` : '',
-        session.grammarCount > 0 ? `<span class="meta-pill"><i class="fa-solid fa-spell-check"></i> ${session.grammarCount} Ngữ pháp</span>` : '',
+        session.vocabCount > 0 ? `<span class="meta-pill"><i class="fa-solid fa-book-open"></i> ${t('sl.pillVocab', { n: session.vocabCount })}</span>` : '',
+        session.grammarCount > 0 ? `<span class="meta-pill"><i class="fa-solid fa-spell-check"></i> ${t('sl.pillGrammar', { n: session.grammarCount })}</span>` : '',
         session.xpReward > 0 ? `<span class="meta-pill xp"><i class="fa-solid fa-star"></i> +${session.xpReward} XP</span>` : '',
-        session.completed ? '<span class="meta-pill xp"><i class="fa-solid fa-circle-check"></i> Hoàn thành</span>' : '',
+        session.completed ? `<span class="meta-pill xp"><i class="fa-solid fa-circle-check"></i> ${t('sl.pillCompleted')}</span>` : '',
         session.locked ? '<span class="meta-pill premium"><i class="fa-solid fa-crown"></i> Premium</span>' : '',
       ].join('');
 
       card.innerHTML = `
         <div class="card-header-row">
           <span class="session-num-pill">SESSION ${session.numStr}</span>
-          <span class="session-tier-tag ${session.tier}">${session.tierLabel}</span>
+          <span class="session-tier-tag ${session.tier}">${t(`sl.tier.${session.tier}`)}</span>
         </div>
 
         <div class="card-main-content">
@@ -452,8 +457,8 @@ class SelectLessonManager {
         <div class="card-action-bar">
           <button type="button" class="btn-card-select">
             ${session.locked
-              ? '<i class="fa-solid fa-crown"></i> Cần Premium'
-              : isSelected ? '<i class="fa-solid fa-circle-check"></i> Đang Chọn' : '<i class="fa-solid fa-arrow-pointer"></i> Chọn Buổi Này'}
+              ? `<i class="fa-solid fa-crown"></i> ${t('sl.needPremium')}`
+              : isSelected ? `<i class="fa-solid fa-circle-check"></i> ${t('sl.selected')}` : `<i class="fa-solid fa-arrow-pointer"></i> ${t('sl.selectThis')}`}
           </button>
         </div>
       `;
@@ -490,7 +495,7 @@ class SelectLessonManager {
     // Re-render to update selected classes
     this.renderSessions();
     this.updateStatusCard();
-    this.showToast(`Đã chọn Session ${session.numStr}: ${session.title[this.currentLang]}`);
+    this.showToast(t('sl.toastSelected', { num: session.numStr, title: session.title[this.currentLang] }));
   }
 
   private updateStatusCard(): void {
@@ -498,20 +503,20 @@ class SelectLessonManager {
       const session = this.sessionsList.find((s) => s.id === this.selectedLessonId);
       if (session) {
         const title = session.title[this.currentLang];
-        this.statusLessonTextEl.textContent = `Session ${session.numStr}: ${title}`;
+        this.statusLessonTextEl.textContent = t('sl.statusSelected', { num: session.numStr, title });
         this.selectionStatusCardEl.classList.add('active');
         this.statusIconEl.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
         this.btnProceedRoadmapEl.disabled = false;
-        this.btnProceedRoadmapEl.title = 'Nhấn để vào bản đồ học tập ngay!';
+        this.btnProceedRoadmapEl.title = t('sl.proceedTitleActive');
         return;
       }
     }
 
-    this.statusLessonTextEl.textContent = 'Chưa chọn buổi học nào';
+    this.statusLessonTextEl.textContent = t('sl.statusNone');
     this.selectionStatusCardEl.classList.remove('active');
     this.statusIconEl.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
     this.btnProceedRoadmapEl.disabled = true;
-    this.btnProceedRoadmapEl.title = 'Vui lòng chọn 1 buổi học để tiếp tục';
+    this.btnProceedRoadmapEl.title = t('sl.proceedTitleDisabled');
   }
 
   private async changeProfileLanguage(lang: TargetLang): Promise<void> {
@@ -522,7 +527,7 @@ class SelectLessonManager {
       localStorage.setItem('slanguage_active_language', lang);
       window.location.reload();
     } catch (error) {
-      this.showToast(error instanceof Error ? error.message : 'Không thể cập nhật ngôn ngữ.');
+      this.showToast(error instanceof Error ? error.message : t('sl.langUpdateFail'));
     } finally {
       this.langDropdownBtnEl.disabled = false;
     }
@@ -533,10 +538,10 @@ class SelectLessonManager {
     if (!session) return;
     if (!session.topicId || !this.dbPathId) {
       if (!isLearnerAuthenticated()) {
-        this.showToast('Cần đăng nhập tài khoản học viên để tải bài đọc từ Database.');
+        this.showToast(t('sl.loginRequired'));
         window.location.assign('../login/index.html');
       } else {
-        this.showToast('Chưa có lộ trình để học');
+        this.showToast(t('sl.noPath'));
       }
       return;
     }
@@ -554,16 +559,9 @@ class SelectLessonManager {
       counts.set(session.tier, (counts.get(session.tier) || 0) + 1);
     });
     const order: SessionTier[] = ['basic', 'intermediate', 'advanced', 'master', 'extension'];
-    const labels: Record<SessionTier, string> = {
-      basic: 'Cơ bản',
-      intermediate: 'Giao tiếp',
-      advanced: 'Nâng cao',
-      master: 'Chuyên sâu',
-      extension: 'Mở rộng'
-    };
     const tabs = order
       .filter((tier) => counts.has(tier))
-      .map((tier) => `<button class="filter-btn" data-filter="${tier}">${labels[tier]} (${counts.get(tier)})</button>`)
+      .map((tier) => `<button class="filter-btn" data-filter="${tier}">${t(`sl.tier.${tier}`)} (${counts.get(tier)})</button>`)
       .join('');
     this.filterTabsEl.querySelectorAll('.filter-btn:not([data-filter="all"])').forEach((btn) => btn.remove());
     const allBtn = this.filterTabsEl.querySelector('.filter-btn[data-filter="all"]');
@@ -572,7 +570,11 @@ class SelectLessonManager {
 
   private updateSessionCount(): void {
     const el = document.getElementById('sessionCountText');
-    if (el) el.textContent = `${this.sessionsList.length} Buổi Học (Session)`;
+    if (el) {
+      // Nội dung động (có số lượng) — bỏ data-i18n tĩnh để applyI18n không ghi đè
+      el.removeAttribute('data-i18n');
+      el.textContent = t('sl.sessionCount', { n: this.sessionsList.length });
+    }
   }
 
   private showPremiumModal(): void {
@@ -584,23 +586,23 @@ class SelectLessonManager {
       overlay.innerHTML = `
         <div class="premium-modal-card">
           <div class="premium-modal-icon"><i class="fa-solid fa-crown"></i></div>
-          <h3>Nâng cấp Premium</h3>
-          <p class="premium-modal-lead">Nửa sau của lộ trình (từ Session ${String(this.freeSessionCount + 1).padStart(2, '0')}) cần Premium để mở khóa. Nâng cấp để học toàn bộ chủ đề còn lại ngay lập tức.</p>
+          <h3 data-i18n="sl.premiumTitle">${t('sl.premiumTitle')}</h3>
+          <p class="premium-modal-lead">${t('sl.premiumLead', { num: String(this.freeSessionCount + 1).padStart(2, '0') })}</p>
           <div class="premium-plan-row">
             <div class="premium-plan-card">
-              <div class="premium-plan-name">Premium Tháng</div>
+              <div class="premium-plan-name" data-i18n="sl.premiumMonthly">${t('sl.premiumMonthly')}</div>
               <div class="premium-plan-price">99.000đ</div>
-              <div class="premium-plan-note">/ 30 ngày</div>
+              <div class="premium-plan-note" data-i18n="sl.per30Days">${t('sl.per30Days')}</div>
             </div>
             <div class="premium-plan-card featured">
-              <div class="premium-plan-badge">Tiết kiệm nhất</div>
-              <div class="premium-plan-name">Premium Vĩnh Viễn</div>
+              <div class="premium-plan-badge" data-i18n="sl.bestValue">${t('sl.bestValue')}</div>
+              <div class="premium-plan-name" data-i18n="sl.premiumLifetime">${t('sl.premiumLifetime')}</div>
               <div class="premium-plan-price">999.000đ</div>
-              <div class="premium-plan-note">không giới hạn</div>
+              <div class="premium-plan-note" data-i18n="sl.unlimited">${t('sl.unlimited')}</div>
             </div>
           </div>
-          <button type="button" id="premiumActivateBtn" class="premium-activate-btn"><i class="fa-solid fa-bolt"></i> Kích hoạt Premium (Demo)</button>
-          <button type="button" id="premiumCloseBtn" class="premium-later-btn">Để sau</button>
+          <button type="button" id="premiumActivateBtn" class="premium-activate-btn" data-i18n="sl.premiumActivate"><i class="fa-solid fa-bolt"></i> ${t('sl.premiumActivate')}</button>
+          <button type="button" id="premiumCloseBtn" class="premium-later-btn" data-i18n="sl.later">${t('sl.later')}</button>
         </div>`;
       document.body.appendChild(overlay);
       overlay.addEventListener('click', (event) => {
@@ -614,7 +616,7 @@ class SelectLessonManager {
         this.renderSessions();
         this.updateStatusCard();
         this.closePremiumModal();
-        this.showToast('Kích hoạt Premium thành công! Toàn bộ chủ đề đã mở khóa 👑');
+        this.showToast(t('sl.premiumActivated'));
       });
     }
     overlay.classList.add('active');

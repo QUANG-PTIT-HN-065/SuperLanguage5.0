@@ -21,6 +21,7 @@ import {
   spendHearts,
 } from "../shared/hearts";
 import { activateBestBoost, tryHealHearts } from "../shared/shop-items";
+import { applyI18n, getLocale, setLocale, t, LOCALE_EVENT, type UiLocale } from "../shared/i18n";
 
 type DungeonDifficulty = 'easy' | 'normal' | 'hard';
 type TargetLang = 'ja' | 'en' | 'vi';
@@ -29,6 +30,11 @@ interface TrialBase {
   prompt: string;
   explanation: string;
   bossIndex?: number;
+  // Khóa i18n cho câu hỏi sinh cục bộ (câu Boss do máy chủ trả về là dữ liệu, giữ nguyên)
+  promptKey?: string;
+  promptVars?: Record<string, string | number>;
+  explanationKey?: string;
+  explanationVars?: Record<string, string | number>;
 }
 
 interface McTrial extends TrialBase {
@@ -137,36 +143,27 @@ const HUB_ICONS = [
   'fa-solid fa-crown',
 ];
 
-const DIFF_META: Record<DungeonDifficulty, { icon: string; xp: number; hearts: number; title: string; objectives: string[] }> = {
+const DIFF_META: Record<DungeonDifficulty, { icon: string; xp: number; hearts: number; titleKey: string; objectiveKeys: string[] }> = {
   easy: {
     icon: 'fa-solid fa-feather-pointed',
     xp: 5,
     hearts: 1,
-    title: 'Nhánh Dễ: Trắc nghiệm & Điền từ (7:3)',
-    objectives: [
-      '15 câu ngẫu nhiên: 11 trắc nghiệm + 4 điền từ nghe chính tả',
-      'Sai trừ 1 máu — hết máu phải thoát khỏi bài học',
-    ],
+    titleKey: 'rm.easyTitle',
+    objectiveKeys: ['rm.easyObj1', 'rm.easyObj2'],
   },
   normal: {
     icon: 'fa-solid fa-wand-magic-sparkles',
     xp: 10,
     hearts: 2,
-    title: 'Nhánh Vừa: Điền từ & Nối nghĩa (5:4:1)',
-    objectives: [
-      '15 câu ngẫu nhiên: 8 điền từ chính tả + 6 nối từ với nghĩa + 1 trắc nghiệm',
-      'Sai trừ 2 máu — hết máu phải thoát khỏi bài học',
-    ],
+    titleKey: 'rm.normalTitle',
+    objectiveKeys: ['rm.normalObj1', 'rm.normalObj2'],
   },
   hard: {
     icon: 'fa-solid fa-skull',
     xp: 15,
     hearts: 3,
-    title: 'Nhánh Khó: Điền từ & Nối nghĩa (5:4:1)',
-    objectives: [
-      '15 câu ngẫu nhiên: 8 điền từ chính tả + 6 nối từ với nghĩa + 1 trắc nghiệm',
-      'Sai trừ 3 máu — hết máu phải thoát khỏi bài học',
-    ],
+    titleKey: 'rm.hardTitle',
+    objectiveKeys: ['rm.normalObj1', 'rm.hardObj2'],
   },
 };
 
@@ -204,6 +201,13 @@ class SlanguageDungeonTree {
   private quizLessonId: number = 0;
   private quizXp: number = 20;
   private quizCompleted: boolean = false;
+  private lessonNumStr: string = '';
+  // Dữ liệu thô cache lại để dựng lại phần chữ UI khi đổi ngôn ngữ giao diện
+  private quizDescription: string = '';
+  private quizTitleRaw: string = '';
+  private readings: TopicReadingEntry[] = [];
+  private bossLoading = false;
+  private trialResultState: { className: string; render: () => string } | null = null;
 
   // Quiz Boss (AI chấm phía server) & trạng thái câu hỏi nhiều dạng
   private bossToken: string | null = null;
@@ -272,6 +276,7 @@ class SlanguageDungeonTree {
     this.topicId = payload.topicId;
     this.pathId = payload.pathId;
     this.topicTitle = payload.title;
+    this.lessonNumStr = payload.numStr;
     this.currentLang = payload.lang;
     this.storageKey = `slanguage_dungeon_topic_${this.currentLang}_${this.topicId}`;
     try {
@@ -290,6 +295,11 @@ class SlanguageDungeonTree {
         this.updateStatsDisplays();
       }
     });
+    // Đổi ngôn ngữ GIAO DIỆN: chỉ dịch lại chữ UI, không đổi ngôn ngữ học / không gọi API
+    window.addEventListener(LOCALE_EVENT, () => {
+      applyI18n();
+      this.handleLocaleChange();
+    });
     showSkeleton(this.treeNodesFlow, 'dungeon', { tone: 'dark' });
     void this.loadDungeon();
   }
@@ -306,7 +316,7 @@ class SlanguageDungeonTree {
       if (!Number.isInteger(topicId) || topicId < 1 || !Number.isInteger(pathId) || pathId < 1 || !title) return null;
       if (lang !== 'ja' && lang !== 'en' && lang !== 'vi') return null;
       const titleEl = document.getElementById('activeLessonTitle');
-      if (titleEl) titleEl.textContent = `Session ${asString(parsed.numStr) || '01'} - ${title}`;
+      if (titleEl) titleEl.textContent = t('rm.sessionFormat', { num: asString(parsed.numStr) || '01', title });
       return { numStr: asString(parsed.numStr), title, lang, topicId, pathId };
     } catch {
       localStorage.removeItem('slanguage_selected_lesson');
@@ -323,15 +333,8 @@ class SlanguageDungeonTree {
   }
 
   private initStorage(): void {
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-
     localStorage.setItem('slanguage_active_language', this.currentLang);
     localStorage.setItem('slanguage_current_lang', this.currentLang);
-
-    document.querySelectorAll<HTMLElement>('.lang-dropdown-item').forEach(item => {
-      item.style.display = item.getAttribute('data-lang') === nativeLang ? 'none' : 'flex';
-    });
 
     // Bản cũ ghi sẵn 2450 XP giả vào storage — dọn một lần duy nhất
     if (!localStorage.getItem('slanguage_xp_v2_reset')) {
@@ -380,6 +383,10 @@ class SlanguageDungeonTree {
     this.modalHubReadingBox = document.getElementById('modalHubReadingBox');
     this.readingArticleTitle = document.getElementById('readingArticleTitle');
     this.readingArticleContent = document.getElementById('readingArticleContent');
+
+    if (this.treeMainTitle) this.treeMainTitle.textContent = t('rm.loadingTitle');
+    if (this.treeMainSubtitle) this.treeMainSubtitle.innerHTML = `<p class="intro-lead">${t('rm.loadingSubtitle')}</p>`;
+    if (this.treeDungeonXp) this.treeDungeonXp.textContent = t('rm.dungeonXpLoading');
 
     this.updateStatsDisplays();
   }
@@ -437,10 +444,17 @@ class SlanguageDungeonTree {
       }
     });
 
-    document.querySelectorAll('.lang-dropdown-item').forEach(item => {
+    // Dropdown ngôn ngữ trên navbar chỉ đổi locale GIAO DIỆN (i18n),
+    // không PATCH target_language, không đổi ngôn ngữ học, không tải lại lộ trình.
+    document.querySelectorAll<HTMLButtonElement>('.lang-dropdown-item').forEach(item => {
       item.addEventListener('click', () => {
-        const lang = item.getAttribute('data-lang') as TargetLang;
-        if (lang) this.switchLanguage(lang);
+        const code = item.dataset.lang as UiLocale | undefined;
+        if (code && code !== getLocale()) setLocale(code);
+        if (langDropdown) {
+          langDropdown.classList.remove('active');
+          langDropdown.classList.remove('open');
+        }
+        langDropdownBtn?.setAttribute('aria-expanded', 'false');
       });
     });
 
@@ -465,25 +479,26 @@ class SlanguageDungeonTree {
     this.bindPageTransitions();
   }
 
+  // Điều khiển đổi ngôn ngữ HỌC (không thuộc navbar) — hiện dùng cho các liên kết ở footer.
   public switchLanguage(lang: TargetLang): void {
     if (lang === this.currentLang) return;
     localStorage.setItem('slanguage_current_lang', lang);
     localStorage.setItem('slanguage_active_language', lang);
     void slanguageApi('/api/v1/me', { method: 'PATCH', body: { target_language: lang } }).catch(() => {});
-    this.showToast('Đổi ngôn ngữ sẽ quay lại trang chọn chủ đề của lộ trình mới.');
+    this.showToast(t('rm.switchLangToast'));
     window.location.assign('../select-lesson/index.html');
   }
 
   private updateStatsDisplays(): void {
     if (this.navXPVal) this.navXPVal.textContent = `${this.totalXP.toLocaleString()} XP`;
     if (this.treeTotalXP) this.treeTotalXP.textContent = `${this.totalXP.toLocaleString()} XP`;
-    if (this.treeLevelVal) this.treeLevelVal.textContent = `Level ${Math.floor(this.totalXP / 100) + 1}`;
+    if (this.treeLevelVal) this.treeLevelVal.textContent = t('rm.level', { n: Math.floor(this.totalXP / 100) + 1 });
     if (this.navHeartsVal) {
       this.navHeartsVal.textContent = `${this.currentHearts}/${this.maxHearts}`;
       const chip = this.navHeartsVal.closest<HTMLElement>('.hud-chip, .stat-chip') || this.navHeartsVal;
       chip.title = isHeartsLocked()
-        ? `Hết máu — sinh lực khóa hồi 24 giờ, còn ${formatHeartLock(heartLockRemainingMs())}`
-        : `Sinh lực: ${this.currentHearts}/${this.maxHearts}`;
+        ? t('rm.heartsChipLocked', { time: formatHeartLock(heartLockRemainingMs()) })
+        : t('rm.heartsChip', { cur: this.currentHearts, max: this.maxHearts });
     }
     this.renderTrialHearts();
     if (this.navHeartIcon) {
@@ -524,7 +539,7 @@ class SlanguageDungeonTree {
       this.quizXp = Number(quiz.xp_reward) || 20;
       this.quizCompleted = quiz.is_completed === true;
       if (!this.words.length || !this.quizLessonId) {
-        throw new Error('Chủ đề chưa có từ vựng hoặc bài học trong Database. Hãy nạp SeedData rồi thử lại.');
+        throw new Error(t('rm.noData'));
       }
       const readingsData = readingsResponse ? asRecord(readingsResponse.data) : {};
       const rawReadings = Array.isArray(readingsData.readings) ? readingsData.readings as unknown[] : [];
@@ -536,13 +551,16 @@ class SlanguageDungeonTree {
           translation: asString(row.translation),
         };
       });
-      this.buildNodes(asString(quiz.description), asString(quiz.title) || this.topicTitle, readings);
+      this.quizDescription = asString(quiz.description);
+      this.quizTitleRaw = asString(quiz.title) || this.topicTitle;
+      this.readings = readings;
+      this.buildNodes(this.quizDescription, this.quizTitleRaw, readings);
       if (this.quizCompleted) this.mastered.add(this.officialId());
       this.applyStatuses();
       this.renderTree();
     } catch (error) {
       clearSkeleton(this.treeNodesFlow);
-      this.showToast(error instanceof Error ? error.message : 'Không thể tải dungeon của chủ đề từ Database.');
+      this.showToast(error instanceof Error ? error.message : t('rm.loadFail'));
       window.setTimeout(() => window.location.replace('../select-lesson/index.html'), 3000);
     }
   }
@@ -555,7 +573,7 @@ class SlanguageDungeonTree {
       const slice = this.words.slice((stage - 1) * chunk, stage * chunk);
       const pool = stage === 5 || !slice.length ? this.words : slice;
       const hubId = this.hubId(stage);
-      const stageName = `MỐC ${stage}: ${this.topicTitle.toUpperCase()}`;
+      const stageName = t('rm.stageName', { stage, topic: this.topicTitle.toUpperCase() });
       const parents = stage === 1
         ? []
         : (['easy', 'normal', 'hard'] as DungeonDifficulty[]).map((diff) => `t${this.topicId}_s${stage - 1}_${diff}`);
@@ -568,8 +586,8 @@ class SlanguageDungeonTree {
         stage,
         stageName,
         isHub: true,
-        title: entry?.title.trim() || `Bài đọc tầng ${stage}: ${this.topicTitle}`,
-        desc: `Chặng ${stage}/5 • ${pool.length} từ vựng trọng tâm`,
+        title: entry?.title.trim() || t('rm.hubTitleFallback', { stage, topic: this.topicTitle }),
+        desc: t('rm.hubDesc', { stage, count: pool.length }),
         icon: HUB_ICONS[stage - 1],
         xpReward: 0,
         heartPenalty: 0,
@@ -590,19 +608,15 @@ class SlanguageDungeonTree {
             isHub: false,
             official: true,
             difficulty: 'hard',
-            title: 'BOSS: Kiểm tra AI (25 câu)',
-            desc: 'AI soạn 25 câu từ tất cả chủ đề — đúng hết để mở chủ đề kế tiếp',
+            title: t('rm.bossTitle'),
+            desc: t('rm.bossDesc'),
             icon: 'fa-solid fa-dragon',
             xpReward: this.quizXp,
             heartPenalty: 1,
             status: 'locked',
             parents: [hubId],
-            objectives: [
-              '25 câu trộn trắc nghiệm, điền từ nghe chính tả và nối từ với nghĩa',
-              'AI soạn đề từ toàn bộ chủ đề của lộ trình',
-              'Sai trừ 1 máu; đúng cả 25 để máy chủ ghi nhận hoàn thành chủ đề',
-            ],
-            preview: 'Quiz Boss gọi AI tạo câu hỏi mới mỗi lần mở, phủ rộng mọi chủ đề đã có.',
+            objectives: [t('rm.bossObj1'), t('rm.bossObj2'), t('rm.bossObj3')],
+            preview: t('rm.bossPreview'),
             pool,
           });
           continue;
@@ -613,14 +627,14 @@ class SlanguageDungeonTree {
           stageName,
           isHub: false,
           difficulty: diff,
-          title: meta.title,
-          desc: `Chặng ${stage}/5 • 15 câu ngẫu nhiên từ kho từ đã tích lũy`,
+          title: t(meta.titleKey),
+          desc: t('rm.branchDesc', { stage }),
           icon: meta.icon,
           xpReward: meta.xp,
           heartPenalty: meta.hearts,
           status: 'locked',
           parents: [hubId],
-          objectives: meta.objectives,
+          objectives: meta.objectiveKeys.map((key) => t(key)),
           preview: pool.map((word) => word.word).join(' • '),
           pool,
         });
@@ -639,13 +653,13 @@ class SlanguageDungeonTree {
     const paragraphs = passage.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
     return {
       title: quizTitle,
-      lead: `Đọc kỹ bài đọc của chủ đề "${this.topicTitle}" rồi bấm hoàn thành để mở 3 nhánh thử thách của chặng.`,
+      lead: t('rm.readingLeadTopic', { topic: this.topicTitle }),
       sections: (paragraphs.length ? paragraphs : [passage]).map((text, index) => ({
-        heading: `Đoạn ${index + 1}`,
+        heading: t('rm.paragraph', { n: index + 1 }),
         icon: 'fa-solid fa-book-open',
         text,
       })),
-      keyTakeaway: translation || 'Chủ đề chưa có bản dịch trong Database.',
+      keyTakeaway: translation || t('rm.noTranslationTopic'),
     };
   }
 
@@ -654,14 +668,14 @@ class SlanguageDungeonTree {
     if (!passage) return undefined;
     const paragraphs = passage.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
     return {
-      title: entry.title.trim() || `Bài đọc tầng ${stage}: ${this.topicTitle}`,
-      lead: `Đọc kỹ bài đọc tầng ${stage} của chủ đề "${this.topicTitle}" rồi bấm hoàn thành để mở 3 nhánh thử thách của tầng.`,
+      title: entry.title.trim() || t('rm.hubTitleFallback', { stage, topic: this.topicTitle }),
+      lead: t('rm.readingLeadStage', { stage, topic: this.topicTitle }),
       sections: (paragraphs.length ? paragraphs : [passage]).map((text, index) => ({
-        heading: `Đoạn ${index + 1}`,
+        heading: t('rm.paragraph', { n: index + 1 }),
         icon: 'fa-solid fa-book-open',
         text,
       })),
-      keyTakeaway: entry.translation.trim() || 'Bài đọc chưa có bản dịch trong Database.',
+      keyTakeaway: entry.translation.trim() || t('rm.noTranslation'),
     };
   }
 
@@ -698,15 +712,11 @@ class SlanguageDungeonTree {
     if (!this.treeNodesFlow || !this.nodes.length) return;
 
     if (this.treeMainTitle) {
-      this.treeMainTitle.textContent = `Dungeon 5 Tầng: ${this.topicTitle}`;
+      this.treeMainTitle.textContent = t('rm.treeTitle', { topic: this.topicTitle });
     }
     if (this.treeMainSubtitle) {
       this.treeMainSubtitle.innerHTML = `
-        <p class="intro-lead">
-          Mỗi tầng gồm một mốc <strong>bài đọc riêng</strong> tải từ Database (5 bài/chủ đề) và 3 nhánh thử thách
-          <strong>Dễ / Vừa / Khó</strong> sinh câu hỏi ngẫu nhiên từ từ vựng của chủ đề.
-          Đọc xong mốc để mở nhánh, vượt tầng trước để mở tầng sau; tầng 5 có Boss quiz AI 25 câu mở chủ đề kế tiếp.
-        </p>`;
+        <p class="intro-lead">${t('rm.introLead')}</p>`;
     }
 
     const totalRooms = this.nodes.filter(n => !n.isHub).length;
@@ -715,11 +725,11 @@ class SlanguageDungeonTree {
 
     if (this.treeProgressFill) this.treeProgressFill.style.width = `${progressPercent}%`;
     if (this.treeProgressPercent) this.treeProgressPercent.textContent = `${progressPercent}%`;
-    if (this.treeNodesRatio) this.treeNodesRatio.textContent = `${masteredRooms} / ${totalRooms} Ải đã vượt`;
+    if (this.treeNodesRatio) this.treeNodesRatio.textContent = t('rm.nodesRatio', { done: masteredRooms, total: totalRooms });
 
     const dungeonXpMax = this.nodes.filter(n => !n.isHub).reduce((sum, n) => sum + n.xpReward, 0);
     const dungeonXpEarned = this.nodes.filter(n => !n.isHub && this.mastered.has(n.id)).reduce((sum, n) => sum + n.xpReward, 0);
-    if (this.treeDungeonXp) this.treeDungeonXp.textContent = `Dungeon này: ${dungeonXpEarned} / ${dungeonXpMax} XP có thể đạt`;
+    if (this.treeDungeonXp) this.treeDungeonXp.textContent = t('rm.dungeonXp', { earned: dungeonXpEarned, max: dungeonXpMax });
 
     const stages: Record<number, { hub?: DungeonNode; branches: DungeonNode[] }> = {};
     for (let i = 1; i <= 5; i++) {
@@ -743,7 +753,7 @@ class SlanguageDungeonTree {
 
       const stagePill = document.createElement('div');
       stagePill.className = 'dungeon-stage-pill';
-      stagePill.innerHTML = `<i class="fa-solid fa-dungeon"></i> TẦNG ${s}: ${stageData.hub ? stageData.hub.stageName : `CHỦ ĐỀ ${s}`}`;
+      stagePill.innerHTML = `<i class="fa-solid fa-dungeon"></i> ${t('rm.stagePill', { stage: s, name: stageData.hub ? stageData.hub.stageName : t('rm.topicFallback', { stage: s }) })}`;
       stageEl.appendChild(stagePill);
 
       if (stageData.hub) {
@@ -778,39 +788,39 @@ class SlanguageDungeonTree {
     el.id = `node_${node.id}`;
 
     let statusBadgeHtml = '';
-    let statusText = 'Đang khóa 🔒';
+    let statusText = t('rm.statusLocked');
     if (node.status === 'mastered') {
       statusBadgeHtml = `<div class="node-status-badge mastered"><i class="fa-solid fa-check"></i></div>`;
-      statusText = node.isHub ? 'Đã đọc bài 📖' : (node.official ? 'Đã hạ Boss 🌟' : 'Đã vượt ải 🌟');
+      statusText = node.isHub ? t('rm.tipReadDone') : (node.official ? t('rm.bossDefeated') : t('rm.cleared'));
     } else if (node.status === 'current') {
       statusBadgeHtml = `<div class="node-status-badge current"><i class="fa-solid fa-play"></i></div>`;
-      statusText = node.isHub ? 'Đang đọc 📖' : 'Đang mở ⚡';
+      statusText = node.isHub ? t('rm.readingNow') : t('rm.openNow');
     } else if (node.status === 'available') {
       statusBadgeHtml = `<div class="node-status-badge available"><i class="fa-solid fa-unlock"></i></div>`;
-      statusText = node.isHub ? 'Sẵn sàng đọc 📖' : (node.official ? 'Sẵn sàng hạ Boss 🎓' : 'Sẵn sàng khiêu chiến ⚔️');
+      statusText = node.isHub ? t('rm.readyRead') : (node.official ? t('rm.readyBoss') : t('rm.readyFight'));
     } else {
       statusBadgeHtml = `<div class="node-status-badge locked"><i class="fa-solid fa-lock"></i></div>`;
-      statusText = 'Đang khóa 🔒';
+      statusText = t('rm.statusLocked');
     }
 
     let diffPillHtml = '';
     if (node.isHub) {
-      diffPillHtml = `<span class="diff-chip chip-hub"><i class="fa-solid fa-book-open"></i> MỐC ${node.stage}</span>`;
+      diffPillHtml = `<span class="diff-chip chip-hub"><i class="fa-solid fa-book-open"></i> ${t('rm.hubChip', { stage: node.stage })}</span>`;
     } else if (node.official) {
       diffPillHtml = `<span class="diff-chip chip-hard"><i class="fa-solid fa-crown"></i> BOSS</span>`;
     } else if (node.difficulty === 'easy') {
-      diffPillHtml = `<span class="diff-chip chip-easy"><i class="fa-solid fa-feather"></i> DỄ</span>`;
+      diffPillHtml = `<span class="diff-chip chip-easy"><i class="fa-solid fa-feather"></i> ${t('rm.easy')}</span>`;
     } else if (node.difficulty === 'normal') {
-      diffPillHtml = `<span class="diff-chip chip-normal"><i class="fa-solid fa-shield-halved"></i> VỪA</span>`;
+      diffPillHtml = `<span class="diff-chip chip-normal"><i class="fa-solid fa-shield-halved"></i> ${t('rm.normal')}</span>`;
     } else {
-      diffPillHtml = `<span class="diff-chip chip-hard"><i class="fa-solid fa-skull"></i> KHÓ</span>`;
+      diffPillHtml = `<span class="diff-chip chip-hard"><i class="fa-solid fa-skull"></i> ${t('rm.hard')}</span>`;
     }
 
     let compactStakesHtml = '';
     if (node.isHub) {
-      compactStakesHtml = `<div class="node-compact-stakes hub-mode"><span class="stake-reading-tag"><i class="fa-solid fa-book-open"></i> Bài đọc chủ đề</span></div>`;
+      compactStakesHtml = `<div class="node-compact-stakes hub-mode"><span class="stake-reading-tag"><i class="fa-solid fa-book-open"></i> ${t('rm.topicReading')}</span></div>`;
     } else if (node.official) {
-      compactStakesHtml = `<div class="node-compact-stakes"><span class="stake-win">+${node.xpReward} XP</span><span class="stake-reading-tag"><i class="fa-solid fa-graduation-cap"></i> 25/25 mở chủ đề kế</span></div>`;
+      compactStakesHtml = `<div class="node-compact-stakes"><span class="stake-win">+${node.xpReward} XP</span><span class="stake-reading-tag"><i class="fa-solid fa-graduation-cap"></i> ${t('rm.bossUnlockShort')}</span></div>`;
     } else if (node.difficulty === 'easy') {
       compactStakesHtml = `<div class="node-compact-stakes"><span class="stake-win">+5 XP</span><span class="stake-loss">-1 ❤️</span></div>`;
     } else if (node.difficulty === 'normal') {
@@ -820,24 +830,24 @@ class SlanguageDungeonTree {
     }
 
     let tooltipStakesHtml = '';
-    let clickHint = '<i class="fa-solid fa-hand-pointer"></i> Nhấn để mở phòng thử thách';
+    let clickHint = `<i class="fa-solid fa-hand-pointer"></i> ${t('rm.hintTrial')}`;
     if (node.isHub) {
       tooltipStakesHtml = `
         <div class="tooltip-stakes-bar hub-mode">
-          <span class="stake-info" style="color: #38bdf8; font-weight:700;"><i class="fa-solid fa-book-open"></i> Bài đọc chủ đề (Không tính thưởng / phạt)</span>
+          <span class="stake-info" style="color: #38bdf8; font-weight:700;"><i class="fa-solid fa-book-open"></i> ${t('rm.hubNoStakes')}</span>
         </div>`;
-      clickHint = '<i class="fa-solid fa-book-reader"></i> Nhấn để mở bài đọc chuyên đề';
+      clickHint = `<i class="fa-solid fa-book-reader"></i> ${t('rm.hintReading')}`;
     } else if (node.official) {
       tooltipStakesHtml = `
         <div class="tooltip-stakes-bar">
-          <span class="stake-win"><i class="fa-solid fa-trophy"></i> Đạt 25/25: +${node.xpReward} XP (máy chủ chấm)</span>
+          <span class="stake-win"><i class="fa-solid fa-trophy"></i> ${t('rm.bossWinStake', { xp: node.xpReward })}</span>
         </div>`;
-      clickHint = '<i class="fa-solid fa-graduation-cap"></i> Nhấn để vào bài kiểm tra chính thức';
+      clickHint = `<i class="fa-solid fa-graduation-cap"></i> ${t('rm.hintBoss')}`;
     } else {
       tooltipStakesHtml = `
         <div class="tooltip-stakes-bar">
-          <span class="stake-win"><i class="fa-solid fa-trophy"></i> Thắng: +${node.xpReward} XP</span>
-          ${node.heartPenalty > 0 ? `<span class="stake-loss"><i class="fa-solid fa-heart-crack"></i> Thua: -${node.heartPenalty} ❤️</span>` : ''}
+          <span class="stake-win"><i class="fa-solid fa-trophy"></i> ${t('rm.winStake', { xp: node.xpReward })}</span>
+          ${node.heartPenalty > 0 ? `<span class="stake-loss"><i class="fa-solid fa-heart-crack"></i> ${t('rm.loseStake', { penalty: node.heartPenalty })}</span>` : ''}
         </div>`;
     }
 
@@ -877,7 +887,7 @@ class SlanguageDungeonTree {
         if (!node.isHub && isHeartsLocked()) {
           const healed = await tryHealHearts();
           if (!healed) {
-            this.showToast(`💔 Hết máu! Sinh lực bị khóa hồi 24 giờ — còn ${formatHeartLock(heartLockRemainingMs())} nữa mới hồi đầy. Mua Hồi Phục Máu Siêu Tốc trong Cửa hàng để chơi tiếp ngay.`);
+            this.showToast(t('rm.heartsLockedToast', { time: formatHeartLock(heartLockRemainingMs()) }));
             return;
           }
           this.currentHearts = readHearts();
@@ -976,6 +986,21 @@ class SlanguageDungeonTree {
     this.selectedChoiceIdx = null;
     if (!this.nodeModalOverlay) return;
 
+    this.renderModalChrome(node);
+
+    if (!node.isHub && !node.official) {
+      this.currentQuestionIdx = 0;
+      await this.ensureExtendedPool();
+      this.currentQuestionsList = this.generateTrials(node);
+      if (node.status !== 'locked') void activateBestBoost();
+      this.renderCurrentQuestion();
+    }
+
+    this.nodeModalOverlay.classList.add('active');
+  }
+
+  /** Phần chữ UI của modal (không sinh câu hỏi) — gọi lại được khi đổi locale. */
+  private renderModalChrome(node: DungeonNode): void {
     if (this.modalNodeBadge) {
       this.modalNodeBadge.innerHTML = `<i class="${node.icon}"></i>`;
     }
@@ -988,13 +1013,13 @@ class SlanguageDungeonTree {
 
     if (this.modalNodeStatus) {
       if (node.status === 'mastered') {
-        this.modalNodeStatus.textContent = node.isHub ? 'Đã hoàn thành bài đọc 📖' : (node.official ? 'Đã hạ Boss 🌟' : 'Đã hoàn thành 🌟');
+        this.modalNodeStatus.textContent = node.isHub ? t('rm.modalReadDone') : (node.official ? t('rm.bossDefeated') : t('rm.modalDone'));
         this.modalNodeStatus.className = 'node-tag status-tag mastered';
       } else if (node.status === 'locked') {
-        this.modalNodeStatus.textContent = 'Đang khóa 🔒';
+        this.modalNodeStatus.textContent = t('rm.statusLocked');
         this.modalNodeStatus.className = 'node-tag status-tag locked';
       } else {
-        this.modalNodeStatus.textContent = node.isHub ? 'Sẵn sàng đọc bài 📖' : (node.official ? 'Sẵn sàng hạ Boss 🎓' : 'Sẵn sàng khiêu chiến ⚔️');
+        this.modalNodeStatus.textContent = node.isHub ? t('rm.modalReadyRead') : (node.official ? t('rm.readyBoss') : t('rm.readyFight'));
         this.modalNodeStatus.className = 'node-tag status-tag available';
       }
     }
@@ -1008,7 +1033,7 @@ class SlanguageDungeonTree {
 
       if (this.modalNodeXP) {
         this.modalNodeXP.innerHTML = `
-          <span style="color: #38bdf8; font-weight:700;"><i class="fa-solid fa-book-open"></i> Bài Đọc Tầng ${node.stage}: Tiếp thu kiến thức cốt lõi (Không thưởng / phạt)</span>
+          <span style="color: #38bdf8; font-weight:700;"><i class="fa-solid fa-book-open"></i> ${t('rm.hubStakes', { stage: node.stage })}</span>
         `;
       }
 
@@ -1036,33 +1061,17 @@ class SlanguageDungeonTree {
               <div class="reading-takeaway-box">
                 <i class="fa-solid fa-gem"></i>
                 <div>
-                  <strong>Điểm Cốt Lõi:</strong>
+                  <strong>${t('rm.takeaway')}</strong>
                   <p>${escapeHtml(article.keyTakeaway)}</p>
                 </div>
               </div>
             `;
           } else {
             this.readingArticleContent.innerHTML = `
-              <p class="reading-lead-p">Tầng ${node.stage} của chủ đề này chưa có bài đọc trong Database.</p>
-              <div class="reading-callout-box"><i class="fa-solid fa-circle-info"></i> <span>Quản trị viên có thể soạn bài đọc cho tầng này ở tab “Quản lý Bài đọc” trong trang Quản trị (mỗi chủ đề 5 bài, tương ứng 5 tầng). Bạn vẫn có thể hoàn thành mốc để mở các nhánh thử thách.</span></div>
+              <p class="reading-lead-p">${t('rm.noArticle', { stage: node.stage })}</p>
+              <div class="reading-callout-box"><i class="fa-solid fa-circle-info"></i> <span>${t('rm.noArticleHint')}</span></div>
             `;
           }
-        }
-      }
-
-      if (this.btnExecuteTrial) {
-        this.btnExecuteTrial.disabled = false;
-        this.btnExecuteTrial.classList.remove('complete-action');
-        if (node.status === 'locked') {
-          this.btnExecuteTrial.disabled = true;
-          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-lock"></i> Mốc chủ đề chưa mở khóa`;
-          this.btnExecuteTrial.style.opacity = '0.5';
-        } else if (node.status === 'mastered') {
-          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-circle-check"></i> Đã hoàn thành bài đọc (Đóng lại)`;
-          this.btnExecuteTrial.style.opacity = '1';
-        } else {
-          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-book-reader"></i> Đã Đọc Xong & Hoàn Thành Chủ Đề 🌟`;
-          this.btnExecuteTrial.style.opacity = '1';
         }
       }
     } else if (node.official) {
@@ -1075,10 +1084,10 @@ class SlanguageDungeonTree {
 
       if (this.modalNodeXP) {
         this.modalNodeXP.innerHTML = `
-          <span style="font-weight:700;">Bài kiểm tra chính thức</span> •
-          <span style="color:#22c55e;">+${node.xpReward} XP khi đạt 25/25</span> •
-          <span style="color:#ef4444;">-1 Máu mỗi câu sai</span> •
-          <span style="color:#38bdf8;">Mở khóa chủ đề kế tiếp</span>
+          <span style="font-weight:700;">${t('rm.officialExam')}</span> •
+          <span style="color:#22c55e;">${t('rm.officialXp', { xp: node.xpReward })}</span> •
+          <span style="color:#ef4444;">${t('rm.officialPenalty')}</span> •
+          <span style="color:#38bdf8;">${t('rm.officialUnlock')}</span>
         `;
       }
       if (this.modalNodeObjectives) {
@@ -1087,22 +1096,7 @@ class SlanguageDungeonTree {
           .join('');
       }
       if (this.modalNodePreview) {
-        this.modalNodePreview.innerHTML = `<strong>Minh họa kiến thức:</strong><br>${node.preview}`;
-      }
-      if (this.btnExecuteTrial) {
-        this.btnExecuteTrial.className = 'btn-trial-action complete-action';
-        this.btnExecuteTrial.style.opacity = '1';
-        if (node.status === 'locked') {
-          this.btnExecuteTrial.disabled = true;
-          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-lock"></i> Mốc chủ đề chưa mở khóa`;
-          this.btnExecuteTrial.style.opacity = '0.5';
-        } else if (node.status === 'mastered') {
-          this.btnExecuteTrial.disabled = false;
-          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-rotate-left"></i> Làm lại Boss quiz (25 câu)`;
-        } else {
-          this.btnExecuteTrial.disabled = false;
-          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Bắt đầu Boss quiz (25 câu)`;
-        }
+        this.modalNodePreview.innerHTML = `<strong>${t('rm.previewLabel')}</strong><br>${node.preview}`;
       }
     } else {
       if (this.modalHubReadingBox) this.modalHubReadingBox.style.display = 'none';
@@ -1113,14 +1107,14 @@ class SlanguageDungeonTree {
       if (this.modalNodePreview) this.modalNodePreview.style.display = 'block';
 
       if (this.modalNodeXP) {
-        let diffText = 'Dễ (Light Green)';
-        if (node.difficulty === 'normal') diffText = 'Bình thường (Light Yellow)';
-        else if (node.difficulty === 'hard') diffText = 'Khó (Light Red Crimson)';
+        let diffText = t('rm.diffEasy');
+        if (node.difficulty === 'normal') diffText = t('rm.diffNormal');
+        else if (node.difficulty === 'hard') diffText = t('rm.diffHard');
 
         this.modalNodeXP.innerHTML = `
-          <span style="font-weight:700;">Độ khó: ${diffText}</span> •
-          <span style="color:#22c55e;">+${node.xpReward} XP nếu hoàn thành</span> •
-          <span style="color:#ef4444;">-${node.heartPenalty} Máu nếu sai</span>
+          <span style="font-weight:700;">${t('rm.difficultyLabel', { diff: diffText })}</span> •
+          <span style="color:#22c55e;">${t('rm.branchXp', { xp: node.xpReward })}</span> •
+          <span style="color:#ef4444;">${t('rm.branchPenalty', { penalty: node.heartPenalty })}</span>
         `;
       }
 
@@ -1130,17 +1124,164 @@ class SlanguageDungeonTree {
           .join('');
       }
       if (this.modalNodePreview) {
-        this.modalNodePreview.innerHTML = `<strong>Minh họa kiến thức:</strong><br>${node.preview}`;
+        this.modalNodePreview.innerHTML = `<strong>${t('rm.previewLabel')}</strong><br>${node.preview}`;
       }
-
-      this.currentQuestionIdx = 0;
-      await this.ensureExtendedPool();
-      this.currentQuestionsList = this.generateTrials(node);
-      if (node.status !== 'locked') void activateBestBoost();
-      this.renderCurrentQuestion();
     }
 
-    this.nodeModalOverlay.classList.add('active');
+    this.refreshModalButton();
+  }
+
+  /** Nhãn nút hành động của modal theo trạng thái hiện tại (dùng lại khi đổi locale). */
+  private refreshModalButton(): void {
+    const btn = this.btnExecuteTrial;
+    const node = this.selectedNode;
+    if (!btn || !node) return;
+
+    if (node.isHub) {
+      btn.disabled = false;
+      btn.classList.remove('complete-action');
+      if (node.status === 'locked') {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-lock"></i> ${t('rm.hubLocked')}`;
+        btn.style.opacity = '0.5';
+      } else if (node.status === 'mastered') {
+        btn.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${t('rm.hubDone')}`;
+        btn.style.opacity = '1';
+      } else {
+        btn.innerHTML = `<i class="fa-solid fa-book-reader"></i> ${t('rm.hubComplete')}`;
+        btn.style.opacity = '1';
+      }
+      return;
+    }
+
+    if (this.bossLoading) {
+      btn.disabled = true;
+      btn.className = 'btn-trial-action check-action';
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${t('rm.preparing')}`;
+      return;
+    }
+
+    if (node.official && !this.bossToken && this.currentQuestionsList.length === 0 && this.currentTrialPhase !== 'failed') {
+      btn.className = 'btn-trial-action complete-action';
+      btn.style.opacity = '1';
+      if (node.status === 'locked') {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-lock"></i> ${t('rm.hubLocked')}`;
+        btn.style.opacity = '0.5';
+      } else if (node.status === 'mastered') {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i> ${t('rm.bossRetry')}`;
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> ${t('rm.bossStart')}`;
+      }
+      return;
+    }
+
+    if (this.currentTrialPhase === 'failed') {
+      btn.disabled = false;
+      btn.className = 'btn-trial-action retry-action';
+      btn.style.opacity = '1';
+      if (this.failReason === 'hearts') {
+        btn.innerHTML = `<i class="fa-solid fa-door-open"></i> ${t('rm.exitLesson')}`;
+      } else if (this.currentQuestionsList.length === 0) {
+        btn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> ${t('rm.retry')}`;
+      } else {
+        btn.innerHTML = `<i class="fa-solid fa-rotate-right"></i> ${t('rm.retryBoss')}`;
+      }
+      return;
+    }
+
+    if (this.currentTrialPhase === 'checked') {
+      if (this.grading) {
+        btn.disabled = true;
+        btn.className = 'btn-trial-action check-action';
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${t('rm.gradingAll')}`;
+        return;
+      }
+      const isLastQ = (this.currentQuestionIdx === this.currentQuestionsList.length - 1);
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      if (isLastQ) {
+        btn.className = 'btn-trial-action complete-action';
+        btn.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${t('rm.complete')}`;
+      } else {
+        btn.className = 'btn-trial-action next-action';
+        btn.innerHTML = `<i class="fa-solid fa-arrow-right"></i> ${t('rm.next')}`;
+      }
+      return;
+    }
+
+    this.refreshCheckButton();
+  }
+
+  /** Dịch lại phần chữ UI của câu hỏi đang mở (giữ nguyên lựa chọn / cặp nối / ô điền). */
+  private refreshTrialChrome(): void {
+    if (!this.modalTrialBox || this.modalTrialBox.style.display === 'none') return;
+    if (this.bossLoading) {
+      if (this.modalTrialStepBadge) this.modalTrialStepBadge.textContent = t('rm.questionStepPlaceholder');
+      if (this.modalTrialPrompt) this.modalTrialPrompt.textContent = t('rm.bossLoadingPrompt');
+      if (this.modalTrialChoices) this.modalTrialChoices.innerHTML = `<div class="trial-loading"><i class="fa-solid fa-spinner fa-spin"></i> ${t('rm.bossLoadingChoices')}</div>`;
+    } else {
+      const trial = this.currentQuestionsList[this.currentQuestionIdx];
+      if (trial) {
+        if (this.modalTrialStepBadge) {
+          this.modalTrialStepBadge.textContent = t('rm.questionStep', { n: this.currentQuestionIdx + 1, total: this.currentQuestionsList.length });
+        }
+        if (this.modalTrialPrompt) {
+          this.modalTrialPrompt.textContent = trial.promptKey ? t(trial.promptKey, trial.promptVars) : trial.prompt;
+        }
+        const audioBtn = document.getElementById('trialAudioBtn');
+        if (audioBtn && !(audioBtn as HTMLButtonElement).disabled) {
+          audioBtn.innerHTML = `<i class="fa-solid fa-volume-high"></i> ${t('rm.listenAnswer')}`;
+        }
+        const fill = document.getElementById('trialFillInput') as HTMLInputElement | null;
+        if (fill) fill.placeholder = t('rm.fillPlaceholder');
+        const fillHint = this.modalTrialChoices?.querySelector('.trial-fill-hint');
+        if (fillHint) fillHint.textContent = t('rm.fillHint');
+        const matchHint = this.modalTrialChoices?.querySelector('.trial-match-hint');
+        if (matchHint) matchHint.textContent = t('rm.matchHint');
+      }
+    }
+    this.renderTrialHearts();
+    if (this.modalTrialResult && this.modalTrialResult.style.display !== 'none' && this.trialResultState) {
+      this.modalTrialResult.className = this.trialResultState.className;
+      this.modalTrialResult.innerHTML = this.trialResultState.render();
+    }
+  }
+
+  /** Đổi locale giao diện: dựng lại chữ UI từ dữ liệu đã cache, không gọi API. */
+  private handleLocaleChange(): void {
+    const titleEl = document.getElementById('activeLessonTitle');
+    if (titleEl) titleEl.textContent = t('rm.sessionFormat', { num: this.lessonNumStr || '01', title: this.topicTitle });
+    this.updateStatsDisplays();
+    if (this.nodes.length) {
+      this.buildNodes(this.quizDescription, this.quizTitleRaw, this.readings);
+      if (this.quizCompleted) this.mastered.add(this.officialId());
+      this.applyStatuses();
+      this.renderTree();
+    } else {
+      if (this.treeMainTitle) this.treeMainTitle.textContent = t('rm.loadingTitle');
+      if (this.treeMainSubtitle) this.treeMainSubtitle.innerHTML = `<p class="intro-lead">${t('rm.loadingSubtitle')}</p>`;
+      if (this.treeDungeonXp) this.treeDungeonXp.textContent = t('rm.dungeonXpLoading');
+    }
+    if (this.selectedNode && this.nodeModalOverlay?.classList.contains('active')) {
+      const node = this.nodes.find((n) => n.id === this.selectedNode?.id);
+      if (node) {
+        this.selectedNode = node;
+        this.renderModalChrome(node);
+        this.refreshTrialChrome();
+      }
+    }
+  }
+
+  private showTrialResult(className: string, render: () => string): void {
+    this.trialResultState = { className, render };
+    if (this.modalTrialResult) {
+      this.modalTrialResult.style.display = 'block';
+      this.modalTrialResult.className = className;
+      this.modalTrialResult.innerHTML = render();
+    }
   }
 
   private shuffle<T>(items: T[]): T[] {
@@ -1227,34 +1368,47 @@ class SlanguageDungeonTree {
 
     for (let index = 0; index < mix.mc; index++) {
       const word = nextWord();
-      const explanation = `"${word.word}" nghĩa là "${word.meaning}".`;
+      const explanationVars = { word: word.word, meaning: word.meaning };
       if (difficulty === 'easy') {
         const choices = this.pickChoices(word.meaning, meaningChoices);
         trials.push({
           kind: 'mc',
-          prompt: `Từ "${word.word}" có nghĩa là gì?`,
+          prompt: t('rm.mcMeaningPrompt', { word: word.word }),
+          promptKey: 'rm.mcMeaningPrompt',
+          promptVars: { word: word.word },
           choices,
           answerIdx: choices.indexOf(word.meaning),
-          explanation,
+          explanation: t('rm.wordExplanation', explanationVars),
+          explanationKey: 'rm.wordExplanation',
+          explanationVars,
         });
       } else {
         const choices = this.pickChoices(word.word, wordChoices);
         trials.push({
           kind: 'mc',
-          prompt: `Chọn từ đúng với nghĩa: "${word.meaning}"`,
+          prompt: t('rm.mcWordPrompt', { meaning: word.meaning }),
+          promptKey: 'rm.mcWordPrompt',
+          promptVars: { meaning: word.meaning },
           choices,
           answerIdx: choices.indexOf(word.word),
-          explanation,
+          explanation: t('rm.wordExplanation', explanationVars),
+          explanationKey: 'rm.wordExplanation',
+          explanationVars,
         });
       }
     }
     for (let index = 0; index < mix.fill; index++) {
       const word = nextWord();
+      const explanationVars = { word: word.word, meaning: word.meaning };
       trials.push({
         kind: 'fill',
-        prompt: `Nghĩa: "${word.meaning}". Nghe giọng đọc và viết lại từ bạn nghe được.`,
+        prompt: t('rm.fillPrompt', { meaning: word.meaning }),
+        promptKey: 'rm.fillPrompt',
+        promptVars: { meaning: word.meaning },
         answer: word.word,
-        explanation: `"${word.word}" nghĩa là "${word.meaning}".`,
+        explanation: t('rm.wordExplanation', explanationVars),
+        explanationKey: 'rm.wordExplanation',
+        explanationVars,
       });
     }
     for (let index = 0; index < mix.match; index++) {
@@ -1263,7 +1417,8 @@ class SlanguageDungeonTree {
       for (const word of group) pairs[word.word] = word.meaning;
       trials.push({
         kind: 'match',
-        prompt: 'Nối mỗi từ với nghĩa đúng của nó:',
+        prompt: t('rm.matchPrompt'),
+        promptKey: 'rm.matchPrompt',
         words: this.shuffle(group.map((word) => word.word)),
         meanings: this.shuffle(group.map((word) => word.meaning)),
         pairs,
@@ -1281,8 +1436,8 @@ class SlanguageDungeonTree {
     ).join('');
     this.modalTrialHearts.innerHTML = `${icons}<span class="trial-hearts-note">${
       isHeartsLocked()
-        ? `Hết máu — hồi sau ${formatHeartLock(heartLockRemainingMs())}`
-        : `Sai trừ ${penalty} máu`
+        ? t('rm.heartsLockedNote', { time: formatHeartLock(heartLockRemainingMs()) })
+        : t('rm.wrongPenaltyNote', { penalty })
     }</span>`;
   }
 
@@ -1300,7 +1455,7 @@ class SlanguageDungeonTree {
     this.stopAudio();
 
     if (this.modalTrialStepBadge) {
-      this.modalTrialStepBadge.textContent = `Câu ${qIdx + 1}/${totalQ}`;
+      this.modalTrialStepBadge.textContent = t('rm.questionStep', { n: qIdx + 1, total: totalQ });
     }
     if (this.modalTrialProgressFill) {
       this.modalTrialProgressFill.style.width = `${((qIdx + 1) / totalQ) * 100}%`;
@@ -1309,9 +1464,10 @@ class SlanguageDungeonTree {
       this.modalTrialResult.style.display = 'none';
       this.modalTrialResult.textContent = '';
     }
+    this.trialResultState = null;
     this.renderTrialHearts();
     if (this.modalTrialPrompt) {
-      this.modalTrialPrompt.textContent = currentTrial.prompt;
+      this.modalTrialPrompt.textContent = currentTrial.promptKey ? t(currentTrial.promptKey, currentTrial.promptVars) : currentTrial.prompt;
     }
 
     const box = this.modalTrialChoices;
@@ -1335,9 +1491,9 @@ class SlanguageDungeonTree {
     } else if (currentTrial.kind === 'fill') {
       box.innerHTML = `
         <div class="trial-fill-box">
-          <button type="button" class="trial-audio-btn" id="trialAudioBtn"><i class="fa-solid fa-volume-high"></i> Nghe đáp án</button>
-          <input type="text" id="trialFillInput" class="trial-fill-input" placeholder="Gõ từ bạn nghe được..." autocomplete="off" spellcheck="false">
-          <p class="trial-fill-hint">Không phân biệt hoa/thường. Bấm "Nghe đáp án" để nghe lại giọng đọc.</p>
+          <button type="button" class="trial-audio-btn" id="trialAudioBtn"><i class="fa-solid fa-volume-high"></i> ${t('rm.listenAnswer')}</button>
+          <input type="text" id="trialFillInput" class="trial-fill-input" placeholder="${t('rm.fillPlaceholder')}" autocomplete="off" spellcheck="false">
+          <p class="trial-fill-hint">${t('rm.fillHint')}</p>
         </div>`;
       this.fillInput = document.getElementById('trialFillInput') as HTMLInputElement | null;
       document.getElementById('trialAudioBtn')?.addEventListener('click', () => void this.playFillAudio(currentTrial));
@@ -1358,7 +1514,7 @@ class SlanguageDungeonTree {
           <div class="match-col">${wordsHtml}</div>
           <div class="match-col">${meaningsHtml}</div>
         </div>
-        <p class="trial-match-hint">Chọn một từ ở cột trái rồi chọn nghĩa tương ứng ở cột phải. Bấm lại từ đã nối để gỡ cặp.</p>`;
+        <p class="trial-match-hint">${t('rm.matchHint')}</p>`;
       box.querySelectorAll('[data-word]').forEach((el) => {
         el.addEventListener('click', () => this.handleMatchWordClick(el as HTMLElement, currentTrial));
       });
@@ -1383,14 +1539,14 @@ class SlanguageDungeonTree {
     this.btnExecuteTrial.style.opacity = '1';
     if (this.selectedNode.status === 'locked') {
       this.btnExecuteTrial.disabled = true;
-      this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-lock"></i> Ải chưa mở khóa`;
+      this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-lock"></i> ${t('rm.nodeLocked')}`;
       this.btnExecuteTrial.style.opacity = '0.5';
       return;
     }
     this.btnExecuteTrial.disabled = !this.trialReady() || this.grading;
     this.btnExecuteTrial.innerHTML = this.grading
-      ? `<i class="fa-solid fa-spinner fa-spin"></i> Đang chấm...`
-      : `<i class="fa-solid fa-magnifying-glass"></i> Kiểm tra`;
+      ? `<i class="fa-solid fa-spinner fa-spin"></i> ${t('rm.grading')}`
+      : `<i class="fa-solid fa-magnifying-glass"></i> ${t('rm.check')}`;
   }
 
   private handleMatchWordClick(btn: HTMLElement, trial: MatchTrial): void {
@@ -1409,7 +1565,7 @@ class SlanguageDungeonTree {
     if (this.currentTrialPhase !== 'idle') return;
     const meaning = btn.dataset.meaning || '';
     if (!this.matchSelectedWord) {
-      this.showToast('Hãy chọn một từ ở cột trái trước khi chọn nghĩa!');
+      this.showToast(t('rm.selectWordFirst'));
       return;
     }
     for (const [word, paired] of [...this.matchPairs.entries()]) {
@@ -1459,7 +1615,7 @@ class SlanguageDungeonTree {
     try {
       if (btn) {
         btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang tải giọng...`;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${t('rm.loadingVoice')}`;
       }
       const blob = trial.bossIndex !== undefined && this.bossToken
         ? await slanguageApiAudio('/api/v1/lessons/boss-quiz/speak', { quiz_token: this.bossToken, index: trial.bossIndex })
@@ -1469,11 +1625,11 @@ class SlanguageDungeonTree {
       this.audioEl = new Audio(this.audioUrl);
       await this.audioEl.play();
     } catch {
-      this.showToast('Không tải được giọng đọc. Bấm "Nghe đáp án" để thử lại.');
+      this.showToast(t('rm.voiceError'));
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<i class="fa-solid fa-volume-high"></i> Nghe đáp án`;
+        btn.innerHTML = `<i class="fa-solid fa-volume-high"></i> ${t('rm.listenAnswer')}`;
       }
     }
   }
@@ -1509,11 +1665,12 @@ class SlanguageDungeonTree {
         explanation: asString(result.explanation),
       };
     }
+    const localExplanation = trial.explanationKey ? t(trial.explanationKey, trial.explanationVars) : trial.explanation;
     if (trial.kind === 'mc') {
       return {
         isCorrect: this.selectedChoiceIdx === trial.answerIdx,
         correctDisplay: trial.choices[trial.answerIdx],
-        explanation: trial.explanation,
+        explanation: localExplanation,
       };
     }
     if (trial.kind === 'fill') {
@@ -1521,7 +1678,7 @@ class SlanguageDungeonTree {
       return {
         isCorrect: this.normalizeText(typed) === this.normalizeText(trial.answer),
         correctDisplay: trial.answer,
-        explanation: trial.explanation,
+        explanation: localExplanation,
       };
     }
     const expected = trial.pairs;
@@ -1531,7 +1688,7 @@ class SlanguageDungeonTree {
     return {
       isCorrect,
       correctDisplay: Object.keys(expected).map((key) => `${key} → ${expected[key]}`).join('; '),
-      explanation: trial.explanation,
+      explanation: localExplanation,
     };
   }
 
@@ -1580,6 +1737,7 @@ class SlanguageDungeonTree {
     this.bossQuestions = [];
     this.bossAnswers = [];
     this.currentQuestionsList = [];
+    this.trialResultState = null;
     this.matchPairs = new Map();
     this.matchSelectedWord = null;
     this.fillInput = null;
@@ -1595,7 +1753,7 @@ class SlanguageDungeonTree {
         this.markMastered(node);
         this.updateStatsDisplays();
         this.renderTree();
-        this.showToast('Bạn đã hoàn thành bài đọc chủ đề! Toàn bộ 3 nhánh độ khó đã sẵn sàng khiêu chiến.');
+        this.showToast(t('rm.hubDoneToast'));
       }
       this.closeModal();
       return;
@@ -1611,7 +1769,7 @@ class SlanguageDungeonTree {
       if (this.failReason === 'hearts') {
         this.updateStatsDisplays();
         this.closeModal();
-        this.showToast(`💔 Hết máu — bạn đã thoát khỏi bài học. Sinh lực khóa hồi 24 giờ, còn ${formatHeartLock(heartLockRemainingMs())} nữa mới hồi đầy.`);
+        this.showToast(t('rm.heartsFailToast', { time: formatHeartLock(heartLockRemainingMs()) }));
       } else if (this.currentQuestionsList.length === 0) {
         await this.startBossQuiz(node);
       } else {
@@ -1626,7 +1784,7 @@ class SlanguageDungeonTree {
     if (this.currentTrialPhase === 'idle') {
       const trial = this.currentQuestionsList[this.currentQuestionIdx];
       if (!trial || !this.trialReady()) {
-        this.showToast('Vui lòng hoàn thành đáp án trước khi kiểm tra!');
+        this.showToast(t('rm.answerFirst'));
         return;
       }
       this.grading = true;
@@ -1637,7 +1795,7 @@ class SlanguageDungeonTree {
       } catch (error) {
         this.grading = false;
         this.refreshCheckButton();
-        this.showToast(error instanceof Error ? error.message : 'Không chấm được đáp án lúc này. Thử lại nhé.');
+        this.showToast(error instanceof Error ? error.message : t('rm.gradeFail'));
         return;
       }
       this.grading = false;
@@ -1670,18 +1828,15 @@ class SlanguageDungeonTree {
         });
       }
 
-      if (this.modalTrialResult) {
-        this.modalTrialResult.style.display = 'block';
-      }
+      const explanationNow = () => trial.explanationKey ? t(trial.explanationKey, trial.explanationVars) : verdict.explanation;
       if (verdict.isCorrect) {
-        this.modalTrialResult!.className = 'modal-trial-result success';
-        this.modalTrialResult!.innerHTML = `
+        this.showTrialResult('modal-trial-result success', () => `
           <div class="result-icon"><i class="fa-solid fa-circle-check"></i></div>
           <div class="result-text">
-            <strong>CHÍNH XÁC!</strong>
-            <p>${escapeHtml(verdict.explanation || verdict.correctDisplay || 'Rất xuất sắc! Bấm nút bên dưới để tiếp tục.')}</p>
+            <strong>${t('rm.correctTitle')}</strong>
+            <p>${escapeHtml(explanationNow() || verdict.correctDisplay || t('rm.correctFallback'))}</p>
           </div>
-        `;
+        `);
       } else {
         const penalty = node.heartPenalty || 1;
         this.currentHearts = spendHearts(penalty);
@@ -1689,14 +1844,13 @@ class SlanguageDungeonTree {
         this.triggerDamageFeedback();
         this.renderTrialHearts();
 
-        this.modalTrialResult!.className = 'modal-trial-result error';
-        this.modalTrialResult!.innerHTML = `
+        this.showTrialResult('modal-trial-result error', () => `
           <div class="result-icon"><i class="fa-solid fa-circle-xmark"></i></div>
           <div class="result-text">
-            <strong>SAI RỒI! (-${penalty} Máu)</strong>
-            <p>Đáp án đúng: <strong>${escapeHtml(verdict.correctDisplay)}</strong>.<br>${escapeHtml(verdict.explanation || '')}</p>
+            <strong>${t('rm.wrongTitle', { penalty })}</strong>
+            <p>${t('rm.correctAnswer')} <strong>${escapeHtml(verdict.correctDisplay)}</strong>.<br>${escapeHtml(explanationNow() || '')}</p>
           </div>
-        `;
+        `);
 
         if (this.currentHearts === 0) {
           const healed = await tryHealHearts();
@@ -1704,28 +1858,27 @@ class SlanguageDungeonTree {
             this.currentHearts = readHearts();
             this.updateStatsDisplays();
             this.renderTrialHearts();
-            this.modalTrialResult!.className = 'modal-trial-result success';
-            this.modalTrialResult!.innerHTML = `
+            this.showTrialResult('modal-trial-result success', () => `
               <div class="result-icon"><i class="fa-solid fa-heart-pulse"></i></div>
               <div class="result-text">
-                <strong>HẾT MÁU — ĐÃ HỒI PHỤC +5 ❤️!</strong>
-                <p>Vật phẩm Hồi Phục Máu Siêu Tốc đã được dùng từ kho. Đáp án đúng: <strong>${escapeHtml(verdict.correctDisplay)}</strong>. Tiếp tục chinh phục các câu hỏi tiếp theo nào!</p>
+                <strong>${t('rm.healedTitle')}</strong>
+                <p>${t('rm.healedBody', { answer: escapeHtml(verdict.correctDisplay) })}</p>
               </div>
-            `;
+            `);
           } else {
             this.currentTrialPhase = 'failed';
             this.failReason = 'hearts';
-            this.modalTrialResult!.innerHTML = `
+            this.showTrialResult('modal-trial-result error', () => `
               <div class="result-icon"><i class="fa-solid fa-heart-crack"></i></div>
               <div class="result-text">
-                <strong>HẾT MÁU — THẤT BẠI!</strong>
-                <p>Bạn đã dùng hết sinh lực của bài học này. Sinh lực bị <strong>khóa hồi trong 24 giờ</strong> (còn ${formatHeartLock(heartLockRemainingMs())}). Mua Hồi Phục Máu Siêu Tốc trong Cửa hàng để chơi tiếp ngay, hoặc bấm <strong>Thoát khỏi bài học</strong> để rời ải.</p>
+                <strong>${t('rm.failedTitle')}</strong>
+                <p>${t('rm.failedBody', { time: formatHeartLock(heartLockRemainingMs()) })}</p>
               </div>
-            `;
+            `);
             if (this.btnExecuteTrial) {
               this.btnExecuteTrial.disabled = false;
               this.btnExecuteTrial.className = 'btn-trial-action retry-action';
-              this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-door-open"></i> Thoát khỏi bài học`;
+              this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-door-open"></i> ${t('rm.exitLesson')}`;
             }
             return;
           }
@@ -1736,10 +1889,10 @@ class SlanguageDungeonTree {
         this.btnExecuteTrial.disabled = false;
         if (isLastQ) {
           this.btnExecuteTrial.className = 'btn-trial-action complete-action';
-          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-circle-check"></i> Hoàn thành`;
+          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${t('rm.complete')}`;
         } else {
           this.btnExecuteTrial.className = 'btn-trial-action next-action';
-          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-arrow-right"></i> Tiếp theo`;
+          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-arrow-right"></i> ${t('rm.next')}`;
         }
       }
       return;
@@ -1787,7 +1940,7 @@ class SlanguageDungeonTree {
     this.updateStatsDisplays();
     this.renderTree();
 
-    this.showToast(`Tuyệt đỉnh! Đã hoàn thành ải, nhận +${awardedXP} XP${boostNote}. Các nhánh đường tiếp theo đã mở khóa!`);
+    this.showToast(t('rm.nodeClearToast', { xp: awardedXP, boost: boostNote }));
     this.closeModal();
   }
 
@@ -1799,26 +1952,28 @@ class SlanguageDungeonTree {
     this.currentQuestionIdx = 0;
     this.currentTrialPhase = 'idle';
     this.failReason = null;
+    this.bossLoading = true;
+    this.trialResultState = null;
     this.stopAudio();
 
     if (this.modalHubReadingBox) this.modalHubReadingBox.style.display = 'none';
     if (this.modalObjectivesWrap) this.modalObjectivesWrap.style.display = 'none';
     if (this.modalNodePreview) this.modalNodePreview.style.display = 'none';
     if (this.modalTrialBox) this.modalTrialBox.style.display = 'block';
-    if (this.modalTrialStepBadge) this.modalTrialStepBadge.textContent = 'Câu –/25';
+    if (this.modalTrialStepBadge) this.modalTrialStepBadge.textContent = t('rm.questionStepPlaceholder');
     if (this.modalTrialProgressFill) this.modalTrialProgressFill.style.width = '0%';
     this.renderTrialHearts();
     if (this.modalTrialPrompt) {
-      this.modalTrialPrompt.textContent = 'AI đang soạn 25 câu hỏi từ tất cả chủ đề của lộ trình...';
+      this.modalTrialPrompt.textContent = t('rm.bossLoadingPrompt');
     }
     if (this.modalTrialChoices) {
-      this.modalTrialChoices.innerHTML = `<div class="trial-loading"><i class="fa-solid fa-spinner fa-spin"></i> Đang gọi AI soạn đề Boss...</div>`;
+      this.modalTrialChoices.innerHTML = `<div class="trial-loading"><i class="fa-solid fa-spinner fa-spin"></i> ${t('rm.bossLoadingChoices')}</div>`;
     }
     if (this.modalTrialResult) this.modalTrialResult.style.display = 'none';
     if (this.btnExecuteTrial) {
       this.btnExecuteTrial.disabled = true;
       this.btnExecuteTrial.className = 'btn-trial-action check-action';
-      this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang soạn đề...`;
+      this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${t('rm.preparing')}`;
     }
 
     try {
@@ -1832,29 +1987,28 @@ class SlanguageDungeonTree {
         ? (data.questions as unknown[]).map((item) => asRecord(item) as unknown as BossPublicQuestion)
         : [];
       if (!this.bossToken || !this.bossQuestions.length) {
-        throw new Error('Máy chủ chưa trả về bộ câu hỏi Boss.');
+        throw new Error(t('rm.bossNoQuestions'));
       }
+      this.bossLoading = false;
       this.currentQuestionsList = this.bossQuestions.map((question) => this.bossToTrial(question));
       void activateBestBoost();
       this.renderCurrentQuestion();
     } catch (error) {
+      this.bossLoading = false;
       this.currentTrialPhase = 'failed';
       this.failReason = 'boss';
-      if (this.modalTrialResult) {
-        this.modalTrialResult.style.display = 'block';
-        this.modalTrialResult.className = 'modal-trial-result error';
-        this.modalTrialResult.innerHTML = `
-          <div class="result-icon"><i class="fa-solid fa-circle-xmark"></i></div>
-          <div class="result-text">
-            <strong>CHƯA SOẠN ĐƯỢC ĐỀ BOSS</strong>
-            <p>${escapeHtml(error instanceof Error ? error.message : 'Lỗi không xác định.')} Bấm thử lại để gọi AI lần nữa.</p>
-          </div>
-        `;
-      }
+      const errorMessage = error instanceof Error ? error.message : null;
+      this.showTrialResult('modal-trial-result error', () => `
+        <div class="result-icon"><i class="fa-solid fa-circle-xmark"></i></div>
+        <div class="result-text">
+          <strong>${t('rm.bossFailTitle')}</strong>
+          <p>${escapeHtml(errorMessage ?? t('rm.unknownError'))} ${t('rm.bossFailRetry')}</p>
+        </div>
+      `);
       if (this.btnExecuteTrial) {
         this.btnExecuteTrial.disabled = false;
         this.btnExecuteTrial.className = 'btn-trial-action retry-action';
-        this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-rotate-right"></i> Thử lại`;
+        this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-rotate-right"></i> ${t('rm.retry')}`;
       }
     }
   }
@@ -1864,7 +2018,7 @@ class SlanguageDungeonTree {
     this.grading = true;
     if (this.btnExecuteTrial) {
       this.btnExecuteTrial.disabled = true;
-      this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang chấm toàn bài...`;
+      this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${t('rm.gradingAll')}`;
     }
     try {
       const response = await slanguageApi('/api/v1/lessons/boss-quiz/grade', {
@@ -1876,35 +2030,31 @@ class SlanguageDungeonTree {
       if (data.passed === true) {
         this.quizCompleted = true;
         await this.completeTrialNode(node);
-        this.showToast(`🐉 Đã hạ Boss với 25/25 câu đúng! Chủ đề kế tiếp đã mở khóa.`);
+        this.showToast(t('rm.bossWinToast'));
       } else {
         const correctCount = Number(data.correct_count) || 0;
         this.currentTrialPhase = 'failed';
         this.failReason = 'boss';
-        if (this.modalTrialResult) {
-          this.modalTrialResult.style.display = 'block';
-          this.modalTrialResult.className = 'modal-trial-result error';
-          this.modalTrialResult.innerHTML = `
-            <div class="result-icon"><i class="fa-solid fa-heart-crack"></i></div>
-            <div class="result-text">
-              <strong>CHƯA HẠ ĐƯỢC BOSS (${correctCount}/25)</strong>
-              <p>Boss yêu cầu đúng cả 25 câu. Bấm <strong>Làm lại Boss</strong> để thử lại từ đầu.</p>
-            </div>
-          `;
-        }
+        this.showTrialResult('modal-trial-result error', () => `
+          <div class="result-icon"><i class="fa-solid fa-heart-crack"></i></div>
+          <div class="result-text">
+            <strong>${t('rm.bossNotDefeated', { count: correctCount })}</strong>
+            <p>${t('rm.bossNotDefeatedBody')}</p>
+          </div>
+        `);
         if (this.btnExecuteTrial) {
           this.btnExecuteTrial.disabled = false;
           this.btnExecuteTrial.className = 'btn-trial-action retry-action';
-          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-rotate-right"></i> Làm lại Boss`;
+          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-rotate-right"></i> ${t('rm.retryBoss')}`;
         }
       }
     } catch (error) {
       this.grading = false;
-      this.showToast(error instanceof Error ? error.message : 'Không chấm được toàn bài Boss. Thử lại nhé.');
+      this.showToast(error instanceof Error ? error.message : t('rm.bossGradeFail'));
       if (this.btnExecuteTrial) {
         this.btnExecuteTrial.disabled = false;
         this.btnExecuteTrial.className = 'btn-trial-action complete-action';
-        this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-circle-check"></i> Hoàn thành`;
+        this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${t('rm.complete')}`;
       }
     }
   }
@@ -1933,7 +2083,7 @@ class SlanguageDungeonTree {
         const official = this.nodes.find((node) => node.official);
         if (official) this.markMastered(official);
         this.renderTree();
-        this.showToast('🎓 Boss quiz đã đạt 25/25! Chủ đề kế tiếp đã mở khóa.');
+        this.showToast(t('rm.quizStatusToast'));
       }
       this.updateStatsDisplays();
     } catch {
