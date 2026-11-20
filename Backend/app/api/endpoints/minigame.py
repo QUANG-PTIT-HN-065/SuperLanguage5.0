@@ -22,6 +22,7 @@ router = APIRouter()
 class MiniGameProgress(BaseModel):
     xp: int = Field(default=0, ge=0, le=5000)
     word_ids: list[int] = Field(default_factory=list, max_length=120)
+    use_boost: bool = False
 
 
 @router.post("/evaluate", response_model=dict)
@@ -97,11 +98,23 @@ def save_progress(
                 rows, on_conflict="user_id,word_id"
             ).execute()
 
+        xp = payload.xp
+        boost = None
+        if payload.use_boost:
+            try:
+                boost = supabase_admin.rpc(
+                    "consume_shop_boost", {"p_user_id": user_id}
+                ).execute().data
+            except Exception:
+                boost = None
+            if boost:
+                xp = int(xp * float(boost["multiplier"]))
+
         activity = supabase_admin.rpc(
             "record_lesson_activity",
-            {"p_user_id": user_id, "p_xp": payload.xp},
+            {"p_user_id": user_id, "p_xp": xp},
         ).execute().data
-        return {"status": "success", "data": {"xp": payload.xp, "activity": activity}}
+        return {"status": "success", "data": {"xp": xp, "boost": boost, "activity": activity}}
     except Exception as exc:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,

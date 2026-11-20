@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class ConversationCreate(BaseModel):
     title: str = Field(min_length=1, max_length=100)
-    language_code: Literal["English", "Japanese"]
+    language_code: Literal["English", "Japanese", "Vietnamese"]
     practice_mode: Literal["free-chat", "read-aloud"] = "free-chat"
 
     @field_validator("title")

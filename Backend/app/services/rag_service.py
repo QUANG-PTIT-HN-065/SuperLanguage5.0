@@ -112,6 +112,8 @@ def _language_for_retrieval(language_code: str) -> str:
         return "English"
     if normalized in {"ja", "japanese"}:
         return "Japanese"
+    if normalized in {"vi", "vietnamese"}:
+        return "Vietnamese"
     return language_code
 
 
@@ -121,9 +123,11 @@ def _language_for_indexing(language_code: str) -> str:
         return "English"
     if normalized in {"ja", "japanese"}:
         return "Japanese"
+    if normalized in {"vi", "vietnamese"}:
+        return "Vietnamese"
     if normalized == "all":
         return "all"
-    raise ValueError("RAG documents must use English, Japanese, or all.")
+    raise ValueError("RAG documents must use English, Japanese, Vietnamese, or all.")
 
 
 def _fetch_rows(

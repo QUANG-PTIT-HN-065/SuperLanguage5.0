@@ -6,6 +6,7 @@
 
 import { slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader, logoutLearner } from "../shared/learner-header";
+import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 
 interface VocabItem {
   id: number;
@@ -96,7 +97,11 @@ class SlanguageVocabulary {
     this.initVocabularyVault();
     this.bindShortcuts();
     this.bindPageTransitions();
-    this.showNotices(this.noticeHtml('Đang tải từ vựng từ các chủ đề bạn đã hoàn thành ở Học tập...'));
+    showSkeleton('vaultGrid', 'vault-cards', { tone: 'cool', count: 8 });
+    showSkeleton('flashcardBox', 'flashcard', { tone: 'cool', overlay: true });
+    showSkeleton(document.querySelector('#tabQuiz .quiz-arena-container'), 'quiz', { tone: 'cool', overlay: true });
+    const deckSelectEl = document.getElementById('deckSelect') as HTMLSelectElement | null;
+    if (deckSelectEl) deckSelectEl.disabled = true;
     this.initHeroStats();
     void this.loadRealData();
   }
@@ -230,6 +235,8 @@ class SlanguageVocabulary {
 
   private showNotices(html: string): void {
     this.clearNotices();
+    clearSkeleton('flashcardBox');
+    clearSkeleton(document.querySelector('#tabQuiz .quiz-arena-container'));
     for (const panelId of ['tabFlashcard', 'tabQuiz']) {
       const panel = document.getElementById(panelId);
       if (!panel) continue;
@@ -238,7 +245,10 @@ class SlanguageVocabulary {
       panel.insertAdjacentHTML('afterbegin', html);
     }
     const vaultGrid = document.getElementById('vaultGrid');
-    if (vaultGrid) vaultGrid.innerHTML = html;
+    if (vaultGrid) {
+      clearSkeleton(vaultGrid);
+      vaultGrid.innerHTML = html;
+    }
     if (this.quizTimerInterval) clearInterval(this.quizTimerInterval);
     const deckSelect = document.getElementById('deckSelect') as HTMLSelectElement | null;
     if (deckSelect) deckSelect.disabled = true;
@@ -546,7 +556,10 @@ class SlanguageVocabulary {
     if (this.currentDeck.length === 0) return;
     const item = this.currentDeck[this.activeCardIndex];
     const flashcardBox = document.getElementById('flashcardBox');
-    if (flashcardBox) flashcardBox.classList.remove('flipped');
+    if (flashcardBox) {
+      clearSkeleton(flashcardBox);
+      flashcardBox.classList.remove('flipped');
+    }
 
     const fcTag = document.getElementById('fcTag');
     const fcWord = document.getElementById('fcWord');
@@ -660,6 +673,7 @@ class SlanguageVocabulary {
 
   private startSpeedQuizQuestion(): void {
     if (this.dataState !== 'ready') return;
+    clearSkeleton(document.querySelector('#tabQuiz .quiz-arena-container'));
     const deck = this.allWords;
     const optionsGrid = document.getElementById('quizOptionsGrid');
     const feedbackBanner = document.getElementById('quizFeedbackBanner');
@@ -857,6 +871,7 @@ class SlanguageVocabulary {
     const vaultGrid = document.getElementById('vaultGrid');
     if (!vaultGrid) return;
     if (this.dataState !== 'ready') return;
+    clearSkeleton(vaultGrid);
 
     const searchInput = document.getElementById('vaultSearchInput') as HTMLInputElement | null;
     const activePill = document.querySelector('.vault-pill.active');

@@ -9,17 +9,10 @@ from app.db.supabase import supabase_admin
 from app.schemas.reponse import BaseResponse
 from app.schemas.learning import VocabularyWordReview, VocabularyWordReviewResult
 from app.schemas.vocabulary import (
-    LearningPathCreate,
-    LearningPathUpdate,
     VocabularyReviewComplete,
     VocabularyReviewCompletionResult,
 )
-from app.services.learning_path_service import (
-    create_learning_path,
-    delete_learning_path,
-    list_learning_paths,
-    update_learning_path,
-)
+from app.services.learning_path_service import list_learning_paths
 from app.services.learning_service import get_path_topic_states, review_vocabulary_word
 from app.services.vocabulary_service import (
     list_catalog_topics,

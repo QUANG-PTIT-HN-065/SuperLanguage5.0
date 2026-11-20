@@ -141,12 +141,20 @@ class FreddyChromaKeyRenderer {
 class AIPracticeManager {
   private currentLang: TargetLang = 'ja';
   private currentMode: PracticeMode = 'free';
+  private conversationId: string | null = null;
+  private isPending: boolean = false;
   private voiceEnabled: boolean = true;
   private voiceRate: number = 1.0;
   private practiceCount: number = 0;
   private earnedXP: number = 0;
   private isRecording: boolean = false;
   private speechRecognizer: any = null;
+  private micHeld = false;
+  private micPointerId: number | null = null;
+  private micKey: string | null = null;
+  private micDraft = '';
+  private micTranscript = '';
+  private micSessionTranscript = '';
 
   private readonly langMetadata: Record<TargetLang, LanguageMeta> = {
     ja: {
@@ -196,10 +204,6 @@ class AIPracticeManager {
   private btnCloseSettingsEl!: HTMLButtonElement;
   private btnCancelSettingsEl!: HTMLButtonElement;
   private btnSaveSettingsEl!: HTMLButtonElement;
-  private radioOfflineEl!: HTMLInputElement;
-  private radioGeminiEl!: HTMLInputElement;
-  private geminiKeyGroupEl!: HTMLElement;
-  private geminiApiKeyInputEl!: HTMLInputElement;
   private voiceSpeedRangeEl!: HTMLInputElement;
   private voiceSpeedValEl!: HTMLElement;
   private voiceToneSelectEl!: HTMLSelectElement;
@@ -270,10 +274,6 @@ class AIPracticeManager {
     this.btnCloseSettingsEl = document.getElementById('btnCloseSettings') as HTMLButtonElement;
     this.btnCancelSettingsEl = document.getElementById('btnCancelSettings') as HTMLButtonElement;
     this.btnSaveSettingsEl = document.getElementById('btnSaveSettings') as HTMLButtonElement;
-    this.radioOfflineEl = document.getElementById('radioOffline') as HTMLInputElement;
-    this.radioGeminiEl = document.getElementById('radioGemini') as HTMLInputElement;
-    this.geminiKeyGroupEl = document.getElementById('geminiKeyGroup') as HTMLElement;
-    this.geminiApiKeyInputEl = document.getElementById('geminiApiKeyInput') as HTMLInputElement;
     this.voiceSpeedRangeEl = document.getElementById('voiceSpeedRange') as HTMLInputElement;
     this.voiceSpeedValEl = document.getElementById('voiceSpeedVal') as HTMLElement;
     this.voiceToneSelectEl = document.getElementById('voiceToneSelect') as HTMLSelectElement;
@@ -326,22 +326,6 @@ class AIPracticeManager {
         // use default
       }
     }
-
-    // Gemini API Key
-    const geminiKey = localStorage.getItem('slanguage_gemini_key') || '';
-    if (this.geminiApiKeyInputEl) {
-      this.geminiApiKeyInputEl.value = geminiKey;
-    }
-    const engineMode = localStorage.getItem('slanguage_ai_engine') || 'offline';
-    if (engineMode === 'gemini' && geminiKey) {
-      if (this.radioGeminiEl) this.radioGeminiEl.checked = true;
-      if (this.geminiKeyGroupEl) this.geminiKeyGroupEl.style.display = 'flex';
-      if (this.engineIndicatorEl) this.engineIndicatorEl.textContent = 'Chế độ: Google Gemini Cloud AI';
-    } else {
-      if (this.radioOfflineEl) this.radioOfflineEl.checked = true;
-      if (this.geminiKeyGroupEl) this.geminiKeyGroupEl.style.display = 'none';
-      if (this.engineIndicatorEl) this.engineIndicatorEl.textContent = 'Chế độ: Smart AI Offline (Sẵn sàng)';
-    }
   }
 
   private async loadOwnProfile(): Promise<void> {
@@ -380,19 +364,57 @@ class AIPracticeManager {
       this.chatInputEl.style.height = Math.min(this.chatInputEl.scrollHeight, 140) + 'px';
     });
 
-    // Mic Recording
-    this.micBtnEl.addEventListener('click', () => this.toggleSpeechRecognition());
+    this.micBtnEl.addEventListener('pointerdown', (event) => {
+      if (event.button !== 0 || !event.isPrimary || this.isRecording || this.isPending) return;
+      event.preventDefault();
+      this.micBtnEl.setPointerCapture(event.pointerId);
+      this.micPointerId = event.pointerId;
+      this.startSpeechRecognition();
+    });
+    this.micBtnEl.addEventListener('pointerup', (event) => {
+      if (event.pointerId !== this.micPointerId) return;
+      event.preventDefault();
+      this.micPointerId = null;
+      this.releaseSpeechRecognition();
+    });
+    this.micBtnEl.addEventListener('pointercancel', () => this.cancelSpeechRecognition());
+    this.micBtnEl.addEventListener('lostpointercapture', () => {
+      if (this.micHeld) this.cancelSpeechRecognition();
+    });
+    this.micBtnEl.addEventListener('contextmenu', (event) => event.preventDefault());
+    this.micBtnEl.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') this.cancelSpeechRecognition();
+      if (event.code !== 'Space' && event.code !== 'Enter') return;
+      event.preventDefault();
+      if (event.repeat || this.isRecording || this.isPending) return;
+      this.micKey = event.code;
+      this.startSpeechRecognition();
+    });
+    this.micBtnEl.addEventListener('keyup', (event) => {
+      if (event.code !== this.micKey) return;
+      event.preventDefault();
+      this.micKey = null;
+      this.releaseSpeechRecognition();
+    });
+    this.micBtnEl.addEventListener('blur', () => {
+      if (this.micKey) this.cancelSpeechRecognition();
+    });
+    window.addEventListener('blur', () => this.cancelSpeechRecognition());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.cancelSpeechRecognition();
+    });
 
     // Practice Mode Switch
     document.querySelectorAll('.ai-mode-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
+        if (this.isPending || this.isRecording) return;
         const target = (e.currentTarget as HTMLElement);
         const mode = target.getAttribute('data-mode') as PracticeMode;
         if (mode && mode !== this.currentMode) {
           document.querySelectorAll('.ai-mode-btn').forEach((b) => b.classList.remove('active'));
           target.classList.add('active');
           this.currentMode = mode;
-          this.renderWelcomeGreeting();
+          this.resetConversation();
         }
       });
     });
@@ -417,8 +439,8 @@ class AIPracticeManager {
     const btnClearChat = document.getElementById('btnClearChat');
     if (btnClearChat) {
       btnClearChat.addEventListener('click', () => {
-        this.chatMessagesEl.innerHTML = '';
-        this.renderWelcomeGreeting();
+        if (this.isPending || this.isRecording) return;
+        this.resetConversation();
         this.showToast('Đã làm mới phiên hội thoại');
       });
     }
@@ -434,18 +456,6 @@ class AIPracticeManager {
       this.settingsModalEl.style.display = 'none';
     });
     this.btnSaveSettingsEl.addEventListener('click', () => this.saveSettings());
-
-    // Radios in Settings
-    this.radioOfflineEl.addEventListener('change', () => {
-      this.geminiKeyGroupEl.style.display = 'none';
-      document.querySelectorAll('.engine-radio-card').forEach((c) => c.classList.remove('active'));
-      this.radioOfflineEl.closest('.engine-radio-card')?.classList.add('active');
-    });
-    this.radioGeminiEl.addEventListener('change', () => {
-      this.geminiKeyGroupEl.style.display = 'flex';
-      document.querySelectorAll('.engine-radio-card').forEach((c) => c.classList.remove('active'));
-      this.radioGeminiEl.closest('.engine-radio-card')?.classList.add('active');
-    });
 
     // Voice Speed Range
     this.voiceSpeedRangeEl.addEventListener('input', () => {
@@ -464,6 +474,7 @@ class AIPracticeManager {
     // Language Dropdown
     this.langDropdownBtnEl.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (this.isPending || this.isRecording) return;
       this.langDropdownEl.classList.toggle('open');
     });
 
@@ -513,6 +524,7 @@ class AIPracticeManager {
   }
 
   private switchLanguage(lang: TargetLang): void {
+    if (this.isPending || this.isRecording) return;
     if (this.currentLang === lang) {
       this.langDropdownEl.classList.remove('open');
       return;
@@ -524,9 +536,21 @@ class AIPracticeManager {
     this.applyCurrentLanguage();
     this.renderVoiceToneOptions();
     this.langDropdownEl.classList.remove('open');
-    this.chatMessagesEl.innerHTML = '';
-    this.renderWelcomeGreeting();
+    this.resetConversation();
     this.showToast(`Đã chuyển mục tiêu luyện tập sang ${this.langMetadata[lang].name}`);
+  }
+
+  private resetConversation(): void {
+    if (this.isPending || this.isRecording) return;
+    this.conversationId = null;
+    this.speechRecognizer?.abort();
+    this.stopSpeechRecognition();
+    this.activeAudio?.pause();
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    this.stopCharacterTalking();
+    this.chatMessagesEl.innerHTML = '';
+    this.engineIndicatorEl.textContent = 'Chat AI: Backend → RAG (cần kết nối máy chủ)';
+    this.renderWelcomeGreeting();
   }
 
   private applyCurrentLanguage(): void {
@@ -552,65 +576,115 @@ class AIPracticeManager {
   }
 
   private initSpeechRecognition(): void {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      this.speechRecognizer = new SpeechRecognition();
-      this.speechRecognizer.continuous = false;
-      this.speechRecognizer.interimResults = false;
-      this.speechRecognizer.lang = this.langMetadata[this.currentLang].locale;
-
-      this.speechRecognizer.onstart = () => {
-        this.isRecording = true;
-        this.micBtnEl.classList.add('recording');
-        this.waveVisualizerEl.style.display = 'flex';
-      };
-
-      this.speechRecognizer.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          this.chatInputEl.value = transcript;
-          this.chatInputEl.style.height = 'auto';
-          this.handleSendMessage();
-        }
-      };
-
-      this.speechRecognizer.onerror = (event: any) => {
-        console.warn('Speech Recognition error:', event.error);
-        this.stopSpeechRecognition();
-        this.showToast('Không nhận diện được giọng nói, vui lòng thử lại');
-      };
-
-      this.speechRecognizer.onend = () => {
-        this.stopSpeechRecognition();
-      };
-    } else {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
       this.micBtnEl.title = 'Trình duyệt của bạn chưa hỗ trợ Web Speech API';
     }
   }
 
-  private toggleSpeechRecognition(): void {
-    if (!this.speechRecognizer) {
+  private startSpeechRecognition(): void {
+    if (this.isPending || this.isRecording) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
       this.showToast('Trình duyệt chưa hỗ trợ ghi âm trực tiếp. Hãy dùng bàn phím để gõ nhé!');
       return;
     }
-
-    if (this.isRecording) {
-      this.speechRecognizer.stop();
-      this.stopSpeechRecognition();
-    } else {
-      this.speechRecognizer.lang = this.langMetadata[this.currentLang].locale;
-      try {
-        this.speechRecognizer.start();
-      } catch (e) {
-        this.stopSpeechRecognition();
+    this.activeAudio?.pause();
+    this.previewAudio?.pause();
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    this.stopCharacterTalking();
+    this.micDraft = this.chatInputEl.value;
+    this.micTranscript = '';
+    this.micSessionTranscript = '';
+    this.micHeld = true;
+    this.isRecording = true;
+    this.micBtnEl.classList.add('recording');
+    this.micBtnEl.setAttribute('aria-pressed', 'true');
+    this.waveVisualizerEl.style.display = 'flex';
+    this.engineIndicatorEl.textContent = 'Đang nghe... Thả mic để gửi.';
+    this.updateInputControls();
+    const recognizer = new SpeechRecognition();
+    this.speechRecognizer = recognizer;
+    recognizer.continuous = true;
+    recognizer.interimResults = true;
+    recognizer.lang = this.langMetadata[this.currentLang].locale;
+    recognizer.onstart = () => {
+      if (this.speechRecognizer === recognizer && !this.micHeld) recognizer.stop();
+    };
+    recognizer.onresult = (event: any) => {
+      if (this.speechRecognizer !== recognizer) return;
+      const final: string[] = [];
+      const interim: string[] = [];
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        (result.isFinal ? final : interim).push(result[0].transcript.trim());
       }
+      this.micSessionTranscript = final.join(' ');
+      this.chatInputEl.value = [this.micDraft, this.micTranscript, this.micSessionTranscript, ...interim]
+        .filter(Boolean).join(' ');
+      this.chatInputEl.style.height = Math.min(this.chatInputEl.scrollHeight, 140) + 'px';
+    };
+    recognizer.onerror = (event: any) => {
+      if (this.speechRecognizer !== recognizer || event.error === 'no-speech') return;
+      this.cancelSpeechRecognition();
+      this.showToast(event.error === 'not-allowed'
+        ? 'Hãy cấp quyền micro rồi nhấn giữ để nói lại.'
+        : 'Không nhận diện được giọng nói. Tin nhắn chưa được gửi.');
+    };
+    recognizer.onend = () => {
+      if (this.speechRecognizer !== recognizer) return;
+      this.micTranscript = [this.micTranscript, this.micSessionTranscript].filter(Boolean).join(' ');
+      this.micSessionTranscript = '';
+      if (this.micHeld) {
+        try {
+          recognizer.start();
+        } catch {
+          this.cancelSpeechRecognition();
+          this.showToast('Micro đã ngắt. Hãy nhấn giữ để nói lại.');
+        }
+        return;
+      }
+      const transcript = this.micTranscript.trim();
+      this.speechRecognizer = null;
+      this.stopSpeechRecognition();
+      this.chatInputEl.value = [this.micDraft, transcript].filter(Boolean).join(' ');
+      if (transcript) void this.handleSendMessage();
+      else this.showToast('Chưa nghe rõ lời nói. Hãy nhấn giữ mic và nói lại.');
+    };
+    try {
+      recognizer.start();
+    } catch {
+      this.cancelSpeechRecognition();
+      this.showToast('Không thể mở micro. Vui lòng thử lại.');
     }
+  }
+
+  private releaseSpeechRecognition(): void {
+    if (!this.isRecording || !this.micHeld) return;
+    this.micHeld = false;
+    this.micBtnEl.setAttribute('aria-pressed', 'false');
+    this.engineIndicatorEl.textContent = 'Đang hoàn tất nhận dạng giọng nói...';
+    this.speechRecognizer?.stop();
+  }
+
+  private cancelSpeechRecognition(): void {
+    if (!this.isRecording) return;
+    const recognizer = this.speechRecognizer;
+    this.speechRecognizer = null;
+    this.chatInputEl.value = this.micDraft;
+    this.stopSpeechRecognition();
+    recognizer?.abort();
   }
 
   private stopSpeechRecognition(): void {
     this.isRecording = false;
+    this.micHeld = false;
+    this.micPointerId = null;
+    this.micKey = null;
     this.micBtnEl.classList.remove('recording');
+    this.micBtnEl.setAttribute('aria-pressed', 'false');
     this.waveVisualizerEl.style.display = 'none';
+    this.engineIndicatorEl.textContent = 'Nhấn giữ mic để nói, thả để gửi.';
+    this.updateInputControls();
   }
 
   private renderWelcomeGreeting(): void {
@@ -764,6 +838,7 @@ class AIPracticeManager {
       btn.className = 'suggestion-chip';
       btn.textContent = prompt;
       btn.addEventListener('click', () => {
+        if (this.isPending || this.isRecording) return;
         this.chatInputEl.value = prompt;
         this.handleSendMessage();
       });
@@ -771,174 +846,85 @@ class AIPracticeManager {
     });
   }
 
-  private handleSendMessage(): void {
+  private async handleSendMessage(): Promise<void> {
+    if (this.isPending || this.isRecording) return;
     const text = this.chatInputEl.value.trim();
     if (!text) return;
-
-    // Render User Message
-    const userMsg: ChatMessage = {
-      id: 'user_' + Date.now(),
-      sender: 'user',
-      text: text,
-      timestamp: this.getFormattedTime()
-    };
-    this.renderMessage(userMsg);
-
-    // Reset input
+    if (text.length > 4000) {
+      this.showToast('Tin nhắn không được vượt quá 4000 ký tự.');
+      return;
+    }
+    this.isPending = true;
+    this.updateInputControls();
+    const userId = 'user_' + Date.now();
+    this.renderMessage({ id: userId, sender: 'user', text, timestamp: this.getFormattedTime() });
     this.chatInputEl.value = '';
     this.chatInputEl.style.height = 'auto';
-
-    // Show Typing Indicator
     this.showTypingIndicator();
-
-    // Process Bot Response
-    setTimeout(() => {
-      this.removeTypingIndicator();
-      this.generateBotReply(text);
-      this.awardXP();
-    }, 700);
-  }
-
-  private generateBotReply(userPrompt: string): void {
-    const isGeminiMode = localStorage.getItem('slanguage_ai_engine') === 'gemini';
-    const apiKey = localStorage.getItem('slanguage_gemini_key') || '';
-
-    if (isGeminiMode && apiKey) {
-      this.callGeminiAPI(userPrompt, apiKey);
-    } else {
-      this.generateOfflineReply(userPrompt);
-    }
-  }
-
-  private generateOfflineReply(prompt: string): void {
-    const lower = prompt.toLowerCase();
-    let replyText = '';
-    let romaji = '';
-    let translation = '';
-    let tip = '';
-
-    if (this.currentLang === 'ja') {
-      if (lower.includes('xin chào') || lower.includes('chào') || lower.includes('hello') || lower.includes('konnichiwa') || lower.includes('こんにちは')) {
-        replyText = 'こんにちは！お会いできて嬉しいです。日本語の勉強は順調ですか？何か質問があれば何でも聞いてくださいね。';
-        romaji = 'Konnichiwa! Oaidekite ureshii desu. Nihongo no benkyou wa junchou desu ka? Nanika shitsumon ga areba nandemo kiite kudasai ne.';
-        translation = 'Chào bạn! Rất vui được gặp bạn. Việc học tiếng Nhật của bạn có thuận lợi không? Nếu có thắc mắc gì hãy cứ hỏi tôi nhé.';
-        tip = 'Mẹo: Dùng "お会いできて嬉しいです" (Oaidekite ureshii desu) để bày tỏ sự hân hạnh khi gặp gỡ.';
-      } else if (lower.includes('giới thiệu') || lower.includes('jikoshoukai') || lower.includes('自己紹介')) {
-        replyText = '素晴らしいですね！自己紹介の基本パターンはこうです：「初めまして、[名前]と申します。ベトナムから来ました。趣味は読書です。どうぞよろしくお願いします！」';
-        romaji = 'Hajimemashite, [Tên] to moushimasu. Betonamu kara kimashita. Shuumi wa dokusho desu. Douzo yoroshiku onegai shimasu!';
-        translation = 'Rất tuyệt vời! Mẫu tự giới thiệu chuẩn: "Rất vui được gặp bạn, tôi tên là [Tên]. Tôi đến từ Việt Nam. Sở thích của tôi là đọc sách. Rất mong nhận được sự giúp đỡ của bạn!"';
-        tip = 'Dùng "と申します" (to moushimasu) là thể khiêm nhường ngữ lịch sự hơn "です" (desu).';
-      } else if (lower.includes('nhà hàng') || lower.includes('order') || lower.includes('gọi món') || lower.includes('chuumon') || lower.includes('注文')) {
-        replyText = 'レストランでは店員を呼ぶ時に「すみません！」と言います。注文する時は「これをお願いします (Kore o onegai shimasu)」や「お会計をお願いします (O-kaikei o onegai shimasu)」が定番です。';
-        romaji = 'Sumimasen! Kore o onegai shimasu. O-kaikei o onegai shimasu.';
-        translation = 'Tại quán ăn, khi gọi phục vụ hãy nói "Sumimasen!". Khi gọi món: "Cho tôi món này" hoặc tính tiền: "Cho tôi xin hóa đơn".';
-        tip = 'Thêm chữ "O-" phía trước từ (O-kaikei, O-mizu) giúp lời nói trở nên tao nhã và lịch thiệp.';
-      } else if (lower.includes('wa') && lower.includes('ga') || lower.includes('は') && lower.includes('が')) {
-        replyText = '「は」は主題（〜について言えば）を表し、既知の情報を提示します。一方、「が」は新しい情報や主語そのものを強調・特定する際に使います。例：「私が山田です (Chính tôi là Yamada)」vs「私は学生です (Tôi là học sinh)」。';
-        translation = 'Trợ từ "は" biểu thị chủ đề câu chuyện (nhắc lại thông tin đã biết), còn "が" nhấn mạnh tân thông tin hoặc đích danh chủ thể hành động.';
-        tip = 'Quy tắc nhanh: Sau "が" là thông tin quan trọng nhất, sau "は" là vị ngữ chứa trọng tâm.';
-      } else {
-        replyText = `「${prompt}」についてですね！とても良い表現です。相手に共感を示す時は「そうですね (Sou desu ne)」や「なるほど (Naruhodo)」と相槌を打つと、会話がとてもスムーズになりますよ。`;
-        romaji = 'Sou desu ne / Naruhodo.';
-        translation = `Về nội dung "${prompt}", bạn diễn đạt rất tốt! Khi đàm thoại, hãy thường xuyên đệm các từ phụ họa như "Sou desu ne" (Đúng vậy nhỉ) hay "Naruhodo" (Ra là vậy) để cuộc nói chuyện tự nhiên hơn nhé.`;
-        tip = 'Văn hóa相槌 (Aizuchi) gật đầu phụ họa là chìa khóa vàng trong đàm thoại tiếng Nhật.';
-      }
-    } else if (this.currentLang === 'en') {
-      if (lower.includes('hello') || lower.includes('hi') || lower.includes('chào') || lower.includes('xin chào')) {
-        replyText = 'Hi there! Great to chat with you today. How is your English learning journey going so far?';
-        translation = 'Xin chào bạn! Thật vui được trò chuyện hôm nay. Hành trình học tiếng Anh của bạn dạo này thế nào rồi?';
-        tip = 'Native tip: Instead of just "I am fine, thank you", try replying: "I\'m doing fantastic, thanks for asking!"';
-      } else if (lower.includes('phỏng vấn') || lower.includes('interview') || lower.includes('kỹ năng')) {
-        replyText = 'In job interviews, always remember to connect your personal skills with business outcomes. For example: "I improved team productivity by 25% by streamlining daily reporting workflows."';
-        translation = 'Trong phỏng vấn xin việc, hãy nhớ luôn gắn kết kỹ năng của bạn với kết quả đo lường được bằng số liệu cụ thể.';
-        tip = 'Action verbs to impress recruiters: Spearheaded, Streamlined, Orchestrated, Optimized.';
-      } else if (lower.includes('look forward') || lower.includes('sửa') || lower.includes('correct')) {
-        replyText = 'The phrase "look forward to" requires a gerund (-ing form)! Therefore, the correct sentence is: "I am looking forward to hearing from you soon," NOT "to hear".';
-        translation = 'Cụm "look forward to" bắt buộc đi kèm V-ing! Do đó câu đúng là: "I am looking forward to hearing from you soon", không dùng "to hear".';
-        tip = 'Other similar structures: be used to + V-ing, object to + V-ing.';
-      } else {
-        replyText = `That's an interesting point regarding "${prompt}"! In conversational English, fluency comes from practicing collocations and expressing opinions with phrases like "From my perspective" or "I\'m strongly convinced that..."`;
-        translation = `Ý tưởng rất hay về "${prompt}"! Để nói tiếng Anh lưu loát, hãy áp dụng các cụm diễn đạt quan điểm tự nhiên như "Theo góc nhìn của tôi" hay "Tôi tin chắc rằng...".`;
-        tip = 'Keep the conversation going: Try asking me a follow-up question!';
-      }
-    } else {
-      // Vietnamese
-      if (lower.includes('chào') || lower.includes('hello')) {
-        replyText = 'Chào bạn nhé! Thật vui được đồng hành cùng bạn trên Slanguage. Hôm nay bạn muốn tìm hiểu hay trau chuốt phần giao tiếp nào?';
-        tip = 'Người Việt thường chào kèm theo xưng hô thân mật: "Em chào anh", "Chào bạn", "Cháu chào cô".';
-      } else if (lower.includes('sắp xếp') || lower.includes('xắp sếp') || lower.includes('chính tả')) {
-        replyText = 'Từ đúng chính tả chuẩn tiếng Việt là "Sắp xếp" (S nặng), không phải "Xắp sếp". "Sắp" mang nghĩa chuẩn bị, thu xếp ngăn nắp.';
-        tip = 'Mẹo ghi nhớ: Sắp đặt, sắp xếp, xếp hàng, ngăn nắp.';
-      } else {
-        replyText = `Về chủ đề "${prompt}", bạn đặt câu rất tự nhiên và chuẩn văn phong giao tiếp. Điểm đặc sắc của tiếng Việt là thanh điệu uyển chuyển và từ ngữ giàu hình ảnh biểu cảm.`;
-        tip = 'Luyện tập thường xuyên để phản xạ giao tiếp ngày càng nhuần nhuyễn bạn nhé!';
-      }
-    }
-
-    const botMsg: ChatMessage = {
-      id: 'bot_' + Date.now(),
-      sender: 'bot',
-      text: replyText,
-      romajiOrPhonetic: romaji,
-      translation: translation,
-      tip: tip,
-      timestamp: this.getFormattedTime()
-    };
-
-    this.renderMessage(botMsg);
-    this.triggerAICharacterResponse(botMsg.text, botMsg.romajiOrPhonetic, botMsg.tip);
-    // Tự động phát âm thanh mỗi lần AI trả lời
-    this.speakText(replyText, this.langMetadata[this.currentLang].locale);
-  }
-
-  private async callGeminiAPI(prompt: string, apiKey: string): Promise<void> {
-    const meta = this.langMetadata[this.currentLang];
-    const systemPrompt = `You are Slanguage AI Tutor, an encouraging, professional, and friendly language teacher specializing in ${meta.name}.
-Respond in ${meta.name} concisely (under 80 words), followed by a brief Vietnamese translation and a helpful grammar/vocabulary tip. Keep tone warm, motivating, and interactive.`;
-
+    this.engineIndicatorEl.textContent = 'Đang chờ phản hồi từ backend và RAG...';
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
+      if (!this.conversationId) {
+        const languages = { vi: 'Vietnamese', en: 'English', ja: 'Japanese' };
+        const created = await slanguageApi<{ id: string }>('/api/v1/chat-ai/conversations', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              { role: 'user', parts: [{ text: `${systemPrompt}\n\nStudent says: "${prompt}"` }] }
-            ]
-          })
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Gemini API request failed');
+          body: { title: text.slice(0, 100), language_code: languages[this.currentLang], practice_mode: 'free-chat' },
+        });
+        if (!created.data?.id) throw new Error('Máy chủ chưa trả về phòng trò chuyện hợp lệ.');
+        this.conversationId = created.data.id;
       }
-
-      const data = await response.json();
-      const rawReply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I understood your question! Let us continue practicing.';
-
-      const botMsg: ChatMessage = {
-        id: 'bot_gemini_' + Date.now(),
-        sender: 'bot',
-        text: rawReply,
-        tip: 'Phản hồi trực tiếp từ Google Gemini AI qua API Cloud.',
-        timestamp: this.getFormattedTime()
-      };
-
-      this.renderMessage(botMsg);
-      this.triggerAICharacterResponse(botMsg.text, undefined, botMsg.tip);
-      // Tự động phát âm thanh mỗi lần AI trả lời
-      this.speakText(rawReply, meta.locale);
-    } catch (err) {
-      console.warn('Gemini API call failed, falling back to smart offline mode:', err);
-      this.generateOfflineReply(prompt);
-      this.showToast('Kết nối Gemini gặp sự cố, đã chuyển sang Offline Smart AI');
+      const response = await slanguageApi<{ ai_response: string; ai_feedback?: string | null }>(
+        '/api/v1/chat-ai/send-message',
+        { method: 'POST', body: { conversation_id: this.conversationId, user_message: text } },
+      );
+      const reply = response.data?.ai_response;
+      if (typeof reply !== 'string' || !reply.trim()) throw new Error('AI chưa trả về câu trả lời hợp lệ.');
+      const tip = this.formatFeedback(response.data.ai_feedback);
+      this.removeTypingIndicator();
+      this.renderMessage({ id: 'bot_' + Date.now(), sender: 'bot', text: reply, tip, timestamp: this.getFormattedTime() });
+      this.triggerAICharacterResponse(reply, undefined, tip);
+      this.speakText(reply, this.langMetadata[this.currentLang].locale);
+      this.awardXP();
+      this.engineIndicatorEl.textContent = 'Chat AI: Đã nhận phản hồi từ backend';
+    } catch (error) {
+      document.getElementById(userId)?.remove();
+      this.chatInputEl.value = text;
+      this.stopCharacterTalking();
+      const message = error instanceof Error ? error.message : 'Không thể kết nối Chat AI. Vui lòng thử lại.';
+      this.engineIndicatorEl.textContent = message;
+      this.showToast(message);
+    } finally {
+      this.removeTypingIndicator();
+      this.isPending = false;
+      this.updateInputControls();
     }
+  }
+
+  private formatFeedback(feedback?: string | null): string {
+    if (!feedback) return '';
+    try {
+      const value = JSON.parse(feedback);
+      return ['grammar_error', 'corrected_sentence', 'natural_suggestion']
+        .map(key => typeof value?.[key] === 'string' ? value[key].trim() : '')
+        .filter(Boolean).join('\n');
+    } catch {
+      return feedback;
+    }
+  }
+
+  private updateInputControls(): void {
+    const busy = this.isPending || this.isRecording;
+    this.chatInputEl.disabled = busy;
+    this.sendBtnEl.disabled = busy;
+    this.micBtnEl.disabled = this.isPending;
+    this.langDropdownBtnEl.disabled = busy;
+    document.querySelectorAll<HTMLButtonElement>('.ai-mode-btn, .suggestion-chip, #btnClearChat')
+      .forEach(button => { button.disabled = busy; });
   }
 
   private renderMessage(msg: ChatMessage): void {
     const row = document.createElement('div');
     row.className = `chat-msg-row ${msg.sender}`;
+    row.id = msg.id;
 
     const avatar = document.createElement('div');
     avatar.className = 'msg-avatar';
@@ -956,23 +942,23 @@ Respond in ${meta.name} concisely (under 80 words), followed by a brief Vietname
     const author = msg.sender === 'bot' 
       ? this.langMetadata[this.currentLang].aiName 
       : (document.getElementById('headerUserName')?.textContent || 'Bạn');
-    meta.innerHTML = `<span class="msg-author">${author}</span> • <span>${msg.timestamp}</span>`;
+    meta.innerHTML = `<span class="msg-author">${this.escapeHtml(author)}</span> • <span>${this.escapeHtml(msg.timestamp)}</span>`;
 
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
 
-    let bubbleContent = `<div>${msg.text}</div>`;
+    let bubbleContent = `<div>${this.escapeHtml(msg.text)}</div>`;
 
     if (msg.romajiOrPhonetic) {
-      bubbleContent += `<div style="font-size: 0.88rem; color: #38bdf8; margin-top: 6px; font-style: italic;"><i class="fa-solid fa-language"></i> ${msg.romajiOrPhonetic}</div>`;
+      bubbleContent += `<div style="font-size: 0.88rem; color: #38bdf8; margin-top: 6px; font-style: italic;"><i class="fa-solid fa-language"></i> ${this.escapeHtml(msg.romajiOrPhonetic)}</div>`;
     }
 
     if (msg.translation) {
-      bubbleContent += `<div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 6px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px;"><i class="fa-solid fa-circle-check" style="color: #4ade80;"></i> ${msg.translation}</div>`;
+      bubbleContent += `<div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 6px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 6px;"><i class="fa-solid fa-circle-check" style="color: #4ade80;"></i> ${this.escapeHtml(msg.translation)}</div>`;
     }
 
     if (msg.tip) {
-      bubbleContent += `<div class="msg-tip-card"><i class="fa-solid fa-lightbulb" style="color: #fbbf24;"></i> ${msg.tip}</div>`;
+      bubbleContent += `<div class="msg-tip-card"><i class="fa-solid fa-lightbulb" style="color: #fbbf24;"></i> ${this.escapeHtml(msg.tip)}</div>`;
     }
 
     if (msg.sender === 'bot') {
@@ -1063,7 +1049,7 @@ Respond in ${meta.name} concisely (under 80 words), followed by a brief Vietname
 
     if (this.comicBubbleTipEl) {
       if (tip) {
-        this.comicBubbleTipEl.innerHTML = `<i class="fa-solid fa-lightbulb"></i> ${tip}`;
+        this.comicBubbleTipEl.innerHTML = `<i class="fa-solid fa-lightbulb"></i> ${this.escapeHtml(tip)}`;
         this.comicBubbleTipEl.style.display = 'block';
       } else {
         this.comicBubbleTipEl.style.display = 'none';
@@ -1290,23 +1276,7 @@ Respond in ${meta.name} concisely (under 80 words), followed by a brief Vietname
   }
 
   private saveSettings(): void {
-    const isGemini = this.radioGeminiEl.checked;
-    const apiKey = this.geminiApiKeyInputEl.value.trim();
-
-    if (isGemini) {
-      if (!apiKey) {
-        this.showToast('Vui lòng nhập API Key của Gemini nếu chọn chế độ Cloud');
-        return;
-      }
-      localStorage.setItem('slanguage_ai_engine', 'gemini');
-      localStorage.setItem('slanguage_gemini_key', apiKey);
-      this.engineIndicatorEl.textContent = 'Chế độ: Google Gemini Cloud AI';
-      this.showToast('Đã lưu cấu hình Google Gemini Cloud AI');
-    } else {
-      localStorage.setItem('slanguage_ai_engine', 'offline');
-      this.engineIndicatorEl.textContent = 'Chế độ: Smart AI Offline (Sẵn sàng)';
-      this.showToast('Đã lưu chế độ Smart AI Offline');
-    }
+    this.showToast('Đã lưu thiết lập giọng đọc. Chat AI sử dụng backend và RAG.');
 
     this.settingsModalEl.style.display = 'none';
   }
@@ -1328,7 +1298,8 @@ Respond in ${meta.name} concisely (under 80 words), followed by a brief Vietname
   }
 
   private escapeHtml(str: string): string {
-    return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 }
 

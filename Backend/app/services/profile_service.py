@@ -156,10 +156,13 @@ def user_today(tz_name: str) -> date:
     return datetime.now(tz).date()
 
 
-def with_effective_streak(stats: Dict[str, Any], tz_name: str) -> Dict[str, Any]:
+def with_effective_streak(
+    stats: Dict[str, Any], tz_name: str, freezes_available: int = 0
+) -> Dict[str, Any]:
     """
     Chuỗi trong DB chỉ được đóng khi user học lần kế tiếp. Khi hiển thị,
-    nếu đã bỏ lỡ hơn 1 ngày thì coi chuỗi hiện tại là 0.
+    nếu đã bỏ lỡ hơn 1 ngày thì coi chuỗi hiện tại là 0 — trừ khi kho còn
+    đủ Đóng Băng Chuỗi để bù cho những ngày lỡ (sẽ tự tiêu khi học lại).
     """
     result = dict(stats)
     last = stats.get("last_activity_date")
@@ -170,12 +173,29 @@ def with_effective_streak(stats: Dict[str, Any], tz_name: str) -> Dict[str, Any]
         today = user_today(tz_name)
         gap = (today - date.fromisoformat(last)).days
         studied_today = gap == 0
-        if gap <= 1:
+        if gap <= 1 + max(0, freezes_available):
             effective = int(stats.get("current_streak", 0))
 
     result["current_streak"] = effective
     result["studied_today"] = studied_today
     return result
+
+
+def get_streak_freeze_count(user_id: str) -> int:
+    try:
+        rows = (
+            supabase_admin.table("shop_inventory")
+            .select("quantity")
+            .eq("user_id", user_id)
+            .eq("shop_item_id", "streak_freeze")
+            .limit(1)
+            .execute()
+            .data
+        )
+    except Exception:
+        logger.exception("Không đọc được số Đóng Băng Chuỗi trong kho của %s", user_id)
+        return 0
+    return int(rows[0]["quantity"]) if rows else 0
 
 
 def _update_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:

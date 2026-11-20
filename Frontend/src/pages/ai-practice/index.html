@@ -289,12 +289,12 @@
             <span class="wave-bar"></span>
             <span class="wave-bar"></span>
             <span class="wave-bar"></span>
-            <span class="wave-label">Đang lắng nghe giọng nói của bạn... Hãy nói vào micro!</span>
+            <span class="wave-label">Đang lắng nghe... Giữ mic khi nói, thả để gửi.</span>
           </div>
 
           <div class="input-row">
             <!-- Mic Record Button -->
-            <button class="btn-mic" id="btnMicRecord" title="Nhấn để nói vào Micro (Speech-to-Text)">
+            <button type="button" class="btn-mic" id="btnMicRecord" title="Nhấn giữ để nói, thả để gửi" aria-label="Nhấn giữ để nói, thả để gửi" aria-pressed="false" style="touch-action: none; user-select: none;">
               <i class="fa-solid fa-microphone" id="micIcon"></i>
             </button>
 
@@ -304,6 +304,7 @@
               class="chat-textarea" 
               placeholder="Nhập tin nhắn bằng Tiếng Nhật, Tiếng Anh hoặc Tiếng Việt... (Nhấn Enter để gửi, Shift+Enter xuống dòng)" 
               rows="1"
+              maxlength="4000"
             ></textarea>
 
             <!-- Send Button -->
@@ -313,8 +314,8 @@
           </div>
           
           <div class="input-hint">
-            <span><i class="fa-solid fa-circle-info"></i> Bạn có thể gõ câu hỏi hoặc bấm vào biểu tượng Micro để luyện nói trực tiếp.</span>
-            <span id="currentEngineIndicator" class="engine-indicator">Chế độ: Smart AI Offline (Sẵn sàng)</span>
+            <span><i class="fa-solid fa-circle-info"></i> Nhấn giữ Micro để nói, thả ra để gửi. Chọn đúng ngôn ngữ trước khi nói.</span>
+            <span id="currentEngineIndicator" class="engine-indicator">Chat AI: Backend → RAG</span>
           </div>
         </div>
 
@@ -339,30 +340,10 @@
           <label class="form-label">
             <i class="fa-solid fa-brain"></i> Chế độ xử lý ngôn ngữ
           </label>
-          <div class="engine-radios">
-            <label class="engine-radio-card active">
-              <input type="radio" name="aiEngine" value="offline" checked id="radioOffline">
-              <div class="radio-info">
-                <strong>Offline Smart Engine (Khuyên dùng)</strong>
-                <span>Kho tri thức đàm thoại & phản xạ chuẩn giáo trình Slanguage, tốc độ phản hồi 0.1s.</span>
-              </div>
-            </label>
-            <label class="engine-radio-card">
-              <input type="radio" name="aiEngine" value="gemini" id="radioGemini">
-              <div class="radio-info">
-                <strong>Google Gemini Cloud API (Trực tuyến)</strong>
-                <span>Kết nối trực tiếp Gemini AI thông qua API Key của bạn để trò chuyện không giới hạn.</span>
-              </div>
-            </label>
+          <div class="radio-info">
+            <strong>Chat AI qua backend và kho tri thức RAG</strong>
+            <span>Câu hỏi được gửi đến máy chủ để tìm tri thức học tập và tạo câu trả lời. Khóa AI được cấu hình ở backend, không nhập trên trình duyệt.</span>
           </div>
-        </div>
-
-        <div class="form-group" id="geminiKeyGroup" style="display: none;">
-          <label class="form-label" for="geminiApiKeyInput">
-            <i class="fa-solid fa-key"></i> Google Gemini API Key
-          </label>
-          <input type="password" id="geminiApiKeyInput" class="form-input" placeholder="Dán mã API Key Gemini (AIzaSy...)">
-          <small class="form-help">Mã API được lưu hoàn toàn trên trình duyệt của bạn (Local Storage) và không bị tải lên máy chủ ngoài.</small>
         </div>
 
         <div class="form-group" id="voiceToneGroup">

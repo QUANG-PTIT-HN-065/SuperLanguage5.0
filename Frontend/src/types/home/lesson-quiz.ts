@@ -1,4 +1,6 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { MAX_HEARTS, readHearts, spendHearts } from "../shared/hearts";
+import { activateBestBoost, tryHealHearts } from "../shared/shop-items";
 import type {
   LessonContent,
   LessonMatchingPair,
@@ -24,6 +26,7 @@ interface LessonCompletion {
   xp_into_level: number;
   current_streak: number;
   already_completed: boolean;
+  boost: { item_id: string; title: string; multiplier: number } | null;
 }
 
 interface AnswerReview {
@@ -71,6 +74,7 @@ let checkedAnswer: CheckedAnswer | null = null;
 let matchingState: MatchingState | null = null;
 let activeRequest = false;
 let completed = false;
+let lessonHearts = MAX_HEARTS;
 let lastXpAwarded = 0;
 let lastXpTotal = 0;
 let lastLessonId = 0;
@@ -98,6 +102,11 @@ function setNotice(message: string, isError = false): void {
   lessonNotice.hidden = !message;
   lessonNotice.textContent = message;
   lessonNotice.dataset.state = isError ? "error" : "";
+}
+
+function updateHeartsDisplay(): void {
+  const heartsElement = document.getElementById("headerHeartsVal");
+  if (heartsElement) heartsElement.textContent = `${lessonHearts}/${MAX_HEARTS}`;
 }
 
 async function loadLessonContent(lessonId: number): Promise<LessonContent> {
@@ -137,6 +146,14 @@ async function requestCompletion(content: LessonContent): Promise<LessonCompleti
   const level = positiveInt(result.level);
   const xpIntoLevel = nonNegativeInt(result.xp_into_level);
   const currentStreak = nonNegativeInt(result.current_streak);
+  const boostRecord = asRecord(result.boost);
+  const boost = typeof boostRecord.title === "string" && Number(boostRecord.multiplier) > 1
+    ? {
+        item_id: typeof boostRecord.item_id === "string" ? boostRecord.item_id : "",
+        title: boostRecord.title,
+        multiplier: Number(boostRecord.multiplier),
+      }
+    : null;
   if (
     parsedScore < 0 ||
     !count ||
@@ -160,6 +177,7 @@ async function requestCompletion(content: LessonContent): Promise<LessonCompleti
     xp_into_level: xpIntoLevel,
     current_streak: currentStreak,
     already_completed: result.already_completed,
+    boost,
   };
 }
 
@@ -514,6 +532,20 @@ export async function openLesson(lessonId: number, pushHistory: boolean, skipRea
 
   try {
     lesson = await loadLessonContent(lessonId);
+    void activateBestBoost();
+    lessonHearts = readHearts();
+    if (lessonHearts === 0) {
+      const healed = await tryHealHearts();
+      if (!healed) {
+        setNotice(
+          "Hết máu — sinh lực đang khóa hồi 24 giờ. Mua Hồi Phục Máu Siêu Tốc trong Cửa hàng để học tiếp ngay.",
+          true,
+        );
+        return;
+      }
+      lessonHearts = readHearts();
+    }
+    updateHeartsDisplay();
     questionIndex = 0;
     if (!skipReading && lesson.lesson.description?.trim()) showReading();
     else renderQuestion();
@@ -613,6 +645,27 @@ async function checkAnswer(): Promise<void> {
             : "Chưa đúng. Đáp án đúng đã được đánh dấu.";
       feedback.textContent = `${questionFeedback}${checkedAnswer.explanation ? ` ${checkedAnswer.explanation}` : ""}`;
       feedback.dataset.state = answer.is_correct ? "correct" : "incorrect";
+    }
+    if (!answer.is_correct) {
+      lessonHearts = spendHearts(1);
+      updateHeartsDisplay();
+      if (feedback) feedback.textContent += ` (-1 ❤️, còn ${lessonHearts}/${MAX_HEARTS} máu)`;
+      if (lessonHearts === 0) {
+        const healed = await tryHealHearts();
+        if (healed) {
+          lessonHearts = readHearts();
+          updateHeartsDisplay();
+        } else {
+          checkButton.hidden = true;
+          if (nextButton) nextButton.hidden = true;
+          setNotice(
+            "Hết máu — bài học kết thúc tại đây. Mua Hồi Phục Máu Siêu Tốc trong Cửa hàng hoặc chờ sinh lực hồi để học tiếp.",
+            true,
+          );
+          showToast({ type: "error", message: "Hết máu! Sinh lực khóa hồi 24 giờ — bài học dừng lại." });
+          return;
+        }
+      }
     }
     const progress = Math.round(((questionIndex + 1) / lesson.questions.length) * 100);
     const progressFill = document.getElementById("lessonProgressFill");
@@ -790,11 +843,14 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
       : `Chưa đủ ${count}/${count} lần này`;
   }
   if (textElement) {
+    const boostNote = result.boost && !result.already_completed
+      ? ` · ${result.boost.title} đã áp dụng`
+      : "";
     textElement.textContent = passed
       ? result.already_completed
         ? `${formatScore(score, count)} câu đúng · Kết quả này đã được ghi nhận trước đó.`
-        : `${formatScore(score, count)} câu đúng · Bạn vừa tiến thêm một bước trên lộ trình.`
-      : `${formatScore(score, count)} câu đúng — vài từ đang chơi trốn tìm thôi. Mình xem lại rồi thử thêm lượt nữa nhé!`;
+        : `${formatScore(score, count)} câu đúng · Bạn vừa tiến thêm một bước trên lộ trình.${boostNote}`
+      : `${formatScore(score, count)} câu đúng — vài từ đang chơi trốn tìm thôi. Mình xem lại rồi thử thêm lượt nữa nhé!${boostNote}`;
   }
   if (unlock) {
     unlock.hidden = !passed;

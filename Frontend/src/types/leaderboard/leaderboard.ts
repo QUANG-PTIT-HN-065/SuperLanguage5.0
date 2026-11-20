@@ -1,5 +1,6 @@
 import { initializeLearnerHeader } from "../shared/learner-header";
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 
 type Period = "today" | "week" | "month" | "all";
 type Sort = "xp" | "streak" | "lessons" | "accuracy";
@@ -121,6 +122,10 @@ class LeaderboardApp {
 
   private async load(): Promise<void> {
     this.setLoading(true);
+    showSkeleton(this.tableBody, "lb-rows", { tone: "dark", count: this.pageSize });
+    for (const id of ["podiumTop1", "podiumTop2", "podiumTop3"]) {
+      showSkeleton(id, "podium", { tone: "dark" });
+    }
     const query = new URLSearchParams({
       period: this.period,
       language: this.language,
@@ -136,6 +141,10 @@ class LeaderboardApp {
       this.render();
       this.status.textContent = "";
     } catch (error) {
+      clearSkeleton(this.tableBody);
+      for (const id of ["podiumTop1", "podiumTop2", "podiumTop3"]) {
+        clearSkeleton(id);
+      }
       this.showMessage(error instanceof Error ? error.message : "Không thể tải bảng xếp hạng.");
     } finally {
       this.setLoading(false);
@@ -162,6 +171,7 @@ class LeaderboardApp {
     for (const { id, entry, place } of places) {
       const container = document.getElementById(id);
       if (!container) continue;
+      clearSkeleton(container);
       container.innerHTML = entry
         ? `<article class="podium-card ${place}${entry.is_current_user ? " current-user" : ""}">
             <div class="podium-crown-badge">#${entry.rank}</div>
@@ -183,6 +193,7 @@ class LeaderboardApp {
 
   private renderRows(items: LeaderboardEntry[]): void {
     if (!this.tableBody) return;
+    clearSkeleton(this.tableBody);
     this.tableBody.innerHTML = items.length
       ? items.map((entry) => `<div class="table-row${entry.rank <= 3 ? ` rank-${entry.rank}` : ""}${entry.is_current_user ? " current-user" : ""}">
           <div class="col-rank"><span class="rank-num">#${entry.rank}</span></div>
