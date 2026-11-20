@@ -539,7 +539,7 @@ def _validate_admin_word(data: Dict[str, Any]) -> None:
         .data
     )
     if not language_rows:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Ngôn ngữ không tồn tại.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Ngôn ngữ không tồn tại.")
 
     topic_rows = (
         supabase_admin.table("topics")
@@ -551,7 +551,7 @@ def _validate_admin_word(data: Dict[str, Any]) -> None:
     )
     if len(topic_rows) != len(topic_ids):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Một hoặc nhiều chủ đề không tồn tại hoặc không thuộc ngôn ngữ đã chọn.",
         )
 
