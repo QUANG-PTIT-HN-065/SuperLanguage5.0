@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Thử Thách Trả Lời Câu Hỏi Toàn Màn Hình</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="./style.css">
+  <!-- Auth Guard -->
+  <script>
+    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+      window.location.replace('../login/index.html');
+    }
+  </script>
+</head>
+<body class="user-authenticated">
+
+  <!-- Ambient Glow Background -->
+  <div class="quiz-ambient-glow"></div>
+
+  <!-- ================= TOP FULL-SCREEN NAVBAR ================= -->
+  <header class="quiz-navbar">
+    <div class="quiz-navbar-inner">
+      <div class="nav-left">
+        <button type="button" class="btn-exit-quiz" id="btnExitQuiz" title="Trở về lộ trình bài học">
+          <i class="fa-solid fa-arrow-left"></i> Rời khỏi
+        </button>
+        <div class="brand-badge">
+          <img src="../assets/logo.png" alt="Slanguage Logo">
+          <span>Slanguage <span class="brand-highlight">Arena</span></span>
+        </div>
+      </div>
+
+      <div class="nav-center-title">
+        <div class="stage-crumb" id="headerStageCrumb">MỐC CHỦ ĐỀ 1</div>
+        <div class="node-crumb-title" id="headerNodeTitle">Thử Thách Giải Mã Dungeon</div>
+      </div>
+
+      <div class="nav-right">
+        <div class="stat-chip streak" title="Chuỗi ngày rèn luyện">
+          <img src="../assets/streak-flame.gif?v=4" alt="Streak" class="streak-flame-img">
+          <span id="headerStreakVal">18 Ngày</span>
+        </div>
+        <div class="stat-chip xp" title="Điểm kinh nghiệm hiện tại">
+          <i class="fa-solid fa-bolt"></i>
+          <span id="headerXPVal">0 XP</span>
+        </div>
+        <div class="stat-chip hearts" title="Sinh mệnh">
+          <i class="fa-solid fa-heart"></i>
+          <span id="headerHeartsVal">5/5</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= FULL-SCREEN MAIN QUIZ CONTAINER ================= -->
+  <main class="quiz-main-container">
+
+    <!-- STAGE HERO BANNER (Đầu thẻ thử thách) -->
+    <section class="stage-hero-banner" id="stageHeroBanner">
+      <div class="stage-hero-top">
+        <div class="stage-title-flex">
+          <div class="stage-icon-circle" id="stageHeroIconWrap">
+            <i class="fa-solid fa-feather" id="stageHeroIcon"></i>
+          </div>
+          <div class="stage-meta-info">
+            <div class="stage-tier-badge" id="stageHeroTier">MỐC CHỦ ĐỀ 1: CỔNG NHẬP MÔN & NGỮ ÂM KANA</div>
+            <h1 class="stage-title-text" id="stageHeroTitle">Nhận Diện 10 Nguyên Âm Cơ Bản</h1>
+          </div>
+        </div>
+        <div class="stage-status-badge" id="stageHeroStatus">
+          <i class="fa-solid fa-shield-halved"></i> Sẵn sàng khiêu chiến ⚔️
+        </div>
+      </div>
+
+      <!-- STAKES PILL RIBBON (Tỉ lệ phần thưởng / phạt) -->
+      <div class="stakes-pill-ribbon" id="stakesPillRibbon">
+        <span class="stake-diff" id="stageHeroDifficulty">Độ khó: Dễ</span>
+        <span>•</span>
+        <span class="stake-win" id="stageHeroXP">+5 XP nếu đúng toàn bộ</span>
+        <span>•</span>
+        <span class="stake-loss" id="stageHeroPenalty">-1 Máu khi hoàn thành nếu sai</span>
+      </div>
+    </section>
+
+    <!-- FULL SCREEN QUIZ ARENA CARD (Thẻ câu hỏi mở rộng tỉ lệ cân đối) -->
+    <section class="quiz-arena-card" id="quizArenaCard">
+
+      <!-- Step Counter & Progress -->
+      <div class="arena-step-header">
+        <div class="arena-step-title">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>Thử Thách Giải Mã Dungeon (Chọn đáp án đúng):</span>
+        </div>
+        <div class="arena-step-counter" id="stepCounterBadge">Câu 1/3</div>
+      </div>
+
+      <!-- Animated Progress Track -->
+      <div class="arena-progress-track">
+        <div class="arena-progress-fill" id="arenaProgressFill" style="width: 33.33%;"></div>
+      </div>
+
+      <!-- Scaled Question Prompt Box -->
+      <div class="arena-prompt-box">
+        <p class="arena-prompt-text" id="arenaQuestionPrompt">
+          Đang tải câu hỏi thử thách...
+        </p>
+      </div>
+
+      <!-- Scaled Choices List -->
+      <div class="arena-choices-grid" id="arenaChoicesGrid">
+        <!-- Rendered dynamically by quiz.ts -->
+      </div>
+
+      <!-- Result Feedback Banner (Hiển thị sau khi bấm Kiểm tra) -->
+      <div class="arena-result-banner" id="arenaResultBanner">
+        <div class="result-icon-large" id="resultBannerIcon">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div class="result-content-body">
+          <strong id="resultBannerHeading">CHÍNH XÁC!</strong>
+          <p id="resultBannerDesc">Giải thích chi tiết về đáp án...</p>
+        </div>
+      </div>
+
+      <!-- Bottom Action Footer -->
+      <div class="arena-action-footer">
+        <button type="button" class="btn-quiz-action" id="btnQuizAction" disabled>
+          <i class="fa-solid fa-magnifying-glass"></i> Kiểm tra
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Modal: Xác nhận rời khỏi đấu trường -->
+  <div class="quiz-modal-overlay" id="modalConfirmExit">
+    <div class="quiz-modal-card">
+      <div class="modal-icon-badge warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 class="quiz-modal-title">Tạm Dừng Thử Thách?</h3>
+      <p class="quiz-modal-desc">
+        Bạn có chắc muốn rời khỏi trang trả lời câu hỏi? Tiến trình làm bài chưa hoàn tất của ải này sẽ không được lưu lại.
+      </p>
+      <div class="quiz-modal-footer">
+        <button type="button" class="btn-modal-cancel" id="btnCancelExit">Ở lại làm tiếp</button>
+        <button type="button" class="btn-modal-confirm" id="btnConfirmExit">Rời khỏi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Cạn kiệt máu / Dược phẩm hồi phục -->
+  <div class="quiz-modal-overlay" id="modalRevive">
+    <div class="quiz-modal-card" id="reviveModalBody">
+      <!-- Dynamic via quiz.ts -->
+    </div>
+  </div>
+
+  <!-- Modal: Chúc mừng hoàn thành xuất sắc 100% -->
+  <div class="quiz-modal-overlay" id="modalVictory">
+    <div class="quiz-modal-card">
+      <div class="modal-icon-badge victory">
+        <i class="fa-solid fa-trophy"></i>
+      </div>
+      <h3 class="quiz-modal-title" id="victoryModalTitle">Xuất Sắc! Vượt Ải Thành Công!</h3>
+      <p class="quiz-modal-desc" id="victoryModalDesc">
+        Bạn đã trả lời chính xác toàn bộ 3/3 câu hỏi và nhận trọn vẹn điểm kinh nghiệm!
+      </p>
+      <div class="quiz-modal-footer">
+        <button type="button" class="btn-modal-confirm" id="btnVictoryReturn">
+          <i class="fa-solid fa-map"></i> Trở Về Lộ Trình
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="quiz-toast" id="quizToast">
+    <i class="fa-solid fa-circle-info"></i>
+    <span id="quizToastText">Thông báo</span>
+  </div>
+
+    <!-- Nạp và thực thi trực tiếp file TypeScript qua Babel Standalone (Không dùng file .js) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
+  <script>
+    fetch('./quiz.ts')
+      .then(function(r) { return r.text(); })
+      .then(function(code) {
+        var js = Babel.transform(code, { filename: 'quiz.ts', presets: ['typescript'] }).code;
+        var s = document.createElement('script');
+        s.textContent = js;
+        document.body.appendChild(s);
+          if (typeof window.initSlanguageQuizApp === 'function' && !window.quizApp) { window.initSlanguageQuizApp(); }
+      })
+      .catch(function(err) { console.error('Error loading quiz.ts:', err); });
+  </script>
+</body>
+</html>

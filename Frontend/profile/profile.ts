@@ -14,7 +14,7 @@ interface LevelInfo {
 function calculateLevelFromXP(xp: number): LevelInfo {
   const safeXP = Math.max(0, xp);
   const level = Math.max(1, Math.floor(safeXP / 180) + 1);
-  let title = 'Học Viên Mới';
+  let title = 'Người yêu mới của mẹ bạn';
   if (level >= 20) {
     title = 'Bậc Thầy Ngôn Ngữ';
   } else if (level >= 15) {
@@ -242,13 +242,14 @@ class SlanguageProfile {
     this.profile.nativeLanguage = nativeLang === 'vi' ? 'Tiếng Việt' : (nativeLang === 'en' ? 'English' : 'Tiếng Nhật');
 
     // 8. Ngôn ngữ mục tiêu
-    let savedLang = (localStorage.getItem('slanguage_active_language') || localStorage.getItem('slanguage_current_lang')) as 'ja' | 'en' | 'vi';
-    if (!savedLang || savedLang === nativeLang) {
-      savedLang = nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja');
-      localStorage.setItem('slanguage_active_language', savedLang);
-      localStorage.setItem('slanguage_current_lang', savedLang);
+    let savedLang = (localStorage.getItem('slanguage_active_language') || localStorage.getItem('slanguage_current_lang') || localStorage.getItem('slanguage_user_lang')) as 'ja' | 'en' | 'vi';
+    if (!savedLang || !['ja', 'en', 'vi'].includes(savedLang)) {
+      savedLang = 'ja';
     }
     this.profile.targetLanguage = savedLang;
+    localStorage.setItem('slanguage_active_language', savedLang);
+    localStorage.setItem('slanguage_current_lang', savedLang);
+    localStorage.setItem('slanguage_user_lang', savedLang);
 
     // 9. Mục tiêu học mỗi ngày (phút)
     const savedGoal = localStorage.getItem('slanguage_daily_goal');
@@ -490,14 +491,20 @@ class SlanguageProfile {
     const headerXPEl = document.getElementById('headerXPVal');
     const headerStreakEl = document.getElementById('headerStreakVal');
     if (headerXPEl) headerXPEl.textContent = `${this.profile.xp.toLocaleString()} XP`;
+    const dropXp = document.getElementById('dropdownXPVal');
+    if (dropXp) dropXp.textContent = `${this.profile.xp.toLocaleString()} XP`;
     if (headerStreakEl) headerStreakEl.textContent = `${this.profile.streak} Ngày`;
+    const dropStreak = document.getElementById('dropdownStreakVal');
+    if (dropStreak) dropStreak.textContent = `${this.profile.streak} Ngày`;
     const savedHearts = localStorage.getItem('slanguage_user_hearts');
     const heartsNum = savedHearts !== null ? Math.max(0, Math.min(5, parseInt(savedHearts, 10))) : 5;
     const headerHeartsEl = document.getElementById('headerHeartsVal');
     if (headerHeartsEl) headerHeartsEl.textContent = `${heartsNum}/5`;
+    const dropHearts = document.getElementById('dropdownHeartsVal');
+    if (dropHearts) dropHearts.textContent = `${heartsNum}/5`;
 
     // Dynamic Top Navbar User Name & Avatar
-    document.querySelectorAll('.user-info-text .name').forEach(el => {
+    document.querySelectorAll('.user-info-text .name, #dropdownUserName').forEach(el => {
       el.textContent = this.profile.fullName;
     });
 
@@ -714,22 +721,14 @@ class SlanguageProfile {
       });
     }
 
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-
     const langDropdownItems = document.querySelectorAll<HTMLButtonElement>('.lang-dropdown-item');
     langDropdownItems.forEach(item => {
-      if (item.getAttribute('data-lang') === nativeLang) {
-        item.style.display = 'none';
-      } else {
-        item.style.display = 'flex';
-      }
+      item.style.display = 'flex';
     });
 
     langDropdownItems.forEach(item => {
       item.addEventListener('click', (e) => {
         const lang = (e.currentTarget as HTMLElement).getAttribute('data-lang') as 'ja' | 'en' | 'vi';
-        if (lang === nativeLang) return;
         if (lang) {
           localStorage.setItem('slanguage_active_language', lang);
           localStorage.setItem('slanguage_current_lang', lang);
@@ -737,6 +736,7 @@ class SlanguageProfile {
           this.profile.targetLanguage = lang;
           this.saveProfile();
           this.render();
+          window.dispatchEvent(new CustomEvent('slanguage_data_changed'));
 
           const langNames: Record<string, string> = {
             ja: 'Tiếng Nhật',
@@ -955,4 +955,71 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initSlanguageProfile);
 } else {
   initSlanguageProfile();
+}
+
+// ================= MOBILE SIDE DRAWER CONTROLLER =================
+function initMobileSideDrawer(): void {
+  const hamburgerBtn = document.getElementById('navHamburgerBtn');
+  const sideDrawer = document.getElementById('sideDrawer');
+  const drawerBackdrop = document.getElementById('drawerBackdrop');
+  const drawerCloseBtn = document.getElementById('drawerCloseBtn');
+
+  if (!hamburgerBtn || !sideDrawer || !drawerBackdrop) return;
+
+  const openDrawer = (e: Event): void => {
+    e.stopPropagation();
+    sideDrawer.classList.add('open');
+    drawerBackdrop.classList.add('open');
+    document.body.classList.add('drawer-open');
+    hamburgerBtn.setAttribute('aria-expanded', 'true');
+  };
+
+  const closeDrawer = (): void => {
+    sideDrawer.classList.remove('open');
+    drawerBackdrop.classList.remove('open');
+    document.body.classList.remove('drawer-open');
+    hamburgerBtn.setAttribute('aria-expanded', 'false');
+  };
+
+  hamburgerBtn.addEventListener('click', openDrawer);
+  drawerCloseBtn?.addEventListener('click', closeDrawer);
+  drawerBackdrop.addEventListener('click', closeDrawer);
+
+  sideDrawer.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', closeDrawer);
+  });
+
+  // Sync drawer user stats
+  try {
+    const rawUser = localStorage.getItem('slanguage_user');
+    const user = rawUser ? JSON.parse(rawUser) : null;
+    const streak = user?.streak ?? localStorage.getItem('slanguage_user_streak') ?? '18';
+    const xp = user?.xp ?? localStorage.getItem('slanguage_user_xp') ?? '2450';
+    const hearts = user?.hearts ?? localStorage.getItem('slanguage_user_hearts') ?? '5';
+    const name = user?.name ?? user?.username ?? localStorage.getItem('slanguage_user_name') ?? 'Vua Xứ Thanh';
+    const avatar = user?.avatar ?? localStorage.getItem('slanguage_user_avatar');
+
+    const streakEl = document.getElementById('drawerStreakVal');
+    if (streakEl) streakEl.textContent = `${streak} Ngày`;
+
+    const xpEl = document.getElementById('drawerXPVal');
+    if (xpEl) xpEl.textContent = `${Number(xp).toLocaleString()} XP`;
+
+    const heartsEl = document.getElementById('drawerHeartsVal');
+    if (heartsEl) heartsEl.textContent = `${hearts}/5`;
+
+    const nameEl = document.getElementById('drawerUserName');
+    if (nameEl) nameEl.textContent = name;
+
+    const avatarEl = document.getElementById('drawerUserAvatar') as HTMLImageElement | null;
+    if (avatarEl && avatar) avatarEl.src = avatar;
+  } catch (err) {
+    console.warn('Error syncing drawer user stats:', err);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMobileSideDrawer);
+} else {
+  initMobileSideDrawer();
 }

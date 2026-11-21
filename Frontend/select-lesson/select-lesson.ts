@@ -413,53 +413,30 @@ class SelectLessonManager {
     this.langDropdownBtnEl = document.getElementById('langDropdownBtn') as HTMLButtonElement;
     this.userDropdownEl = document.getElementById('userDropdown') as HTMLElement;
     this.userDropdownBtnEl = document.getElementById('userDropdownBtn') as HTMLButtonElement;
+
+    // Safety clear loading overlay on init
+    if (this.loadingOverlayEl) {
+      this.loadingOverlayEl.classList.remove('active');
+      this.loadingOverlayEl.style.pointerEvents = 'none';
+    }
   }
 
   private loadUserData(): void {
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-
-    let savedLang = (localStorage.getItem('slanguage_current_lang') || localStorage.getItem('slanguage_active_language') || 'ja') as TargetLang;
-    if (savedLang === nativeLang) {
-      savedLang = (nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja')) as TargetLang;
-      localStorage.setItem('slanguage_current_lang', savedLang);
-      localStorage.setItem('slanguage_active_language', savedLang);
-    }
+    let savedLang = (localStorage.getItem('slanguage_active_language') || localStorage.getItem('slanguage_current_lang') || localStorage.getItem('slanguage_user_lang') || 'ja') as TargetLang;
     if (savedLang && ['ja', 'en', 'vi'].includes(savedLang)) {
       this.currentLang = savedLang;
+    } else {
+      this.currentLang = 'ja';
     }
+    localStorage.setItem('slanguage_current_lang', this.currentLang);
+    localStorage.setItem('slanguage_active_language', this.currentLang);
+    localStorage.setItem('slanguage_user_lang', this.currentLang);
 
     document.querySelectorAll<HTMLElement>('.lang-dropdown-item').forEach(item => {
-      if (item.getAttribute('data-lang') === nativeLang) {
-        item.style.display = 'none';
-      } else {
-        item.style.display = 'flex';
-      }
+      item.style.display = 'flex';
     });
 
-    // Header XP
-    const userXP = localStorage.getItem('slanguage_user_xp') || '2,450 XP';
-    const xpEl = document.getElementById('headerXPVal');
-    if (xpEl) xpEl.textContent = userXP.includes('XP') ? userXP : `${userXP} XP`;
-
-    // Header Hearts
-    const userHearts = localStorage.getItem('slanguage_user_hearts') || '5';
-    const heartsEl = document.getElementById('headerHeartsVal');
-    if (heartsEl) heartsEl.textContent = `${userHearts}/5`;
-
-    // Current User profile
-    const rawUser = localStorage.getItem('slanguage_current_user');
-    if (rawUser) {
-      try {
-        const u = JSON.parse(rawUser);
-        const nameEl = document.getElementById('headerUserName');
-        if (nameEl && u.name) nameEl.textContent = u.name;
-        const avatarEl = document.getElementById('headerAvatar') as HTMLImageElement;
-        if (avatarEl && u.avatar) avatarEl.src = u.avatar;
-      } catch (e) {
-        // use default
-      }
-    }
+    this.syncHeaderStats();
 
     // Check if a lesson was previously chosen
     const rawLesson = localStorage.getItem('slanguage_selected_lesson');
@@ -473,6 +450,88 @@ class SelectLessonManager {
         // not set
       }
     }
+  }
+
+  public syncHeaderStats(): void {
+    // Header XP
+    const savedXP = localStorage.getItem('slanguage_user_xp');
+    let xpNum = 2450;
+    if (savedXP !== null) {
+      const parsed = parseInt(savedXP.replace(/[^0-9]/g, ''), 10);
+      if (!isNaN(parsed)) xpNum = parsed;
+    }
+    const xpEl = document.getElementById('headerXPVal');
+    if (xpEl) xpEl.textContent = `${xpNum.toLocaleString()} XP`;
+    const dropXP = document.getElementById('dropdownXPVal');
+    if (dropXP) dropXP.textContent = `${xpNum.toLocaleString()} XP`;
+
+    // Header Hearts (Mạng / Máu)
+    const savedHearts = localStorage.getItem('slanguage_user_hearts');
+    const heartsNum = savedHearts !== null ? Math.max(0, Math.min(5, parseInt(savedHearts, 10))) : 5;
+    const heartsEl = document.getElementById('headerHeartsVal');
+    if (heartsEl) heartsEl.textContent = `${heartsNum}/5`;
+    const dropHearts = document.getElementById('dropdownHeartsVal');
+    if (dropHearts) dropHearts.textContent = `${heartsNum}/5`;
+
+    // Header Streak
+    const savedStreak = localStorage.getItem('slanguage_user_streak') || '18';
+    const streakEl = document.getElementById('headerStreakVal');
+    if (streakEl) streakEl.textContent = `${savedStreak} Ngày`;
+    const dropStreak = document.getElementById('dropdownStreakVal');
+    if (dropStreak) dropStreak.textContent = `${savedStreak} Ngày`;
+
+    // User Name
+    let savedUserName = localStorage.getItem('slanguage_user_name');
+    if (!savedUserName) {
+      const rawUser = localStorage.getItem('slanguage_current_user');
+      if (rawUser) {
+        try {
+          const u = JSON.parse(rawUser);
+          if (u.name || u.fullName) savedUserName = u.name || u.fullName;
+        } catch (e) {}
+      }
+    }
+    if (!savedUserName) savedUserName = 'Vua Xứ Thanh';
+    document.querySelectorAll('.user-info-text .name').forEach(el => {
+      el.textContent = savedUserName!;
+    });
+    const headerUserNameEl = document.getElementById('headerUserName');
+    if (headerUserNameEl) headerUserNameEl.textContent = savedUserName;
+    const dropUserName = document.getElementById('dropdownUserName');
+    if (dropUserName) dropUserName.textContent = savedUserName;
+
+    // Current User avatar & profile
+    const savedAvatar = localStorage.getItem('slanguage_user_avatar');
+    if (savedAvatar) {
+      document.querySelectorAll<HTMLImageElement>('.user-avatar-mini, #headerAvatar').forEach(img => {
+        img.src = savedAvatar;
+      });
+    } else {
+      const rawUser = localStorage.getItem('slanguage_current_user');
+      if (rawUser) {
+        try {
+          const u = JSON.parse(rawUser);
+          if (u.avatar) {
+            document.querySelectorAll<HTMLImageElement>('.user-avatar-mini, #headerAvatar').forEach(img => {
+              img.src = u.avatar;
+            });
+          }
+        } catch (e) {}
+      }
+    }
+
+    // Language flag & label
+    const meta = this.langMetadata[this.currentLang] || this.langMetadata.ja;
+    if (this.currentLangFlagEl && meta) {
+      this.currentLangFlagEl.src = meta.flag;
+      this.currentLangFlagEl.alt = meta.name;
+    }
+    if (this.currentLangLabelEl && meta) {
+      this.currentLangLabelEl.textContent = meta.name;
+    }
+    document.querySelectorAll('.lang-dropdown-item').forEach(item => {
+      item.classList.toggle('active', item.getAttribute('data-lang') === this.currentLang);
+    });
   }
 
   private bindEvents(): void {
@@ -554,15 +613,36 @@ class SelectLessonManager {
     // Global Link Page Transitions with loading video
     this.bindPageTransitions();
 
+    // Auto-update header and lesson state across tabs or when user returns/focuses
+    window.addEventListener('storage', () => {
+      this.loadUserData();
+      this.syncHeaderStats();
+    });
+
+    window.addEventListener('focus', () => {
+      this.loadUserData();
+      this.syncHeaderStats();
+    });
+
     window.addEventListener('pageshow', () => {
+      this.loadUserData();
+      this.syncHeaderStats();
       const overlay = document.getElementById('slanguageLoadingOverlay');
       const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement | null;
-      if (overlay) overlay.classList.remove('active');
+      if (overlay) {
+        overlay.classList.remove('active');
+        overlay.style.pointerEvents = 'none';
+      }
       if (video) {
         video.pause();
         video.muted = true;
         video.currentTime = 0;
       }
+    });
+
+    window.addEventListener('slanguage_data_changed', () => {
+      this.loadUserData();
+      this.syncHeaderStats();
     });
 
     window.addEventListener('pagehide', () => {
@@ -575,22 +655,40 @@ class SelectLessonManager {
   }
 
   private switchLanguage(lang: TargetLang): void {
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-    if (lang === nativeLang) {
-      this.showToast(`Bạn không thể chọn ngôn ngữ mẹ đẻ để học!`);
-      this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
-      return;
-    }
+    if (!['ja', 'en', 'vi'].includes(lang)) return;
 
-    if (this.currentLang === lang) {
-      this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
-      return;
-    }
     this.currentLang = lang;
     localStorage.setItem('slanguage_current_lang', lang);
     localStorage.setItem('slanguage_active_language', lang);
+    localStorage.setItem('slanguage_user_lang', lang);
+
+    const rawUser = localStorage.getItem('slanguage_current_user');
+    if (rawUser) {
+      try {
+        const u = JSON.parse(rawUser);
+        u.targetLanguage = lang;
+        localStorage.setItem('slanguage_current_user', JSON.stringify(u));
+      } catch (e) {}
+    }
+
+    const rawDb = localStorage.getItem('slanguage_users_db');
+    if (rawDb) {
+      try {
+        const db = JSON.parse(rawDb);
+        const userEmail = localStorage.getItem('slanguage_user_email');
+        if (Array.isArray(db) && userEmail) {
+          const uIdx = db.findIndex((x: any) => x.email === userEmail);
+          if (uIdx !== -1) {
+            db[uIdx].targetLanguage = lang;
+            localStorage.setItem('slanguage_users_db', JSON.stringify(db));
+          }
+        }
+      } catch (e) {}
+    }
+
+    window.dispatchEvent(new CustomEvent('slanguage_data_changed'));
     this.applyCurrentLanguage();
+    this.syncHeaderStats();
     this.langDropdownEl.classList.remove('open'); this.langDropdownEl.classList.remove('show');
     this.renderSessions();
     this.updateStatusCard();
@@ -694,7 +792,15 @@ class SelectLessonManager {
     });
   }
 
-  private selectSession(session: SessionData): void {
+  public getSessionsList(): SessionData[] {
+    return this.sessionsList;
+  }
+
+  public getSelectedLessonId(): number | null {
+    return this.selectedLessonId;
+  }
+
+  public selectSession(session: SessionData): void {
     this.selectedLessonId = session.id;
 
     const savedPayload = {
@@ -745,6 +851,7 @@ class SelectLessonManager {
     const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement | null;
     if (overlay) {
       overlay.classList.add('active');
+      overlay.style.pointerEvents = 'all';
       if (video) {
         video.muted = false;
         video.volume = 1.0;
@@ -767,9 +874,18 @@ class SelectLessonManager {
       }
       if (overlay) {
         overlay.classList.remove('active');
+        overlay.style.pointerEvents = 'none';
       }
       window.location.href = targetUrl;
     }, duration);
+
+    // Fallback: unlock UI if navigation is delayed
+    setTimeout(() => {
+      if (overlay) {
+        overlay.classList.remove('active');
+        overlay.style.pointerEvents = 'none';
+      }
+    }, 4000);
   }
 
   private bindPageTransitions(): void {
@@ -801,19 +917,90 @@ class SelectLessonManager {
   }
 }
 
-// Global declaration and instantiation
-declare global {
-  interface Window {
-    selectLessonApp?: SelectLessonManager;
-  }
-}
+// Instantiation on DOM ready
 
 function initSelectLessonManager(): void {
-  (window as unknown as { selectLessonApp?: SelectLessonManager }).selectLessonApp = new SelectLessonManager();
+  const manager = new SelectLessonManager();
+  (window as any).selectLessonApp = manager;
+  (window as any).slanguageSelectLessonApp = {
+    sessions: manager.getSessionsList(),
+    getSelectedId: () => manager.getSelectedLessonId(),
+    selectSessionById: (id: number) => {
+      const s = manager.getSessionsList().find(x => x.id === id);
+      if (s) manager.selectSession(s);
+    }
+  };
 }
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initSelectLessonManager);
 } else {
   initSelectLessonManager();
+}
+
+// ================= MOBILE SIDE DRAWER CONTROLLER =================
+function initMobileSideDrawer(): void {
+  const hamburgerBtn = document.getElementById('navHamburgerBtn');
+  const sideDrawer = document.getElementById('sideDrawer');
+  const drawerBackdrop = document.getElementById('drawerBackdrop');
+  const drawerCloseBtn = document.getElementById('drawerCloseBtn');
+
+  if (!hamburgerBtn || !sideDrawer || !drawerBackdrop) return;
+
+  const openDrawer = (e: Event): void => {
+    e.stopPropagation();
+    sideDrawer.classList.add('open');
+    drawerBackdrop.classList.add('open');
+    document.body.classList.add('drawer-open');
+    hamburgerBtn.setAttribute('aria-expanded', 'true');
+  };
+
+  const closeDrawer = (): void => {
+    sideDrawer.classList.remove('open');
+    drawerBackdrop.classList.remove('open');
+    document.body.classList.remove('drawer-open');
+    hamburgerBtn.setAttribute('aria-expanded', 'false');
+  };
+
+  hamburgerBtn.addEventListener('click', openDrawer);
+  drawerCloseBtn?.addEventListener('click', closeDrawer);
+  drawerBackdrop.addEventListener('click', closeDrawer);
+
+  sideDrawer.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', closeDrawer);
+  });
+
+  // Sync drawer user stats
+  try {
+    const rawUser = localStorage.getItem('slanguage_user');
+    const user = rawUser ? JSON.parse(rawUser) : null;
+    const streak = user?.streak ?? localStorage.getItem('slanguage_user_streak') ?? '18';
+    const xp = user?.xp ?? localStorage.getItem('slanguage_user_xp') ?? '2450';
+    const hearts = user?.hearts ?? localStorage.getItem('slanguage_user_hearts') ?? '5';
+    const name = user?.name ?? user?.username ?? localStorage.getItem('slanguage_user_name') ?? 'Vua Xứ Thanh';
+    const avatar = user?.avatar ?? localStorage.getItem('slanguage_user_avatar');
+
+    const streakEl = document.getElementById('drawerStreakVal');
+    if (streakEl) streakEl.textContent = `${streak} Ngày`;
+
+    const xpEl = document.getElementById('drawerXPVal');
+    if (xpEl) xpEl.textContent = `${Number(xp).toLocaleString()} XP`;
+
+    const heartsEl = document.getElementById('drawerHeartsVal');
+    if (heartsEl) heartsEl.textContent = `${hearts}/5`;
+
+    const nameEl = document.getElementById('drawerUserName');
+    if (nameEl) nameEl.textContent = name;
+
+    const avatarEl = document.getElementById('drawerUserAvatar') as HTMLImageElement | null;
+    if (avatarEl && avatar) avatarEl.src = avatar;
+  } catch (err) {
+    console.warn('Error syncing drawer user stats:', err);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMobileSideDrawer);
+} else {
+  initMobileSideDrawer();
 }

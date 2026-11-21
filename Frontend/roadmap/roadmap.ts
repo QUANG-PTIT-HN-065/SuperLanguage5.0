@@ -66,7 +66,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
     id: 'ja',
     name: 'Tiếng Nhật',
     dungeonTitle: 'Mê Cung Thử Thách: Tiếng Nhật Sơ Cấp (JLPT N5)',
-    dungeonSubtitle: 'Vượt qua 5 ải hầm ngục tri thức. Mỗi cột mốc là một chủ đề phân nhánh 3 ngả Dễ (Light Green), Vừa (Light Yellow), Khó (Light Red Crimson) với phần thưởng XP và sinh mệnh tương ứng.',
+    dungeonSubtitle: 'Vượt qua 5 ải hầm ngục tri thức. Mỗi cột mốc là một chủ đề phân nhánh 3 ngả Dễ, Vừa, Khó với phần thưởng XP và sinh mệnh tương ứng.',
     nodes: [
       // ================= STAGE 1: CỔNG NHẬP MÔN & NGỮ ÂM KANA =================
       {
@@ -177,7 +177,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-skull',
         xpReward: 15,
         heartPenalty: 3,
-        status: 'available',
+        status: 'locked',
         parents: ['ja_s1_hub'],
         objectives: [
           'Phân biệt trường âm おばさん (cô) vs おばあさん (bà)',
@@ -250,7 +250,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-seedling',
         xpReward: 5,
         heartPenalty: 1,
-        status: 'available',
+        status: 'locked',
         parents: ['ja_s2_hub'],
         objectives: [
           'Ghi nhớ mặt chữ 20 chữ Hán thường gặp nhất',
@@ -275,7 +275,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-shield-halved',
         xpReward: 10,
         heartPenalty: 2,
-        status: 'available',
+        status: 'locked',
         parents: ['ja_s2_hub'],
         objectives: [
           'Làm chủ mẫu câu: A は B です (A là B)',
@@ -300,7 +300,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-fire-flame-curved',
         xpReward: 15,
         heartPenalty: 3,
-        status: 'available',
+        status: 'locked',
         parents: ['ja_s2_hub'],
         objectives: [
           'Phân biệt chủ ngữ đề tài (は) và chủ ngữ phát hiện mới (が)',
@@ -691,7 +691,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
     id: 'en',
     name: 'English',
     dungeonTitle: 'Dungeon of Mastery: English Proficiency (IELTS & Communicative)',
-    dungeonSubtitle: 'Conquer the 5 chambers of English linguistic power. Every milestone branches into Easy (Light Green), Normal (Light Yellow), and Hard (Light Red Crimson) paths with respective XP rewards and heart penalties.',
+    dungeonSubtitle: 'Conquer the 5 chambers of English linguistic power. Every milestone branches into Easy, Normal, and Hard paths with respective XP rewards and heart penalties.',
     nodes: [
       {
         id: 'en_s1_hub',
@@ -769,7 +769,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-skull',
         xpReward: 15,
         heartPenalty: 3,
-        status: 'available',
+        status: 'locked',
         parents: ['en_s1_hub'],
         objectives: ['Understand native contractions at normal velocity', 'Use rising/falling pitch for subtle nuance'],
         preview: 'What do you want to do? -> /wʌdəjə wɑnə duː/',
@@ -814,7 +814,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-seedling',
         xpReward: 5,
         heartPenalty: 1,
-        status: 'available',
+        status: 'locked',
         parents: ['en_s2_hub'],
         objectives: ['Present Simple habits vs Past Simple events'],
         preview: 'She studies every day • They arrived yesterday',
@@ -836,7 +836,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-shield-halved',
         xpReward: 10,
         heartPenalty: 2,
-        status: 'available',
+        status: 'locked',
         parents: ['en_s2_hub'],
         objectives: ['Second and Third Conditionals in debates'],
         preview: 'If I were you, I would take the offer.',
@@ -858,7 +858,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-fire-flame-curved',
         xpReward: 15,
         heartPenalty: 3,
-        status: 'available',
+        status: 'locked',
         parents: ['en_s2_hub'],
         objectives: ['Hard negative inversions: Seldom, Hardly, Not only'],
         preview: 'Not only did she pass, but she also scored top of class.',
@@ -1144,7 +1144,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
     id: 'vi',
     name: 'Tiếng Việt',
     dungeonTitle: 'Hầm Ngục Kỳ Bí: Tiếng Việt Bản Xứ & Ứng Dụng Đời Sống',
-    dungeonSubtitle: 'Khám phá 5 tầng kỳ hoa dị thảo của tiếng Việt. Mỗi cột mốc là một chủ đề phân nhánh 3 độ khó Dễ (Light Green), Bình thường (Light Yellow), Khó (Light Red Crimson) với phần thưởng XP và sinh lực tương ứng.',
+    dungeonSubtitle: 'Khám phá 5 tầng kỳ hoa dị thảo của tiếng Việt. Mỗi cột mốc là một chủ đề phân nhánh 3 độ khó Dễ, Bình thường, Khó với phần thưởng XP và sinh lực tương ứng.',
     nodes: [
       {
         id: 'vi_s1_hub',
@@ -1222,7 +1222,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-skull',
         xpReward: 15,
         heartPenalty: 3,
-        status: 'available',
+        status: 'locked',
         parents: ['vi_s1_hub'],
         objectives: ['Luyện phản xạ đọc nhanh 5 câu thơ lắt léo không vấp'],
         preview: 'Lúa nếp là lúa nếp làng, lúa lên lớp lớp lòng nàng lâng lâng',
@@ -1267,7 +1267,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-seedling',
         xpReward: 5,
         heartPenalty: 1,
-        status: 'available',
+        status: 'locked',
         parents: ['vi_s2_hub'],
         objectives: ['Chào hỏi người lớn tuổi hơn với kính ngữ "Dạ, Thưa"'],
         preview: 'Dạ, em chào anh ạ! • Dạ, con cảm ơn cô!',
@@ -1289,7 +1289,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-shield-halved',
         xpReward: 10,
         heartPenalty: 2,
-        status: 'available',
+        status: 'locked',
         parents: ['vi_s2_hub'],
         objectives: ['Viết email công vụ trang trọng, mở đầu và kết thúc chuẩn chỉ'],
         preview: 'Kính gửi Quý đối tác • Trân trọng cảm ơn',
@@ -1311,7 +1311,7 @@ const dungeonDB: Record<string, LanguageDungeon> = {
         icon: 'fa-solid fa-fire-flame-curved',
         xpReward: 15,
         heartPenalty: 3,
-        status: 'available',
+        status: 'locked',
         parents: ['vi_s2_hub'],
         objectives: ['Xác định chính xác vị trí trong cây gia phả dòng họ'],
         preview: 'Vợ của cậu gọi là Mợ • Chồng của dì gọi là Dượng',
@@ -1621,8 +1621,6 @@ class SlanguageDungeonTree {
   private modalNodeTitle: HTMLElement | null = null;
   private modalNodeStatus: HTMLElement | null = null;
   private modalNodeXP: HTMLElement | null = null;
-  private modalNodeObjectives: HTMLElement | null = null;
-  private modalNodePreview: HTMLElement | null = null;
   private modalTrialBox: HTMLElement | null = null;
   private modalTrialPrompt: HTMLElement | null = null;
   private modalTrialChoices: HTMLElement | null = null;
@@ -1630,6 +1628,7 @@ class SlanguageDungeonTree {
   private modalTrialStepBadge: HTMLElement | null = null;
   private modalTrialProgressFill: HTMLElement | null = null;
   private currentQuestionIdx: number = 0;
+  private currentTrialWrongCount: number = 0;
   private currentQuestionsList: DungeonTrial[] = [];
   private currentTrialPhase: 'idle' | 'checked' = 'idle';
   private btnExecuteTrial: HTMLButtonElement | null = null;
@@ -1637,6 +1636,10 @@ class SlanguageDungeonTree {
   private modalHubReadingBox: HTMLElement | null = null;
   private readingArticleTitle: HTMLElement | null = null;
   private readingArticleContent: HTMLElement | null = null;
+  private reviveModalOverlay: HTMLElement | null = null;
+  private reviveModalBody: HTMLElement | null = null;
+  private lockedPrereqModal: HTMLElement | null = null;
+  private lockedPrereqModalBody: HTMLElement | null = null;
 
   constructor() {
     if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
@@ -1646,6 +1649,7 @@ class SlanguageDungeonTree {
     this.checkLessonAccess();
     this.initStorage();
     this.cacheDom();
+    this.loadDungeonProgress();
     this.initEventListeners();
     this.renderTree();
   }
@@ -1672,32 +1676,24 @@ class SlanguageDungeonTree {
   }
 
   private initStorage(): void {
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-
-    let savedLang = (localStorage.getItem('slanguage_active_language') || localStorage.getItem('slanguage_current_lang') || 'ja') as 'ja' | 'en' | 'vi';
-    if (savedLang === nativeLang) {
-      savedLang = nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja');
-      localStorage.setItem('slanguage_active_language', savedLang);
-      localStorage.setItem('slanguage_current_lang', savedLang);
+    let savedLang = (localStorage.getItem('slanguage_active_language') || localStorage.getItem('slanguage_current_lang') || localStorage.getItem('slanguage_user_lang') || 'ja') as 'ja' | 'en' | 'vi';
+    if (!['ja', 'en', 'vi'].includes(savedLang)) {
+      savedLang = 'ja';
     }
     this.currentLang = savedLang;
+    localStorage.setItem('slanguage_active_language', savedLang);
+    localStorage.setItem('slanguage_current_lang', savedLang);
+    localStorage.setItem('slanguage_user_lang', savedLang);
 
-    // Filter header language dropdown & roadmap tabs to exclude native language
+    // Hiển thị đầy đủ cả 3 ngôn ngữ trong header dropdown & roadmap tabs
     document.querySelectorAll<HTMLElement>('.lang-dropdown-item').forEach(item => {
-      if (item.getAttribute('data-lang') === nativeLang) {
-        item.style.display = 'none';
-      } else {
-        item.style.display = 'flex';
-      }
+      item.style.display = 'flex';
+      item.classList.toggle('active', item.getAttribute('data-lang') === savedLang);
     });
 
     document.querySelectorAll<HTMLElement>('#treeLanguageTabs .tree-tab-btn').forEach(btn => {
-      if (btn.getAttribute('data-lang') === nativeLang) {
-        btn.style.display = 'none';
-      } else {
-        btn.style.display = 'inline-flex';
-      }
+      btn.style.display = 'inline-flex';
+      btn.classList.toggle('active', btn.getAttribute('data-lang') === savedLang);
     });
 
     const savedXP = localStorage.getItem('slanguage_user_xp');
@@ -1725,9 +1721,47 @@ class SlanguageDungeonTree {
     this.treeProgressPercent = document.getElementById('treeProgressPercent');
     this.treeNodesRatio = document.getElementById('treeNodesRatio');
     this.treeTotalXP = document.getElementById('treeTotalXP');
-    this.navXPVal = document.getElementById('navXPVal');
-    this.navHeartsVal = document.getElementById('navHeartsVal');
-    this.navHeartIcon = document.getElementById('navHeartIcon');
+    this.navXPVal = document.getElementById('headerXPVal') || document.getElementById('navXPVal');
+    this.navHeartsVal = document.getElementById('headerHeartsVal') || document.getElementById('navHeartsVal');
+    this.navHeartIcon = document.querySelector('.stat-chip.hearts i') || document.getElementById('navHeartIcon');
+
+    // Sync streak and user name
+    const savedStreak = localStorage.getItem('slanguage_user_streak') || '18';
+    const streakBadge = document.getElementById('headerStreakVal');
+    if (streakBadge) {
+      streakBadge.textContent = `${savedStreak} Ngày`;
+    }
+
+    const savedUserName = localStorage.getItem('slanguage_user_name') || 'Vua Xứ Thanh';
+    document.querySelectorAll('.user-info-text .name').forEach(el => {
+      el.textContent = savedUserName;
+    });
+
+    const syncStatsFromStorage = () => {
+      const sXP = localStorage.getItem('slanguage_user_xp');
+      if (sXP !== null) {
+        const parsed = parseInt(sXP.replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(parsed)) this.totalXP = parsed;
+      }
+      const sHearts = localStorage.getItem('slanguage_user_hearts');
+      if (sHearts !== null) {
+        this.currentHearts = Math.max(0, Math.min(5, parseInt(sHearts, 10)));
+      }
+      this.updateStatsDisplays();
+      const sStreak = localStorage.getItem('slanguage_user_streak') || '18';
+      const strEl = document.getElementById('headerStreakVal');
+      if (strEl) strEl.textContent = `${sStreak} Ngày`;
+      const dropStr = document.getElementById('dropdownStreakVal');
+      if (dropStr) dropStr.textContent = `${sStreak} Ngày`;
+      const sName = localStorage.getItem('slanguage_user_name') || 'Vua Xứ Thanh';
+      document.querySelectorAll('.user-info-text .name, #dropdownUserName').forEach(el => {
+        el.textContent = sName;
+      });
+    };
+    window.addEventListener('storage', syncStatsFromStorage);
+    window.addEventListener('focus', syncStatsFromStorage);
+    window.addEventListener('pageshow', syncStatsFromStorage);
+    window.addEventListener('slanguage_data_changed', syncStatsFromStorage);
 
     // Modal
     this.nodeModalOverlay = document.getElementById('nodeModalOverlay');
@@ -1736,8 +1770,6 @@ class SlanguageDungeonTree {
     this.modalNodeTitle = document.getElementById('modalNodeTitle');
     this.modalNodeStatus = document.getElementById('modalNodeStatus');
     this.modalNodeXP = document.getElementById('modalNodeXP');
-    this.modalNodeObjectives = document.getElementById('modalNodeObjectives');
-    this.modalNodePreview = document.getElementById('modalNodePreview');
     this.modalTrialBox = document.getElementById('modalTrialBox');
     this.modalTrialPrompt = document.getElementById('modalTrialPrompt');
     this.modalTrialChoices = document.getElementById('modalTrialChoices');
@@ -1749,6 +1781,21 @@ class SlanguageDungeonTree {
     this.modalHubReadingBox = document.getElementById('modalHubReadingBox');
     this.readingArticleTitle = document.getElementById('readingArticleTitle');
     this.readingArticleContent = document.getElementById('readingArticleContent');
+    this.reviveModalOverlay = document.getElementById('reviveModalOverlay');
+    this.reviveModalBody = document.getElementById('reviveModalBody');
+    if (this.reviveModalOverlay) {
+      this.reviveModalOverlay.addEventListener('click', (e) => {
+        if (e.target === this.reviveModalOverlay) this.closeReviveModal();
+      });
+    }
+
+    this.lockedPrereqModal = document.getElementById('lockedPrereqModal');
+    this.lockedPrereqModalBody = document.getElementById('lockedPrereqModalBody');
+    if (this.lockedPrereqModal) {
+      this.lockedPrereqModal.addEventListener('click', (e) => {
+        if (e.target === this.lockedPrereqModal) this.closeLockedPrereqModal();
+      });
+    }
 
     this.updateStatsDisplays();
   }
@@ -1856,14 +1903,38 @@ class SlanguageDungeonTree {
   }
 
   public switchLanguage(lang: 'ja' | 'en' | 'vi'): void {
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-    if (lang === nativeLang) return;
+    if (!['ja', 'en', 'vi'].includes(lang)) return;
 
-    if (this.currentLang === lang) return;
     this.currentLang = lang;
     localStorage.setItem('slanguage_active_language', lang);
     localStorage.setItem('slanguage_current_lang', lang);
+    localStorage.setItem('slanguage_user_lang', lang);
+
+    const rawUser = localStorage.getItem('slanguage_current_user');
+    if (rawUser) {
+      try {
+        const u = JSON.parse(rawUser);
+        u.targetLanguage = lang;
+        localStorage.setItem('slanguage_current_user', JSON.stringify(u));
+      } catch (e) {}
+    }
+
+    const rawDb = localStorage.getItem('slanguage_users_db');
+    if (rawDb) {
+      try {
+        const db = JSON.parse(rawDb);
+        const userEmail = localStorage.getItem('slanguage_user_email');
+        if (Array.isArray(db) && userEmail) {
+          const uIdx = db.findIndex((x: any) => x.email === userEmail);
+          if (uIdx !== -1) {
+            db[uIdx].targetLanguage = lang;
+            localStorage.setItem('slanguage_users_db', JSON.stringify(db));
+          }
+        }
+      } catch (e) {}
+    }
+
+    window.dispatchEvent(new CustomEvent('slanguage_data_changed'));
 
     const langNames: Record<string, string> = {
       ja: 'Tiếng Nhật (JLPT N5)',
@@ -1892,14 +1963,19 @@ class SlanguageDungeonTree {
       btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
     });
 
+    this.loadDungeonProgress();
     this.renderTree();
     this.showToast(`Đã mở khóa Dungeon: ${langNames[lang]}`, flagImgs[lang]);
   }
 
   private updateStatsDisplays(): void {
     if (this.navXPVal) this.navXPVal.textContent = `${this.totalXP.toLocaleString()} XP`;
+    const dropXP = document.getElementById('dropdownXPVal');
+    if (dropXP) dropXP.textContent = `${this.totalXP.toLocaleString()} XP`;
     if (this.treeTotalXP) this.treeTotalXP.textContent = `${this.totalXP.toLocaleString()} XP`;
     if (this.navHeartsVal) this.navHeartsVal.textContent = `${this.currentHearts}/${this.maxHearts}`;
+    const dropHearts = document.getElementById('dropdownHeartsVal');
+    if (dropHearts) dropHearts.textContent = `${this.currentHearts}/${this.maxHearts}`;
     if (this.navHeartIcon) {
       if (this.currentHearts === 0) {
         this.navHeartIcon.style.color = '#64748b';
@@ -2080,18 +2156,38 @@ class SlanguageDungeonTree {
     // Rich Hover Tooltip (Revealed when hovering on card or icon)
     let tooltipStakesHtml = '';
     let clickHint = '<i class="fa-solid fa-hand-pointer"></i> Nhấn để mở phòng thử thách';
-    if (node.isHub) {
+    if (node.status === 'locked') {
+      if (node.isHub) {
+        clickHint = `<i class="fa-solid fa-lock"></i> Khóa: Hoàn thành ít nhất 1 bài trắc nghiệm Mốc ${node.stage - 1}`;
+      } else {
+        const hub = dungeonDB[this.currentLang]?.nodes.find(n => n.stage === node.stage && n.isHub);
+        if (hub && hub.status !== 'mastered') {
+          clickHint = `<i class="fa-solid fa-lock"></i> Khóa: Đọc xong bài đọc Mốc ${node.stage} để mở`;
+        } else if (node.difficulty === 'normal') {
+          clickHint = `<i class="fa-solid fa-lock"></i> Khóa: Hoàn thành bài Dễ trước`;
+        } else if (node.difficulty === 'hard') {
+          clickHint = `<i class="fa-solid fa-lock"></i> Khóa: Hoàn thành bài Bình thường trước`;
+        } else {
+          clickHint = `<i class="fa-solid fa-lock"></i> Chưa mở khóa`;
+        }
+      }
+    } else if (node.isHub) {
       tooltipStakesHtml = `
         <div class="tooltip-stakes-bar hub-mode">
           <span class="stake-info" style="color: #38bdf8; font-weight:700;"><i class="fa-solid fa-book-open"></i> Bài đọc chủ đề (Không tính thưởng / phạt)</span>
         </div>`;
-      clickHint = '<i class="fa-solid fa-book-reader"></i> Nhấn để mở bài đọc chuyên đề';
+      clickHint = node.status === 'mastered'
+        ? '<i class="fa-solid fa-book-reader"></i> Nhấn để đọc lại bài chuyên đề'
+        : '<i class="fa-solid fa-book-reader"></i> Nhấn để mở bài đọc chuyên đề';
     } else {
       tooltipStakesHtml = `
         <div class="tooltip-stakes-bar">
           <span class="stake-win"><i class="fa-solid fa-trophy"></i> Thắng: +${node.xpReward} XP</span>
           ${node.heartPenalty > 0 ? `<span class="stake-loss"><i class="fa-solid fa-heart-crack"></i> Thua: -${node.heartPenalty} ❤️</span>` : ''}
         </div>`;
+      if (node.status === 'mastered') {
+        clickHint = '<i class="fa-solid fa-rotate-right"></i> Nhấn để khiêu chiến lại';
+      }
     }
 
     const tooltipHtml = `
@@ -2127,6 +2223,10 @@ class SlanguageDungeonTree {
     `;
 
     el.addEventListener('click', () => {
+      if (node.status === 'locked') {
+        this.promptLockedNodeModal(node);
+        return;
+      }
       this.openModal(node);
     });
 
@@ -2183,9 +2283,9 @@ class SlanguageDungeonTree {
           path.classList.add('path-hard');
         }
 
-        if (node.status === 'mastered' || (parentNode && parentNode.status === 'mastered')) {
+        if (node.status === 'mastered') {
           path.classList.add('branch-mastered');
-        } else if (node.status === 'locked' && (!parentNode || parentNode.status === 'locked')) {
+        } else if (node.status === 'locked') {
           path.classList.add('branch-locked');
         } else {
           path.classList.add('branch-active');
@@ -2232,6 +2332,37 @@ class SlanguageDungeonTree {
   }
 
   private openModal(node: DungeonNode): void {
+    if (!node.isHub && this.currentHearts === 0) {
+      this.promptReviveWithPotion(() => {
+        this.openModal(node);
+      });
+      return;
+    }
+
+    // Tách phần trả lời câu hỏi thành trang riêng full screen
+    if (!node.isHub) {
+      const trialData = {
+        node: {
+          id: node.id,
+          stage: node.stage,
+          stageName: node.stageName,
+          title: node.title,
+          desc: node.desc,
+          icon: node.icon,
+          difficulty: node.difficulty,
+          xpReward: node.xpReward,
+          heartPenalty: node.heartPenalty,
+          status: node.status,
+          isHub: false
+        },
+        trials: this.getTrialsForNode(node),
+        lang: this.currentLang
+      };
+      localStorage.setItem('slanguage_active_quiz_node', JSON.stringify(trialData));
+      window.location.href = `../quiz/index.html?nodeId=${encodeURIComponent(node.id)}&lang=${this.currentLang}`;
+      return;
+    }
+
     this.selectedNode = node;
     this.selectedChoiceIdx = null;
     if (!this.nodeModalOverlay) return;
@@ -2263,10 +2394,6 @@ class SlanguageDungeonTree {
     if (node.isHub) {
       // HUB MODE: READING ARTICLE (NO XP, NO PENALTY, NO QUIZ CHOICES)
       if (this.modalTrialBox) this.modalTrialBox.style.display = 'none';
-      if (this.modalNodeObjectives && this.modalNodeObjectives.parentElement) {
-        this.modalNodeObjectives.parentElement.style.display = 'none';
-      }
-      if (this.modalNodePreview) this.modalNodePreview.style.display = 'none';
       if (this.btnHealHeartsModal) this.btnHealHeartsModal.style.display = 'none';
 
       if (this.modalNodeXP) {
@@ -2329,37 +2456,24 @@ class SlanguageDungeonTree {
       // CHALLENGE MODE: MULTI-QUESTION TRIAL PROGRESSION
       if (this.modalHubReadingBox) this.modalHubReadingBox.style.display = 'none';
       if (this.modalTrialBox) this.modalTrialBox.style.display = 'block';
-      if (this.modalNodeObjectives && this.modalNodeObjectives.parentElement) {
-        this.modalNodeObjectives.parentElement.style.display = 'block';
-      }
-      if (this.modalNodePreview) this.modalNodePreview.style.display = 'block';
       if (this.btnHealHeartsModal) this.btnHealHeartsModal.style.display = 'none';
 
       // Modal XP Tag & Stakes display
       if (this.modalNodeXP) {
-        let diffText = 'Dễ (Light Green)';
-        if (node.difficulty === 'normal') diffText = 'Bình thường (Light Yellow)';
-        else if (node.difficulty === 'hard') diffText = 'Khó (Light Red Crimson)';
+        let diffText = 'Dễ';
+        if (node.difficulty === 'normal') diffText = 'Bình thường';
+        else if (node.difficulty === 'hard') diffText = 'Khó';
 
         this.modalNodeXP.innerHTML = `
           <span style="font-weight:700;">Độ khó: ${diffText}</span> •
-          <span style="color:#22c55e;">+${node.xpReward} XP nếu hoàn thành</span> •
-          <span style="color:#ef4444;">-${node.heartPenalty} Máu nếu sai</span>
+          <span style="color:#22c55e;">+${node.xpReward} XP nếu đúng toàn bộ</span> •
+          <span style="color:#ef4444;">-${node.heartPenalty} Máu khi hoàn thành nếu sai</span>
         `;
-      }
-
-      if (this.modalNodeObjectives) {
-        this.modalNodeObjectives.innerHTML = node.objectives
-          .map(obj => `<li><i class="fa-solid fa-circle-check"></i> <span>${obj}</span></li>`)
-          .join('');
-      }
-
-      if (this.modalNodePreview) {
-        this.modalNodePreview.innerHTML = `<strong>Minh họa kiến thức:</strong><br>${node.preview}`;
       }
 
       // Initialize question sequence
       this.currentQuestionIdx = 0;
+      this.currentTrialWrongCount = 0;
       this.currentQuestionsList = this.getTrialsForNode(node);
       this.renderCurrentQuestion();
     }
@@ -2435,6 +2549,7 @@ class SlanguageDungeonTree {
     this.selectedNode = null;
     this.selectedChoiceIdx = null;
     this.currentQuestionIdx = 0;
+    this.currentTrialWrongCount = 0;
     this.currentTrialPhase = 'idle';
   }
 
@@ -2449,7 +2564,7 @@ class SlanguageDungeonTree {
         this.unlockNextNodes(node);
         this.updateStatsDisplays();
         this.renderTree();
-        this.showToast('Bạn đã hoàn thành bài đọc chủ đề! Toàn bộ 3 nhánh độ khó đã sẵn sàng khiêu chiến.');
+        this.showToast(`Bạn đã hoàn thành bài đọc Mốc ${node.stage}! Thử thách mức độ Dễ đã sẵn sàng khiêu chiến.`);
       }
       this.closeModal();
       return;
@@ -2492,6 +2607,8 @@ class SlanguageDungeonTree {
           </div>
         `;
       } else {
+        this.currentTrialWrongCount++;
+
         // Nổi bật đáp án sai màu đỏ & hiện đáp án đúng màu xanh lá
         if (allChoices) {
           if (allChoices[this.selectedChoiceIdx]) {
@@ -2502,27 +2619,15 @@ class SlanguageDungeonTree {
           }
         }
 
-        // Trừ máu theo quy tắc thử thách
-        this.currentHearts = Math.max(0, this.currentHearts - node.heartPenalty);
-        localStorage.setItem('slanguage_user_hearts', this.currentHearts.toString());
-        this.updateStatsDisplays();
-        this.triggerDamageFeedback();
-
+        // Máu chỉ trừ khi người dùng đã hoàn thành bộ câu hỏi trắc nghiệm theo mức độ (không trừ tại từng câu)
         this.modalTrialResult!.className = 'modal-trial-result error';
         this.modalTrialResult!.innerHTML = `
           <div class="result-icon"><i class="fa-solid fa-circle-xmark"></i></div>
           <div class="result-text">
-            <strong>CHƯA CHÍNH XÁC! (-${node.heartPenalty} Máu)</strong>
+            <strong>CHƯA CHÍNH XÁC!</strong>
             <p>Đáp án đúng là: <strong>${currentTrial.choices[currentTrial.answerIdx]}</strong>.<br>${currentTrial.explanation || 'Hãy ghi nhớ lý do để vận dụng vào câu tiếp theo!'}</p>
           </div>
         `;
-
-        if (this.currentHearts === 0) {
-          this.currentHearts = 5;
-          localStorage.setItem('slanguage_user_hearts', '5');
-          this.updateStatsDisplays();
-          this.showToast('❤️ Sinh lực của bạn đã tự động phục hồi đầy (5/5) để tiếp tục thử thách!');
-        }
       }
 
       // Đổi nút: Nếu câu cuối -> "Hoàn thành", nếu chưa cuối -> "Tiếp theo"
@@ -2550,39 +2655,124 @@ class SlanguageDungeonTree {
         this.currentQuestionIdx++;
         this.renderCurrentQuestion();
       } else {
-        // NGƯỜI DÙNG BẤM "HOÀN THÀNH" -> CHINH PHỤC TOÀN BỘ ẢI DUNGEON!
-        node.status = 'mastered';
-        
-        // Kiểm tra hiệu ứng Boost XP đang kích hoạt (không cộng dồn)
-        let awardedXP = node.xpReward;
-        const activeExpBoost = localStorage.getItem('slanguage_active_exp_boost');
-        let boostNote = '';
-        if (activeExpBoost === 'double_xp') {
-          awardedXP = node.xpReward * 2;
-          boostNote = ' (x2 XP Gấp Đôi!)';
-          localStorage.removeItem('slanguage_active_exp_boost');
-          localStorage.removeItem('slanguage_xp_boost_active');
-        } else if (activeExpBoost === 'boost_10') {
-          awardedXP = Math.round(node.xpReward * 1.1);
-          boostNote = ' (+10% Boost XP!)';
-          localStorage.removeItem('slanguage_active_exp_boost');
-          localStorage.removeItem('slanguage_xp_boost_active');
-        }
+        // NGƯỜI DÙNG BẤM "HOÀN THÀNH" -> HOÀN TẤT TOÀN BỘ BỘ CÂU HỎI THEO MỨC ĐỘ!
+        const totalQ = this.currentQuestionsList.length;
+        const correctCount = totalQ - this.currentTrialWrongCount;
 
-        this.totalXP += awardedXP;
-        localStorage.setItem('slanguage_user_xp', this.totalXP.toString());
+        if (this.currentTrialWrongCount === 0) {
+          // ================= ĐÚNG TOÀN BỘ PHẦN CÁC CÂU HỎI (100% ĐÚNG) =================
+          // EXP CHỈ CỘNG KHI NGƯỜI DÙNG ĐÚNG TOÀN BỘ PHẦN CÁC CÂU HỎI
+          node.status = 'mastered';
+          
+          // Kiểm tra hiệu ứng Boost XP đang kích hoạt (không cộng dồn)
+          let awardedXP = node.xpReward;
+          const activeExpBoost = localStorage.getItem('slanguage_active_exp_boost');
+          let boostNote = '';
+          if (activeExpBoost === 'double_xp') {
+            awardedXP = node.xpReward * 2;
+            boostNote = ' (x2 XP Gấp Đôi!)';
+            localStorage.removeItem('slanguage_active_exp_boost');
+            localStorage.removeItem('slanguage_xp_boost_active');
+          } else if (activeExpBoost === 'boost_10') {
+            awardedXP = Math.round(node.xpReward * 1.1);
+            boostNote = ' (+10% Boost XP!)';
+            localStorage.removeItem('slanguage_active_exp_boost');
+            localStorage.removeItem('slanguage_xp_boost_active');
+          }
 
-        if (this.currentHearts < this.maxHearts) {
-          this.currentHearts = Math.min(this.maxHearts, this.currentHearts + 1);
+          if (activeExpBoost) {
+            const rawInv = localStorage.getItem('slanguage_user_inventory');
+            if (rawInv) {
+              try {
+                const inv = JSON.parse(rawInv);
+                inv.xpBoostCount = 0;
+                inv.doubleXPCount = 0;
+                localStorage.setItem('slanguage_user_inventory', JSON.stringify(inv));
+              } catch (e) {}
+            }
+          }
+
+          this.totalXP += awardedXP;
+          localStorage.setItem('slanguage_user_xp', this.totalXP.toString());
+
+          // Cập nhật chuỗi Streak theo ngày học thực tế
+          let currentStreak = parseInt(localStorage.getItem('slanguage_user_streak') || '18', 10);
+          if (isNaN(currentStreak)) currentStreak = 18;
+          const todayStr = new Date().toISOString().split('T')[0];
+          const lastStudy = localStorage.getItem('slanguage_last_study_date');
+          if (lastStudy !== todayStr) {
+            currentStreak += 1;
+            localStorage.setItem('slanguage_last_study_date', todayStr);
+            localStorage.setItem('slanguage_user_streak', currentStreak.toString());
+          }
+
+          // Cập nhật Cấp cao nhất nếu đạt mốc cấp kỷ lục mới
+          const currentLvl = Math.max(1, Math.floor(this.totalXP / 180) + 1);
+          const savedHighest = localStorage.getItem('slanguage_user_highest_level');
+          const highestLvl = savedHighest !== null ? Math.max(14, parseInt(savedHighest, 10)) : 14;
+          if (currentLvl > highestLvl) {
+            localStorage.setItem('slanguage_user_highest_level', currentLvl.toString());
+          }
+
+          // Ghi nhận lịch sử bài học và thời gian học cho trang cá nhân
+          try {
+            const rawHist = localStorage.getItem('slanguage_recent_lessons');
+            let hList = rawHist ? JSON.parse(rawHist) : [];
+            if (!Array.isArray(hList)) hList = [];
+            hList.unshift({
+              title: node.title || `Buổi học Mốc ${node.stage}`,
+              lang: this.currentLang || 'ja',
+              timestamp: new Date().toISOString(),
+              score: `${Math.round((correctCount / totalQ) * 100)}/100`,
+              status: correctCount === totalQ ? 'Xuất sắc' : 'Đạt',
+              xpEarned: awardedXP
+            });
+            if (hList.length > 20) hList = hList.slice(0, 20);
+            localStorage.setItem('slanguage_recent_lessons', JSON.stringify(hList));
+
+            let totalMins = parseInt(localStorage.getItem('slanguage_total_study_minutes') || '2910', 10);
+            if (isNaN(totalMins)) totalMins = 2910;
+            totalMins += 15;
+            localStorage.setItem('slanguage_total_study_minutes', totalMins.toString());
+          } catch (e) {}
+
+          this.updateStatsDisplays();
+          window.dispatchEvent(new Event('storage'));
+          window.dispatchEvent(new CustomEvent('slanguage_data_changed'));
+
+          this.unlockNextNodes(node);
+          this.renderTree();
+
+          let unlockMsg = '';
+          if (node.difficulty === 'easy') {
+            unlockMsg = ` Thử thách mức độ Bình thường và Mốc ${node.stage + 1} đã mở khóa!`;
+          } else if (node.difficulty === 'normal') {
+            unlockMsg = ` Thử thách mức độ Khó đã mở khóa!`;
+          } else {
+            unlockMsg = ` Bạn đã chinh phục trọn vẹn độ khó cao nhất của Mốc ${node.stage}!`;
+          }
+
+          this.showToast(`Tuyệt đỉnh! Đã trả lời đúng toàn bộ ${totalQ}/${totalQ} câu, nhận +${awardedXP} XP${boostNote}.${unlockMsg}`);
+          this.closeModal();
+        } else {
+          // ================= CÓ CÂU TRẢ LỜI SAI =================
+          // 1. Máu chỉ trừ khi người dùng đã hoàn thành bộ câu hỏi trắc nghiệm theo mức độ
+          const penalty = node.heartPenalty;
+          this.currentHearts = Math.max(0, this.currentHearts - penalty);
           localStorage.setItem('slanguage_user_hearts', this.currentHearts.toString());
+          this.updateStatsDisplays();
+          this.triggerDamageFeedback();
+
+          // 2. Không cộng EXP vì không đúng toàn bộ câu hỏi
+          this.closeModal();
+
+          if (this.currentHearts === 0) {
+            this.showToast(`Bạn hoàn thành với ${correctCount}/${totalQ} câu đúng. Vì có câu trả lời sai nên bị trừ -${penalty} Máu (còn 0 Máu) và không nhận được EXP!`);
+            this.promptReviveWithPotion();
+          } else {
+            this.showToast(`Bạn hoàn thành với ${correctCount}/${totalQ} câu đúng. Vì có câu trả lời sai nên bị trừ -${penalty} Máu (còn ${this.currentHearts}/5) và không nhận được EXP. Cần đúng 100% để vượt qua!`);
+          }
         }
-        this.updateStatsDisplays();
-
-        this.unlockNextNodes(node);
-        this.renderTree();
-
-        this.showToast(`Tuyệt đỉnh! Đã hoàn thành ải, nhận +${awardedXP} XP${boostNote}. Các nhánh đường tiếp theo đã mở khóa!`);
-        this.closeModal();
       }
     }
   }
@@ -2684,27 +2874,282 @@ class SlanguageDungeonTree {
     this.showToast('❤️ Sinh mệnh hồi phục đầy bình (5/5 Máu)! Sẵn sàng tiếp tục khiêu chiến!');
   }
 
+  private promptReviveWithPotion(onReviveSuccess?: () => void): void {
+    const rawInv = localStorage.getItem('slanguage_user_inventory');
+    let inv: any = {};
+    let healPotions = 0;
+    if (rawInv) {
+      try {
+        inv = JSON.parse(rawInv);
+        healPotions = inv.healPotionsCount ?? 0;
+      } catch (e) {
+        inv = {};
+      }
+    }
 
-  private unlockNextNodes(completedNode: DungeonNode): void {
+    if (!this.reviveModalOverlay || !this.reviveModalBody) return;
+
+    if (healPotions > 0) {
+      this.reviveModalBody.innerHTML = `
+        <div class="revive-dialog-icon">
+          <img src="../assets/potion_red.png" alt="Dược Phẩm Hồi Phục">
+        </div>
+        <h3 class="revive-dialog-title">Bạn Đã Hết Máu! 💔</h3>
+        <p class="revive-dialog-desc">
+          Sinh lực của bạn đã giảm về <strong>0/5 ❤️</strong>.<br>
+          Trong tủ đồ của bạn hiện còn <strong>${healPotions} Dược Phẩm Hồi Phục</strong> 🧪.<br>
+          Bạn có muốn sử dụng 1 bình để hồi phục lại đầy <strong>5/5 máu</strong> và tiếp tục bài học không?
+        </p>
+        <div class="revive-dialog-subnote">
+          Số bình hiện có: <strong>${healPotions} bình</strong> ➔ Sau khi dùng: <strong>${healPotions - 1} bình</strong>.
+        </div>
+        <div class="revive-dialog-footer">
+          <button type="button" class="btn-revive-cancel" id="btnReviveCancel">
+            <i class="fa-solid fa-xmark"></i> Không, Giữ Lại
+          </button>
+          <button type="button" class="btn-revive-confirm" id="btnReviveConfirm">
+            <i class="fa-solid fa-heart-pulse"></i> Sử Dụng Ngay (1 Bình)
+          </button>
+        </div>
+      `;
+
+      const btnCancel = document.getElementById('btnReviveCancel');
+      const btnConfirm = document.getElementById('btnReviveConfirm');
+
+      if (btnCancel) {
+        btnCancel.onclick = () => {
+          this.closeReviveModal();
+        };
+      }
+
+      if (btnConfirm) {
+        btnConfirm.onclick = () => {
+          inv.healPotionsCount = Math.max(0, healPotions - 1);
+          localStorage.setItem('slanguage_user_inventory', JSON.stringify(inv));
+          this.currentHearts = 5;
+          localStorage.setItem('slanguage_user_hearts', '5');
+          this.updateStatsDisplays();
+          this.closeReviveModal();
+          this.showToast(`❤️ Đã sử dụng 1 Dược Phẩm Hồi Phục! Máu đã hồi phục đầy đủ (5/5). Còn lại: ${inv.healPotionsCount} bình.`);
+          if (onReviveSuccess) {
+            onReviveSuccess();
+          }
+        };
+      }
+    } else {
+      this.reviveModalBody.innerHTML = `
+        <div class="revive-dialog-icon">
+          <i class="fa-solid fa-heart-crack" style="font-size: 2.2rem; color: #ff4d6d;"></i>
+        </div>
+        <h3 class="revive-dialog-title">Bạn Đã Cạn Kiệt Máu! 💔</h3>
+        <p class="revive-dialog-desc">
+          Sinh lực của bạn đã về <strong>0/5 ❤️</strong> và hiện không còn <strong>Dược Phẩm Hồi Phục</strong> nào trong tủ đồ.<br>
+          Hãy ghé Cửa Hàng (Shop) để quy đổi EXP lấy Dược Phẩm Hồi Phục và sẵn sàng tiếp tục thử thách nhé!
+        </p>
+        <div class="revive-dialog-footer">
+          <button type="button" class="btn-revive-cancel" id="btnReviveCancel">
+            <i class="fa-solid fa-xmark"></i> Đóng
+          </button>
+          <a href="../shop/index.html" class="btn-revive-shop">
+            <i class="fa-solid fa-store"></i> Đến Cửa Hàng (Shop)
+          </a>
+        </div>
+      `;
+
+      const btnCancel = document.getElementById('btnReviveCancel');
+      if (btnCancel) {
+        btnCancel.onclick = () => {
+          this.closeReviveModal();
+        };
+      }
+    }
+
+    this.reviveModalOverlay.classList.add('active');
+  }
+
+  private closeReviveModal(): void {
+    if (this.reviveModalOverlay) {
+      this.reviveModalOverlay.classList.remove('active');
+    }
+  }
+
+  private closeLockedPrereqModal(): void {
+    if (this.lockedPrereqModal) {
+      this.lockedPrereqModal.classList.remove('active');
+    }
+  }
+
+  private promptLockedNodeModal(node: DungeonNode): void {
+    if (!this.lockedPrereqModal || !this.lockedPrereqModalBody) return;
     const dungeon = dungeonDB[this.currentLang];
     if (!dungeon) return;
 
-    // 1. Current stage: ensure all other branches in current stage are available
-    dungeon.nodes.forEach(node => {
-      if (node.stage === completedNode.stage && node.status === 'locked') {
-        node.status = 'available';
-      }
-    });
+    let targetDiffName = 'này';
+    let reqDiffName = '';
+    let reqTitle = '';
+    let reqNode: DungeonNode | undefined;
+    let descHtml = '';
 
-    // 2. Next stage: when next stage is opened, ALL of its difficulty branches are opened immediately!
-    const nextStage = completedNode.stage + 1;
-    if (nextStage <= 5) {
-      dungeon.nodes.forEach(node => {
-        if (node.stage === nextStage && node.status === 'locked') {
-          node.status = 'available';
-        }
-      });
+    if (node.isHub) {
+      targetDiffName = `Bài đọc Mốc ${node.stage}`;
+      const prevTrials = dungeon.nodes.filter(n => n.stage === node.stage - 1 && !n.isHub);
+      reqNode = prevTrials.find(n => n.difficulty === 'easy') || prevTrials[0];
+      reqDiffName = `Mốc ${node.stage - 1}`;
+      reqTitle = reqNode?.title || (`Thử thách Mốc ${node.stage - 1}`);
+      descHtml = `Bạn cần phải hoàn thành ít nhất 1 bài trắc nghiệm ở <strong>Mốc ${node.stage - 1}</strong> trước để mở khóa bài học của <strong>Mốc ${node.stage}</strong>!`;
+    } else if (node.difficulty === 'hard') {
+      targetDiffName = 'Khó';
+      reqDiffName = 'Bình thường';
+      reqNode = dungeon.nodes.find(n => n.stage === node.stage && !n.isHub && n.difficulty === 'normal');
+      reqTitle = reqNode?.title || 'Thử thách mức độ Bình thường';
+      descHtml = `Bạn cần phải vượt qua thử thách mức độ <strong>Bình thường</strong> trước để mở khóa mức độ <strong>Khó</strong> của Mốc ${node.stage}!`;
+    } else if (node.difficulty === 'normal') {
+      targetDiffName = 'Bình thường';
+      reqDiffName = 'Dễ';
+      reqNode = dungeon.nodes.find(n => n.stage === node.stage && !n.isHub && n.difficulty === 'easy');
+      reqTitle = reqNode?.title || 'Thử thách mức độ Dễ';
+      descHtml = `Bạn cần phải vượt qua thử thách mức độ <strong>Dễ</strong> trước để mở khóa mức độ <strong>Bình thường</strong> của Mốc ${node.stage}!`;
+    } else {
+      // easy node locked because Hub reading is not completed
+      targetDiffName = 'Dễ';
+      reqDiffName = `Bài đọc Mốc ${node.stage}`;
+      reqNode = dungeon.nodes.find(n => n.stage === node.stage && n.isHub);
+      reqTitle = reqNode?.title || `Bài đọc lý thuyết Mốc ${node.stage}`;
+      descHtml = `Bạn cần phải đọc xong <strong>Bài đọc chuyên đề của Mốc ${node.stage}</strong> trước để mở khóa thử thách mức độ <strong>Dễ</strong>!`;
     }
+
+    const confirmBtnText = reqNode?.isHub 
+      ? `Đọc bài Mốc ${node.stage}`
+      : `Vào bài ${reqDiffName}`;
+
+    this.lockedPrereqModalBody.innerHTML = `
+      <div class="locked-dialog-icon">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <h3 class="locked-dialog-title">Thử Thách Chưa Mở Khóa! 🔒</h3>
+      <p class="locked-dialog-desc">
+        ${descHtml}
+      </p>
+      <div class="locked-dialog-prereq-badge">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <div class="badge-text">
+          Độ khó cần hoàn thành: <strong>${reqDiffName}</strong> (${reqTitle})
+        </div>
+      </div>
+      <div class="locked-dialog-footer">
+        <button type="button" class="btn-locked-cancel" id="btnLockedPrereqCancel">
+          <i class="fa-solid fa-xmark"></i> Hủy
+        </button>
+        <button type="button" class="btn-locked-confirm" id="btnLockedPrereqGo">
+          <i class="fa-solid fa-arrow-right"></i> ${confirmBtnText}
+        </button>
+      </div>
+    `;
+
+    const btnCancel = document.getElementById('btnLockedPrereqCancel');
+    const btnGo = document.getElementById('btnLockedPrereqGo');
+
+    if (btnCancel) {
+      btnCancel.onclick = () => {
+        this.closeLockedPrereqModal();
+      };
+    }
+
+    if (btnGo) {
+      btnGo.onclick = () => {
+        this.closeLockedPrereqModal();
+        if (reqNode) {
+          this.openModal(reqNode);
+        }
+      };
+    }
+
+    this.lockedPrereqModal.classList.add('active');
+  }
+
+
+  private updateNodeStatuses(): void {
+    const dungeon = dungeonDB[this.currentLang];
+    if (!dungeon) return;
+
+    for (let stage = 1; stage <= 5; stage++) {
+      const hub = dungeon.nodes.find(n => n.stage === stage && n.isHub);
+      const easy = dungeon.nodes.find(n => n.stage === stage && !n.isHub && n.difficulty === 'easy');
+      const normal = dungeon.nodes.find(n => n.stage === stage && !n.isHub && n.difficulty === 'normal');
+      const hard = dungeon.nodes.find(n => n.stage === stage && !n.isHub && n.difficulty === 'hard');
+
+      // 1. Mở khóa bài đọc của mốc (Hub node):
+      // Giai đoạn 1 luôn khả dụng (nếu chưa hoàn thành)
+      // Các giai đoạn sau (>1) chỉ mở khi ít nhất 1 bài trắc nghiệm ở mốc trước đã hoàn thành (mastered)
+      if (hub && hub.status !== 'mastered') {
+        if (stage === 1) {
+          hub.status = 'available';
+        } else {
+          const prevTrials = dungeon.nodes.filter(n => n.stage === stage - 1 && !n.isHub);
+          const hasPrevTrialMastered = prevTrials.some(n => n.status === 'mastered');
+          hub.status = hasPrevTrialMastered ? 'available' : 'locked';
+        }
+      }
+
+      // 2. Mở khóa 3 thẻ trắc nghiệm trong mốc:
+      // "sau khi đọc xong bài đọc của mốc thì mới mở ra 3 thẻ trắc nghiệm cho người dùng"
+      const isHubRead = hub && hub.status === 'mastered';
+
+      if (!isHubRead) {
+        // Khi chưa đọc xong bài đọc của mốc, toàn bộ 3 thẻ trắc nghiệm đều bị khóa
+        if (easy && easy.status !== 'mastered') easy.status = 'locked';
+        if (normal && normal.status !== 'mastered') normal.status = 'locked';
+        if (hard && hard.status !== 'mastered') hard.status = 'locked';
+      } else {
+        // Đã đọc xong bài đọc của mốc:
+        // Thẻ Dễ được mở khóa đầu tiên
+        if (easy && easy.status !== 'mastered') {
+          easy.status = 'available';
+        }
+
+        // "để có thể làm được bài ở mốc độ khó tiếp theo thì cần phải vượt qua được bài trắc nghiệm có độ khó xếp trước"
+        // Thẻ Bình thường chỉ mở khi thẻ Dễ đã hoàn thành
+        if (normal && normal.status !== 'mastered') {
+          normal.status = (easy && easy.status === 'mastered') ? 'available' : 'locked';
+        }
+
+        // Thẻ Khó chỉ mở khi thẻ Bình thường đã hoàn thành
+        if (hard && hard.status !== 'mastered') {
+          hard.status = (normal && normal.status === 'mastered') ? 'available' : 'locked';
+        }
+      }
+    }
+  }
+
+  private saveDungeonProgress(): void {
+    const dungeon = dungeonDB[this.currentLang];
+    if (!dungeon) return;
+    const masteredIds = dungeon.nodes
+      .filter(n => n.status === 'mastered')
+      .map(n => n.id);
+    localStorage.setItem(`slanguage_dungeon_mastered_${this.currentLang}`, JSON.stringify(masteredIds));
+  }
+
+  private loadDungeonProgress(): void {
+    const dungeon = dungeonDB[this.currentLang];
+    if (!dungeon) return;
+    const raw = localStorage.getItem(`slanguage_dungeon_mastered_${this.currentLang}`);
+    if (raw) {
+      try {
+        const masteredIds: string[] = JSON.parse(raw);
+        dungeon.nodes.forEach(node => {
+          if (masteredIds.includes(node.id)) {
+            node.status = 'mastered';
+          }
+        });
+      } catch (e) {}
+    }
+    this.updateNodeStatuses();
+  }
+
+  private unlockNextNodes(completedNode: DungeonNode): void {
+    this.updateNodeStatuses();
+    this.saveDungeonProgress();
   }
 
   private showToast(message: string, flagImg?: string): void {
@@ -2758,6 +3203,26 @@ class SlanguageDungeonTree {
     });
 
     window.addEventListener('pageshow', () => {
+      const sXP = localStorage.getItem('slanguage_user_xp');
+      if (sXP !== null) {
+        const parsed = parseInt(sXP.replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(parsed)) this.totalXP = parsed;
+      }
+      const sHearts = localStorage.getItem('slanguage_user_hearts');
+      if (sHearts !== null) {
+        this.currentHearts = Math.max(0, Math.min(5, parseInt(sHearts, 10)));
+      }
+      this.updateStatsDisplays();
+      const sStreak = localStorage.getItem('slanguage_user_streak') || '18';
+      const strEl = document.getElementById('headerStreakVal');
+      if (strEl) strEl.textContent = `${sStreak} Ngày`;
+      const dropStr = document.getElementById('dropdownStreakVal');
+      if (dropStr) dropStr.textContent = `${sStreak} Ngày`;
+      const sName = localStorage.getItem('slanguage_user_name') || 'Vua Xứ Thanh';
+      document.querySelectorAll('.user-info-text .name, #dropdownUserName').forEach(el => {
+        el.textContent = sName;
+      });
+
       const overlay = document.getElementById('slanguageLoadingOverlay');
       const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
       if (overlay) overlay.classList.remove('active');
@@ -2815,4 +3280,71 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initSlanguageDungeonTree);
 } else {
   initSlanguageDungeonTree();
+}
+
+// ================= MOBILE SIDE DRAWER CONTROLLER =================
+function initMobileSideDrawer(): void {
+  const hamburgerBtn = document.getElementById('navHamburgerBtn');
+  const sideDrawer = document.getElementById('sideDrawer');
+  const drawerBackdrop = document.getElementById('drawerBackdrop');
+  const drawerCloseBtn = document.getElementById('drawerCloseBtn');
+
+  if (!hamburgerBtn || !sideDrawer || !drawerBackdrop) return;
+
+  const openDrawer = (e: Event): void => {
+    e.stopPropagation();
+    sideDrawer.classList.add('open');
+    drawerBackdrop.classList.add('open');
+    document.body.classList.add('drawer-open');
+    hamburgerBtn.setAttribute('aria-expanded', 'true');
+  };
+
+  const closeDrawer = (): void => {
+    sideDrawer.classList.remove('open');
+    drawerBackdrop.classList.remove('open');
+    document.body.classList.remove('drawer-open');
+    hamburgerBtn.setAttribute('aria-expanded', 'false');
+  };
+
+  hamburgerBtn.addEventListener('click', openDrawer);
+  drawerCloseBtn?.addEventListener('click', closeDrawer);
+  drawerBackdrop.addEventListener('click', closeDrawer);
+
+  sideDrawer.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', closeDrawer);
+  });
+
+  // Sync drawer user stats
+  try {
+    const rawUser = localStorage.getItem('slanguage_user');
+    const user = rawUser ? JSON.parse(rawUser) : null;
+    const streak = user?.streak ?? localStorage.getItem('slanguage_user_streak') ?? '18';
+    const xp = user?.xp ?? localStorage.getItem('slanguage_user_xp') ?? '2450';
+    const hearts = user?.hearts ?? localStorage.getItem('slanguage_user_hearts') ?? '5';
+    const name = user?.name ?? user?.username ?? localStorage.getItem('slanguage_user_name') ?? 'Vua Xứ Thanh';
+    const avatar = user?.avatar ?? localStorage.getItem('slanguage_user_avatar');
+
+    const streakEl = document.getElementById('drawerStreakVal');
+    if (streakEl) streakEl.textContent = `${streak} Ngày`;
+
+    const xpEl = document.getElementById('drawerXPVal');
+    if (xpEl) xpEl.textContent = `${Number(xp).toLocaleString()} XP`;
+
+    const heartsEl = document.getElementById('drawerHeartsVal');
+    if (heartsEl) heartsEl.textContent = `${hearts}/5`;
+
+    const nameEl = document.getElementById('drawerUserName');
+    if (nameEl) nameEl.textContent = name;
+
+    const avatarEl = document.getElementById('drawerUserAvatar') as HTMLImageElement | null;
+    if (avatarEl && avatar) avatarEl.src = avatar;
+  } catch (err) {
+    console.warn('Error syncing drawer user stats:', err);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMobileSideDrawer);
+} else {
+  initMobileSideDrawer();
 }

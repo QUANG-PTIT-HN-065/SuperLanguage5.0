@@ -24,12 +24,16 @@
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
+        <!-- Hamburger Menu Button (< 768px) -->
+        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng" aria-expanded="false" title="Menu điều hướng">
+          <i class="fa-solid fa-bars"></i>
+        </button>
         <a href="../home/index.html" class="brand-logo">
           <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
-          <span class="brand-name">S<span class="brand-language">language</span></span>
+          <span class="brand-name">Slanguage</span>
         </a>
 
-        <nav>
+        <nav class="desktop-nav">
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
             <li><a href="./index.html" class="active">Học tập</a></li>
@@ -83,14 +87,49 @@
         <!-- User Account Dropdown (Shown when logged in) -->
         <div class="user-dropdown auth-only" id="userDropdown">
           <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini" id="headerAvatar">
             <div class="user-info-text">
-              <div class="name">Vua Xứ Thanh</div>
+              <div class="name" id="headerUserName">Vua Xứ Thanh</div>
               <div class="role">Học viên</div>
             </div>
             <i class="fa-solid fa-chevron-down user-chevron"></i>
           </button>
           <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <!-- Mobile User Profile & Stats Header (Chứa thông tin cá nhân & chỉ số chuỗi, exp, mạng) -->
+            <div class="dropdown-user-header" id="dropdownUserHeader">
+              <div class="dropdown-user-meta">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="dropdown-user-avatar" id="dropdownUserAvatar">
+                <div class="dropdown-user-details">
+                  <div class="dropdown-user-name" id="dropdownUserName">Vua Xứ Thanh</div>
+                  <div class="dropdown-user-role">Học viên Slanguage</div>
+                </div>
+              </div>
+              <div class="dropdown-stats-grid">
+                <div class="dropdown-stat-chip streak" title="Chuỗi ngày học liên tục">
+                  <img src="../assets/streak-flame.gif?v=4" alt="Streak" class="streak-flame-img">
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">Chuỗi</span>
+                    <span class="dropdown-stat-value" id="dropdownStreakVal">18 Ngày</span>
+                  </div>
+                </div>
+                <div class="dropdown-stat-chip xp" title="Điểm kinh nghiệm tích lũy">
+                  <i class="fa-solid fa-star"></i>
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">EXP</span>
+                    <span class="dropdown-stat-value" id="dropdownXPVal">2,450 XP</span>
+                  </div>
+                </div>
+                <div class="dropdown-stat-chip hearts" title="Năng lượng làm bài">
+                  <i class="fa-solid fa-heart"></i>
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">Mạng</span>
+                    <span class="dropdown-stat-value" id="dropdownHeartsVal">5/5</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="user-dropdown-divider mobile-only-divider"></div>
+
             <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
               <div class="menu-item-text">
@@ -131,6 +170,132 @@
       </div>
     </div>
   </header>
+
+  <!-- Mobile Side Drawer & Backdrop Overlay (< 768px) -->
+  <div class="mobile-drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <aside class="mobile-side-drawer" id="sideDrawer" aria-label="Menu điều hướng di động" aria-hidden="true">
+    <div class="drawer-header">
+      <a href="../home/index.html" class="drawer-brand">
+        <img src="../assets/logo.png" alt="Slanguage Logo" class="drawer-logo-img">
+        <span class="drawer-brand-name">Slanguage</span>
+      </a>
+      <button type="button" class="drawer-close-btn" id="drawerCloseBtn" aria-label="Đóng menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- User Profile Card inside Drawer -->
+    <div class="drawer-user-card" id="drawerUserCard">
+      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="drawer-avatar" id="drawerUserAvatar">
+      <div class="drawer-user-info">
+        <div class="drawer-user-name" id="drawerUserName">Vua Xứ Thanh</div>
+        <div class="drawer-user-role" id="drawerUserRole">Học viên Slanguage</div>
+      </div>
+    </div>
+
+    <!-- Quick Stats in Drawer -->
+    <div class="drawer-stats-grid">
+      <div class="drawer-stat-pill streak" title="Chuỗi ngày liên tục">
+        <img src="../assets/streak-flame.gif?v=4" alt="Streak" class="drawer-stat-flame">
+        <span id="drawerStreakVal">18 Ngày</span>
+      </div>
+      <div class="drawer-stat-pill xp" title="Điểm kinh nghiệm">
+        <i class="fa-solid fa-star"></i>
+        <span id="drawerXPVal">2,450 XP</span>
+      </div>
+      <div class="drawer-stat-pill hearts" title="Mạng học tập">
+        <i class="fa-solid fa-heart"></i>
+        <span id="drawerHeartsVal">5/5</span>
+      </div>
+    </div>
+
+    <div class="drawer-divider"></div>
+
+    <!-- 5 Main Navigation Links -->
+    <nav class="drawer-nav">
+      <div class="drawer-section-title">Menu chính</div>
+      <ul class="drawer-nav-list">
+        <li>
+          <a href="../home/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-house"></i></span>
+            <span class="drawer-nav-label">Trang chủ</span>
+          </a>
+        </li>
+        <li>
+          <a href="./index.html" class="drawer-nav-item active">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-map-location-dot"></i></span>
+            <span class="drawer-nav-label">Học tập</span>
+          </a>
+        </li>
+        <li>
+          <a href="../vocabulary/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-book-open"></i></span>
+            <span class="drawer-nav-label">Luyện từ vựng</span>
+          </a>
+        </li>
+        <li>
+          <a href="../ai-practice/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-robot"></i></span>
+            <span class="drawer-nav-label">Luyện tập với AI</span>
+          </a>
+        </li>
+        <li>
+          <a href="../leaderboard/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-trophy"></i></span>
+            <span class="drawer-nav-label">Bảng xếp hạng</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section-title">Tài khoản & Tiện ích</div>
+      <ul class="drawer-nav-list">
+        <li>
+          <a href="../profile/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-id-badge"></i></span>
+            <span class="drawer-nav-label">Thông tin cá nhân</span>
+          </a>
+        </li>
+        <li>
+          <a href="../shop/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-store"></i></span>
+            <span class="drawer-nav-label">Shop quy đổi</span>
+          </a>
+        </li>
+        <li>
+          <a href="../login/index.html" class="drawer-nav-item drawer-logout" id="drawerLogoutBtn">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span>
+            <span class="drawer-nav-label">Đăng xuất</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Mobile Bottom Navigation Bar (< 768px) -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Điều hướng ngón cái">
+    <a href="../home/index.html" class="bottom-nav-item ">
+      <i class="fa-solid fa-house bottom-nav-icon"></i>
+      <span class="bottom-nav-label">Trang chủ</span>
+    </a>
+    <a href="./index.html" class="bottom-nav-item active">
+      <i class="fa-solid fa-map-location-dot bottom-nav-icon"></i>
+      <span class="bottom-nav-label">Học tập</span>
+    </a>
+    <a href="../vocabulary/index.html" class="bottom-nav-item ">
+      <i class="fa-solid fa-book-open bottom-nav-icon"></i>
+      <span class="bottom-nav-label">Từ vựng</span>
+    </a>
+    <a href="../ai-practice/index.html" class="bottom-nav-item ">
+      <i class="fa-solid fa-robot bottom-nav-icon"></i>
+      <span class="bottom-nav-label">Luyện AI</span>
+    </a>
+    <a href="../leaderboard/index.html" class="bottom-nav-item ">
+      <i class="fa-solid fa-trophy bottom-nav-icon"></i>
+      <span class="bottom-nav-label">Xếp hạng</span>
+    </a>
+  </nav>
 
   <!-- ================= MAIN ROADMAP WRAPPER ================= -->
   <main class="roadmap-main">
@@ -259,15 +424,6 @@
       </div>
 
       <div class="node-modal-body">
-        <h4 class="section-heading">Mục tiêu bài học đạt được:</h4>
-        <ul class="node-objectives-list" id="modalNodeObjectives">
-          <!-- Objectives injected here -->
-        </ul>
-
-        <div class="node-skill-preview" id="modalNodePreview">
-          <!-- Key phrases / examples preview -->
-        </div>
-
         <!-- HUB READING PASSAGE BOX (Displayed only for Milestone Hub cards) -->
         <div class="hub-reading-box" id="modalHubReadingBox" style="display: none;">
           <div class="reading-article-header">
@@ -307,6 +463,24 @@
     </div>
   </div>
 
+  <!-- ================= REVIVE / HEAL POTION CONFIRMATION MODAL ================= -->
+  <div class="revive-modal-overlay" id="reviveModalOverlay">
+    <div class="revive-modal-card" id="reviveModalCard">
+      <div id="reviveModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= LOCKED PREREQUISITE WARNING MODAL ================= -->
+  <div class="locked-modal-overlay" id="lockedPrereqModal">
+    <div class="locked-modal-card" id="lockedPrereqModalCard">
+      <div id="lockedPrereqModalBody">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST NOTIFICATION -->
   <div class="roadmap-toast" id="roadmapToast"></div>
 
@@ -316,7 +490,7 @@
       <div class="footer-col">
         <div class="brand-logo" style="margin-bottom: 14px;">
           <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
-          <span class="brand-name">S<span class="brand-language">language</span></span>
+          <span class="brand-name">Slanguage</span>
         </div>
         <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
           Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
@@ -423,22 +597,18 @@
     </div>
   </div>
 
-    <!-- Logic TypeScript cho trang -->
-  <script type="module" src="./roadmap.ts"></script>
-  <!-- Fallback nạp TypeScript trực tiếp cho Live Server / Trình duyệt -->
+      <!-- Nạp và thực thi trực tiếp file TypeScript qua Babel Standalone (Không dùng file .js) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
   <script>
-    if (!window.roadmapApp) {
-      fetch('./roadmap.ts')
-        .then(function(r) { return r.text(); })
-        .then(function(code) {
-          var js = Babel.transform(code, { filename: 'roadmap.ts', presets: ['typescript'] }).code;
-          var s = document.createElement('script');
-          s.textContent = js;
-          document.body.appendChild(s);
-        })
-        .catch(function(err) { console.error('Error loading roadmap.ts:', err); });
-    }
+    fetch('./roadmap.ts')
+      .then(function(r) { return r.text(); })
+      .then(function(code) {
+        var js = Babel.transform(code, { filename: 'roadmap.ts', presets: ['typescript'] }).code;
+        var s = document.createElement('script');
+        s.textContent = js;
+        document.body.appendChild(s);
+      })
+      .catch(function(err) { console.error('Error loading roadmap.ts:', err); });
   </script>
 </body>
 </html>

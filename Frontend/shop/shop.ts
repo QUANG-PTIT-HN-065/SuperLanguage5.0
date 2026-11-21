@@ -497,23 +497,17 @@ class SlanguageShopApp {
     };
 
     // Filter header language dropdown to exclude user's native language
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-
     langItems.forEach(item => {
-      if (item.getAttribute('data-lang') === nativeLang) {
-        item.style.display = 'none';
-      } else {
-        item.style.display = 'flex';
-      }
+      item.style.display = 'flex';
     });
 
-    let savedLang = localStorage.getItem('slanguage_active_language') || localStorage.getItem('slanguage_current_lang') || 'ja';
-    if (savedLang === nativeLang) {
-      savedLang = nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja');
-      localStorage.setItem('slanguage_active_language', savedLang);
-      localStorage.setItem('slanguage_current_lang', savedLang);
+    let savedLang = localStorage.getItem('slanguage_active_language') || localStorage.getItem('slanguage_current_lang') || localStorage.getItem('slanguage_user_lang') || 'ja';
+    if (!langMap[savedLang]) {
+      savedLang = 'ja';
     }
+    localStorage.setItem('slanguage_active_language', savedLang);
+    localStorage.setItem('slanguage_current_lang', savedLang);
+    localStorage.setItem('slanguage_user_lang', savedLang);
 
     if (langMap[savedLang]) {
       if (currentLangLabel) currentLangLabel.textContent = langMap[savedLang].name;
@@ -530,10 +524,37 @@ class SlanguageShopApp {
     langItems.forEach(item => {
       item.addEventListener('click', () => {
         const lang = item.getAttribute('data-lang') || 'ja';
-        if (lang === nativeLang) return;
         if (langMap[lang]) {
           localStorage.setItem('slanguage_active_language', lang);
           localStorage.setItem('slanguage_current_lang', lang);
+          localStorage.setItem('slanguage_user_lang', lang);
+
+          const rawUser = localStorage.getItem('slanguage_current_user');
+          if (rawUser) {
+            try {
+              const u = JSON.parse(rawUser);
+              u.targetLanguage = lang;
+              localStorage.setItem('slanguage_current_user', JSON.stringify(u));
+            } catch (e) {}
+          }
+
+          const rawDb = localStorage.getItem('slanguage_users_db');
+          if (rawDb) {
+            try {
+              const db = JSON.parse(rawDb);
+              const userEmail = localStorage.getItem('slanguage_user_email');
+              if (Array.isArray(db) && userEmail) {
+                const uIdx = db.findIndex((x: any) => x.email === userEmail);
+                if (uIdx !== -1) {
+                  db[uIdx].targetLanguage = lang;
+                  localStorage.setItem('slanguage_users_db', JSON.stringify(db));
+                }
+              }
+            } catch (e) {}
+          }
+
+          window.dispatchEvent(new CustomEvent('slanguage_data_changed'));
+
           if (currentLangLabel) currentLangLabel.textContent = langMap[lang].name;
           if (currentLangFlag) currentLangFlag.src = langMap[lang].flag;
           langItems.forEach(i => i.classList.remove('active'));
@@ -1285,4 +1306,71 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initSlanguageShop);
 } else {
   initSlanguageShop();
+}
+
+// ================= MOBILE SIDE DRAWER CONTROLLER =================
+function initMobileSideDrawer(): void {
+  const hamburgerBtn = document.getElementById('navHamburgerBtn');
+  const sideDrawer = document.getElementById('sideDrawer');
+  const drawerBackdrop = document.getElementById('drawerBackdrop');
+  const drawerCloseBtn = document.getElementById('drawerCloseBtn');
+
+  if (!hamburgerBtn || !sideDrawer || !drawerBackdrop) return;
+
+  const openDrawer = (e: Event): void => {
+    e.stopPropagation();
+    sideDrawer.classList.add('open');
+    drawerBackdrop.classList.add('open');
+    document.body.classList.add('drawer-open');
+    hamburgerBtn.setAttribute('aria-expanded', 'true');
+  };
+
+  const closeDrawer = (): void => {
+    sideDrawer.classList.remove('open');
+    drawerBackdrop.classList.remove('open');
+    document.body.classList.remove('drawer-open');
+    hamburgerBtn.setAttribute('aria-expanded', 'false');
+  };
+
+  hamburgerBtn.addEventListener('click', openDrawer);
+  drawerCloseBtn?.addEventListener('click', closeDrawer);
+  drawerBackdrop.addEventListener('click', closeDrawer);
+
+  sideDrawer.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', closeDrawer);
+  });
+
+  // Sync drawer user stats
+  try {
+    const rawUser = localStorage.getItem('slanguage_user');
+    const user = rawUser ? JSON.parse(rawUser) : null;
+    const streak = user?.streak ?? localStorage.getItem('slanguage_user_streak') ?? '18';
+    const xp = user?.xp ?? localStorage.getItem('slanguage_user_xp') ?? '2450';
+    const hearts = user?.hearts ?? localStorage.getItem('slanguage_user_hearts') ?? '5';
+    const name = user?.name ?? user?.username ?? localStorage.getItem('slanguage_user_name') ?? 'Vua Xứ Thanh';
+    const avatar = user?.avatar ?? localStorage.getItem('slanguage_user_avatar');
+
+    const streakEl = document.getElementById('drawerStreakVal');
+    if (streakEl) streakEl.textContent = `${streak} Ngày`;
+
+    const xpEl = document.getElementById('drawerXPVal');
+    if (xpEl) xpEl.textContent = `${Number(xp).toLocaleString()} XP`;
+
+    const heartsEl = document.getElementById('drawerHeartsVal');
+    if (heartsEl) heartsEl.textContent = `${hearts}/5`;
+
+    const nameEl = document.getElementById('drawerUserName');
+    if (nameEl) nameEl.textContent = name;
+
+    const avatarEl = document.getElementById('drawerUserAvatar') as HTMLImageElement | null;
+    if (avatarEl && avatar) avatarEl.src = avatar;
+  } catch (err) {
+    console.warn('Error syncing drawer user stats:', err);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMobileSideDrawer);
+} else {
+  initMobileSideDrawer();
 }
