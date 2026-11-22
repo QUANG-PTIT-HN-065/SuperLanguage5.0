@@ -136,7 +136,7 @@ def get_recent_daily_activity(user_id: str, tz_name: str) -> list[Dict[str, Any]
         .execute()
         .data
         or []
-    )
+    ) # type: ignore
 
 
 def get_plan(plan_id: str) -> Optional[Dict[str, Any]]:
@@ -195,7 +195,7 @@ def get_streak_freeze_count(user_id: str) -> int:
     except Exception:
         logger.exception("Không đọc được số Đóng Băng Chuỗi trong kho của %s", user_id)
         return 0
-    return int(rows[0]["quantity"]) if rows else 0
+    return int(rows[0]["quantity"]) if rows else 0 # type: ignore
 
 
 def _update_profile(user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:

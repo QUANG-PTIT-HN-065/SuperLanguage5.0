@@ -141,6 +141,10 @@ export interface UserItem {
   xp_total?: number;
   current_streak?: number;
   words_learned?: number;
+  last_sign_in_at?: string | null;
+  last_activity_at?: string | null;
+  inactive_days?: number | null;
+  inactive_over_24_months?: boolean;
 }
 
 interface OverviewStats {
@@ -167,6 +171,9 @@ let usersList: UserItem[] = [];
 let documentsList: RagDocument[] = [];
 let documentPage = 1;
 const DOCUMENT_PAGE_SIZE = 5;
+let userPage = 1;
+const USER_PAGE_SIZE = 10;
+let userTotal = 0;
 let activeTab = "dashboard";
 let currentTopicFilterLang = "all";
 let readingsTopicId: number | null = null;
@@ -660,10 +667,87 @@ async function saveReadings(): Promise<void> {
 /**
  * 3. NẠP DANH SÁCH NGƯỜI DÙNG THẬT TỪ CSDL
  */
+function formatDate(value?: string | null): string {
+  if (!value) return "Chưa có dữ liệu";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Chưa có dữ liệu";
+  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function openActionConfirm(title: string, description: string, confirmLabel: string, action: () => Promise<void>): void {
+  const modal = getElement("actionConfirmModal");
+  const titleEl = getElement("actionConfirmTitle");
+  const descEl = getElement("actionConfirmDescription");
+  const accept = getElement<HTMLButtonElement>("actionConfirmAccept");
+  const cancel = getElement<HTMLButtonElement>("actionConfirmCancel");
+  if (!modal || !titleEl || !descEl || !accept || !cancel) return;
+
+  titleEl.textContent = title;
+  descEl.textContent = description;
+  accept.textContent = confirmLabel;
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+
+  const close = () => {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  };
+  cancel.onclick = close;
+  accept.onclick = async () => {
+    accept.disabled = true;
+    cancel.disabled = true;
+    try {
+      await action();
+      close();
+    } finally {
+      accept.disabled = false;
+      cancel.disabled = false;
+    }
+  };
+}
+
+async function confirmUserStatusChange(user: UserItem): Promise<void> {
+  const locking = user.status !== "suspended";
+  openActionConfirm(
+    locking ? "Xác nhận khóa tài khoản" : "Xác nhận mở khóa tài khoản",
+    locking
+      ? `Bạn sắp khóa tài khoản "${user.display_name || user.username}" (${user.email}). Tài khoản sẽ không thể đăng nhập hoặc sử dụng dịch vụ cho đến khi được mở khóa.`
+      : `Bạn sắp mở khóa tài khoản "${user.display_name || user.username}" (${user.email}). Tài khoản sẽ được phép đăng nhập và sử dụng dịch vụ trở lại.`,
+    locking ? "Khóa tài khoản" : "Mở khóa tài khoản",
+    async () => {
+      await adminApi(`/api/v1/admin/users/${encodeURIComponent(user.id)}/status?action=${locking ? "lock" : "unlock"}`, { method: "PATCH" });
+      showToast(locking ? "Đã khóa tài khoản." : "Đã mở khóa tài khoản.", "success");
+      await loadUsers();
+    },
+  );
+}
+
+async function confirmDeleteUser(user: UserItem): Promise<void> {
+  openActionConfirm(
+    "Xác nhận xóa tài khoản",
+    `Bạn sắp xóa vĩnh viễn tài khoản "${user.display_name || user.username}" (${user.email}). Hành động này sẽ xóa tài khoản khỏi Supabase Auth và toàn bộ dữ liệu liên quan trong cơ sở dữ liệu, không thể hoàn tác.`,
+    "Xóa vĩnh viễn",
+    async () => {
+      await adminApi(`/api/v1/admin/users/${encodeURIComponent(user.id)}`, { method: "DELETE" });
+      showToast("Đã xóa tài khoản và dữ liệu liên quan.", "success");
+      await Promise.all([loadUsers(), loadDashboardStats()]);
+    },
+  );
+}
+
 async function loadUsers(): Promise<void> {
   try {
-    const res = await adminApi<{ items: UserItem[]; total: number }>("/api/v1/admin/users?limit=50&offset=0");
+    const params = new URLSearchParams({
+      limit: String(USER_PAGE_SIZE),
+      offset: String((userPage - 1) * USER_PAGE_SIZE),
+    });
+    const search = getFieldValue("searchUserInput");
+    const status = getFieldValue("filterUserStatus") || "all";
+    if (search) params.set("q", search);
+    if (status !== "all") params.set("status", status);
+    const res = await adminApi<{ items: UserItem[]; total: number }>(`/api/v1/admin/users?${params}`);
     usersList = res.items || [];
+    userTotal = res.total || 0;
     renderUsersTable();
   } catch (err) {
     clearSkeleton("usersTableBody");
@@ -679,14 +763,12 @@ function renderUsersTable(): void {
   if (usersList.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" class="py-10 text-center text-slate-400">
-          Chưa có người dùng nào trong cơ sở dữ liệu.
+        <td colspan="7" class="py-10 text-center text-slate-400">
+          Không tìm thấy tài khoản phù hợp.
         </td>
       </tr>
     `;
-    return;
-  }
-
+  } else {
   tbody.replaceChildren(...usersList.map((user) => {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-200 text-sm";
@@ -734,16 +816,59 @@ function renderUsersTable(): void {
     // Status
     const tdStatus = document.createElement("td");
     tdStatus.className = "py-3 px-4 whitespace-nowrap";
-    tdStatus.innerHTML = user.status === "active"
-      ? '<span class="inline-flex items-center gap-1 text-xs text-emerald-700 font-semibold"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Hoạt động</span>'
-      : '<span class="inline-flex items-center gap-1 text-xs text-rose-700 font-semibold"><span class="w-2 h-2 rounded-full bg-rose-500"></span>Tạm khóa</span>';
+    const statusLabel = user.status === "active"
+      ? (user.inactive_over_24_months
+        ? '<span class="inline-flex items-center text-xs text-amber-700 font-semibold">Không hoạt động ≥24 tháng</span>'
+        : '<span class="inline-flex items-center gap-1 text-xs text-emerald-700 font-semibold"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Hoạt động</span>')
+      : '<span class="inline-flex items-center gap-1 text-xs text-rose-700 font-semibold"><span class="w-2 h-2 rounded-full bg-rose-500"></span>Đang bị khóa</span>';
+    tdStatus.innerHTML = statusLabel;
 
-    tr.append(tdUser, tdLang, tdPlan, tdStats, tdStatus);
+    const tdLastActivity = document.createElement("td");
+    tdLastActivity.className = "py-3 px-4 whitespace-nowrap";
+    if (user.inactive_days == null) {
+      tdLastActivity.innerHTML = '<p class="text-xs text-slate-400">Chưa ghi nhận</p>';
+    } else {
+      tdLastActivity.innerHTML = `<p class="font-semibold text-slate-800">${user.inactive_days} ngày trước</p>
+        <p class="text-[11px] text-slate-500">${formatDate(user.last_activity_at)}</p>`;
+    }
+
+    const tdActions = document.createElement("td");
+    tdActions.className = "py-3 px-4 whitespace-nowrap";
+    const lock = document.createElement("button");
+    lock.type = "button";
+    lock.className = user.status === "suspended"
+      ? "mr-2 text-xs font-bold text-emerald-700 hover:text-emerald-900"
+      : "mr-2 text-xs font-bold text-amber-700 hover:text-amber-900";
+    lock.textContent = user.status === "suspended" ? "Mở khóa" : "Khóa";
+    lock.addEventListener("click", () => void confirmUserStatusChange(user));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "text-xs font-bold text-rose-700 hover:text-rose-900";
+    remove.textContent = "Xóa";
+    remove.addEventListener("click", () => void confirmDeleteUser(user));
+    tdActions.append(lock, remove);
+
+    tr.append(tdUser, tdLang, tdPlan, tdStats, tdStatus, tdLastActivity, tdActions);
     return tr;
   }));
+  }
 
   const userBadge = getElement("totalUsersBadge");
-  if (userBadge) userBadge.textContent = `${usersList.length} tài khoản`;
+  if (userBadge) userBadge.textContent = `${userTotal} tài khoản`;
+  const totalPages = Math.max(1, Math.ceil(userTotal / USER_PAGE_SIZE));
+  userPage = Math.min(userPage, totalPages);
+  const info = getElement("userPaginationInfo");
+  if (info) {
+    const start = userTotal ? (userPage - 1) * USER_PAGE_SIZE + 1 : 0;
+    const end = Math.min(userPage * USER_PAGE_SIZE, userTotal);
+    info.textContent = userTotal ? `Hiển thị ${start}-${end} / ${userTotal} tài khoản` : "Không có tài khoản phù hợp";
+  }
+  const pageNumber = getElement("userPageNumber");
+  if (pageNumber) pageNumber.textContent = `${userPage}/${totalPages}`;
+  const previous = getElement<HTMLButtonElement>("prevUserPage");
+  const next = getElement<HTMLButtonElement>("nextUserPage");
+  if (previous) previous.disabled = userPage <= 1;
+  if (next) next.disabled = userPage >= totalPages;
 }
 
 /**
@@ -928,6 +1053,49 @@ function initEngagementChart(): void {
 }
 
 function setupEventListeners(): void {
+  let userSearchTimer: number | undefined;
+  getElement("searchUserInput")?.addEventListener("input", () => {
+    if (userSearchTimer) window.clearTimeout(userSearchTimer);
+    userSearchTimer = window.setTimeout(() => {
+      userPage = 1;
+      void loadUsers();
+    }, 300);
+  });
+  getElement("filterUserStatus")?.addEventListener("change", () => {
+    userPage = 1;
+    void loadUsers();
+  });
+  getElement("prevUserPage")?.addEventListener("click", () => {
+    if (userPage > 1) {
+      userPage -= 1;
+      void loadUsers();
+    }
+  });
+  getElement("nextUserPage")?.addEventListener("click", () => {
+    if (userPage * USER_PAGE_SIZE < userTotal) {
+      userPage += 1;
+      void loadUsers();
+    }
+  });
+  getElement("btnDeleteInactiveUsers")?.addEventListener("click", () => {
+    openActionConfirm(
+      "Xác nhận cảnh báo và lập lịch xóa",
+      "Hệ thống sẽ gửi email cảnh báo đến tất cả tài khoản không hoạt động ít nhất 24 tháng. Sau 7 ngày, tài khoản vẫn không quay lại đăng nhập sẽ bị xóa vĩnh viễn cùng toàn bộ dữ liệu liên quan.",
+      "Gửi cảnh báo & lập lịch",
+      async () => {
+        const result = await adminApi<{ status: string; data: { eligible_accounts: number; warning_emails_sent: number; scheduled_for: string } }>(
+          "/api/v1/admin/users/delete-inactive",
+          { method: "POST" },
+        );
+        showToast(
+          `Đã lập lịch cho ${result.data.eligible_accounts} tài khoản; gửi thành công ${result.data.warning_emails_sent} email cảnh báo.`,
+          "success",
+        );
+        await loadUsers();
+      },
+    );
+  });
+
   getElement("documentForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const title = getFieldValue("inputDocumentTitle");

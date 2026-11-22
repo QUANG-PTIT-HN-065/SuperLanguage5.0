@@ -157,9 +157,24 @@ async function loadTopicsForLanguage(languageCode: string, selectedIds: number[]
 
 async function loadWords(): Promise<void> {
   try {
+    const params = new URLSearchParams({
+      limit: String(PAGE_SIZE),
+      offset: String(currentPage * PAGE_SIZE),
+    });
+    if (currentLanguageFilter !== "all") params.set("language_code", currentLanguageFilter);
+    if (currentCefrFilter !== "all") params.set("level", currentCefrFilter);
+    const searchTerm = getFieldValue("searchInput");
+    if (searchTerm) params.set("q", searchTerm);
+
     const response = await adminApi<WordListResponse>(
-      `/api/v1/admin/words?limit=${PAGE_SIZE}&offset=${currentPage * PAGE_SIZE}`
+      `/api/v1/admin/words?${params.toString()}`
     );
+    const lastPage = response.total > 0 ? Math.ceil(response.total / PAGE_SIZE) - 1 : 0;
+    if (currentPage > lastPage) {
+      currentPage = lastPage;
+      await loadWords();
+      return;
+    }
     vocabList.splice(0, vocabList.length, ...response.items);
     totalWords = response.total;
     renderVocabTable();
@@ -177,23 +192,7 @@ function updateStats(): void {
 function renderVocabTable(): void {
   const tableBody = getElement("vocabTableBody");
   if (!tableBody) return;
-
-  const searchTerm = getFieldValue("searchInput").toLocaleLowerCase();
-  const visibleItems = vocabList.filter((item) => {
-    const matchesSearch = [
-      item.word,
-      item.phonetic,
-      item.meaning,
-      item.example_sentence,
-      languagesMap.get(item.language_code),
-      item.level
-    ].join(" ").toLocaleLowerCase().includes(searchTerm);
-
-    const matchesLang = currentLanguageFilter === "all" || item.language_code === currentLanguageFilter;
-    const matchesCefr = currentCefrFilter === "all" || item.level === currentCefrFilter;
-
-    return matchesSearch && matchesLang && matchesCefr;
-  });
+  const visibleItems = vocabList;
 
   if (visibleItems.length === 0) {
     tableBody.innerHTML = `
@@ -210,7 +209,10 @@ function renderVocabTable(): void {
 
   const tableInfo = getElement("tableInfo");
   if (tableInfo) {
-    tableInfo.textContent = `Hiển thị ${visibleItems.length} từ (Trang ${currentPage + 1} / Tổng ${totalWords} từ vựng)`;
+    const totalPages = totalWords > 0 ? Math.ceil(totalWords / PAGE_SIZE) : 0;
+    const start = totalWords === 0 ? 0 : currentPage * PAGE_SIZE + 1;
+    const end = totalWords === 0 ? 0 : Math.min((currentPage + 1) * PAGE_SIZE, totalWords);
+    tableInfo.textContent = `Hiển thị ${start}-${end} / ${totalWords} từ vựng (Trang ${totalPages === 0 ? 0 : currentPage + 1}/${totalPages})`;
   }
 
   const prev = getElement<HTMLButtonElement>("prevPage");
@@ -218,6 +220,12 @@ function renderVocabTable(): void {
 
   const next = getElement<HTMLButtonElement>("nextPage");
   if (next) next.disabled = (currentPage + 1) * PAGE_SIZE >= totalWords;
+
+  const first = getElement<HTMLButtonElement>("firstPage");
+  if (first) first.disabled = currentPage === 0;
+
+  const last = getElement<HTMLButtonElement>("lastPage");
+  if (last) last.disabled = totalWords === 0 || (currentPage + 1) * PAGE_SIZE >= totalWords;
 
   const pageNum = getElement("pageNumber");
   if (pageNum) pageNum.textContent = String(currentPage + 1);
@@ -498,17 +506,22 @@ async function confirmDelete(): Promise<void> {
 
 function setupEventListeners(): void {
   // Search
-  getElement("searchInput")?.addEventListener("input", renderVocabTable);
+  getElement("searchInput")?.addEventListener("input", () => {
+    currentPage = 0;
+    void loadWords();
+  });
 
   // Filters
   getElement("filterLanguage")?.addEventListener("change", (e) => {
     currentLanguageFilter = (e.target as HTMLSelectElement).value;
-    renderVocabTable();
+    currentPage = 0;
+    void loadWords();
   });
 
   getElement("filterCefr")?.addEventListener("change", (e) => {
     currentCefrFilter = (e.target as HTMLSelectElement).value;
-    renderVocabTable();
+    currentPage = 0;
+    void loadWords();
   });
 
   // Language change in form -> reload topics
@@ -586,10 +599,27 @@ function setupEventListeners(): void {
     }
   });
 
+  getElement("firstPage")?.addEventListener("click", () => {
+    if (currentPage !== 0) {
+      currentPage = 0;
+      void loadWords();
+    }
+  });
+
   getElement("nextPage")?.addEventListener("click", () => {
     if ((currentPage + 1) * PAGE_SIZE < totalWords) {
       currentPage += 1;
       void loadWords();
+    }
+  });
+
+  getElement("lastPage")?.addEventListener("click", () => {
+    if (totalWords > 0) {
+      const lastPage = Math.ceil(totalWords / PAGE_SIZE) - 1;
+      if (currentPage !== lastPage) {
+        currentPage = lastPage;
+        void loadWords();
+      }
     }
   });
 

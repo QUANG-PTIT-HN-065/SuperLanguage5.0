@@ -14,10 +14,14 @@ from app.schemas.vocabulary import (
 )
 from app.services.admin import (
     create_admin_topic,
+    delete_admin_user,
+    process_inactive_account_deletions,
     delete_admin_topic,
     get_admin_overview_stats,
     list_admin_topics_full,
     list_admin_users,
+    schedule_inactive_account_deletions,
+    set_admin_user_status,
     update_admin_topic,
 )
 from app.services.learning_service import get_topic_readings, save_topic_readings
@@ -199,10 +203,51 @@ def get_stats(_: Dict[str, Any] = Depends(get_current_admin_profile)):
 def get_users(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    q: Optional[str] = Query(default=None, max_length=80),
+    status_filter: Optional[str] = Query(default=None, alias="status"),
+    inactive_only: bool = Query(default=False),
     _: Dict[str, Any] = Depends(get_current_admin_profile),
 ):
     """Danh sách học viên và người dùng kèm số liệu học tập thực tế."""
-    return list_admin_users(limit, offset)
+    return list_admin_users(
+        limit,
+        offset,
+        search_term=q,
+        status_filter=status_filter,
+        inactive_only=inactive_only,
+    )
+
+
+@router.patch("/users/{user_id}/status")
+def change_user_status(
+    user_id: str,
+    action: str = Query(..., pattern="^(lock|unlock)$"),
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    return {"status": "success", "user": set_admin_user_status(user_id, action)}
+
+
+@router.delete("/users/{user_id}")
+def remove_user(
+    user_id: str,
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    delete_admin_user(user_id)
+    return {"status": "success", "deleted_user_id": user_id}
+
+
+@router.post("/users/delete-inactive")
+def schedule_delete_inactive_users(
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    return {"status": "success", "data": schedule_inactive_account_deletions()}
+
+
+@router.post("/users/process-inactive-deletion")
+def process_inactive_deletion(
+    _: Dict[str, Any] = Depends(get_current_admin_profile),
+):
+    return {"status": "success", "data": process_inactive_account_deletions()}
 
 
 # ==================== TOPICS MANAGEMENT ====================
@@ -273,10 +318,19 @@ def save_topic_readings_route(
 def get_words(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    language_code: Optional[str] = Query(default=None),
+    level: Optional[str] = Query(default=None),
+    q: Optional[str] = Query(default=None, max_length=80),
     _: Dict[str, Any] = Depends(get_current_admin_profile),
 ):
     """Danh sách từ vựng dành cho quản trị viên."""
-    return list_admin_words(limit, offset)
+    return list_admin_words(
+        limit,
+        offset,
+        language_code=language_code,
+        level=level,
+        search_term=q,
+    )
 
 
 @router.get("/words/{word_id}")
