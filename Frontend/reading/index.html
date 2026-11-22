@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Bài Đọc Chuyên Đề Toàn Màn Hình</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="./style.css">
+  <!-- Auth Guard -->
+  <script>
+    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+      window.location.replace('../login/index.html');
+    }
+  </script>
+</head>
+<body class="user-authenticated">
+
+  <!-- Ambient Glow Background -->
+  <div class="reading-ambient-glow"></div>
+
+  <!-- Scroll Progress Indicator (Top edge) -->
+  <div class="reading-scroll-progress-bar" id="readingScrollProgressBar" style="width: 0%;"></div>
+
+  <!-- ================= TOP FULL-SCREEN NAVBAR ================= -->
+  <header class="reading-navbar">
+    <div class="reading-navbar-inner">
+      <div class="nav-left">
+        <button type="button" class="btn-exit-reading" id="btnExitReading" title="Trở về lộ trình bài học">
+          <i class="fa-solid fa-arrow-left"></i> <span>Rời khỏi</span>
+        </button>
+        <div class="brand-badge">
+          <img src="../assets/logo.png" alt="Slanguage Logo">
+          <span>Slanguage <span class="brand-highlight">Reader</span></span>
+        </div>
+      </div>
+
+      <div class="nav-center-title">
+        <div class="stage-crumb" id="headerStageCrumb">MỐC CHỦ ĐỀ 1</div>
+        <div class="node-crumb-title" id="headerNodeTitle">Bài Đọc Lý Thuyết Chuyên Đề</div>
+      </div>
+
+      <div class="nav-right">
+        <div class="stat-chip streak" title="Chuỗi ngày rèn luyện">
+          <img src="../assets/streak-flame.gif?v=4" alt="Streak" class="streak-flame-img">
+          <span id="headerStreakVal">18 Ngày</span>
+        </div>
+        <div class="stat-chip xp" title="Điểm kinh nghiệm hiện tại">
+          <i class="fa-solid fa-bolt"></i>
+          <span id="headerXPVal">0 XP</span>
+        </div>
+        <div class="stat-chip hearts" title="Sinh mệnh">
+          <i class="fa-solid fa-heart"></i>
+          <span id="headerHeartsVal">5/5</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN READING CONTAINER ================= -->
+  <main class="reading-main-container">
+
+    <!-- STAGE HERO BANNER (Đầu trang bài đọc) -->
+    <section class="stage-hero-banner" id="stageHeroBanner">
+      <div class="stage-hero-top">
+        <div class="stage-title-flex">
+          <div class="stage-icon-circle" id="stageHeroIconWrap">
+            <i class="fa-solid fa-book-open" id="stageHeroIcon"></i>
+          </div>
+          <div class="stage-meta-info">
+            <div class="stage-tier-badge" id="stageHeroTier">MỐC CHỦ ĐỀ 1: CỔNG NHẬP MÔN & NGỮ ÂM KANA</div>
+            <h1 class="stage-title-text" id="stageHeroTitle">Cổng Khởi Nguyên: Ngữ Âm & Chữ Cái</h1>
+          </div>
+        </div>
+        <div class="stage-status-badge" id="stageHeroStatus">
+          <i class="fa-solid fa-book-reader"></i> Bài đọc mở đường 📖
+        </div>
+      </div>
+
+      <!-- STAKES PILL RIBBON -->
+      <div class="stakes-pill-ribbon" id="stakesPillRibbon">
+        <span class="stake-time" id="stageHeroReadTime"><i class="fa-solid fa-clock"></i> ~3-5 phút đọc</span>
+        <span>•</span>
+        <span class="stake-reward" id="stageHeroXP"><i class="fa-solid fa-book-open"></i> Tiếp thu kiến thức cốt lõi (Không thưởng / phạt)</span>
+        <span>•</span>
+        <span class="stake-unlock" id="stageHeroUnlock"><i class="fa-solid fa-lock-open"></i> Mở khóa thử thách Mức Dễ</span>
+      </div>
+    </section>
+
+    <!-- READING TOOLBAR (Tùy chỉnh cỡ chữ, giọng đọc Audio TTS) -->
+    <section class="reading-toolbar">
+      <div class="toolbar-left">
+        <span class="toolbar-label"><i class="fa-solid fa-sliders"></i> Tùy chỉnh đọc:</span>
+        <div class="font-size-controls">
+          <button type="button" class="btn-tool-control" id="btnFontDecr" title="Thu nhỏ chữ">
+            A<span style="font-size: 0.75rem;">-</span>
+          </button>
+          <span class="font-size-val" id="fontSizeVal">100%</span>
+          <button type="button" class="btn-tool-control" id="btnFontIncr" title="Phóng to chữ">
+            A<span style="font-size: 0.85rem;">+</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="toolbar-right">
+        <button type="button" class="btn-narration-toggle" id="btnNarrationToggle">
+          <i class="fa-solid fa-volume-high" id="narrationIcon"></i>
+          <span id="narrationText">Nghe bài đọc (Audio TTS)</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- FULL READING ARENA CARD -->
+    <article class="reading-arena-card" id="readingArenaCard">
+      <!-- Article Header & Lead -->
+      <header class="article-lead-header">
+        <div class="article-tag-wrap">
+          <span class="article-cat-tag"><i class="fa-solid fa-scroll"></i> Kiến thức nền tảng</span>
+          <span class="article-stage-tag" id="articleStageBadge">Giai đoạn 1</span>
+        </div>
+        <h2 class="article-main-title" id="articleMainTitle">Tiêu đề bài đọc lý thuyết</h2>
+        <p class="reading-lead-p" id="articleLeadText">
+          Đang tải nội dung bài đọc chuyên đề...
+        </p>
+      </header>
+
+      <!-- Dynamic Sections Body -->
+      <div class="reading-sections-container" id="readingSectionsContainer">
+        <!-- Rendered dynamically by reading.ts -->
+      </div>
+
+      <!-- Key Takeaways Card -->
+      <section class="reading-takeaway-card" id="readingTakeawayCard">
+        <div class="takeaway-icon-wrap">
+          <i class="fa-solid fa-gem"></i>
+        </div>
+        <div class="takeaway-content-wrap">
+          <h4 class="takeaway-title">Điểm Cốt Lõi Cần Nhớ</h4>
+          <p class="takeaway-text" id="articleTakeawayText">
+            Đang tải tóm tắt kiến thức trọng tâm...
+          </p>
+        </div>
+      </section>
+
+      <!-- Bottom Action Footer -->
+      <footer class="reading-action-footer">
+        <div class="action-footer-info">
+          <i class="fa-solid fa-circle-check" style="color: #4ade80;"></i>
+          <span>Bạn đã xem qua toàn bộ kiến thức chuyên đề của mốc này!</span>
+        </div>
+        <button type="button" class="btn-complete-reading" id="btnCompleteReading">
+          <i class="fa-solid fa-book-reader"></i> Đã Đọc Xong & Hoàn Thành Chủ Đề 🌟
+        </button>
+      </footer>
+    </article>
+
+  </main>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- Modal: Xác nhận rời khỏi bài đọc -->
+  <div class="reading-modal-overlay" id="modalConfirmExit">
+    <div class="reading-modal-card">
+      <div class="modal-icon-badge warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+      </div>
+      <h3 class="reading-modal-title">Tạm Dừng Đọc Bài?</h3>
+      <p class="reading-modal-desc">
+        Bạn có muốn trở về lộ trình học? Tiến trình hoàn thành bài đọc và mở khóa ải tiếp theo sẽ chỉ được ghi nhận khi bạn bấm "Đã đọc xong & hoàn thành chủ đề".
+      </p>
+      <div class="reading-modal-footer">
+        <button type="button" class="btn-modal-cancel" id="btnCancelExit">Ở lại đọc tiếp</button>
+        <button type="button" class="btn-modal-confirm" id="btnConfirmExit">Rời khỏi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Chúc mừng hoàn thành bài đọc (Sử dụng model & logic chúc mừng chuẩn) -->
+  <div class="reading-modal-overlay" id="modalVictory">
+    <div class="reading-modal-card">
+      <div class="modal-icon-badge victory">
+        <i class="fa-solid fa-trophy"></i>
+      </div>
+      <h3 class="reading-modal-title" id="victoryModalTitle">Xuất Sắc! Tiếp Thu Hoàn Tất!</h3>
+      <p class="reading-modal-desc" id="victoryModalDesc">
+        Bạn đã hoàn thành bài đọc chuyên đề của Mốc chủ đề!<br>
+        Thử thách mức độ <strong>Dễ</strong> đã sẵn sàng khiêu chiến.
+      </p>
+      <div class="reading-modal-footer">
+        <button type="button" class="btn-modal-confirm" id="btnVictoryReturn">
+          <i class="fa-solid fa-map"></i> Trở Về Lộ Trình
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="reading-toast" id="readingToast">
+    <i class="fa-solid fa-circle-info"></i>
+    <span id="readingToastText">Thông báo</span>
+  </div>
+
+  <!-- Nạp và thực thi trực tiếp file TypeScript qua Babel Standalone (Không dùng file .js) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
+  <script>
+    fetch('./reading.ts')
+      .then(function(r) { return r.text(); })
+      .then(function(code) {
+        var js = Babel.transform(code, { filename: 'reading.ts', presets: ['typescript'] }).code;
+        var s = document.createElement('script');
+        s.textContent = js;
+        document.body.appendChild(s);
+        if (typeof window.initSlanguageReadingApp === 'function' && !window.readingApp) {
+          window.initSlanguageReadingApp();
+        }
+      })
+      .catch(function(err) { console.error('Error loading reading.ts:', err); });
+  </script>
+</body>
+</html>
