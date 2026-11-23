@@ -435,6 +435,14 @@
             <span id="tableInfo">Đang tải số liệu...</span>
             <div class="flex items-center gap-1.5">
               <button
+                id="firstPage"
+                type="button"
+                disabled
+                class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                Trang đầu
+              </button>
+              <button
                 id="prevPage"
                 type="button"
                 disabled
@@ -450,6 +458,14 @@
                 class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-40 transition-colors cursor-pointer"
               >
                 Trang sau
+              </button>
+              <button
+                id="lastPage"
+                type="button"
+                disabled
+                class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                Trang cuối
               </button>
             </div>
           </div>

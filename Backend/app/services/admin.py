@@ -1,6 +1,10 @@
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+import requests
+
 from fastapi import HTTPException, status
 from app.db.supabase import supabase_admin
+from app.core.config import settings
 from app.services.profile_service import raise_db_error
 
 
@@ -116,42 +120,279 @@ def delete_admin_topic(topic_id: int) -> None:
         raise_db_error(exc)
 
 
-def list_admin_users(limit: int = 50, offset: int = 0) -> Dict[str, Any]:
-    """Lấy danh sách người dùng và thống kê học tập."""
+def _parse_datetime(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
     try:
-        res = (
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
+    except (TypeError, ValueError):
+        return None
+
+
+def _last_activity(profile: Dict[str, Any], stats: Dict[str, Any]) -> Optional[datetime]:
+    candidates = [
+        _parse_datetime(profile.get("last_sign_in_at")),
+        _parse_datetime(stats.get("last_activity_date")),
+        _parse_datetime(profile.get("updated_at")),
+        _parse_datetime(profile.get("created_at")),
+    ]
+    candidates = [item for item in candidates if item is not None]
+    return max(candidates) if candidates else None
+
+
+def list_admin_users(
+    limit: int = 50,
+    offset: int = 0,
+    search_term: Optional[str] = None,
+    status_filter: Optional[str] = None,
+    inactive_only: bool = False,
+) -> Dict[str, Any]:
+    """Lọc, tìm kiếm và phân trang tài khoản người dùng."""
+    try:
+        query = (
             supabase_admin.table("profiles")
             .select(
-                "id, email, username, display_name, role, status, plan_id, target_language, current_level, created_at",
-                count="exact",# type: ignore
+                "id, email, username, display_name, role, status, plan_id, "
+                "target_language, current_level, created_at, updated_at, last_sign_in_at",
+                count="exact", # type: ignore
             )
-            .order("created_at", desc=True)
-            .range(offset, offset + limit - 1)
-            .execute()
+            .is_("deleted_at", "null")
         )
-        profiles = res.data or []
-        total = res.count or len(profiles)
+        if status_filter in ("active", "suspended"):
+            query = query.eq("status", status_filter)
 
-        user_ids = [p["id"] for p in profiles]# type: ignore
+        profiles = query.order("created_at", desc=True).range(0, 4999).execute().data or []
+
+        search = (search_term or "").strip().lower()
+        if search:
+            profiles = [
+                p for p in profiles
+                if search in str(p.get("email") or "").lower() # type: ignore
+                or search in str(p.get("username") or "").lower() # type: ignore
+                or search in str(p.get("display_name") or "").lower() # type: ignore
+            ]
+
+        user_ids = [p["id"] for p in profiles] # type: ignore
         stats_map: Dict[str, Dict[str, Any]] = {}
         if user_ids:
             stats_res = (
                 supabase_admin.table("user_stats")
-                .select("user_id, xp_total, current_streak, longest_streak, words_learned")
-                .in_("user_id", user_ids)# type: ignore
+                .select("user_id, xp_total, current_streak, longest_streak, words_learned, last_activity_date")
+                .in_("user_id", user_ids) # type: ignore
                 .execute()
             )
             for s in stats_res.data or []:
-                stats_map[s["user_id"]] = s# type: ignore
+                stats_map[s["user_id"]] = s # type: ignore
 
-        for p in profiles:
-            st = stats_map.get(p["id"], {})# type: ignore
-            p["xp_total"] = st.get("xp_total", 0)# type: ignore
-            p["current_streak"] = st.get("current_streak", 0)# type: ignore
-            p["words_learned"] = st.get("words_learned", 0)# type: ignore
+        cutoff = datetime.now(timezone.utc) - timedelta(days=730)
+        filtered: List[Dict[str, Any]] = []
+        for profile in profiles:
+            stats = stats_map.get(profile["id"], {}) # type: ignore
+            last_activity = _last_activity(profile, stats)  # type: ignore
+            inactive_days = max(0, (datetime.now(timezone.utc) - last_activity).days) if last_activity else None
+            profile["xp_total"] = stats.get("xp_total", 0) # type: ignore
+            profile["current_streak"] = stats.get("current_streak", 0) # type: ignore
+            profile["words_learned"] = stats.get("words_learned", 0) # type: ignore
+            profile["last_activity_at"] = last_activity.isoformat() if last_activity else None # type: ignore
+            profile["inactive_days"] = inactive_days # type: ignore
+            profile["inactive_over_24_months"] = bool(last_activity and last_activity < cutoff) # type: ignore
 
-        return {"items": profiles, "total": total, "limit": limit, "offset": offset}
+            if inactive_only and not profile["inactive_over_24_months"]: # type: ignore
+                continue
+            if status_filter == "inactive" and not profile["inactive_over_24_months"]: # type: ignore
+                continue
+            if status_filter == "active" and (profile["status"] != "active" or profile["inactive_over_24_months"]): # type: ignore
+                continue
+            filtered.append(profile) # type: ignore
+
+        total = len(filtered)
+        paged = filtered[offset:offset + limit]
+        return {"items": paged, "total": total, "limit": limit, "offset": offset}
     except Exception as exc:
         raise_db_error(exc)
         return {"items": [], "total": 0, "limit": limit, "offset": offset}
+
+
+def set_admin_user_status(user_id: str, action: str) -> Dict[str, Any]:
+    if action not in ("lock", "unlock"):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Hành động không hợp lệ.")
+
+    new_status = "suspended" if action == "lock" else "active"
+    try:
+        profile_res = (
+            supabase_admin.table("profiles")
+            .update({"status": new_status})
+            .eq("id", user_id)
+            .execute()
+        )
+        if not profile_res.data:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy tài khoản.")
+
+        try:
+            supabase_admin.auth.admin.update_user_by_id(
+                user_id,
+                {"ban_duration": "876000h" if action == "lock" else "none"},
+            )
+        except Exception:
+            if action == "lock":
+                raise HTTPException(
+                    status.HTTP_502_BAD_GATEWAY,
+                    "Đã cập nhật hồ sơ nhưng không thể khóa phiên đăng nhập trong Supabase Auth.",
+                )
+
+        return profile_res.data[0] # type: ignore
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise_db_error(exc)
+        raise
+
+
+def delete_admin_user(user_id: str) -> None:
+    try:
+        supabase_admin.auth.admin.delete_user(user_id)
+    except Exception as exc:
+        raise_db_error(exc)
+
+
+def _send_inactivity_warning(email: str, display_name: str) -> bool:
+    if not settings.RESEND_API_KEY or not email:
+        return False
+    try:
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": "SuperLanguage <onboarding@resend.dev>",
+                "to": [email],
+                "subject": "Cảnh báo: tài khoản SuperLanguage sẽ bị xóa",
+                "html": (
+                    f"<p>Xin chào {display_name or email},</p>"
+                    "<p>Tài khoản của bạn đã không hoạt động ít nhất 24 tháng. "
+                    "Tài khoản và toàn bộ dữ liệu liên quan sẽ được xóa sau 7 ngày nếu bạn không đăng nhập lại.</p>"
+                    "<p>Hãy đăng nhập vào SuperLanguage để giữ tài khoản.</p>"
+                ),
+            },
+            timeout=15,
+        )
+        return response.status_code in (200, 201)
+    except requests.RequestException:
+        return False
+
+
+def _inactive_profiles() -> List[Dict[str, Any]]:
+    cutoff = datetime.now(timezone.utc) - timedelta(days=730)
+    result = (
+        supabase_admin.table("profiles")
+        .select(
+            "id, email, username, display_name, status, created_at, updated_at, "
+            "last_sign_in_at"
+        )
+        .is_("deleted_at", "null")
+        .range(0, 4999)
+        .execute()
+    )
+    profiles = result.data or []
+    user_ids = [p["id"] for p in profiles] # type: ignore
+    stats_map: Dict[str, Dict[str, Any]] = {}
+    if user_ids:
+        stats_res = (
+            supabase_admin.table("user_stats")
+            .select("user_id, last_activity_date")
+            .in_("user_id", user_ids) # type: ignore
+            .execute()
+        )
+        stats_map = {row["user_id"]: row for row in (stats_res.data or [])} # type: ignore
+
+    inactive: List[Dict[str, Any]] = []
+    for profile in profiles:
+        last_activity = _last_activity(profile, stats_map.get(profile["id"], {})) # type: ignore
+        if last_activity and last_activity < cutoff:
+            profile["_last_activity"] = last_activity # type: ignore
+            inactive.append(profile) # type: ignore
+    return inactive
+
+
+def schedule_inactive_account_deletions() -> Dict[str, Any]:
+    """Gửi mail cảnh báo và lên lịch xóa sau 7 ngày."""
+    now = datetime.now(timezone.utc)
+    scheduled_at = now + timedelta(days=7)
+    warned = 0
+    eligible = 0
+    for profile in _inactive_profiles():
+        eligible += 1
+        email_sent = _send_inactivity_warning(
+            profile.get("email") or "",
+            profile.get("display_name") or profile.get("username") or "",
+        )
+        try:
+            supabase_admin.table("profiles").update({
+                "deletion_warning_at": now.isoformat(),
+                "deletion_scheduled_at": scheduled_at.isoformat(),
+            }).eq("id", profile["id"]).execute()
+        except Exception as exc:
+            text = str(exc).lower()
+            if "deletion_warning_at" in text or "deletion_scheduled_at" in text:
+                raise HTTPException(
+                    status.HTTP_400_BAD_REQUEST,
+                    "Chưa áp dụng migration 16_account_lifecycle.sql trên Supabase.",
+                ) from exc
+            raise_db_error(exc)
+        if email_sent:
+            warned += 1
+    return {
+        "eligible_accounts": eligible,
+        "warning_emails_sent": warned,
+        "scheduled_for": scheduled_at.isoformat(),
+    }
+
+
+def process_inactive_account_deletions() -> Dict[str, Any]:
+    """Xóa tài khoản đã hết 7 ngày cảnh báo và vẫn không hoạt động."""
+    now = datetime.now(timezone.utc)
+    try:
+        result = (
+            supabase_admin.table("profiles")
+            .select("id")
+            .is_("deleted_at", "null")
+            .lte("deletion_scheduled_at", now.isoformat())
+            .execute()
+        )
+    except Exception as exc:
+        text = str(exc).lower()
+        if "deletion_scheduled_at" in text:
+            return {"deleted_accounts": 0}
+        raise_db_error(exc)
+    deleted = 0
+    for profile in result.data or []:
+        full = (
+            supabase_admin.table("profiles")
+            .select("id, last_sign_in_at, updated_at, created_at")
+            .eq("id", profile["id"]) # type: ignore
+            .limit(1)
+            .execute()
+            .data
+        )
+        if not full:
+            continue
+        stats = (
+            supabase_admin.table("user_stats")
+            .select("last_activity_date")
+            .eq("user_id", profile["id"]) # type: ignore
+            .limit(1)
+            .execute()
+            .data
+        )
+        last_activity = _last_activity(full[0], (stats or [{}])[0]) # type: ignore
+        cutoff = now - timedelta(days=730)
+        if last_activity and last_activity < cutoff:
+            delete_admin_user(profile["id"]) # type: ignore
+            deleted += 1
+    return {"deleted_accounts": deleted}
 
