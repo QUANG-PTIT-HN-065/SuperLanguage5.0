@@ -6,7 +6,7 @@
  * còn ngôn ngữ mục tiêu (lộ trình học) chỉ đổi khi lưu hồ sơ.
  */
 
-import { slanguageApi } from '../shared/api-client';
+import { isLearnerAuthenticated, slanguageApi } from '../shared/api-client';
 import { initializeLearnerHeader, renderLearnerHeader } from '../shared/learner-header';
 import { applyI18n, getLocale, localeLabel, t, LOCALE_EVENT } from '../shared/i18n';
 import { clearSkeleton, showSkeleton } from '../shared/skeleton';
@@ -84,7 +84,7 @@ class SlanguageProfile {
   private topics: PathTopic[] = [];
 
   constructor() {
-    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+    if (!isLearnerAuthenticated()) {
       window.location.replace('../login/index.html');
       return;
     }

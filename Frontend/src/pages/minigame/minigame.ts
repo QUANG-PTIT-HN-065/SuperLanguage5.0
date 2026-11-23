@@ -333,8 +333,9 @@ function getApiBaseUrl(): string {
 }
 
 function getAuthToken(): string {
+  const cookieMatch = document.cookie.match(/(?:^|;\s*)slanguage_access_token=([^;]*)/);
   return (
-    localStorage.getItem('slanguage_access_token') ||
+    (cookieMatch ? decodeURIComponent(cookieMatch[1]) : '') ||
     sessionStorage.getItem('superlanguage.admin.accessToken') ||
     ''
   );

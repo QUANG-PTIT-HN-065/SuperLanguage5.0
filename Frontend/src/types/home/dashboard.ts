@@ -1,4 +1,4 @@
-import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { getAuthCookie, isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { renderLearnerHeader } from "../shared/learner-header";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import { LOCALE_EVENT, t } from "../shared/i18n";
@@ -274,7 +274,7 @@ function renderLeaderboard(entries: WeeklyLeaderboardEntry[]): void {
 async function loadLearnerDashboard(): Promise<void> {
   clearServerData("hm.loadingData");
   if (!isLearnerAuthenticated()) {
-    if (localStorage.getItem("slanguage_is_logged_in") === "true") {
+    if (getAuthCookie("slanguage_is_logged_in") === "true") {
       clearServerData("hm.invalidSession");
       showStatus("hm.noToken", true);
     }

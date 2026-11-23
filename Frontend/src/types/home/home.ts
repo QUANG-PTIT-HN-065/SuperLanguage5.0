@@ -4,7 +4,7 @@
  * flashcard interactions, XP tracker, streak logic, and lesson preview modal.
  */
 
-import { slanguageApi } from '../shared/api-client';
+import { getAuthCookie, setAuthCookie, slanguageApi } from '../shared/api-client';
 import { logoutLearner } from '../shared/learner-header';
 import { applyI18n, getLocale, initI18n, localeLabel, setLocale, t, LOCALE_EVENT, type UiLocale } from '../shared/i18n';
 
@@ -134,12 +134,12 @@ class SlanguageDashboard {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('auth')) {
       this.isLoggedIn = urlParams.get('auth') === '1' || urlParams.get('auth') === 'true';
-      localStorage.setItem('slanguage_is_logged_in', this.isLoggedIn ? 'true' : 'false');
+      setAuthCookie('slanguage_is_logged_in', this.isLoggedIn ? 'true' : 'false');
     } else if (urlParams.has('logout')) {
       this.isLoggedIn = false;
-      localStorage.setItem('slanguage_is_logged_in', 'false');
+      setAuthCookie('slanguage_is_logged_in', 'false');
     } else {
-      this.isLoggedIn = localStorage.getItem('slanguage_is_logged_in') === 'true';
+      this.isLoggedIn = getAuthCookie('slanguage_is_logged_in') === 'true';
     }
 
     this.applyAuthState();
@@ -155,7 +155,7 @@ class SlanguageDashboard {
     }
 
     // Check saved user name and sync with Header & Leaderboard
-    const savedUserName = localStorage.getItem('slanguage_user_name') || 'Học viên';
+    const savedUserName = getAuthCookie('slanguage_user_name') || 'Học viên';
     document.querySelectorAll('.user-info-text .name').forEach(el => {
       el.textContent = savedUserName;
     });

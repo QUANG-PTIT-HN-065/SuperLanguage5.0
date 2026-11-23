@@ -2980,3 +2980,111 @@ body.user-authenticated .guest-only {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   NODE MODAL FULL-SCREEN ARENA (bài đọc + thử thách quiz)
+   Phóng to thẻ ải trong roadmap ra toàn màn hình như arena quiz.
+   ============================================================ */
+.node-modal-overlay {
+  padding: 0;
+}
+
+.node-modal-box {
+  width: 100%;
+  max-width: none;
+  height: 100vh;
+  max-height: none;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  padding: clamp(18px, 3vw, 36px) clamp(16px, 5vw, 72px) clamp(24px, 3vw, 40px);
+}
+
+.node-modal-close {
+  top: clamp(16px, 2.5vw, 26px);
+  right: clamp(16px, 2.5vw, 26px);
+  width: 44px;
+  height: 44px;
+}
+
+.node-modal-box .node-modal-title {
+  font-size: clamp(1.5rem, 3vw, 2.15rem);
+}
+
+.node-modal-box .node-modal-body {
+  padding-top: 22px;
+}
+
+/* --- Reading article card --- */
+.hub-reading-box {
+  padding: clamp(24px, 4vw, 44px);
+  border-radius: 22px;
+}
+
+.reading-article-title {
+  font-size: clamp(1.35rem, 2.6vw, 1.9rem);
+}
+
+.reading-lead-p {
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  line-height: 1.8;
+}
+
+.reading-section-heading {
+  font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+}
+
+.hub-reading-box p {
+  font-size: clamp(1rem, 1.5vw, 1.12rem);
+  line-height: 1.85;
+}
+
+/* --- Dungeon trial card --- */
+.dungeon-trial-box {
+  padding: clamp(22px, 3.5vw, 40px);
+  border-radius: 22px;
+}
+
+.trial-title-wrap {
+  font-size: 1rem;
+}
+
+.trial-prompt {
+  font-size: clamp(1.15rem, 2.2vw, 1.45rem);
+  line-height: 1.6;
+  padding: 16px 20px;
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+
+.dungeon-choice-btn {
+  min-height: 54px;
+  padding: 15px 20px;
+  font-size: clamp(1rem, 1.5vw, 1.1rem);
+  border-radius: 14px;
+}
+
+@media (max-width: 768px) {
+  .node-modal-box {
+    padding: 64px 16px 24px;
+  }
+
+  .hub-reading-box,
+  .dungeon-trial-box {
+    padding: 18px 16px;
+    border-radius: 16px;
+  }
+
+  .trial-prompt {
+    padding: 14px 16px;
+  }
+}
+
+/* --- Bỏ khối header thừa trong thẻ ải (bài đọc & nhánh): nhãn trạng thái,
+       dải độ khó/XP/máu, mục tiêu, minh họa — chỉ giữ tiêu đề phía trên. --- */
+.node-modal-box .node-modal-tags,
+.node-modal-box .node-stakes-bar,
+.node-modal-box #modalObjectivesWrap,
+.node-modal-box .node-skill-preview {
+  display: none !important;
+}

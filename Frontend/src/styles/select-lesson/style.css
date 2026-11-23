@@ -2194,3 +2194,287 @@ dialog.lesson-result::backdrop {
   line-height: 1.6;
   font-size: 0.95rem;
 }
+
+/* ============================================================
+   LESSON FULL-SCREEN ARENA — tích hợp từ prototype quiz/
+   Bài đọc + quiz mở TOÀN MÀN HÌNH thay vì card 860px trong trang
+   ============================================================ */
+.lesson-workspace {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(0, 180, 216, 0.14) 0%, transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(255, 183, 3, 0.07) 0%, transparent 45%),
+    #050d16;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.lesson-workspace[hidden] {
+  display: none;
+}
+
+body:has(.lesson-workspace:not([hidden])) {
+  overflow: hidden;
+}
+
+.lesson-ambient-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 25%, rgba(0, 180, 216, 0.08) 0%, transparent 65%);
+  z-index: 0;
+}
+
+/* --- Sticky quiz-navbar style toolbar --- */
+.lesson-workspace .lesson-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 14px clamp(16px, 4vw, 44px);
+  background: rgba(6, 18, 30, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lesson-workspace #exitLesson {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e2f0f8;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.lesson-workspace #exitLesson:hover {
+  background: rgba(220, 20, 60, 0.22);
+  border-color: rgba(220, 20, 60, 0.5);
+  color: #ffffff;
+}
+
+.lesson-workspace #lessonProgressText {
+  background: rgba(0, 180, 216, 0.16);
+  border: 1px solid rgba(0, 180, 216, 0.45);
+  color: #4cc9f0;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* --- Sticky progress track (arena-progress-track) --- */
+.lesson-workspace .lesson-progress-track {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  flex-shrink: 0;
+  width: 100%;
+  height: 9px;
+  margin: 0;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lesson-workspace .lesson-progress-track span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #00B4D8 0%, #7AE2CF 100%);
+  box-shadow: 0 0 12px rgba(0, 180, 216, 0.6);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Full-screen arena column (cards span the viewport) --- */
+.lesson-arena-main {
+  position: relative;
+  z-index: 1;
+  flex: 1 0 auto;
+  width: calc(100% - clamp(16px, 3vw, 40px));
+  max-width: none;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 42px) 0 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* --- Reading panel = arena card (stage hero scale) --- */
+.lesson-workspace .lesson-reading {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  background: rgba(12, 22, 34, 0.96);
+  border: 1.5px solid rgba(255, 183, 3, 0.35);
+  border-radius: 24px;
+  padding: clamp(26px, 4.5vw, 44px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), inset 0 0 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.lesson-workspace .lesson-reading h2 {
+  font-size: clamp(1.6rem, 3.4vw, 2.2rem);
+  margin-top: 12px;
+}
+
+.lesson-workspace .lesson-reading__text {
+  font-size: clamp(1.05rem, 1.8vw, 1.22rem);
+  line-height: 1.95;
+  margin-top: 18px;
+}
+
+/* --- Question panel = arena card --- */
+.lesson-workspace .lesson-question {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  background: rgba(12, 22, 34, 0.96);
+  border: 1.5px solid rgba(0, 180, 216, 0.35);
+  border-radius: 24px;
+  padding: clamp(26px, 4.5vw, 44px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), inset 0 0 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.lesson-workspace .lesson-question h2 {
+  font-size: clamp(1.45rem, 3vw, 1.95rem);
+}
+
+.lesson-workspace .lesson-question-count,
+.lesson-workspace .lesson-question-type {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* Prompt = arena-prompt-box */
+.lesson-workspace .lesson-prompt {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  padding: 24px 30px;
+  margin: 18px 0 24px;
+  font-size: clamp(1.2rem, 2.2vw, 1.5rem);
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.6;
+  letter-spacing: 0.2px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.lesson-workspace .lesson-prompt:empty {
+  display: none;
+}
+
+/* Choices = arena-choices-grid */
+.lesson-workspace .lesson-options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.lesson-workspace .lesson-option {
+  padding: 16px 20px;
+  border-radius: 14px;
+  font-size: 1.05rem;
+}
+
+.lesson-workspace .lesson-option-letter {
+  width: 34px;
+  height: 34px;
+  font-size: 0.95rem;
+}
+
+.lesson-workspace .lesson-feedback {
+  font-size: 1rem;
+}
+
+.lesson-workspace .lesson-actions {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lesson-workspace .study-primary-button,
+.lesson-workspace .study-secondary-button {
+  min-height: 50px;
+  padding: 12px 26px;
+  font-size: 1.02rem;
+}
+
+.lesson-workspace .lesson-reading .study-primary-button {
+  background: linear-gradient(135deg, #FFB703, #FB8500);
+  color: #05131f;
+  border-color: rgba(255, 183, 3, 0.5);
+  box-shadow: 0 6px 20px rgba(255, 183, 3, 0.35);
+}
+
+/* Result dialog scales up */
+dialog.lesson-result {
+  max-width: min(820px, calc(100vw - 32px));
+  border-radius: 24px;
+}
+
+/* --- Responsive (mobile-first tweaks, ported from quiz/style.css breakpoints) --- */
+@media (max-width: 768px) {
+  .lesson-workspace .lesson-toolbar {
+    flex-wrap: wrap;
+    padding: 10px 14px;
+  }
+
+  .lesson-arena-main {
+    width: calc(100% - 20px);
+    padding-top: 16px;
+    padding-bottom: 48px;
+  }
+
+  .lesson-workspace .lesson-reading,
+  .lesson-workspace .lesson-question {
+    border-radius: 18px;
+  }
+
+  .lesson-workspace .lesson-prompt {
+    padding: 16px 18px;
+  }
+
+  .lesson-workspace .lesson-option {
+    padding: 14px 16px;
+    font-size: 1rem;
+  }
+
+  .lesson-workspace .study-primary-button,
+  .lesson-workspace .study-secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .lesson-workspace #lessonProgressText {
+    font-size: 0.82rem;
+    padding: 5px 12px;
+  }
+
+  .lesson-workspace .lesson-reading,
+  .lesson-workspace .lesson-question {
+    padding: 18px 14px;
+  }
+}

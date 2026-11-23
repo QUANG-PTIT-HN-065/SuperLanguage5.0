@@ -1,57 +1,20 @@
 export {};
 
+import { slanguageApi } from "../shared/api-client";
+
 /**
- * Slanguage - Forgot Password & 8-Digit OTP Verification Logic
- * Step-by-step password recovery:
- * 1. Validate registered student email.
- * 2. Generate simulated web OTP & render 8-digit individual interactive inputs.
- * 3. Verify OTP & allow setting new password with seamless transition.
+ * Slanguage - Forgot Password & OTP Verification Logic
+ * Step-by-step password recovery (backend: /api/v1/auth):
+ * 1. Send a login OTP to the registered email (/send-otp).
+ * 2. Collect the 8-digit code (verified server-side together with the new password).
+ * 3. Set the new password (/reset-password-otp).
  */
-
-interface UserAccount {
-  fullName: string;
-  email: string;
-  password: string;
-  nativeLanguage?: string;
-  targetLanguage?: string;
-  xp?: number;
-  createdAt?: string;
-}
-
-const DEFAULT_USERS_DB: UserAccount[] = [
-  {
-    fullName: 'Vua Xứ Thanh',
-    email: 'quanquan@gmail.com',
-    password: '123456',
-    nativeLanguage: 'vi',
-    targetLanguage: 'ja',
-    xp: 0,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    fullName: 'Học viên Slanguage',
-    email: 'hocvien@slanguage.edu.vn',
-    password: '123456',
-    nativeLanguage: 'vi',
-    targetLanguage: 'en',
-    xp: 0,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  },
-  {
-    fullName: 'Nguyễn Văn A',
-    email: 'learner@gmail.com',
-    password: '123456',
-    nativeLanguage: 'vi',
-    targetLanguage: 'ja',
-    xp: 0,
-    createdAt: '2026-01-01T00:00:00.000Z'
-  }
-];
 
 class SlanguageForgotPassword {
   private currentStage: number = 1;
   private registeredEmail: string = '';
-  private currentOtpCode: string = '';
+  private pendingOtp: string = '';
+  private submitting: boolean = false;
   private countdownTimer: number | null = null;
   private countdownRemaining: number = 60;
 
@@ -72,7 +35,6 @@ class SlanguageForgotPassword {
   private confirmNewPasswordInput: HTMLInputElement | null = null;
 
   private webOtpToast: HTMLElement | null = null;
-  private toastOtpNumber: HTMLElement | null = null;
   private countdownVal: HTMLElement | null = null;
   private countdownWrap: HTMLElement | null = null;
   private btnResendOtp: HTMLElement | null = null;
@@ -97,15 +59,15 @@ class SlanguageForgotPassword {
     this.confirmNewPasswordInput = document.getElementById('confirmNewPassword') as HTMLInputElement;
 
     this.webOtpToast = document.getElementById('webOtpToast');
-    this.toastOtpNumber = document.getElementById('toastOtpNumber');
     this.countdownVal = document.getElementById('countdownVal');
     this.countdownWrap = document.getElementById('countdownWrap');
     this.btnResendOtp = document.getElementById('btnResendOtp');
 
     this.otpDigits = Array.from(document.querySelectorAll<HTMLInputElement>('.otp-digit'));
 
-    // Pre-fill email if stored in localStorage
-    const savedUserEmail = localStorage.getItem('slanguage_user_email');
+    // Pre-fill email if stored from a previous session (cookie)
+    const emailCookie = document.cookie.match(/(?:^|;\s*)slanguage_user_email=([^;]*)/);
+    const savedUserEmail = emailCookie ? decodeURIComponent(emailCookie[1]) : '';
     if (savedUserEmail && this.recoveryEmailInput) {
       this.recoveryEmailInput.value = savedUserEmail;
     }
@@ -149,7 +111,7 @@ class SlanguageForgotPassword {
     // Stage 2: Resend OTP button
     if (this.btnResendOtp) {
       this.btnResendOtp.addEventListener('click', () => {
-        this.generateAndSendOtp(true);
+        void this.sendRecoveryOtp(true);
       });
     }
 
@@ -166,7 +128,7 @@ class SlanguageForgotPassword {
     if (formResetPassword) {
       formResetPassword.addEventListener('submit', (e) => {
         e.preventDefault();
-        this.handleResetPassword();
+        void this.handleResetPassword();
       });
     }
 
@@ -201,28 +163,6 @@ class SlanguageForgotPassword {
     });
   }
 
-  private getUsersDB(): UserAccount[] {
-    const raw = localStorage.getItem('slanguage_users_db');
-    if (!raw) {
-      localStorage.setItem('slanguage_users_db', JSON.stringify(DEFAULT_USERS_DB));
-      return [...DEFAULT_USERS_DB];
-    }
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    } catch (e) {
-      console.error('Error parsing slanguage_users_db:', e);
-    }
-    localStorage.setItem('slanguage_users_db', JSON.stringify(DEFAULT_USERS_DB));
-    return [...DEFAULT_USERS_DB];
-  }
-
-  private saveUsersDB(users: UserAccount[]): void {
-    localStorage.setItem('slanguage_users_db', JSON.stringify(users));
-  }
-
   private bindOtpInputGrid(): void {
     this.otpDigits.forEach((input, index) => {
       // Input event: auto advance to next box
@@ -242,9 +182,9 @@ class SlanguageForgotPassword {
           target.classList.remove('filled');
         }
 
-        // Auto verify if all 8 boxes are filled
+        // Auto verify if all boxes are filled
         const fullOtp = this.getEnteredOtp();
-        if (fullOtp.length === 8) {
+        if (fullOtp.length === this.otpDigits.length) {
           this.handleVerifyOtp();
         }
       });
@@ -264,11 +204,11 @@ class SlanguageForgotPassword {
         }
       });
 
-      // Paste event: handle full 8-digit paste
+      // Paste event: handle full OTP paste
       input.addEventListener('paste', (e: ClipboardEvent) => {
         e.preventDefault();
         const pastedData = (e.clipboardData || (window as any).clipboardData)?.getData('text') || '';
-        const digits = pastedData.replace(/\D/g, '').slice(0, 8);
+        const digits = pastedData.replace(/\D/g, '').slice(0, this.otpDigits.length);
         if (digits) {
           for (let i = 0; i < digits.length && i < this.otpDigits.length; i++) {
             this.otpDigits[i].value = digits[i];
@@ -278,7 +218,7 @@ class SlanguageForgotPassword {
           this.otpDigits[focusIndex].focus();
           this.clearError('otpError');
 
-          if (digits.length === 8) {
+          if (digits.length === this.otpDigits.length) {
             this.handleVerifyOtp();
           }
         }
@@ -299,50 +239,59 @@ class SlanguageForgotPassword {
       return;
     }
 
-    const users = this.getUsersDB();
-    const user = users.find(u => u.email.trim().toLowerCase() === emailVal.toLowerCase());
-    if (!user) {
-      this.showError('emailError', 'Email này chưa được đăng ký trong hệ thống Slanguage.');
-      return;
-    }
-
     this.registeredEmail = emailVal;
-    const sentEmailEl = document.getElementById('sentTargetEmail');
-    if (sentEmailEl) {
-      sentEmailEl.textContent = emailVal;
-    }
-
-    // Generate and display simulated 6-digit OTP
-    this.generateAndSendOtp(false);
-
-    // Advance to Stage 2
-    this.goToStage(2);
+    void this.sendRecoveryOtp(false);
   }
 
-  private generateAndSendOtp(isResend: boolean = false): void {
-    // Generate an 8-digit simulation code
-    this.currentOtpCode = Math.floor(10000000 + Math.random() * 90000000).toString();
-
-    // Clear previous input digits
+  private resetOtpInputs(): void {
     this.otpDigits.forEach(input => {
       input.value = '';
       input.classList.remove('filled');
       input.style.borderColor = '';
     });
     this.clearError('otpError');
+  }
 
-    // Display Toast banner: "Hãy kiểm tra email của bạn"
-    if (this.webOtpToast) {
-      this.webOtpToast.classList.add('show');
+  private async sendRecoveryOtp(isResend: boolean): Promise<void> {
+    if (this.submitting) return;
+    this.submitting = true;
+    const btnSend = document.getElementById('btnSendOtp');
+    btnSend?.setAttribute('disabled', '');
+    try {
+      // Email chỉ được gửi khi tài khoản tồn tại; phản hồi luôn là sent:true
+      await slanguageApi('/api/v1/auth/recover', {
+        method: 'POST',
+        body: { email: this.registeredEmail },
+        anonymous: true,
+      });
+
+      if (!isResend) {
+        const sentEmailEl = document.getElementById('sentTargetEmail');
+        if (sentEmailEl) {
+          sentEmailEl.textContent = this.registeredEmail;
+        }
+        this.resetOtpInputs();
+        this.goToStage(2);
+      }
+
+      if (this.webOtpToast) {
+        this.webOtpToast.classList.add('show');
+      }
+
+      // Start 60s countdown
+      this.startResendCountdown();
+
+      // Auto-focus first box
+      setTimeout(() => {
+        if (this.otpDigits[0]) this.otpDigits[0].focus();
+      }, 300);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Không thể gửi mã OTP lúc này. Vui lòng thử lại sau.';
+      this.showError(isResend ? 'otpError' : 'emailError', msg);
+    } finally {
+      this.submitting = false;
+      btnSend?.removeAttribute('disabled');
     }
-
-    // Start 60s countdown
-    this.startResendCountdown();
-
-    // Auto-focus first box
-    setTimeout(() => {
-      if (this.otpDigits[0]) this.otpDigits[0].focus();
-    }, 300);
   }
 
   private getEnteredOtp(): string {
@@ -352,31 +301,37 @@ class SlanguageForgotPassword {
   private handleVerifyOtp(): void {
     const entered = this.getEnteredOtp();
 
-    if (entered.length < 8) {
-      this.showError('otpError', 'Vui lòng điền đủ 8 chữ số mã OTP.');
+    if (entered.length < this.otpDigits.length) {
+      this.showError('otpError', `Vui lòng điền đủ ${this.otpDigits.length} chữ số mã OTP.`);
       return;
     }
 
-    // In web demo prototype, since OTP is simulated to user email,
-    // any 6 digits entered (e.g. 123456 or generated code) will verify successfully
+    // Supabase OTP dùng một lần nên mã chỉ được verify cùng mật khẩu mới
+    // ở bước 3 (POST /auth/reset-password-otp).
+    this.pendingOtp = entered;
+
     if (this.countdownTimer) {
       clearInterval(this.countdownTimer);
     }
     if (this.webOtpToast) {
       this.webOtpToast.classList.remove('show');
     }
+    this.clearError('newPassError');
+    this.clearError('confirmNewPassError');
 
-    // OTP Verified! Advance to Stage 3
+    // OTP collected! Advance to Stage 3
     this.goToStage(3);
   }
 
-  private handleResetPassword(): void {
+  private async handleResetPassword(): Promise<void> {
+    if (this.submitting) return;
+
     const newPass = this.newPasswordInput ? this.newPasswordInput.value : '';
     const confirmPass = this.confirmNewPasswordInput ? this.confirmNewPasswordInput.value : '';
 
     let isValid = true;
-    if (!newPass || newPass.length < 6) {
-      this.showError('newPassError', 'Mật khẩu mới phải từ 6 ký tự trở lên.');
+    if (!newPass || newPass.length < 8) {
+      this.showError('newPassError', 'Mật khẩu mới phải từ 8 ký tự trở lên.');
       isValid = false;
     }
 
@@ -387,17 +342,32 @@ class SlanguageForgotPassword {
 
     if (!isValid) return;
 
-    // Persist new password for student in DB & localStorage
-    const users = this.getUsersDB();
-    const userIndex = users.findIndex(u => u.email.trim().toLowerCase() === this.registeredEmail.toLowerCase());
-    if (userIndex >= 0) {
-      users[userIndex].password = newPass;
-      this.saveUsersDB(users);
-    }
-    localStorage.setItem('slanguage_user_password', newPass);
+    this.submitting = true;
+    try {
+      await slanguageApi('/api/v1/auth/reset-password-otp', {
+        method: 'POST',
+        body: {
+          email: this.registeredEmail,
+          token: this.pendingOtp,
+          new_password: newPass,
+        },
+        anonymous: true,
+      });
 
-    // Show loading transition back to login
-    this.triggerLoadingAndRedirect('../login/index.html', 1500);
+      // Show loading transition back to login
+      this.triggerLoadingAndRedirect('../login/index.html', 1500);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Không thể đặt lại mật khẩu. Vui lòng thử lại.';
+      if (/OTP/i.test(msg)) {
+        this.goToStage(2);
+        this.resetOtpInputs();
+        this.showError('otpError', msg);
+      } else {
+        this.showError('newPassError', msg);
+      }
+    } finally {
+      this.submitting = false;
+    }
   }
 
   private startResendCountdown(): void {
@@ -450,7 +420,7 @@ class SlanguageForgotPassword {
       this.stepper1?.classList.add('done');
       this.stepper2?.classList.add('active');
       this.line1?.classList.add('active');
-      if (headerSub) headerSub.textContent = 'Nhập 8 chữ số mã xác thực OTP được cung cấp để xác minh danh tính.';
+      if (headerSub) headerSub.textContent = 'Nhập 8 chữ số mã xác thực OTP được gửi tới email để xác minh danh tính.';
       setTimeout(() => {
         if (this.otpDigits[0]) this.otpDigits[0].focus();
       }, 200);

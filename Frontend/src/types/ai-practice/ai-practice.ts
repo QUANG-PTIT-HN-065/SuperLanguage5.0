@@ -4,7 +4,7 @@
  * Supports Speech-to-Text (Mic), Text-to-Speech (Audio Voice), Grammar Corrections & XP Rewards.
  */
 
-import { slanguageApi, slanguageApiAudio } from '../shared/api-client';
+import { isLearnerAuthenticated, slanguageApi, slanguageApiAudio } from '../shared/api-client';
 import { initializeLearnerHeader, logoutLearner } from '../shared/learner-header';
 import { applyI18n, getLocale, setLocale, t, LOCALE_EVENT, type UiLocale } from '../shared/i18n';
 
@@ -233,7 +233,7 @@ class AIPracticeManager {
   private micUnsupported: boolean = false;
 
   constructor() {
-    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+    if (!isLearnerAuthenticated()) {
       window.location.replace('../login/index.html');
       return;
     }
@@ -545,7 +545,7 @@ class AIPracticeManager {
     });
 
     // Auth state synchronization
-    const isLoggedIn = localStorage.getItem('slanguage_is_logged_in') === 'true';
+    const isLoggedIn = isLearnerAuthenticated();
     if (isLoggedIn) {
       document.body.classList.add('user-authenticated');
       document.body.classList.remove('user-guest');

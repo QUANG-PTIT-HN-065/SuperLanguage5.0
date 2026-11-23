@@ -72,20 +72,12 @@ class SelectLessonManager {
   private userDropdownBtnEl!: HTMLButtonElement;
 
   constructor() {
-    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
-      window.location.replace('../login/index.html');
-      return;
-    }
     this.initDOM();
     this.loadUserData();
     this.bindEvents();
     this.applyCurrentLanguage();
-    if (isLearnerAuthenticated()) {
-      showSkeleton(this.sessionsGridEl, 'session-cards', { tone: 'dark', count: 8 });
-      void this.loadDatabaseCatalog();
-    } else {
-      this.renderSessions();
-    }
+    showSkeleton(this.sessionsGridEl, 'session-cards', { tone: 'dark', count: 8 });
+    void this.loadDatabaseCatalog();
     this.updateStatusCard();
     void initializeLearnerHeader({ bindControls: false, loadProfile: false });
     // Đổi locale GIAO DIỆN: chỉ dịch UI + re-render từ dữ liệu đã cache, không gọi lại API
@@ -109,17 +101,24 @@ class SelectLessonManager {
 
   private async loadDatabaseCatalog(): Promise<void> {
     try {
-      const me = await slanguageApi('/api/v1/me');
-      renderLearnerHeader(me.data);
-      const meData = (me.data ?? {}) as Record<string, unknown>;
-      const profile = (meData.profile ?? meData) as Record<string, unknown>;
-      const profileLang = String(profile.target_language ?? '') as TargetLang;
-      if (['ja', 'en', 'vi'].includes(profileLang) && profileLang !== this.currentLang) {
-        this.currentLang = profileLang;
-        this.applyCurrentLanguage();
+      const authenticated = isLearnerAuthenticated();
+      if (authenticated) {
+        const me = await slanguageApi('/api/v1/me');
+        renderLearnerHeader(me.data);
+        const meData = (me.data ?? {}) as Record<string, unknown>;
+        const profile = (meData.profile ?? meData) as Record<string, unknown>;
+        const profileLang = String(profile.target_language ?? '') as TargetLang;
+        if (['ja', 'en', 'vi'].includes(profileLang) && profileLang !== this.currentLang) {
+          this.currentLang = profileLang;
+          this.applyCurrentLanguage();
+        }
+        this.isPremiumUser = String(profile.plan_id ?? '') === 'premium' || localStorage.getItem('slanguage_is_premium') === 'true';
+      } else {
+        // Khách xem catalogue như người dùng miễn phí, theo ngôn ngữ đang chọn trên trang
+        this.isPremiumUser = false;
       }
-      this.isPremiumUser = String(profile.plan_id ?? '') === 'premium' || localStorage.getItem('slanguage_is_premium') === 'true';
-      const pathsResponse = await slanguageApi('/api/v1/vocabulary/learning-paths');
+      const langQuery = authenticated ? '' : `?language=${encodeURIComponent(this.currentLang)}`;
+      const pathsResponse = await slanguageApi(`/api/v1/vocabulary/learning-paths${langQuery}`);
       const paths = Array.isArray(pathsResponse.data) ? pathsResponse.data as Record<string, unknown>[] : [];
       const path = paths.find((item) => item.language_code === this.currentLang) ?? paths[0];
       const pathId = Number(path?.id);
@@ -129,7 +128,7 @@ class SelectLessonManager {
         this.renderSessions();
         return;
       }
-      const detail = await slanguageApi(`/api/v1/vocabulary/learning-paths/${pathId}`);
+      const detail = await slanguageApi(`/api/v1/vocabulary/learning-paths/${pathId}${langQuery}`);
       const detailData = (detail.data ?? {}) as Record<string, unknown>;
       const topics = Array.isArray(detailData.topics) ? detailData.topics as Record<string, unknown>[] : [];
       if (!topics.length) {
@@ -323,7 +322,7 @@ class SelectLessonManager {
     });
 
     // Auth state synchronization
-    const isLoggedIn = localStorage.getItem('slanguage_is_logged_in') === 'true';
+    const isLoggedIn = isLearnerAuthenticated();
     if (isLoggedIn) {
       document.body.classList.add('user-authenticated');
       document.body.classList.remove('user-guest');
@@ -547,6 +546,11 @@ class SelectLessonManager {
     }
     if (session.locked) {
       this.showPremiumModal();
+      return;
+    }
+    if (!isLearnerAuthenticated()) {
+      this.showToast(t('sl.loginRequired'));
+      window.location.assign('../login/index.html');
       return;
     }
     window.location.assign('../roadmap/index.html');

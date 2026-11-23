@@ -5,7 +5,13 @@
    hiện ra, nội dung thật chưa render -> không nháy chữ.
    ============================================================ */
 
-import { clearLearnerCache, slanguageApi } from "../shared/api-client";
+import {
+  clearAuthTokens,
+  clearLearnerCache,
+  getAuthCookie,
+  removeAuthCookie,
+  slanguageApi,
+} from "../shared/api-client";
 
 export const ACCESS_TOKEN_KEY = "slanguage_access_token";
 export const REFRESH_TOKEN_KEY = "slanguage_refresh_token";
@@ -24,7 +30,7 @@ const SESSION_KEYS = [
 ];
 
 export function getToken(): string | null {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
+  return getAuthCookie(ACCESS_TOKEN_KEY);
 }
 
 export function isSignedIn(): boolean {
@@ -32,7 +38,10 @@ export function isSignedIn(): boolean {
 }
 
 export function clearSession(): void {
-  for (const key of SESSION_KEYS) localStorage.removeItem(key);
+  for (const key of SESSION_KEYS) {
+    localStorage.removeItem(key);
+    removeAuthCookie(key);
+  }
 }
 
 export function setPageState(state: PageState): void {
@@ -48,7 +57,7 @@ export function redirectToLogin(): void {
 }
 
 export function logout(): void {
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  const refreshToken = getAuthCookie(REFRESH_TOKEN_KEY);
   if (refreshToken) {
     // Thu hồi phiên phía Supabase; keepalive để request sống qua điều hướng
     void slanguageApi("/api/v1/auth/logout", {

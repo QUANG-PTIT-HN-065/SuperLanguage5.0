@@ -4,7 +4,7 @@
  * mức ghi nhớ (user_words) và XP đồng bộ trực tiếp với backend.
  */
 
-import { slanguageApi } from "../shared/api-client";
+import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader, logoutLearner } from "../shared/learner-header";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import { applyI18n, getLocale, localeLabel, setLocale, t, LOCALE_EVENT, type UiLocale } from "../shared/i18n";
@@ -90,10 +90,6 @@ class SlanguageVocabulary {
   private lastFeedbackXp = 0;
 
   constructor() {
-    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
-      window.location.replace('../login/index.html');
-      return;
-    }
     this.loadInitialState();
     this.initNavbar();
     this.initModeTabs();
@@ -119,9 +115,10 @@ class SlanguageVocabulary {
   // ================= REAL DATA =================
   private async fetchTopicWords(topicId: number): Promise<Record<string, unknown>[]> {
     const items: Record<string, unknown>[] = [];
+    const langQuery = isLearnerAuthenticated() ? '' : `&language=${encodeURIComponent(this.currentLang)}`;
     for (let offset = 0; offset < 500; offset += 100) {
       const response = await slanguageApi<{ items?: unknown }>(
-        `/api/v1/vocabulary/words?topic_id=${topicId}&limit=100&offset=${offset}`,
+        `/api/v1/vocabulary/words?topic_id=${topicId}&limit=100&offset=${offset}${langQuery}`,
       );
       const page = Array.isArray(response.data.items) ? response.data.items : [];
       items.push(...page.map(asRecord));
@@ -138,19 +135,25 @@ class SlanguageVocabulary {
       const savedXP = localStorage.getItem('slanguage_user_xp');
       if (savedXP) this.currentXP = parseInt(savedXP, 10) || 0;
       this.updateXPDisplays();
+      const langQuery = isLearnerAuthenticated()
+        ? ''
+        : `?language=${encodeURIComponent(this.currentLang)}`;
 
-      const pathsResponse = await slanguageApi<unknown>('/api/v1/vocabulary/learning-paths');
+      const pathsResponse = await slanguageApi<unknown>(`/api/v1/vocabulary/learning-paths${langQuery}`);
       const paths = Array.isArray(pathsResponse.data) ? pathsResponse.data.map(asRecord) : [];
       const path = paths.find((item) => item.language_code === this.currentLang);
       if (!path) throw new Error(t('vc.errNoPath'));
 
       const detailResponse = await slanguageApi<{ topics?: unknown }>(
-        `/api/v1/vocabulary/learning-paths/${path.id}`,
+        `/api/v1/vocabulary/learning-paths/${path.id}${langQuery}`,
       );
       const topics = Array.isArray(detailResponse.data.topics)
         ? detailResponse.data.topics.map(asRecord)
         : [];
-      const passed = topics.filter((topic) => topic.is_completed === true);
+      // Khách chưa đăng nhập: duyệt nửa đầu miễn phí của lộ trình (như tài khoản free)
+      const passed = isLearnerAuthenticated()
+        ? topics.filter((topic) => topic.is_completed === true)
+        : topics.slice(0, Math.ceil(topics.length / 2));
       this.passedTopics = passed.map((topic) => ({
         id: Number(topic.id),
         name: asText(topic.name) || t('vc.topicFallback', { id: String(topic.id) }),
@@ -387,7 +390,7 @@ class SlanguageVocabulary {
       });
     });
 
-    const isLoggedIn = localStorage.getItem('slanguage_is_logged_in') === 'true';
+    const isLoggedIn = isLearnerAuthenticated();
     if (isLoggedIn) {
       document.body.classList.add('user-authenticated');
       document.body.classList.remove('user-guest');
@@ -837,6 +840,8 @@ class SlanguageVocabulary {
   }
 
   private async persistReview(item: VocabItem, rating: 'Khó' | 'Tốt', xp: number): Promise<void> {
+    // Khách: không lưu tiến độ, chỉ làm mẫu trên giao diện
+    if (!isLearnerAuthenticated()) return;
     try {
       const response = await slanguageApi<{ mastery_level?: unknown }>(
         `/api/v1/vocabulary/words/${item.id}/review`,

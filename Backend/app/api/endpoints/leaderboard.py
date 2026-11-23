@@ -1,8 +1,9 @@
-from typing import Any
+import uuid
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Query
 
-from app.core.deps import get_current_profile
+from app.core.deps import get_optional_profile
 from app.schemas.leaderboard import (
     LeaderboardLanguage,
     LeaderboardPeriod,
@@ -23,8 +24,12 @@ def read_leaderboard(
     search: str | None = Query(default=None, max_length=80),
     limit: int = Query(default=20, ge=1, le=50),
     offset: int = Query(default=0, ge=0, le=100_000),
-    profile: dict[str, Any] = Depends(get_current_profile),
+    profile: Optional[dict[str, Any]] = Depends(get_optional_profile),
 ):
+    # Khách (không token): dùng id ảo để RPC trả current_user = null,
+    # bảng xếp hạng vẫn đầy đủ cho mọi người xem.
+    if profile is None:
+        profile = {"id": str(uuid.uuid4()), "timezone": None}
     data = get_leaderboard(
         profile,
         period=period,

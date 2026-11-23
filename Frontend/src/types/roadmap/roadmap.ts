@@ -9,7 +9,7 @@
  * - Thắng nhận XP, sai trừ Máu, hết máu khóa hồi 24 giờ rồi mới được chơi tiếp; tiến độ lưu theo chủ đề trong localStorage
  */
 
-import { slanguageApi, slanguageApiAudio } from "../shared/api-client";
+import { isLearnerAuthenticated, slanguageApi, slanguageApiAudio } from "../shared/api-client";
 import { initializeLearnerHeader, logoutLearner } from "../shared/learner-header";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import {
@@ -264,7 +264,7 @@ class SlanguageDungeonTree {
   private readingArticleContent: HTMLElement | null = null;
 
   constructor() {
-    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+    if (!isLearnerAuthenticated()) {
       window.location.replace('../login/index.html');
       return;
     }
@@ -392,7 +392,7 @@ class SlanguageDungeonTree {
   }
 
   private initEventListeners(): void {
-    const isLoggedIn = localStorage.getItem('slanguage_is_logged_in') === 'true';
+    const isLoggedIn = isLearnerAuthenticated();
     document.body.classList.toggle('user-authenticated', isLoggedIn);
     document.body.classList.toggle('user-guest', !isLoggedIn);
 

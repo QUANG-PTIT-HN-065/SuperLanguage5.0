@@ -1,4 +1,4 @@
-import { clearAuthTokens, clearLearnerCache, isLearnerAuthenticated, slanguageApi } from "./api-client";
+import { clearAuthTokens, clearLearnerCache, getAuthCookie, isLearnerAuthenticated, removeAuthCookie, setAuthCookie, slanguageApi } from "./api-client";
 import { formatHeartLock, heartLockRemainingMs, isHeartsLocked, readHearts } from "./hearts";
 import { showToast } from "../ui/toast";
 import { applyI18n, getLocale, initI18n, localeLabel, setLocale, t, translateShell, LOCALE_EVENT, type UiLocale } from "./i18n";
@@ -113,13 +113,28 @@ export function renderLearnerHeader(payload: unknown): void {
 
   const avatarUrl = text(profile.avatar_url);
   const avatarSrc = avatarUrl.startsWith("https://") ? avatarUrl : initialsAvatar(name);
-  document.querySelectorAll<HTMLImageElement>(".user-avatar-mini, #headerAvatar, #profileAvatarImg").forEach((img) => {
+  document.querySelectorAll<HTMLImageElement>(".user-avatar-mini, #headerAvatar, #profileAvatarImg, #dropdownUserAvatar, #drawerUserAvatar").forEach((img) => {
     img.src = avatarSrc;
   });
+
+  // Đồng bộ header hồ sơ & chỉ số trong user dropdown (mobile) và side drawer
+  document.querySelectorAll<HTMLElement>("#dropdownUserName, #drawerUserName").forEach((element) => {
+    element.textContent = name;
+  });
+  document.querySelectorAll<HTMLElement>("#dropdownStreakVal, #drawerStreakVal").forEach((element) => {
+    element.textContent = `${streak} ${t("unit.day")}`;
+  });
+  document.querySelectorAll<HTMLElement>("#dropdownXPVal, #drawerXPVal").forEach((element) => {
+    element.textContent = `${xp.toLocaleString(localeTag)} ${t("unit.xp")}`;
+  });
+  document.querySelectorAll<HTMLElement>("#dropdownHeartsVal, #drawerHeartsVal").forEach((element) => {
+    element.textContent = `${hearts}/${maxHearts}`;
+  });
+
   updateLanguageDisplay();
 
-  localStorage.setItem("slanguage_user_name", name);
-  localStorage.setItem("slanguage_user_email", email);
+  setAuthCookie("slanguage_user_name", name);
+  setAuthCookie("slanguage_user_email", email);
   localStorage.setItem("slanguage_user_xp", String(xp));
   if (languageCode) localStorage.setItem("slanguage_active_language", languageCode);
 
@@ -156,7 +171,7 @@ function maybeWarnStreakExpiring(payload: unknown): void {
 export async function logoutLearner(): Promise<void> {
   // Thu hồi phiên phía Supabase trước khi xóa token; keepalive để request kịp
   // hoàn thành dù trang điều hướng ngay tới trang đăng nhập.
-  const refreshToken = localStorage.getItem("slanguage_refresh_token");
+  const refreshToken = getAuthCookie("slanguage_refresh_token");
   if (refreshToken) {
     void slanguageApi("/api/v1/auth/logout", {
       method: "POST",
@@ -166,6 +181,10 @@ export async function logoutLearner(): Promise<void> {
   }
   clearAuthTokens();
   clearLearnerCache();
+  for (const key of ["slanguage_is_logged_in", "slanguage_user_id", "slanguage_user_name", "slanguage_user_email"]) {
+    localStorage.removeItem(key);
+    removeAuthCookie(key);
+  }
   window.location.replace("../login/index.html");
 }
 
@@ -221,10 +240,42 @@ function bindHeaderControls(): void {
     });
   });
 
-  document.querySelector("#navLogoutItem, #logoutButton")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    void logoutLearner();
+  document.querySelectorAll("#navLogoutItem, #logoutButton, #drawerLogoutBtn").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      void logoutLearner();
+    });
   });
+}
+
+function bindMobileSideDrawer(): void {
+  const hamburgerBtn = document.getElementById("navHamburgerBtn");
+  const sideDrawer = document.getElementById("sideDrawer");
+  const drawerBackdrop = document.getElementById("drawerBackdrop");
+  const drawerCloseBtn = document.getElementById("drawerCloseBtn");
+  if (!hamburgerBtn || !sideDrawer || !drawerBackdrop) return;
+
+  const openDrawer = (): void => {
+    sideDrawer.classList.add("open");
+    drawerBackdrop.classList.add("open");
+    document.body.classList.add("drawer-open");
+    hamburgerBtn.setAttribute("aria-expanded", "true");
+  };
+
+  const closeDrawer = (): void => {
+    sideDrawer.classList.remove("open");
+    drawerBackdrop.classList.remove("open");
+    document.body.classList.remove("drawer-open");
+    hamburgerBtn.setAttribute("aria-expanded", "false");
+  };
+
+  hamburgerBtn.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openDrawer();
+  });
+  drawerCloseBtn?.addEventListener("click", closeDrawer);
+  drawerBackdrop.addEventListener("click", closeDrawer);
+  sideDrawer.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeDrawer));
 }
 
 export async function initializeLearnerHeader(options: LearnerHeaderOptions = {}): Promise<void> {
@@ -241,7 +292,10 @@ export async function initializeLearnerHeader(options: LearnerHeaderOptions = {}
     if (lastHeaderPayload) renderLearnerHeader(lastHeaderPayload);
   });
 
-  if (options.bindControls !== false) bindHeaderControls();
+  if (options.bindControls !== false) {
+    bindHeaderControls();
+    bindMobileSideDrawer();
+  }
   if (!authenticated || options.loadProfile === false) return;
 
   try {

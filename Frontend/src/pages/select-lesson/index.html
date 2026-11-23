@@ -13,12 +13,6 @@
   <link rel="stylesheet" href="../../styles/shared/learner-world.css">
   <link rel="stylesheet" href="../../styles/study/learning-page.css">
   <link rel="stylesheet" href="../../styles/select-lesson/style.css">
-  <!-- Auth Guard: Chỉ cho phép truy cập khi đã đăng nhập, ngược lại điều hướng về Trang chủ với vai trò Guest -->
-  <script>
-    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
-      window.location.replace('../login/index.html');
-    }
-  </script>
 </head>
 <body class="user-authenticated">
 
@@ -197,6 +191,7 @@
 
   <!-- ================= LESSON WORKSPACE: READING + QUIZ (DATABASE) ================= -->
       <section class="lesson-workspace" id="lessonWorkspace" hidden aria-labelledby="lessonTitle">
+        <div class="lesson-ambient-glow" aria-hidden="true"></div>
         <div class="lesson-toolbar">
           <button type="button" class="study-text-button" id="exitLesson" data-i18n="sl.exitLesson">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H6"/><path d="m12 19-7-7 7-7"/></svg>
@@ -214,6 +209,7 @@
           aria-valuemax="100"
           aria-valuenow="0"
         ><span id="lessonProgressFill"></span></div>
+        <div class="lesson-arena-main">
         <p class="lesson-generation-notice" id="lessonGenerationNotice" role="status" aria-live="polite" hidden></p>
         <section class="lesson-reading" id="lessonReading" hidden aria-labelledby="lessonReadingTitle">
           <p class="lesson-reading__eyebrow" data-i18n="sl.readingEyebrow">Bài đọc chủ đề · tải từ Database</p>
@@ -242,6 +238,7 @@
             </button>
           </div>
         </article>
+        </div>
         <dialog class="lesson-result" id="lessonResult" aria-labelledby="lessonResultTitle">
           <div class="lesson-result__content">
             <button type="button" class="lesson-result__close" id="closeLessonResult" aria-label="Đóng tổng kết" data-i18n-aria-label="sl.closeResultAria">

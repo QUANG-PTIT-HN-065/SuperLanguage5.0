@@ -1,5 +1,5 @@
 import { initializeLearnerHeader } from "../shared/learner-header";
-import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { getAuthCookie, isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import { applyI18n, localeLabel, t, LOCALE_EVENT } from "../shared/i18n";
 
@@ -42,11 +42,6 @@ class LeaderboardApp {
   private readonly status = this.createStatusElement();
 
   constructor() {
-    if (!isLearnerAuthenticated()) {
-      window.location.replace("../login/index.html");
-      return;
-    }
-
     void initializeLearnerHeader();
     window.addEventListener(LOCALE_EVENT, () => {
       applyI18n();
@@ -61,7 +56,11 @@ class LeaderboardApp {
     this.bindEvents();
     this.renderFilterLabels();
     const sticky = document.getElementById("stickyUserText");
-    if (sticky) sticky.textContent = t("lb.stickyLoading");
+    if (sticky && isLearnerAuthenticated()) sticky.textContent = t("lb.stickyLoading");
+    if (!isLearnerAuthenticated()) {
+      // Khách chưa đăng nhập: ẩn thanh "bạn ở hạng X"
+      document.getElementById("userStickyBar")?.setAttribute("hidden", "");
+    }
     void this.load();
   }
 
@@ -122,7 +121,7 @@ class LeaderboardApp {
         currentRow.scrollIntoView({ behavior: "smooth", block: "center" });
         return;
       }
-      const name = localStorage.getItem("slanguage_user_name") || "";
+      const name = getAuthCookie("slanguage_user_name") || "";
       const searchInput = document.getElementById("leaderboardSearchInput") as HTMLInputElement | null;
       if (searchInput && name) {
         searchInput.value = name;
@@ -272,13 +271,14 @@ class LeaderboardApp {
   }
 
   private renderCurrentUser(): void {
+    if (!isLearnerAuthenticated()) return;
     const sticky = document.getElementById("stickyUserText");
     if (!sticky || !this.result) return;
     const currentUser = this.result.current_user;
     sticky.textContent = currentUser
       ? t("lb.stickyRank", {
           rank: currentUser.rank,
-          name: localStorage.getItem("slanguage_user_name") || t("lb.you"),
+          name: getAuthCookie("slanguage_user_name") || t("lb.you"),
           xp: this.format(currentUser.xp),
         })
       : t("lb.stickyNone");

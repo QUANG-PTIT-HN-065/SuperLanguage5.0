@@ -1,4 +1,4 @@
-import { saveAuthTokens, saveLearnerIdentity, slanguageApi } from "../shared/api-client";
+import { getAuthCookie, saveAuthTokens, saveLearnerIdentity, slanguageApi } from "../shared/api-client";
 
 /**
  * ===================================================================
@@ -70,8 +70,8 @@ class VerifyOtpController {
 
   private init(): void {
     // 1. Read registered user data from sessionStorage/localStorage
-    const savedName = sessionStorage.getItem('slanguage_reg_name') || localStorage.getItem('slanguage_user_name');
-    const savedEmail = sessionStorage.getItem('slanguage_reg_email') || localStorage.getItem('slanguage_user_email');
+    const savedName = sessionStorage.getItem('slanguage_reg_name') || getAuthCookie('slanguage_user_name');
+    const savedEmail = sessionStorage.getItem('slanguage_reg_email') || getAuthCookie('slanguage_user_email');
     const savedNative = (sessionStorage.getItem('slanguage_reg_native') || localStorage.getItem('slanguage_native_language')) as AppLanguage;
     const savedTarget = (sessionStorage.getItem('slanguage_reg_target') || localStorage.getItem('slanguage_active_language')) as AppLanguage;
 

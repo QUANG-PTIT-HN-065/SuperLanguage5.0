@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 from pydantic import ValidationError
 
-from app.core.deps import get_current_profile
+from app.core.deps import get_current_profile, get_optional_profile, guest_profile
 from app.db.supabase import supabase_admin
 from app.schemas.reponse import BaseResponse
 from app.schemas.learning import VocabularyWordReview, VocabularyWordReviewResult
@@ -44,13 +44,15 @@ def get_words(
     q: Optional[str] = Query(default=None, min_length=1, max_length=80, pattern=r"^[\w\s'-]+$"),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    profile: Dict[str, Any] = Depends(get_current_profile),
+    language: Optional[str] = Query(default=None, pattern=r"^[a-z]{2}$"),
+    profile: Optional[Dict[str, Any]] = Depends(get_optional_profile),
 ):
-    """Danh sách từ vựng trong ngôn ngữ đang học, có thể lọc theo chủ đề."""
+    """Danh sách từ vựng trong ngôn ngữ đang học, có thể lọc theo chủ đề.
+    Khách (không token) xem được nửa miễn phí của `language` (mặc định ja)."""
     return BaseResponse(
         status="success",
         message="Đã tải danh sách từ vựng.",
-        data=list_words(profile, limit, offset, topic_id, q),
+        data=list_words(profile or guest_profile(language), limit, offset, topic_id, q),
     )
 
 
@@ -72,8 +74,12 @@ def review_word(
 
 
 @router.get("/learning-paths", response_model=BaseResponse[list[Dict[str, Any]]])
-def get_learning_paths(profile: Dict[str, Any] = Depends(get_current_profile)):
-    """Lộ trình và các chủ đề người học có quyền truy cập."""
+def get_learning_paths(
+    language: Optional[str] = Query(default=None, pattern=r"^[a-z]{2}$"),
+    profile: Optional[Dict[str, Any]] = Depends(get_optional_profile),
+):
+    """Lộ trình và các chủ đề người học có quyền truy cập (khách xem theo `language`)."""
+    profile = profile or guest_profile(language)
     catalog = list_catalog_topics(profile)
     paths = list_learning_paths(profile["target_language"])
     visible_paths = [
@@ -95,9 +101,12 @@ def get_learning_paths(profile: Dict[str, Any] = Depends(get_current_profile)):
 )
 def get_learning_path(
     path_id: int,
-    profile: Dict[str, Any] = Depends(get_current_profile),
+    language: Optional[str] = Query(default=None, pattern=r"^[a-z]{2}$"),
+    profile: Optional[Dict[str, Any]] = Depends(get_optional_profile),
 ):
     """Chi tiết lộ trình với toàn bộ chủ đề của ngôn ngữ đang học."""
+    is_guest = profile is None
+    profile = profile or guest_profile(language)
     path = next(
         (
             item
@@ -110,11 +119,15 @@ def get_learning_path(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy lộ trình.")
 
     topics = list_catalog_topics(profile)
-    topic_states = get_path_topic_states(
-        path_id,
-        profile["id"],
-        topics,
-        is_premium=profile.get("plan_id") == "premium",
+    topic_states = (
+        {}
+        if is_guest
+        else get_path_topic_states(
+            path_id,
+            profile["id"],
+            topics,
+            is_premium=profile.get("plan_id") == "premium",
+        )
     )
     topics = [
         {**topic, **topic_states.get(topic["id"], {
