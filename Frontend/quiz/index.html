@@ -28,7 +28,7 @@
     <div class="quiz-navbar-inner">
       <div class="nav-left">
         <button type="button" class="btn-exit-quiz" id="btnExitQuiz" title="Trở về lộ trình bài học">
-          <i class="fa-solid fa-arrow-left"></i> Rời khỏi
+          <i class="fa-solid fa-arrow-left"></i> <span>Rời khỏi</span>
         </button>
         <div class="brand-badge">
           <img src="../assets/logo.png" alt="Slanguage Logo">
@@ -167,7 +167,7 @@
 
   <!-- Modal: Chúc mừng hoàn thành xuất sắc 100% -->
   <div class="quiz-modal-overlay" id="modalVictory">
-    <div class="quiz-modal-card">
+    <div class="quiz-modal-card victory-modal-card">
       <div class="modal-icon-badge victory">
         <i class="fa-solid fa-trophy"></i>
       </div>
@@ -178,6 +178,55 @@
       <div class="quiz-modal-footer">
         <button type="button" class="btn-modal-confirm" id="btnVictoryReturn">
           <i class="fa-solid fa-map"></i> Trở Về Lộ Trình
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Thông báo Chưa đạt yêu cầu vượt ải (Khi có câu trả lời sai & còn máu) -->
+  <div class="quiz-modal-overlay" id="modalDefeat">
+    <div class="quiz-modal-card defeat-modal-card">
+      <div class="modal-icon-badge defeat">
+        <i class="fa-solid fa-heart-crack"></i>
+      </div>
+      <h3 class="quiz-modal-title" id="defeatModalTitle">Chưa Đạt Yêu Cầu Vượt Ải! ⚔️</h3>
+      <p class="quiz-modal-desc" id="defeatModalDesc">
+        Bạn đã hoàn thành lượt làm bài nhưng có câu trả lời chưa chính xác. Cần đạt 100% để vượt qua ải!
+      </p>
+
+      <!-- Bảng tóm tắt chỉ số chi tiết -->
+      <div class="modal-stats-grid">
+        <div class="modal-stat-card">
+          <div class="modal-stat-label"><i class="fa-solid fa-bullseye"></i> Số câu đúng</div>
+          <div class="modal-stat-value" id="defeatStatCorrect">0/3 câu</div>
+        </div>
+        <div class="modal-stat-card penalty">
+          <div class="modal-stat-label"><i class="fa-solid fa-heart-crack"></i> Bị trừ</div>
+          <div class="modal-stat-value text-danger" id="defeatStatPenalty">-1 Máu</div>
+        </div>
+        <div class="modal-stat-card">
+          <div class="modal-stat-label"><i class="fa-solid fa-heart"></i> Máu còn lại</div>
+          <div class="modal-stat-value text-heart" id="defeatStatHearts">3/5 ❤️</div>
+        </div>
+        <div class="modal-stat-card">
+          <div class="modal-stat-label"><i class="fa-solid fa-star"></i> Thưởng EXP</div>
+          <div class="modal-stat-value text-muted" id="defeatStatXP">+0 EXP</div>
+        </div>
+      </div>
+
+      <!-- Khung lời khuyên / Động viên -->
+      <div class="modal-tip-callout">
+        <i class="fa-solid fa-lightbulb"></i>
+        <span>Đừng nản lòng! Ôn lại kiến thức và thử lại ngay để phục thù và nhận trọn điểm EXP nhé.</span>
+      </div>
+
+      <!-- Nút hành động -->
+      <div class="quiz-modal-footer">
+        <button type="button" class="btn-modal-cancel" id="btnDefeatReturn">
+          <i class="fa-solid fa-map"></i> Trở Về Lộ Trình
+        </button>
+        <button type="button" class="btn-modal-confirm retry-btn" id="btnDefeatRetry">
+          <i class="fa-solid fa-rotate-right"></i> Thử Lại Ngay
         </button>
       </div>
     </div>

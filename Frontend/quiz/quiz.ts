@@ -82,6 +82,15 @@ class SlanguageQuizApp {
   private victoryModalTitle!: HTMLElement;
   private victoryModalDesc!: HTMLElement;
   private btnVictoryReturn!: HTMLButtonElement;
+  private modalDefeat!: HTMLElement;
+  private defeatModalTitle!: HTMLElement;
+  private defeatModalDesc!: HTMLElement;
+  private defeatStatCorrect!: HTMLElement;
+  private defeatStatPenalty!: HTMLElement;
+  private defeatStatHearts!: HTMLElement;
+  private defeatStatXP!: HTMLElement;
+  private btnDefeatReturn!: HTMLButtonElement;
+  private btnDefeatRetry!: HTMLButtonElement;
   private quizToast!: HTMLElement;
   private quizToastText!: HTMLElement;
 
@@ -135,6 +144,15 @@ class SlanguageQuizApp {
     this.victoryModalTitle = document.getElementById('victoryModalTitle')!;
     this.victoryModalDesc = document.getElementById('victoryModalDesc')!;
     this.btnVictoryReturn = document.getElementById('btnVictoryReturn') as HTMLButtonElement;
+    this.modalDefeat = document.getElementById('modalDefeat')!;
+    this.defeatModalTitle = document.getElementById('defeatModalTitle')!;
+    this.defeatModalDesc = document.getElementById('defeatModalDesc')!;
+    this.defeatStatCorrect = document.getElementById('defeatStatCorrect')!;
+    this.defeatStatPenalty = document.getElementById('defeatStatPenalty')!;
+    this.defeatStatHearts = document.getElementById('defeatStatHearts')!;
+    this.defeatStatXP = document.getElementById('defeatStatXP')!;
+    this.btnDefeatReturn = document.getElementById('btnDefeatReturn') as HTMLButtonElement;
+    this.btnDefeatRetry = document.getElementById('btnDefeatRetry') as HTMLButtonElement;
     this.quizToast = document.getElementById('quizToast')!;
     this.quizToastText = document.getElementById('quizToastText')!;
   }
@@ -335,6 +353,19 @@ class SlanguageQuizApp {
     this.btnVictoryReturn.addEventListener('click', () => {
       this.returnToRoadmap();
     });
+
+    // Modal Defeat Actions
+    if (this.btnDefeatReturn) {
+      this.btnDefeatReturn.addEventListener('click', () => {
+        this.returnToRoadmap();
+      });
+    }
+
+    if (this.btnDefeatRetry) {
+      this.btnDefeatRetry.addEventListener('click', () => {
+        this.retryQuiz();
+      });
+    }
 
     // Phím tắt bàn phím: 1, 2, 3 tương ứng A, B, C; Enter để Kiểm tra / Tiếp theo
     window.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -643,12 +674,48 @@ class SlanguageQuizApp {
       if (this.currentHearts === 0) {
         this.promptReviveModal(correctCount, totalQ, penalty);
       } else {
-        this.showToast(`Bạn hoàn thành với ${correctCount}/${totalQ} câu đúng. Vì có câu trả lời sai nên bị trừ -${penalty} Máu (còn ${this.currentHearts}/${this.maxHearts}) và không nhận được EXP. Cần đạt 100% để vượt qua!`);
-        setTimeout(() => {
-          this.returnToRoadmap();
-        }, 3200);
+        // Cập nhật thông tin chi tiết vào Pop-up kết quả lớn (Defeat Modal)
+        if (this.defeatStatCorrect) {
+          this.defeatStatCorrect.textContent = `${correctCount}/${totalQ} câu`;
+        }
+        if (this.defeatStatPenalty) {
+          this.defeatStatPenalty.textContent = `-${penalty} Máu`;
+        }
+        if (this.defeatStatHearts) {
+          this.defeatStatHearts.textContent = `${this.currentHearts}/${this.maxHearts} ❤️`;
+        }
+        if (this.defeatStatXP) {
+          this.defeatStatXP.textContent = `+0 EXP`;
+        }
+
+        if (this.defeatModalTitle) {
+          this.defeatModalTitle.textContent = 'Chưa Đạt Yêu Cầu Vượt Ải! ⚔️';
+        }
+
+        if (this.defeatModalDesc) {
+          this.defeatModalDesc.innerHTML = `
+            Bạn đã hoàn thành với <strong>${correctCount}/${totalQ} câu đúng</strong>.<br>
+            Vì có câu trả lời chưa chính xác nên bị trừ <strong style="color: #EF4444;">-${penalty} Máu</strong> (còn <strong>${this.currentHearts}/${this.maxHearts}</strong>) và không nhận được EXP.<br>
+            Cần trả lời chính xác trọn vẹn <strong>100% (${totalQ}/${totalQ} câu)</strong> để vượt qua ải này!
+          `;
+        }
+
+        if (this.modalDefeat) {
+          this.modalDefeat.classList.add('active');
+        }
       }
     }
+  }
+
+  private retryQuiz(): void {
+    if (this.modalDefeat) {
+      this.modalDefeat.classList.remove('active');
+    }
+    this.currentQuestionIdx = 0;
+    this.currentTrialWrongCount = 0;
+    this.selectedChoiceIdx = null;
+    this.currentTrialPhase = 'idle';
+    this.renderCurrentQuestion();
   }
 
   private markNodeMastered(nodeId: string): void {
