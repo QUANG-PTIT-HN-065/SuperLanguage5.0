@@ -740,13 +740,21 @@
             </div>
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
               <p class="text-sm font-semibold text-slate-600">Chuỗi Ngày Học Dài Nhất</p>
-              <h3 class="font-title text-2xl font-bold text-emerald-600 mt-1">365 ngày 🔥</h3>
+              <h3 id="statAnalyticsMaxStreak" class="font-title text-2xl font-bold text-emerald-600 mt-1">...</h3>
               <p class="text-xs text-slate-500 mt-2">Kỷ lục chuyên cần học viên</p>
             </div>
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
               <p class="text-sm font-semibold text-slate-600">Tỷ Lệ Đạt Mục Tiêu Hằng Ngày</p>
-              <h3 class="font-title text-2xl font-bold text-amber-600 mt-1">94.8%</h3>
-              <p class="text-xs text-slate-500 mt-2">Tính trên số bài hoàn thành</p>
+              <h3 id="statAnalyticsGoalMet" class="font-title text-2xl font-bold text-amber-600 mt-1">...</h3>
+              <p class="text-xs text-slate-500 mt-2">Tỷ lệ hoạt động 7 ngày đạt goal_met</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+              <p class="text-sm font-semibold text-slate-600">Độ Chính Xác Bài Học</p>
+              <h3 id="statAnalyticsLessonAccuracy" class="font-title text-2xl font-bold text-indigo-600 mt-1">...</h3>
+              <p class="text-xs text-slate-500 mt-2">Tổng điểm / tổng câu hỏi trong 7 ngày gần nhất</p>
             </div>
           </div>
         </div>
@@ -802,7 +810,7 @@
   <!-- Toast Container -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
 
-  <div id="actionConfirmModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/40 p-4">
+  <div id="actionConfirmModal" class="fixed inset-0 z-60 hidden items-center justify-center bg-slate-950/40 p-4">
     <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 p-5">
       <h3 id="actionConfirmTitle" class="font-title text-lg font-bold text-slate-900">Xác nhận hành động</h3>
       <p id="actionConfirmDescription" class="mt-2 text-sm leading-6 text-slate-600"></p>

@@ -35,6 +35,68 @@ def get_admin_overview_stats() -> Dict[str, Any]:
             lang = p.get("target_language") or "en" # type: ignore
             lang_distribution[lang] = lang_distribution.get(lang, 0) + 1 # type: ignore
 
+        # 6. Dữ liệu 7 ngày gần nhất cho biểu đồ
+        today = datetime.now(timezone.utc).date()
+        week_start = today - timedelta(days=6)
+        date_labels: List[str] = [
+            (week_start + timedelta(days=offset)).isoformat()
+            for offset in range(7)
+        ]
+
+        activity_res = (
+            supabase_admin.table("daily_activity")
+            .select("activity_date,user_id,lessons_completed,goal_met")
+            .gte("activity_date", week_start.isoformat())
+            .lte("activity_date", today.isoformat())
+            .execute()
+        )
+        activity_rows = activity_res.data or []
+
+        review_res = (
+            supabase_admin.table("user_word_review_events")
+            .select("last_reviewed_at")
+            .gte("last_reviewed_at", datetime.combine(week_start, datetime.min.time(), timezone.utc).isoformat())
+            .lte("last_reviewed_at", datetime.combine(today + timedelta(days=1), datetime.min.time(), timezone.utc).isoformat())
+            .execute()
+        )
+        review_rows = review_res.data or []
+
+        lesson_res = (
+            supabase_admin.table("lesson_progress")
+            .select("score,question_count")
+            .gte("completed_at", datetime.combine(week_start, datetime.min.time(), timezone.utc).isoformat())
+            .lte("completed_at", datetime.combine(today + timedelta(days=1), datetime.min.time(), timezone.utc).isoformat())
+            .execute()
+        )
+        lesson_rows = lesson_res.data or []
+
+        active_by_date: Dict[str, set[str]] = {day: set() for day in date_labels}
+        lessons_by_date: Dict[str, int] = {day: 0 for day in date_labels}
+        goal_met_total = 0
+        for row in activity_rows:
+            day = str(row.get("activity_date") or "") # type: ignore
+            if day in active_by_date:
+                user_id = str(row.get("user_id") or "") # type: ignore
+                if user_id:
+                    active_by_date[day].add(user_id)
+                lessons_by_date[day] += int(row.get("lessons_completed") or 0) # type: ignore
+            if row.get("goal_met") is True: # type: ignore
+                goal_met_total += 1
+
+        reviews_by_date: Dict[str, int] = {day: 0 for day in date_labels}
+        for row in review_rows:
+            reviewed_at = str(row.get("last_reviewed_at") or "") # type: ignore
+            day = reviewed_at[:10]
+            if day in reviews_by_date:
+                reviews_by_date[day] += 1
+
+        goal_total = len([row for row in activity_rows if row.get("activity_date") in date_labels]) # type: ignore
+        goal_percentage = round(goal_met_total * 100 / goal_total, 1) if goal_total else 0
+
+        total_score = sum(int(row.get("score") or 0) for row in lesson_rows) # type: ignore
+        total_questions = sum(int(row.get("question_count") or 0) for row in lesson_rows) # type: ignore
+        lesson_accuracy = round(total_score * 100 / total_questions, 1) if total_questions else 0
+
         return {
             "total_students": total_students,
             "total_words": total_words,
@@ -42,6 +104,14 @@ def get_admin_overview_stats() -> Dict[str, Any]:
             "total_xp": total_xp,
             "max_streak": max_streak,
             "language_distribution": lang_distribution,
+            "engagement": {
+                "date_labels": date_labels,
+                "active_users": [len(active_by_date[day]) for day in date_labels],
+                "lessons_completed": [lessons_by_date[day] for day in date_labels],
+                "vocabulary_reviews": [reviews_by_date[day] for day in date_labels],
+            },
+            "goal_met_percentage": goal_percentage,
+            "lesson_accuracy": lesson_accuracy,
         }
     except Exception as exc:
         raise_db_error(exc)

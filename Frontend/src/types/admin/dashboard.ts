@@ -154,6 +154,14 @@ interface OverviewStats {
   total_xp: number;
   max_streak: number;
   language_distribution: Record<string, number>;
+  goal_met_percentage?: number;
+  lesson_accuracy?: number;
+  engagement?: {
+    date_labels: string[];
+    active_users: number[];
+    lessons_completed: number[];
+    vocabulary_reviews: number[];
+  };
 }
 
 interface RagDocument {
@@ -262,6 +270,8 @@ async function loadDashboardStats(): Promise<void> {
 
     // Cập nhật thanh phân bố ngôn ngữ
     renderLanguageDistribution(stats.language_distribution, stats.total_students);
+    updateEngagementChart(stats.engagement);
+    updateAnalyticsStats(stats);
   } catch (err) {
     console.warn("Không thể tải thống kê thời gian thực:", err);
   }
@@ -292,6 +302,42 @@ function renderLanguageDistribution(dist: Record<string, number>, total: number)
       </div>
     `;
   }).join("");
+}
+
+function updateEngagementChart(engagement: OverviewStats["engagement"]): void {
+  if (!chartInstance || !engagement) return;
+
+  const labels = engagement.date_labels.map((day) => {
+    const parsed = new Date(`${day}T00:00:00`);
+    return Number.isNaN(parsed.getTime())
+      ? day
+      : parsed.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" });
+  });
+
+  chartInstance.data.labels = labels;
+  const activeDataset = chartInstance.data.datasets[0];
+  const reviewDataset = chartInstance.data.datasets[1];
+  if (activeDataset) activeDataset.data = engagement.active_users;
+  if (reviewDataset) reviewDataset.data = engagement.vocabulary_reviews;
+
+  chartInstance.update();
+}
+
+function updateAnalyticsStats(stats: OverviewStats): void {
+  const streak = getElement("statAnalyticsMaxStreak");
+  if (streak) streak.textContent = `${Number(stats.max_streak || 0).toLocaleString("vi-VN")} ngày 🔥`;
+
+  const goal = getElement("statAnalyticsGoalMet");
+  if (goal) goal.textContent = `${Number(stats.goal_met_percentage || 0).toLocaleString("vi-VN", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
+
+  const accuracy = getElement("statAnalyticsLessonAccuracy");
+  if (accuracy) accuracy.textContent = `${Number(stats.lesson_accuracy || 0).toLocaleString("vi-VN", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
 }
 
 /**
@@ -993,11 +1039,11 @@ function initEngagementChart(): void {
   chartInstance = new Chart(canvas, {
     type: "line",
     data: {
-      labels: ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ Nhật"],
+      labels: ["Đang tải...", "", "", "", "", "", ""],
       datasets: [
         {
           label: "Học viên hoạt động",
-          data: [120, 150, 140, 185, 170, 210, 195],
+          data: [0, 0, 0, 0, 0, 0, 0],
           borderColor: "#2563eb",
           backgroundColor: "rgba(37, 99, 235, 0.08)",
           fill: true,
@@ -1009,7 +1055,7 @@ function initEngagementChart(): void {
         },
         {
           label: "Lượt ôn tập từ vựng",
-          data: [65, 80, 75, 95, 90, 120, 110],
+          data: [0, 0, 0, 0, 0, 0, 0],
           borderColor: "#059669",
           backgroundColor: "rgba(5, 150, 105, 0.05)",
           fill: true,
