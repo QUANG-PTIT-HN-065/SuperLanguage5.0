@@ -30,7 +30,7 @@ export const vi: Record<string, string> = {
   'guest.login': 'Đăng nhập',
   'guest.register': 'Đăng ký',
   'nav.newLesson': 'Học bài mới',
-  'nav.newLessonDesc': 'Lộ trình học theo từng mốc',
+  'nav.newLessonDesc': 'Chọn chủ đề và buổi học',
   'nav.vocabTrain': 'Luyện từ vựng',
   'nav.vocabTrainDesc': 'Flashcard & kho từ vựng',
   'nav.aiTrain': 'Luyện tập với AI',

@@ -30,7 +30,7 @@ export const en: Record<string, string> = {
   'guest.login': 'Log in',
   'guest.register': 'Sign up',
   'nav.newLesson': 'New lessons',
-  'nav.newLessonDesc': 'Guided path by milestone',
+  'nav.newLessonDesc': 'Pick a topic and session',
   'nav.vocabTrain': 'Vocabulary drills',
   'nav.vocabTrainDesc': 'Flashcards & word library',
   'nav.aiTrain': 'AI practice',

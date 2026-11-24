@@ -593,19 +593,6 @@ class SelectLessonManager {
           <div class="premium-modal-icon"><i class="fa-solid fa-crown"></i></div>
           <h3 data-i18n="sl.premiumTitle">${t('sl.premiumTitle')}</h3>
           <p class="premium-modal-lead">${t('sl.premiumLead', { num: String(this.freeSessionCount + 1).padStart(2, '0') })}</p>
-          <div class="premium-plan-row">
-            <div class="premium-plan-card">
-              <div class="premium-plan-name" data-i18n="sl.premiumMonthly">${t('sl.premiumMonthly')}</div>
-              <div class="premium-plan-price">99.000đ</div>
-              <div class="premium-plan-note" data-i18n="sl.per30Days">${t('sl.per30Days')}</div>
-            </div>
-            <div class="premium-plan-card featured">
-              <div class="premium-plan-badge" data-i18n="sl.bestValue">${t('sl.bestValue')}</div>
-              <div class="premium-plan-name" data-i18n="sl.premiumLifetime">${t('sl.premiumLifetime')}</div>
-              <div class="premium-plan-price">999.000đ</div>
-              <div class="premium-plan-note" data-i18n="sl.unlimited">${t('sl.unlimited')}</div>
-            </div>
-          </div>
           <button type="button" id="premiumActivateBtn" class="premium-activate-btn" data-i18n="sl.premiumActivate"><i class="fa-solid fa-bolt"></i> ${t('sl.premiumActivate')}</button>
           <button type="button" id="premiumCloseBtn" class="premium-later-btn" data-i18n="sl.later">${t('sl.later')}</button>
         </div>`;

@@ -30,7 +30,7 @@ export const ja: Record<string, string> = {
   'guest.login': 'ログイン',
   'guest.register': '新規登録',
   'nav.newLesson': '新しいレッスン',
-  'nav.newLessonDesc': 'マイルストーン別の学習ルート',
+  'nav.newLessonDesc': 'トピックとセッションを選択',
   'nav.vocabTrain': '単語トレーニング',
   'nav.vocabTrainDesc': 'フラッシュカードと語彙ライブラリ',
   'nav.aiTrain': 'AI会話練習',

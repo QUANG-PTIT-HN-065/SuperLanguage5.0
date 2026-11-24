@@ -55,11 +55,6 @@ export const vi: Record<string, string> = {
   // Modal Premium
   'sl.premiumTitle': 'Nâng cấp Premium',
   'sl.premiumLead': 'Nửa sau của lộ trình (từ Session {num}) cần Premium để mở khóa. Nâng cấp để học toàn bộ chủ đề còn lại ngay lập tức.',
-  'sl.premiumMonthly': 'Premium Tháng',
-  'sl.per30Days': '/ 30 ngày',
-  'sl.bestValue': 'Tiết kiệm nhất',
-  'sl.premiumLifetime': 'Premium Vĩnh Viễn',
-  'sl.unlimited': 'không giới hạn',
   'sl.premiumActivate': 'Mua Premium 1 Ngày · 500 Coin trong Shop',
   'sl.later': 'Để sau',
 
@@ -171,11 +166,6 @@ export const en: Record<string, string> = {
 
   'sl.premiumTitle': 'Upgrade to Premium',
   'sl.premiumLead': 'The second half of the path (from Session {num}) requires Premium to unlock. Upgrade to study all remaining topics right away.',
-  'sl.premiumMonthly': 'Monthly Premium',
-  'sl.per30Days': '/ 30 days',
-  'sl.bestValue': 'Best value',
-  'sl.premiumLifetime': 'Lifetime Premium',
-  'sl.unlimited': 'unlimited',
   'sl.premiumActivate': 'Buy Premium 1 Day · 500 Coins in the Shop',
   'sl.later': 'Later',
 
@@ -285,11 +275,6 @@ export const ja: Record<string, string> = {
 
   'sl.premiumTitle': 'Premiumにアップグレード',
   'sl.premiumLead': 'パスの後半（セッション{num}以降）はPremiumで解放されます。アップグレードして、残りのトピックを今すぐ学習しましょう。',
-  'sl.premiumMonthly': 'Premium月額',
-  'sl.per30Days': '/ 30日',
-  'sl.bestValue': '一番お得',
-  'sl.premiumLifetime': 'Premium永久',
-  'sl.unlimited': '無制限',
   'sl.premiumActivate': 'ショップでPremium 1日（500コイン）を購入',
   'sl.later': '後で',
 
