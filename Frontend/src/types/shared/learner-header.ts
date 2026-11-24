@@ -1,5 +1,5 @@
 import { clearAuthTokens, clearLearnerCache, getAuthCookie, isLearnerAuthenticated, removeAuthCookie, setAuthCookie, slanguageApi } from "./api-client";
-import { formatHeartLock, heartLockRemainingMs, isHeartsLocked, readHearts } from "./hearts";
+import { DEFAULT_MAX_HEARTS, formatHeartLock, formatHearts, heartLockRemainingMs, isHeartsLocked, readHearts, setHeartCap } from "./hearts";
 import { showToast } from "../ui/toast";
 import { applyI18n, getLocale, initI18n, localeLabel, setLocale, t, translateShell, LOCALE_EVENT, type UiLocale } from "./i18n";
 
@@ -77,8 +77,8 @@ export function renderLearnerHeader(payload: unknown): void {
   const languageCode = text(profile.target_language);
   const xp = count(stats.xp_total);
   const streak = count(stats.current_streak);
-  const maxHearts = count(plan.max_hearts) || 5;
-  const hearts = Math.min(readHearts(), maxHearts);
+  setHeartCap('max_hearts' in plan ? (plan.max_hearts === null ? null : count(plan.max_hearts)) : DEFAULT_MAX_HEARTS);
+  const hearts = readHearts();
 
   document.querySelectorAll<HTMLElement>(".user-info-text .name, [data-learner-name]").forEach((element) => {
     element.textContent = name;
@@ -103,12 +103,12 @@ export function renderLearnerHeader(payload: unknown): void {
       ? String(streak)
       : `${streak} ${t("unit.day")}`;
   });
-  document.querySelectorAll<HTMLElement>("#headerHeartsVal, .stat-chip.hearts span").forEach((element) => {
-    element.textContent = `${hearts}/${maxHearts}`;
+  document.querySelectorAll<HTMLElement>("#headerHeartsVal, #userHeartsDisplay, .stat-chip.hearts span").forEach((element) => {
+    element.textContent = `${formatHearts(hearts)}`;
     const chip = element.closest<HTMLElement>(".hud-chip, .stat-chip") || element;
     chip.title = isHeartsLocked()
       ? `Hết máu — sinh lực khóa hồi 24 giờ, còn ${formatHeartLock(heartLockRemainingMs())}`
-      : `Sinh lực: ${hearts}/${maxHearts}`;
+      : `Sinh lực: ${formatHearts(hearts)}`;
   });
 
   const avatarUrl = text(profile.avatar_url);
@@ -128,7 +128,7 @@ export function renderLearnerHeader(payload: unknown): void {
     element.textContent = `${xp.toLocaleString(localeTag)} ${t("unit.xp")}`;
   });
   document.querySelectorAll<HTMLElement>("#dropdownHeartsVal, #drawerHeartsVal").forEach((element) => {
-    element.textContent = `${hearts}/${maxHearts}`;
+    element.textContent = `${formatHearts(hearts)}`;
   });
 
   updateLanguageDisplay();
@@ -248,12 +248,16 @@ function bindHeaderControls(): void {
   });
 }
 
-function bindMobileSideDrawer(): void {
+export function bindMobileSideDrawer(): void {
   const hamburgerBtn = document.getElementById("navHamburgerBtn");
   const sideDrawer = document.getElementById("sideDrawer");
   const drawerBackdrop = document.getElementById("drawerBackdrop");
   const drawerCloseBtn = document.getElementById("drawerCloseBtn");
   if (!hamburgerBtn || !sideDrawer || !drawerBackdrop) return;
+  // Trang tự gọi bindMobileSideDrawer() lẫn với lời gọi từ initializeLearnerHeader();
+  // nếu bind trùng thì một cú click sẽ mở rồi đóng ngay lập tức.
+  if (hamburgerBtn.dataset.drawerBound === "true") return;
+  hamburgerBtn.dataset.drawerBound = "true";
 
   const openDrawer = (): void => {
     sideDrawer.classList.add("open");
@@ -276,6 +280,37 @@ function bindMobileSideDrawer(): void {
   drawerCloseBtn?.addEventListener("click", closeDrawer);
   drawerBackdrop.addEventListener("click", closeDrawer);
   sideDrawer.querySelectorAll("a").forEach((link) => link.addEventListener("click", closeDrawer));
+  document.querySelectorAll<HTMLElement>("#drawerLogoutBtn").forEach((button) => {
+    if (button.dataset.logoutBound === "true") return;
+    button.dataset.logoutBound = "true";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      void logoutLearner();
+    });
+  });
+}
+
+function bindLearnNavDropdown(): void {
+  const item = document.querySelector<HTMLElement>(".nav-dropdown-item");
+  const button = document.getElementById("learnNavDropdownBtn");
+  if (!item || !button || button.dataset.bound === "true") return;
+  button.dataset.bound = "true";
+
+  const setOpen = (open: boolean): void => {
+    item.classList.toggle("open", open);
+    button.setAttribute("aria-expanded", String(open));
+  };
+
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setOpen(!item.classList.contains("open"));
+  });
+  document.addEventListener("click", (event) => {
+    if (event.target instanceof Node && !item.contains(event.target)) setOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setOpen(false);
+  });
 }
 
 export async function initializeLearnerHeader(options: LearnerHeaderOptions = {}): Promise<void> {
@@ -292,10 +327,9 @@ export async function initializeLearnerHeader(options: LearnerHeaderOptions = {}
     if (lastHeaderPayload) renderLearnerHeader(lastHeaderPayload);
   });
 
-  if (options.bindControls !== false) {
-    bindHeaderControls();
-    bindMobileSideDrawer();
-  }
+  if (options.bindControls !== false) bindHeaderControls();
+  bindMobileSideDrawer();
+  bindLearnNavDropdown();
   if (!authenticated || options.loadProfile === false) return;
 
   try {

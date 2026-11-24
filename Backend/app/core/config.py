@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEYS: str = ""
     GEMINI_CHAT_MODEL: str = "gemini-3.5-flash-lite"
     MINIGAME_AI_MODEL: str = "gemini-3.5-flash-lite"
+    WRITING_AI_MODEL: str = "gemini-3.5-flash-lite"
     OPENAI_API_KEYS: str = ""
     OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
     DEEPSEEK_API_KEYS: str = ""

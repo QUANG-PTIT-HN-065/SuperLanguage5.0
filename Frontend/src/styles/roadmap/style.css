@@ -3088,3 +3088,417 @@ body.user-authenticated .guest-only {
 .node-modal-box .node-skill-preview {
   display: none !important;
 }
+
+/* ============================================================
+   DUNGEON QUIZ: PHẢN HỒI ĐÚNG/SAI + MÀN TỔNG KẾT ẢI
+   ============================================================ */
+.dungeon-verdict-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 34px;
+  transform: translate(-50%, 24px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: #0a0d10;
+  border: 2px solid #4ADE80;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100000;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.dungeon-verdict-toast[data-state="incorrect"] {
+  border-color: #ef4444;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 18px rgba(239, 68, 68, 0.35);
+}
+
+.dungeon-verdict-toast.is-in {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.dungeon-toast__icon {
+  font-size: 1.15rem;
+  color: #4ADE80;
+}
+
+.dungeon-verdict-toast[data-state="incorrect"] .dungeon-toast__icon {
+  color: #FB7185;
+}
+
+.dungeon-trial-box.is-shake {
+  animation: dungeonShake 0.42s ease;
+}
+
+.dungeon-trial-box.is-glow {
+  animation: dungeonGlow 0.6s ease;
+}
+
+@keyframes dungeonShake {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(-9px); }
+  38% { transform: translateX(8px); }
+  58% { transform: translateX(-5px); }
+  78% { transform: translateX(4px); }
+}
+
+@keyframes dungeonGlow {
+  0% { box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6), 0 0 0 rgba(74, 222, 128, 0); }
+  45% { box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6), 0 0 26px rgba(74, 222, 128, 0.6); }
+  100% { box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6), 0 0 0 rgba(74, 222, 128, 0); }
+}
+
+/* --- Man tong ket --- */
+.dungeon-summary {
+  margin-top: 14px;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dungeon-summary.is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.dungeon-summary__banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+  border-radius: 20px;
+  background: rgba(34, 197, 94, 0.14);
+  border: 2px solid #22c55e;
+}
+
+.dungeon-summary__banner[data-state="fail"] {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: #ef4444;
+}
+
+.dungeon-summary__icon {
+  flex-shrink: 0;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #0a0d10;
+  background: linear-gradient(135deg, #4ADE80 0%, #16A34A 100%);
+  box-shadow: 0 0 22px rgba(74, 222, 128, 0.5);
+}
+
+.dungeon-summary__banner[data-state="fail"] .dungeon-summary__icon {
+  background: linear-gradient(135deg, #FB7185 0%, #DC143C 100%);
+  color: #ffffff;
+  box-shadow: 0 0 22px rgba(239, 68, 68, 0.45);
+}
+
+.dungeon-summary__title {
+  display: block;
+  font-size: clamp(1.15rem, 2.2vw, 1.5rem);
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  color: #4ADE80;
+}
+
+.dungeon-summary__banner[data-state="fail"] .dungeon-summary__title {
+  color: #FB7185;
+}
+
+.dungeon-summary__text {
+  margin: 4px 0 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.dungeon-summary__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.dstat {
+  background: rgba(10, 13, 16, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dstat__label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #7d95a3;
+}
+
+.dstat__value {
+  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.dstat--xp {
+  border-color: rgba(74, 222, 128, 0.45);
+}
+
+.dstat--xp .dstat__value {
+  color: #4ADE80;
+}
+
+/* --- Xem lai cau tra loi --- */
+.dungeon-review {
+  margin-top: 20px;
+}
+
+.dungeon-review[hidden] {
+  display: none;
+}
+
+.dungeon-review__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.dungeon-review__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.dungeon-review__filters {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(10, 13, 16, 0.9);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+}
+
+.dungeon-review__filter {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 7px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.dungeon-review__filter b {
+  color: inherit;
+}
+
+.dungeon-review__filter:hover {
+  color: #ffffff;
+}
+
+.dungeon-review__filter.is-active {
+  background: rgba(74, 222, 128, 0.18);
+  color: #4ADE80;
+}
+
+.dungeon-review__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: min(46vh, 460px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.d-review {
+  background: rgba(10, 13, 16, 0.75);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  border-left-width: 5px;
+  border-radius: 16px;
+  padding: 14px 18px;
+}
+
+.d-review.is-correct {
+  border-left-color: #22c55e;
+}
+
+.d-review.is-wrong {
+  border-left-color: #ef4444;
+}
+
+.d-review__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #7d95a3;
+}
+
+.d-review__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.d-review.is-correct .d-review__status {
+  color: #4ADE80;
+}
+
+.d-review.is-wrong .d-review__status {
+  color: #FB7185;
+}
+
+.d-review__prompt {
+  margin: 8px 0 12px;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #ffffff;
+}
+
+.d-review__answers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.d-review__answers--single {
+  grid-template-columns: 1fr;
+}
+
+.d-review__answer {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.d-review__answer.is-wrong {
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.d-review__answer.is-right {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.d-review__answer-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #7d95a3;
+  margin-bottom: 4px;
+}
+
+.d-review__answer strong {
+  font-size: 0.95rem;
+  color: #ffffff;
+  word-break: break-word;
+}
+
+.d-review__note {
+  margin: 10px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #a4bcc8;
+}
+
+.d-review__note i {
+  color: var(--color-topaz, #7AE2CF);
+  margin-right: 6px;
+}
+
+.dungeon-review__empty {
+  margin: 0;
+  padding: 18px;
+  border-radius: 14px;
+  background: rgba(10, 13, 16, 0.6);
+  border: 1.5px dashed rgba(255, 255, 255, 0.14);
+  color: #94a3b8;
+  font-weight: 700;
+  text-align: center;
+}
+
+.dungeon-review__empty[hidden] {
+  display: none;
+}
+
+/* Confetti no trong khung modal (trang roadmap khong nap components.css) */
+.node-modal-box .slg-confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+#btnSummaryRetry {
+  background: linear-gradient(135deg, #F59E0B 0%, #B45309 100%);
+  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.45);
+}
+
+#btnSummaryRetry[hidden] {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .dungeon-verdict-toast {
+    bottom: 18px;
+    width: calc(100vw - 28px);
+    justify-content: center;
+    font-size: 0.9rem;
+  }
+
+  .dungeon-summary__banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .dungeon-review__list {
+    max-height: min(38vh, 320px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dungeon-summary,
+  .dungeon-verdict-toast {
+    transition: none;
+  }
+
+  .dungeon-trial-box.is-shake,
+  .dungeon-trial-box.is-glow {
+    animation: none;
+  }
+}

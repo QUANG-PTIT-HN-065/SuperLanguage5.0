@@ -25,6 +25,7 @@ from app.services.profile_service import (
     touch_last_sign_in,
     validate_languages,
 )
+from app.services.vocabulary_service import effective_plan_id
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -142,7 +143,7 @@ def _session_response(session: Any, user_id: str, require_admin: bool = False) -
                 "display_name": profile["display_name"],
                 "avatar_url": profile["avatar_url"],
                 "role": profile["role"],
-                "plan_id": profile.get("plan_id") or "free",
+                "plan_id": effective_plan_id(profile),
                 "status": profile.get("status", "active"),
             },
             "needs_onboarding": profile["onboarding_completed_at"] is None,

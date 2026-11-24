@@ -30,6 +30,14 @@ def is_premium_profile(profile: Dict[str, Any]) -> bool:
     return expires_at > datetime.now(timezone.utc)
 
 
+def effective_plan_id(profile: Dict[str, Any]) -> str:
+    """plan_id đã trừ premium hết hạn (pass shop ghi plan_id vĩnh viễn, chỉ hạn dùng hết hạn)."""
+    plan_id = profile.get("plan_id") or "free"
+    if plan_id == "premium" and not is_premium_profile(profile):
+        return "free"
+    return plan_id
+
+
 def _count_rows(query: Any) -> int:
     response = query.limit(1).execute()
     return int(response.count or 0)

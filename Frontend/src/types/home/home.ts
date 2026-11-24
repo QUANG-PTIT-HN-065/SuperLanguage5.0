@@ -5,8 +5,9 @@
  */
 
 import { getAuthCookie, setAuthCookie, slanguageApi } from '../shared/api-client';
-import { logoutLearner } from '../shared/learner-header';
+import { initializeLearnerHeader, logoutLearner } from '../shared/learner-header';
 import { applyI18n, getLocale, initI18n, localeLabel, setLocale, t, LOCALE_EVENT, type UiLocale } from '../shared/i18n';
+import { playLoadingRive, stopLoadingRive } from '../shared/loading-rive';
 
 // Cờ của ngôn ngữ GIAO DIỆN (navbar chỉ đổi locale UI, không đổi ngôn ngữ học).
 const UI_FLAGS: Record<UiLocale, string> = {
@@ -146,6 +147,9 @@ class SlanguageDashboard {
 
     // Dịch shell navbar + các phần tử data-i18n theo locale GIAO DIỆN đã lưu.
     initI18n();
+    // Shared shell chịu trách nhiệm drawer di động + dropdown "Học tập";
+    // bindControls=false vì home đã tự bind lang/user dropdown và logout.
+    void initializeLearnerHeader({ loadProfile: false, bindControls: false });
     this.syncUiLocale();
 
     // Check saved language or default to Japanese
@@ -336,25 +340,14 @@ class SlanguageDashboard {
     // Page navigation transitions
     this.bindPageTransitions();
 
-    // Reset and mute video if page is shown from bfcache or when hidden
+    // Reset loading animation if page is shown from bfcache or when hidden
     window.addEventListener('pageshow', () => {
       const overlay = document.getElementById('slanguageLoadingOverlay');
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
       if (overlay) overlay.classList.remove('active');
-      if (video) {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
-      }
+      stopLoadingRive();
     });
 
-    window.addEventListener('pagehide', () => {
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
-    });
+    window.addEventListener('pagehide', () => stopLoadingRive());
   }
 
 
@@ -464,27 +457,12 @@ class SlanguageDashboard {
 
   private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
     const overlay = document.getElementById('slanguageLoadingOverlay');
-    const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     if (overlay) {
       overlay.classList.add('active');
-      if (video) {
-        video.muted = false;
-        video.volume = 1.0;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            video.muted = true;
-            video.play();
-          });
-        }
-      }
+      playLoadingRive();
     }
     setTimeout(() => {
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
+      stopLoadingRive();
       if (overlay) {
         overlay.classList.remove('active');
       }

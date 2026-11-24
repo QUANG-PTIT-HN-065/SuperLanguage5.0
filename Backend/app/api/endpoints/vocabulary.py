@@ -15,6 +15,7 @@ from app.schemas.vocabulary import (
 from app.services.learning_path_service import list_learning_paths
 from app.services.learning_service import get_path_topic_states, review_vocabulary_word
 from app.services.vocabulary_service import (
+    is_premium_profile,
     list_catalog_topics,
     list_topics,
     list_words,
@@ -126,7 +127,7 @@ def get_learning_path(
             path_id,
             profile["id"],
             topics,
-            is_premium=profile.get("plan_id") == "premium",
+            is_premium=is_premium_profile(profile),
         )
     )
     topics = [

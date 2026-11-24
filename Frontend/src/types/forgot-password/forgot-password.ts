@@ -1,6 +1,7 @@
 export {};
 
 import { slanguageApi } from "../shared/api-client";
+import { playLoadingRive, stopLoadingRive } from "../shared/loading-rive";
 
 /**
  * Slanguage - Forgot Password & OTP Verification Logic
@@ -142,25 +143,14 @@ class SlanguageForgotPassword {
     // Page navigation links with transition
     this.bindPageTransitions();
 
-    // Reset and mute video if page is shown from bfcache or when hidden
+    // Reset loading animation if page is shown from bfcache or when hidden
     window.addEventListener('pageshow', () => {
       const overlay = document.getElementById('slanguageLoadingOverlay');
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
       if (overlay) overlay.classList.remove('active');
-      if (video) {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
-      }
+      stopLoadingRive();
     });
 
-    window.addEventListener('pagehide', () => {
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
-    });
+    window.addEventListener('pagehide', () => stopLoadingRive());
   }
 
   private bindOtpInputGrid(): void {
@@ -454,27 +444,12 @@ class SlanguageForgotPassword {
 
   private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
     const overlay = document.getElementById('slanguageLoadingOverlay');
-    const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     if (overlay) {
       overlay.classList.add('active');
-      if (video) {
-        video.muted = false;
-        video.volume = 1.0;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            video.muted = true;
-            video.play();
-          });
-        }
-      }
+      playLoadingRive();
     }
     setTimeout(() => {
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
+      stopLoadingRive();
       if (overlay) {
         overlay.classList.remove('active');
       }

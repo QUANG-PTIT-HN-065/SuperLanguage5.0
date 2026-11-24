@@ -8,6 +8,7 @@ import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader, logoutLearner } from "../shared/learner-header";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import { applyI18n, getLocale, localeLabel, setLocale, t, LOCALE_EVENT, type UiLocale } from "../shared/i18n";
+import { playLoadingRive, stopLoadingRive } from "../shared/loading-rive";
 
 interface VocabItem {
   id: number;
@@ -1092,35 +1093,20 @@ class SlanguageVocabulary {
 
     window.addEventListener('pageshow', () => {
       const overlay = document.getElementById('slanguageLoadingOverlay');
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
       if (overlay) overlay.classList.remove('active');
-      if (video) {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
-      }
+      stopLoadingRive();
     });
   }
 
   private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
     const overlay = document.getElementById('slanguageLoadingOverlay');
-    const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     if (overlay) {
       overlay.classList.add('active');
-      if (video) {
-        video.muted = false;
-        video.volume = 1.0;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            video.muted = true;
-            video.play().catch(() => {});
-          });
-        }
-      }
+      playLoadingRive();
     }
     setTimeout(() => {
+      stopLoadingRive();
+      if (overlay) overlay.classList.remove('active');
       window.location.href = targetUrl;
     }, duration);
   }

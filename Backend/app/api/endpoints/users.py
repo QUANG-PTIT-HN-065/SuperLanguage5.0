@@ -16,6 +16,7 @@ from app.services.profile_service import (
     update_profile,
     with_effective_streak,
 )
+from app.services.vocabulary_service import effective_plan_id
 
 router = APIRouter()
 XP_PER_LEVEL = 100
@@ -34,7 +35,7 @@ def _me_payload(profile: Dict[str, Any]) -> BaseResponse[Dict[str, Any]]:
             "profile": profile,
             "stats": stats,
             "daily_activity": get_recent_daily_activity(profile["id"], profile["timezone"]),
-            "plan": get_plan(profile["plan_id"]),
+            "plan": get_plan(effective_plan_id(profile)),
             "needs_onboarding": profile["onboarding_completed_at"] is None,
         },
     )

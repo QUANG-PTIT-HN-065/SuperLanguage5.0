@@ -205,7 +205,12 @@ function renderStreakWeek(days: StreakDay[]): void {
       bubble.append(icon);
     } else if (date === today) {
       bubble.classList.add("active-today");
-      bubble.textContent = t("hm.todayBubble");
+      const flame = document.createElement("img");
+      flame.src = "../../../assets/streak-flame.gif?v=4";
+      flame.alt = "";
+      flame.className = "streak-flame-img streak-flame-day";
+      bubble.append(flame);
+      bubble.setAttribute("aria-label", t("hm.todayBubble"));
     } else {
       bubble.textContent = "·";
     }

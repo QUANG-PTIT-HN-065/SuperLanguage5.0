@@ -1,8 +1,9 @@
 import { initializeLearnerHeader } from "../shared/learner-header";
+import { bindPageTransitions } from "../shared/page-transition";
 import { isLearnerAuthenticated, slanguageApi, type ApiResponse } from "../shared/api-client";
 import { applyI18n, t, LOCALE_EVENT } from "../shared/i18n";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
-import { readHearts, refillHearts } from "../shared/hearts";
+import { fillHearts, formatHearts, heartCapLabel, isHeartsFull, readHearts } from "../shared/hearts";
 
 interface ShopItem {
   id: string;
@@ -12,7 +13,7 @@ interface ShopItem {
   icon: string;
   badge: string;
   badge_class: string;
-  category: "boost" | "heal" | "shield";
+  category: "boost" | "heal" | "shield" | "premium";
   limit_period: "daily" | "monthly";
   limit_count: number;
   remaining_limit: number;
@@ -40,12 +41,14 @@ interface ShopState {
   xp_total: number;
   xp_balance: number;
   coin_balance: number;
+  premium_active?: boolean;
+  premium_until?: string | null;
   items: ShopItem[];
   inventory: ShopInventoryItem[];
   transactions: ShopTransaction[];
 }
 
-// Ảnh vật phẩm dùng lại thiết kế prototype (Fallback: icon Font Awesome từ API)
+// Ảnh vật phẩm dùng lại thiết kế prototype (item_id lạ thì suy ra theo nhóm)
 const ITEM_IMAGES: Record<string, string> = {
   heal_hearts: "../../../assets/potion_red.png",
   heal_potion: "../../../assets/potion_red.png",
@@ -54,8 +57,21 @@ const ITEM_IMAGES: Record<string, string> = {
   streak_freeze: "../../../assets/potion_blue.png",
 };
 
-function itemVisual(id: string, iconClass: string, cssClass: string, alt: string): string {
-  const image = ITEM_IMAGES[id];
+// 'premium' không có ảnh bình thuốc → itemVisual tự rơi về icon vương miện.
+const CATEGORY_IMAGES: Partial<Record<ShopItem["category"], string>> = {
+  heal: "../../../assets/potion_red.png",
+  boost: "../../../assets/potion_yellow.png",
+  shield: "../../../assets/potion_blue.png",
+};
+
+function itemVisual(
+  id: string,
+  iconClass: string,
+  cssClass: string,
+  alt: string,
+  category?: ShopItem["category"] | null,
+): string {
+  const image = ITEM_IMAGES[id] ?? (category ? CATEGORY_IMAGES[category] : undefined);
   if (image) return `<img src="${image}" alt="${alt}" class="${cssClass}">`;
   return `<i class="${iconClass}"></i>`;
 }
@@ -78,6 +94,7 @@ class SlanguageShopApp {
     }
 
     void initializeLearnerHeader();
+    bindPageTransitions();
     document.title = t("sh.pageTitle");
     this.bindEvents();
     void this.loadState();
@@ -364,7 +381,35 @@ class SlanguageShopApp {
     await this.runTransaction("/api/v1/shop/purchase", {
       request_id: crypto.randomUUID(),
       item_id: item.id,
-    }, (response) => this.showPurchaseSuccessModal(item, response.message));
+    }, (response) => {
+      if (item.category === "premium") {
+        this.showPremiumActivatedModal(response.data?.premium_until ?? null);
+      } else {
+        this.showPurchaseSuccessModal(item, response.message);
+      }
+    });
+  }
+
+  private premiumUntilLabel(until: string | null): string {
+    if (!until) return t("sh.premiumPermanent");
+    const date = new Date(until);
+    return Number.isNaN(date.getTime()) ? until : date.toLocaleString("vi-VN");
+  }
+
+  private showPremiumActivatedModal(until: string | null): void {
+    this.openDialog({
+      iconClass: "success",
+      icon: "fa-solid fa-crown",
+      titleHtml: this.escape(t("sh.modalPremiumSuccessTitle")),
+      descHtml: t("sh.modalPremiumSuccessDesc", {
+        until: this.escape(this.premiumUntilLabel(until)),
+      }),
+      subHtml: this.escape(t("sh.modalPremiumSuccessSub")),
+      footerHtml: `
+        <button type="button" class="btn-dialog-action" data-modal-action="close">
+          <i class="fa-solid fa-thumbs-up"></i> ${this.escape(t("sh.modalBtnGreat"))}
+        </button>`,
+    });
   }
 
   private categoryOf(itemId: string): ShopItem["category"] | null {
@@ -377,10 +422,10 @@ class SlanguageShopApp {
     const category = this.categoryOf(itemId);
     const title = this.escape(entry.title);
 
-    if (category === "heal" && readHearts() >= 5) {
+    if (category === "heal" && isHeartsFull()) {
       this.showSuccessModal(
         t("sh.modalHealFullTitle"),
-        t("sh.modalHealFullDesc", { title }),
+        t("sh.modalHealFullDesc", { title, max: heartCapLabel() }),
         t("sh.modalHealFullSub", { count: this.format(entry.quantity) })
       );
       return;
@@ -441,7 +486,7 @@ class SlanguageShopApp {
         },
       });
       if (category === "heal") {
-        refillHearts(5);
+        fillHearts();
         this.refreshHeartsDisplay();
       }
       await this.loadState();
@@ -457,8 +502,8 @@ class SlanguageShopApp {
 
   private refreshHeartsDisplay(): void {
     const hearts = readHearts();
-    document.querySelectorAll<HTMLElement>("#headerHeartsVal, .stat-chip.hearts span").forEach((element) => {
-      element.textContent = `${hearts}/5`;
+    document.querySelectorAll<HTMLElement>("#headerHeartsVal, #userHeartsDisplay, .stat-chip.hearts span").forEach((element) => {
+      element.textContent = formatHearts(hearts);
     });
   }
 
@@ -506,7 +551,7 @@ class SlanguageShopApp {
     if (!this.state) return;
     this.setText("userCoinsDisplay", `${this.format(this.state.coin_balance)} Coin`);
     this.setText("userXPDisplay", `${this.format(this.state.xp_balance)} XP`);
-    this.setText("userHeartsDisplay", `${this.format(this.state.xp_total)} XP`);
+    this.refreshHeartsDisplay();
     this.setText("headerCoinsVal", `${this.format(this.state.coin_balance)} Coin`);
     if (this.xpInput) {
       this.xpInput.max = String(this.state.xp_balance);
@@ -525,6 +570,7 @@ class SlanguageShopApp {
       const limitReached = item.remaining_limit === 0;
       const cannotAfford = item.cost_coins > this.state!.coin_balance;
       const limit = item.limit_period === "daily" ? t("sh.limitDaily") : t("sh.limitMonthly");
+      const premiumActive = item.category === "premium" && this.state!.premium_active;
       const btnHtml = limitReached
         ? `<button type="button" class="btn-buy-card limit-reached" data-purchase-item="${this.escape(item.id)}" disabled>
              <i class="fa-solid fa-ban"></i> ${this.escape(t("sh.btnLimitReached", { period: limit }))}
@@ -541,7 +587,7 @@ class SlanguageShopApp {
           </div>
         </div>
         <div class="item-header-row">
-          <div class="item-icon-box">${itemVisual(item.id, this.escape(item.icon), "potion-icon-img", this.escape(item.title))}</div>
+          <div class="item-icon-box">${itemVisual(item.id, this.escape(item.icon), "potion-icon-img", this.escape(item.title), item.category)}</div>
           <h3 class="item-title">${this.escape(item.title)}</h3>
         </div>
         <div class="item-card-body">
@@ -550,6 +596,9 @@ class SlanguageShopApp {
             <span class="item-limit-tag${limitReached ? " exhausted" : ""}">
               <i class="fa-regular fa-clock"></i> ${this.escape(t("sh.itemLimit", { remaining: item.remaining_limit, count: item.limit_count, period: limit }))}
             </span>
+            ${premiumActive ? `<span class="item-limit-tag premium-active">
+              <i class="fa-solid fa-crown"></i> ${this.escape(t("sh.premiumActiveUntil", { until: this.premiumUntilLabel(this.state!.premium_until ?? null) }))}
+            </span>` : ""}
             ${item.non_stacking ? `<span class="item-non-stack-note"><i class="fa-solid fa-circle-exclamation"></i> ${this.escape(t("sh.nonStacking"))}</span>` : ""}
           </div>
         </div>
@@ -563,7 +612,7 @@ class SlanguageShopApp {
     if (!this.inventoryList || !this.state) return;
     this.inventoryList.innerHTML = this.state.inventory.length
       ? this.state.inventory.map((item) => `<div class="inventory-item-row clickable-potion" role="button" tabindex="0" data-use-item-id="${this.escape(item.item_id)}" title="${this.escape(t("sh.invUseHint"))}">
-          <div class="inv-icon">${itemVisual(item.item_id, this.escape(item.icon), "inv-potion-img", this.escape(item.title))}</div>
+          <div class="inv-icon">${itemVisual(item.item_id, this.escape(item.icon), "inv-potion-img", this.escape(item.title), this.categoryOf(item.item_id))}</div>
           <div class="inv-info">
             <span class="inv-name">${this.escape(item.title)} <i class="fa-solid fa-hand-pointer inv-use-hint"></i></span>
             <span class="inv-status">${this.escape(t("sh.invOwned"))}</span>

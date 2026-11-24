@@ -194,7 +194,7 @@
       </div>
 
       <!-- Hearts Display -->
-      <div id="hud-hearts" class="flex items-center gap-0.5 px-2.5 py-1.5 rounded-xl bg-rose-950/70 border border-rose-500/40 text-xs sm:text-sm" title="Sinh lực (Hearts)">
+      <div id="hud-hearts" class="flex items-center gap-0.5 px-2.5 py-1.5 rounded-xl bg-rose-950/70 border border-rose-500/40 text-xs sm:text-sm" title="Máu thật của tài khoản">
         ❤️❤️❤️❤️❤️
       </div>
 
@@ -207,6 +207,11 @@
       <!-- Sound Toggle -->
       <button id="btn-sound" onclick="toggleSound()" class="pixel-btn w-9 h-9 rounded-xl bg-slate-800/90 border border-indigo-400/40 flex items-center justify-center text-sm" title="Bật/Tắt âm thanh 16-bit">
         🔊
+      </button>
+
+      <!-- Exit Game -->
+      <button id="btn-exit-game" onclick="exitGame()" class="pixel-btn h-9 px-2.5 rounded-xl bg-rose-950/80 border border-rose-400/50 flex items-center gap-1 text-xs font-bold text-rose-200 hover:text-white" title="Thoát khỏi trò chơi (tự lưu XP đã kiếm)">
+        ⏏️ <span class="hidden sm:inline">Thoát</span>
       </button>
     </div>
   </header>
@@ -426,6 +431,12 @@
         </div>
       </div>
 
+      <button id="btn-use-potion" onclick="usePotionToHeal()" class="pixel-btn w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-extrabold text-sm">
+        🧪 Dùng Bình Máu — hồi đầy máu, chơi tiếp tầng này
+      </button>
+      <p class="text-[11px] text-slate-400 -mt-2">
+        Bình máu lấy từ kho cửa hàng (vật phẩm “Hồi Phục Máu Siêu Tốc”). Không có bình máu? Vào cửa hàng mua trước.
+      </p>
       <button onclick="restartGame()" class="pixel-btn w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-extrabold text-sm">
         🔄 Leo Tháp Lại Từ Đầu
       </button>

@@ -13,14 +13,20 @@ import { isLearnerAuthenticated, slanguageApi, slanguageApiAudio } from "../shar
 import { initializeLearnerHeader, logoutLearner } from "../shared/learner-header";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import {
+  DEFAULT_MAX_HEARTS,
   formatHeartLock,
+  formatHearts,
   gainHearts,
+  getHeartCap,
+  heartCapLabel,
   heartLockRemainingMs,
   isHeartsLocked,
   readHearts,
   spendHearts,
 } from "../shared/hearts";
 import { activateBestBoost, tryHealHearts } from "../shared/shop-items";
+import { playLoadingRive, stopLoadingRive } from "../shared/loading-rive";
+import { launchConfetti } from "../ui/confetti";
 import { applyI18n, getLocale, setLocale, t, LOCALE_EVENT, type UiLocale } from "../shared/i18n";
 
 type DungeonDifficulty = 'easy' | 'normal' | 'hard';
@@ -183,11 +189,77 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
+/* ==================== PHẢN HỒI ĐÚNG/SAI (âm thanh + toast) ==================== */
+type DungeonCue = 'correct' | 'wrong' | 'pass' | 'fail';
+
+const DUNGEON_CUE_NOTES: Record<DungeonCue, number[]> = {
+  correct: [880, 1318.5],
+  wrong: [392, 261.6],
+  pass: [659.3, 830.6, 1046.5, 1318.5],
+  fail: [440, 349.2, 261.6],
+};
+
+const VERDICT_ANIMATIONS = ['is-in', 'is-shake', 'is-glow'];
+
+let cueAudioContext: AudioContext | null = null;
+let verdictToastTimer = 0;
+
+/** Trình duyệt chỉ mở AudioContext sau một thao tác chạm/phím của người dùng. */
+function unlockDungeonAudio(): void {
+  const Constructor = window.AudioContext
+    ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Constructor) return;
+  try {
+    cueAudioContext ??= new Constructor();
+    if (cueAudioContext.state === 'suspended') void cueAudioContext.resume();
+  } catch {
+    cueAudioContext = null;
+  }
+}
+
+/** Âm báo tổng hợp — khỏi nạp file audio cho từng lượt đúng/sai. */
+function playDungeonCue(cue: DungeonCue): void {
+  const context = cueAudioContext;
+  if (!context || context.state === 'closed') return;
+  const rising = cue === 'correct' || cue === 'pass';
+  try {
+    let at = context.currentTime;
+    for (const frequency of DUNGEON_CUE_NOTES[cue]) {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = rising ? 'sine' : 'triangle';
+      oscillator.frequency.setValueAtTime(frequency, at);
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(rising ? 0.16 : 0.12, at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(at);
+      oscillator.stop(at + 0.24);
+      at += rising ? 0.09 : 0.14;
+    }
+  } catch {
+    // Bỏ qua khi trình duyệt chặn phát âm thanh.
+  }
+}
+
+function replayAnimation(element: HTMLElement, className: string): void {
+  element.classList.remove(...VERDICT_ANIMATIONS);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+
+interface DungeonAnswerReview {
+  prompt: string;
+  selected: string;
+  correct: string;
+  explanation: string;
+  isCorrect: boolean;
+}
+
 class SlanguageDungeonTree {
   private currentLang: TargetLang = 'ja';
   private totalXP: number = 0;
-  private currentHearts: number = 5;
-  private maxHearts: number = 5;
+  private currentHearts: number = readHearts();
   private selectedNode: DungeonNode | null = null;
   private selectedChoiceIdx: number | null = null;
 
@@ -222,6 +294,9 @@ class SlanguageDungeonTree {
   private extraWords: TopicWord[] = [];
   private extraPoolLoaded = false;
   private grading = false;
+  private answerReviews: DungeonAnswerReview[] = [];
+  private reviewFilter: 'all' | 'correct' | 'wrong' = 'all';
+  private summaryState: { passed: boolean; xp: number; boostNote: string; body: string; retryable: boolean } | null = null;
 
   // DOM Elements
   private treeSvgCanvas: SVGSVGElement | null = null;
@@ -472,6 +547,17 @@ class SlanguageDungeonTree {
       this.btnExecuteTrial.addEventListener('click', () => this.handleTrialSubmission());
     }
 
+    document.getElementById('btnSummaryRetry')?.addEventListener('click', () => this.retryCurrentNode());
+    document.querySelectorAll<HTMLElement>('#modalReviewFilters .dungeon-review__filter').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const raw = tab.dataset.reviewFilter;
+        this.applyReviewFilter(raw === 'correct' || raw === 'wrong' ? raw : 'all');
+      });
+    });
+    const trialHost = document.getElementById('nodeModalOverlay');
+    trialHost?.addEventListener('pointerdown', unlockDungeonAudio);
+    window.addEventListener('keydown', unlockDungeonAudio, { once: true });
+
     window.addEventListener('resize', () => {
       this.drawConnectingBranches();
     });
@@ -490,15 +576,16 @@ class SlanguageDungeonTree {
   }
 
   private updateStatsDisplays(): void {
+    this.currentHearts = readHearts();
     if (this.navXPVal) this.navXPVal.textContent = `${this.totalXP.toLocaleString()} XP`;
     if (this.treeTotalXP) this.treeTotalXP.textContent = `${this.totalXP.toLocaleString()} XP`;
     if (this.treeLevelVal) this.treeLevelVal.textContent = t('rm.level', { n: Math.floor(this.totalXP / 100) + 1 });
     if (this.navHeartsVal) {
-      this.navHeartsVal.textContent = `${this.currentHearts}/${this.maxHearts}`;
+      this.navHeartsVal.textContent = formatHearts(this.currentHearts);
       const chip = this.navHeartsVal.closest<HTMLElement>('.hud-chip, .stat-chip') || this.navHeartsVal;
       chip.title = isHeartsLocked()
         ? t('rm.heartsChipLocked', { time: formatHeartLock(heartLockRemainingMs()) })
-        : t('rm.heartsChip', { cur: this.currentHearts, max: this.maxHearts });
+        : t('rm.heartsChip', { cur: this.currentHearts, max: heartCapLabel() });
     }
     this.renderTrialHearts();
     if (this.navHeartIcon) {
@@ -984,6 +1071,9 @@ class SlanguageDungeonTree {
   private async openModal(node: DungeonNode): Promise<void> {
     this.selectedNode = node;
     this.selectedChoiceIdx = null;
+    this.summaryState = null;
+    this.answerReviews = [];
+    this.resetSummaryPanel(false);
     if (!this.nodeModalOverlay) return;
 
     this.renderModalChrome(node);
@@ -1137,6 +1227,14 @@ class SlanguageDungeonTree {
     const node = this.selectedNode;
     if (!btn || !node) return;
 
+    if (this.summaryState) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.className = 'btn-trial-action complete-action';
+      btn.innerHTML = `<i class="fa-solid ${this.summaryState.passed ? 'fa-map' : 'fa-door-open'}"></i> ${t(this.summaryState.passed ? 'rm.summaryContinue' : 'rm.summaryExit')}`;
+      return;
+    }
+
     if (node.isHub) {
       btn.disabled = false;
       btn.classList.remove('complete-action');
@@ -1271,6 +1369,7 @@ class SlanguageDungeonTree {
         this.selectedNode = node;
         this.renderModalChrome(node);
         this.refreshTrialChrome();
+        if (this.summaryState) this.renderSummary();
       }
     }
   }
@@ -1431,8 +1530,10 @@ class SlanguageDungeonTree {
   private renderTrialHearts(): void {
     if (!this.modalTrialHearts) return;
     const penalty = this.selectedNode?.heartPenalty || 1;
-    const icons = Array.from({ length: this.maxHearts }, (_, index) =>
-      `<i class="fa-solid fa-heart" style="color:${index < this.currentHearts ? '#ef4444' : '#334155'};"></i>`
+    const cap = getHeartCap();
+    const iconCount = cap ?? DEFAULT_MAX_HEARTS;
+    const icons = Array.from({ length: iconCount }, (_, index) =>
+      `<i class="fa-solid fa-heart" style="color:${cap === null || index < this.currentHearts ? '#ef4444' : '#334155'};"></i>`
     ).join('');
     this.modalTrialHearts.innerHTML = `${icons}<span class="trial-hearts-note">${
       isHeartsLocked()
@@ -1738,6 +1839,9 @@ class SlanguageDungeonTree {
     this.bossAnswers = [];
     this.currentQuestionsList = [];
     this.trialResultState = null;
+    this.summaryState = null;
+    this.answerReviews = [];
+    this.resetSummaryPanel();
     this.matchPairs = new Map();
     this.matchSelectedWord = null;
     this.fillInput = null;
@@ -1747,6 +1851,11 @@ class SlanguageDungeonTree {
   private async handleTrialSubmission(): Promise<void> {
     if (!this.selectedNode || this.grading) return;
     const node = this.selectedNode;
+
+    if (this.summaryState) {
+      this.closeModal();
+      return;
+    }
 
     if (node.isHub) {
       if (node.status !== 'mastered') {
@@ -1766,17 +1875,16 @@ class SlanguageDungeonTree {
     }
 
     if (this.currentTrialPhase === 'failed') {
+      if (this.currentQuestionsList.length === 0) {
+        await this.startBossQuiz(node);
+        return;
+      }
       if (this.failReason === 'hearts') {
         this.updateStatsDisplays();
-        this.closeModal();
-        this.showToast(t('rm.heartsFailToast', { time: formatHeartLock(heartLockRemainingMs()) }));
-      } else if (this.currentQuestionsList.length === 0) {
-        await this.startBossQuiz(node);
+        this.openSummary(false, 0, '', t('rm.failedBody', { time: formatHeartLock(heartLockRemainingMs()) }), false);
       } else {
-        this.bossAnswers = [];
-        this.currentQuestionIdx = 0;
-        this.failReason = null;
-        this.renderCurrentQuestion();
+        const correctCount = this.answerReviews.filter((entry) => entry.isCorrect).length;
+        this.openSummary(false, 0, '', t('rm.bossNotDefeated', { count: correctCount }), true);
       }
       return;
     }
@@ -1829,6 +1937,13 @@ class SlanguageDungeonTree {
       }
 
       const explanationNow = () => trial.explanationKey ? t(trial.explanationKey, trial.explanationVars) : verdict.explanation;
+      this.answerReviews.push({
+        prompt: trial.promptKey ? t(trial.promptKey, trial.promptVars) : trial.prompt,
+        selected: this.describeAnswer(trial),
+        correct: verdict.correctDisplay,
+        explanation: explanationNow() || '',
+        isCorrect: verdict.isCorrect,
+      });
       if (verdict.isCorrect) {
         this.showTrialResult('modal-trial-result success', () => `
           <div class="result-icon"><i class="fa-solid fa-circle-check"></i></div>
@@ -1837,6 +1952,7 @@ class SlanguageDungeonTree {
             <p>${escapeHtml(explanationNow() || verdict.correctDisplay || t('rm.correctFallback'))}</p>
           </div>
         `);
+        this.reactToVerdict(true, 0);
       } else {
         const penalty = node.heartPenalty || 1;
         this.currentHearts = spendHearts(penalty);
@@ -1851,6 +1967,7 @@ class SlanguageDungeonTree {
             <p>${t('rm.correctAnswer')} <strong>${escapeHtml(verdict.correctDisplay)}</strong>.<br>${escapeHtml(explanationNow() || '')}</p>
           </div>
         `);
+        this.reactToVerdict(false, penalty);
 
         if (this.currentHearts === 0) {
           const healed = await tryHealHearts();
@@ -1877,8 +1994,8 @@ class SlanguageDungeonTree {
             `);
             if (this.btnExecuteTrial) {
               this.btnExecuteTrial.disabled = false;
-              this.btnExecuteTrial.className = 'btn-trial-action retry-action';
-              this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-door-open"></i> ${t('rm.exitLesson')}`;
+              this.btnExecuteTrial.className = 'btn-trial-action complete-action';
+              this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-chart-simple"></i> ${t('rm.viewResult')}`;
             }
             return;
           }
@@ -1913,7 +2030,7 @@ class SlanguageDungeonTree {
     }
   }
 
-  private async completeTrialNode(node: DungeonNode): Promise<void> {
+  private async completeTrialNode(node: DungeonNode, winNote?: string): Promise<void> {
     this.markMastered(node);
 
     let awardedXP = node.xpReward;
@@ -1940,8 +2057,197 @@ class SlanguageDungeonTree {
     this.updateStatsDisplays();
     this.renderTree();
 
-    this.showToast(t('rm.nodeClearToast', { xp: awardedXP, boost: boostNote }));
-    this.closeModal();
+    this.openSummary(true, awardedXP, boostNote, winNote || t('rm.summaryPassBody'), false);
+  }
+
+  /** Màn tổng kết ải: điểm, số câu đúng, XP nhận được, xem lại câu sai. */
+  private openSummary(passed: boolean, xp: number, boostNote: string, body: string, retryable: boolean): void {
+    const summary = document.getElementById('modalSummaryBox');
+    if (!summary) return;
+    this.summaryState = { passed, xp, boostNote, body, retryable };
+    this.resetSummaryPanel(false);
+    if (this.modalTrialBox) this.modalTrialBox.style.display = 'none';
+    summary.style.display = 'block';
+    summary.classList.remove('is-in');
+    void summary.offsetWidth;
+    summary.classList.add('is-in');
+    if (this.nodeModalOverlay) this.nodeModalOverlay.scrollTop = 0;
+    const modalBox = this.nodeModalOverlay?.querySelector<HTMLElement>('.node-modal-box');
+    if (modalBox) modalBox.scrollTop = 0;
+    this.renderSummary();
+    playDungeonCue(passed ? 'pass' : 'fail');
+    if (passed && modalBox) launchConfetti(modalBox);
+    this.refreshModalButton();
+  }
+
+  /** Ẩn bảng tổng kết, trả lại khung thử thách như trước khi làm ải. */
+  private resetSummaryPanel(hideTrialBox = true): void {
+    this.reviewFilter = 'all';
+    const summary = document.getElementById('modalSummaryBox');
+    if (summary) {
+      summary.style.display = 'none';
+      summary.classList.remove('is-in');
+    }
+    document.getElementById('btnSummaryRetry')?.setAttribute('hidden', '');
+    const list = document.getElementById('modalReviewList');
+    if (list) list.innerHTML = '';
+    if (hideTrialBox && this.modalTrialBox) this.modalTrialBox.style.display = 'none';
+  }
+
+  private renderSummary(): void {
+    const state = this.summaryState;
+    if (!state) return;
+    const total = this.answerReviews.length;
+    const correct = this.answerReviews.filter((entry) => entry.isCorrect).length;
+    const percent = total ? Math.round((correct / total) * 100) : 0;
+
+    const banner = document.getElementById('modalSummaryBanner');
+    if (banner) banner.dataset.state = state.passed ? 'pass' : 'fail';
+    const icon = document.getElementById('modalSummaryIcon');
+    if (icon) icon.className = `fa-solid ${state.passed ? 'fa-trophy' : 'fa-heart-crack'}`;
+    const title = document.getElementById('modalSummaryTitle');
+    if (title) title.textContent = t(state.passed ? 'rm.summaryPassTitle' : 'rm.summaryFailTitle');
+    const text = document.getElementById('modalSummaryText');
+    // Mã i18n được phép kèm <strong> trong chữ động nên phải nạp HTML.
+    if (text) text.innerHTML = state.body;
+
+    const setText = (id: string, value: string): void => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = value;
+    };
+    setText('summaryScore', total ? `${percent}%` : '—');
+    setText('summaryCorrect', `${correct}/${total}`);
+    setText('summaryXp', state.passed ? `+${state.xp} XP${state.boostNote}` : '+0 XP');
+    setText('summaryHearts', formatHearts(this.currentHearts));
+
+    const retry = document.getElementById('btnSummaryRetry');
+    if (retry) {
+      retry.hidden = !state.retryable;
+      const label = retry.querySelector<HTMLElement>('[data-i18n]');
+      const node = this.selectedNode;
+      if (label && node?.official) label.textContent = t('rm.retryBoss');
+    }
+    this.openDefaultReviewFilter();
+  }
+
+  private applyReviewFilter(filter: 'all' | 'correct' | 'wrong'): void {
+    this.reviewFilter = filter;
+    document.querySelectorAll<HTMLElement>('#modalReviewFilters .dungeon-review__filter').forEach((tab) => {
+      const active = tab.dataset.reviewFilter === filter;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    this.renderReviewList();
+  }
+
+  private renderReviewList(): void {
+    const list = document.getElementById('modalReviewList');
+    const empty = document.getElementById('modalReviewEmpty');
+    if (!list) return;
+    const total = this.answerReviews.length;
+    const correctCount = this.answerReviews.filter((entry) => entry.isCorrect).length;
+    const wrongCount = total - correctCount;
+    const setCount = (id: string, value: number): void => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = String(value);
+    };
+    setCount('reviewCountAll', total);
+    setCount('reviewCountCorrect', correctCount);
+    setCount('reviewCountWrong', wrongCount);
+
+    const entries = this.answerReviews
+      .map((entry, index) => ({ entry, no: index + 1 }))
+      .filter(({ entry }) => this.reviewFilter === 'all'
+        || (this.reviewFilter === 'correct' ? entry.isCorrect : !entry.isCorrect));
+
+    list.innerHTML = entries.map(({ entry, no }) => `
+      <li class="d-review ${entry.isCorrect ? 'is-correct' : 'is-wrong'}">
+        <div class="d-review__head">
+          <span class="d-review__no">${escapeHtml(t('rm.reviewQuestion', { n: no, total }))}</span>
+          <span class="d-review__status"><i class="fa-solid ${entry.isCorrect ? 'fa-check' : 'fa-xmark'}"></i> ${escapeHtml(t(entry.isCorrect ? 'rm.reviewStatusCorrect' : 'rm.reviewStatusWrong'))}</span>
+        </div>
+        <p class="d-review__prompt">${escapeHtml(entry.prompt)}</p>
+        <div class="d-review__answers${entry.isCorrect ? ' d-review__answers--single' : ''}">
+          <div class="d-review__answer ${entry.isCorrect ? 'is-right' : 'is-wrong'}">
+            <span class="d-review__answer-label">${escapeHtml(t('rm.reviewYourAnswer'))}</span>
+            <strong>${escapeHtml(entry.selected || '—')}</strong>
+          </div>
+          ${entry.isCorrect ? '' : `
+            <div class="d-review__answer is-right">
+              <span class="d-review__answer-label">${escapeHtml(t('rm.reviewCorrectAnswer'))}</span>
+              <strong>${escapeHtml(entry.correct || '—')}</strong>
+            </div>`}
+        </div>
+        ${entry.explanation ? `<p class="d-review__note"><i class="fa-solid fa-circle-info"></i> ${escapeHtml(entry.explanation)}</p>` : ''}
+      </li>`).join('');
+
+    if (empty) {
+      const hasNothing = entries.length === 0;
+      empty.hidden = !hasNothing;
+      if (hasNothing) {
+        empty.textContent = t(this.reviewFilter === 'wrong' ? 'rm.reviewEmptyWrong' : 'rm.reviewEmptyOther');
+      }
+    }
+  }
+
+  /** Chọn bộ lọc mặc định: có câu sai thì mở tab "Sai" để học viên soi lỗi ngay. */
+  private openDefaultReviewFilter(): void {
+    const hasWrong = this.answerReviews.some((entry) => !entry.isCorrect);
+    this.applyReviewFilter(hasWrong ? 'wrong' : 'all');
+  }
+
+  private describeAnswer(trial: DungeonTrial): string {
+    if (trial.kind === 'mc') {
+      return this.selectedChoiceIdx !== null ? (trial.choices[this.selectedChoiceIdx] ?? '—') : '—';
+    }
+    if (trial.kind === 'fill') return this.fillInput?.value.trim() || '—';
+    const pairs = Array.from(this.matchPairs.entries()).map(([word, meaning]) => `${word} → ${meaning}`);
+    return pairs.join('; ') || '—';
+  }
+
+  /** Toast nổi + âm báo + rung/nhấp nháy khung câu hỏi khi chấm một câu. */
+  private reactToVerdict(isCorrect: boolean, heartsLost: number): void {
+    const toast = document.getElementById('dungeonVerdictToast');
+    if (toast) {
+      toast.dataset.state = isCorrect ? 'correct' : 'incorrect';
+      const icon = toast.querySelector<HTMLElement>('.dungeon-toast__icon');
+      if (icon) icon.className = `dungeon-toast__icon fa-solid ${isCorrect ? 'fa-circle-check' : 'fa-heart-crack'}`;
+      const text = toast.querySelector<HTMLElement>('.dungeon-toast__text');
+      if (text) {
+        text.textContent = isCorrect
+          ? t('rm.verdictCorrect')
+          : heartsLost > 0
+            ? t('rm.verdictHearts', { hearts: formatHearts(this.currentHearts) })
+            : t('rm.verdictWrong');
+      }
+      replayAnimation(toast, 'is-in');
+      window.clearTimeout(verdictToastTimer);
+      verdictToastTimer = window.setTimeout(() => toast.classList.remove('is-in'), 1800);
+    }
+    if (this.modalTrialBox) replayAnimation(this.modalTrialBox, isCorrect ? 'is-glow' : 'is-shake');
+    playDungeonCue(isCorrect ? 'correct' : 'wrong');
+  }
+
+  /** Làm lại ải đang chơi dở (chỉ khi còn tim / boss chưa hạ được). */
+  private retryCurrentNode(): void {
+    const node = this.selectedNode;
+    if (!node || !this.summaryState) return;
+    this.summaryState = null;
+    this.answerReviews = [];
+    this.resetSummaryPanel();
+    this.failReason = null;
+    this.currentQuestionIdx = 0;
+    this.currentTrialPhase = 'idle';
+    if (this.modalTrialBox) this.modalTrialBox.style.display = 'block';
+    if (node.official) {
+      this.bossAnswers = [];
+      this.renderCurrentQuestion();
+      return;
+    }
+    void this.ensureExtendedPool().then(() => {
+      this.currentQuestionsList = this.generateTrials(node);
+      this.renderCurrentQuestion();
+    });
   }
 
   private async startBossQuiz(node: DungeonNode): Promise<void> {
@@ -2029,8 +2335,7 @@ class SlanguageDungeonTree {
       this.grading = false;
       if (data.passed === true) {
         this.quizCompleted = true;
-        await this.completeTrialNode(node);
-        this.showToast(t('rm.bossWinToast'));
+        await this.completeTrialNode(node, t('rm.bossWinToast'));
       } else {
         const correctCount = Number(data.correct_count) || 0;
         this.currentTrialPhase = 'failed';
@@ -2042,10 +2347,11 @@ class SlanguageDungeonTree {
             <p>${t('rm.bossNotDefeatedBody')}</p>
           </div>
         `);
+        playDungeonCue('fail');
         if (this.btnExecuteTrial) {
           this.btnExecuteTrial.disabled = false;
-          this.btnExecuteTrial.className = 'btn-trial-action retry-action';
-          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-rotate-right"></i> ${t('rm.retryBoss')}`;
+          this.btnExecuteTrial.className = 'btn-trial-action complete-action';
+          this.btnExecuteTrial.innerHTML = `<i class="fa-solid fa-chart-simple"></i> ${t('rm.viewResult')}`;
         }
       }
     } catch (error) {
@@ -2143,13 +2449,8 @@ class SlanguageDungeonTree {
 
     window.addEventListener('pageshow', () => {
       const overlay = document.getElementById('slanguageLoadingOverlay');
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
       if (overlay) overlay.classList.remove('active');
-      if (video) {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
-      }
+      stopLoadingRive();
       const savedXP = localStorage.getItem('slanguage_user_xp');
       if (savedXP) this.totalXP = parseInt(savedXP, 10) || this.totalXP;
       this.currentHearts = readHearts();
@@ -2160,27 +2461,12 @@ class SlanguageDungeonTree {
 
   private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
     const overlay = document.getElementById('slanguageLoadingOverlay');
-    const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     if (overlay) {
       overlay.classList.add('active');
-      if (video) {
-        video.muted = false;
-        video.volume = 1.0;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            video.muted = true;
-            video.play();
-          });
-        }
-      }
+      playLoadingRive();
     }
     setTimeout(() => {
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
+      stopLoadingRive();
       if (overlay) overlay.classList.remove('active');
       window.location.href = targetUrl;
     }, duration);

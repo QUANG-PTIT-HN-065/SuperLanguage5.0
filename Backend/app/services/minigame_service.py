@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from app.db.supabase import supabase_admin
+from app.services.vocabulary_service import is_premium_profile
 
 
 def _language_name(language_code: str) -> str:
@@ -131,7 +132,7 @@ def get_minigame_state(
             break
 
     plan_id = profile.get("plan_id") or "free"
-    is_premium = plan_id == "premium"
+    is_premium = is_premium_profile(profile)
     return {
         "language": language_code,
         "level": level,

@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../styles/shop/style.css">
+  <link rel="stylesheet" href="../../styles/shared/learner-shell.css">
   <!-- Auth Guard: token nằm trong cookie (không còn localStorage) -->
   <script>
     if (!/(?:^|;\s*)slanguage_access_token=[^;]+/.test(document.cookie)) {
@@ -24,7 +25,6 @@
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
-        <!-- Hamburger Menu Button (< 1286px) -->
         <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng" aria-expanded="false" title="Menu điều hướng">
           <i class="fa-solid fa-bars"></i>
         </button>
@@ -36,9 +36,39 @@
         <nav class="desktop-nav">
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="../select-lesson/index.html">Học tập</a></li>
-            <li><a href="../vocabulary/index.html">Từ vựng</a></li>
-            <li><a href="../ai-practice/index.html">Luyện tập AI</a></li>
+            <li class="nav-dropdown-item">
+              <button type="button" class="nav-link-dropdown-btn" id="learnNavDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                <span>Học tập</span>
+                <i class="fa-solid fa-chevron-down nav-dropdown-chevron"></i>
+              </button>
+              <div class="nav-dropdown-menu" id="learnNavDropdownMenu">
+                <a href="../roadmap/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Học bài mới</span>
+                    <span class="nav-dropdown-desc">Lộ trình học theo từng mốc</span>
+                  </div>
+                </a>
+                <a href="../vocabulary/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện từ vựng</span>
+                    <span class="nav-dropdown-desc">Flashcard & kho từ vựng</span>
+                  </div>
+                </a>
+                <a href="../ai-practice/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện tập với AI</span>
+                    <span class="nav-dropdown-desc">Hội thoại tương tác trợ lý AI</span>
+                  </div>
+                </a>
+                <a href="../writing/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện viết đoạn văn</span>
+                    <span class="nav-dropdown-desc">AI ra đề và chấm bài chi tiết</span>
+                  </div>
+                </a>
+              </div>
+            </li>
+            <li><a href="../minigames/index.html">Mini game</a></li>
             <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
           </ul>
         </nav>
@@ -57,7 +87,7 @@
           <i class="fa-solid fa-heart"></i>
           <span id="headerHeartsVal">—</span>
         </div>
-        <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
+
         <div class="lang-dropdown auth-only" id="langDropdown">
           <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
             <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
@@ -83,18 +113,16 @@
           </div>
         </div>
 
-        <!-- User Account Dropdown -->
         <div class="user-dropdown auth-only" id="userDropdown">
-          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
-            <img alt="Ảnh đại diện" class="user-avatar-mini">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
+            <img alt="Ảnh đại diện" class="user-avatar-mini" id="headerAvatar">
             <div class="user-info-text">
-              <div class="name"></div>
+              <div class="name" id="headerUserName">Học viên</div>
               <div class="role">Học viên</div>
             </div>
             <i class="fa-solid fa-chevron-down user-chevron"></i>
           </button>
           <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
-            <!-- Mobile User Profile & Stats Header (chỉ hiện < 1286px) -->
             <div class="dropdown-user-header" id="dropdownUserHeader">
               <div class="dropdown-user-meta">
                 <img alt="Avatar" class="dropdown-user-avatar" id="dropdownUserAvatar">
@@ -133,21 +161,21 @@
               <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
               <div class="menu-item-text">
                 <span class="title">Thông tin cá nhân</span>
-                <span class="sub">Hồ sơ & cài đặt tài khoản</span>
+                <span class="sub">Hồ sơ &amp; cài đặt tài khoản</span>
               </div>
             </a>
             <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
               <div class="menu-item-text">
                 <span class="title">Tiến độ học tập</span>
-                <span class="sub">Thống kê XP & chuỗi ngày</span>
+                <span class="sub">Thống kê XP &amp; chuỗi ngày</span>
               </div>
             </a>
-            <a href="./index.html" class="user-dropdown-item active-page" role="menuitem">
+            <a href="../shop/index.html" class="user-dropdown-item active-page" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
               <div class="menu-item-text">
                 <span class="title">Shop quy đổi</span>
-                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
+                <span class="sub">Đổi 5 XP = 1 Coin &amp; vật phẩm</span>
               </div>
             </a>
             <div class="user-dropdown-divider"></div>
@@ -161,7 +189,6 @@
           </div>
         </div>
 
-        <!-- Guest Auth Buttons -->
         <div class="guest-nav-auth guest-only" id="guestNavAuth">
           <a href="../login/index.html" class="nav-auth-login">Đăng nhập</a>
           <a href="../register/index.html" class="nav-auth-register">Đăng ký</a>
@@ -176,15 +203,14 @@
     <div class="drawer-header">
       <a href="../home/index.html" class="drawer-brand">
         <img src="../../../assets/logo.png" alt="Slanguage Logo" class="drawer-logo-img">
-        <span class="drawer-brand-name">Slanguage</span>
+        <span class="drawer-brand-name">S<span class="brand-language">language</span></span>
       </a>
       <button type="button" class="drawer-close-btn" id="drawerCloseBtn" aria-label="Đóng menu">
         <i class="fa-solid fa-xmark"></i>
       </button>
     </div>
 
-    <!-- User Profile Card inside Drawer -->
-    <div class="drawer-user-card">
+    <div class="drawer-user-card" id="drawerUserCard">
       <img alt="Avatar" class="drawer-avatar" id="drawerUserAvatar">
       <div class="drawer-user-info">
         <div class="drawer-user-name" id="drawerUserName">Học viên</div>
@@ -192,7 +218,6 @@
       </div>
     </div>
 
-    <!-- Quick Stats in Drawer -->
     <div class="drawer-stats-grid">
       <div class="drawer-stat-pill streak" title="Chuỗi ngày liên tục">
         <img src="../../../assets/streak-flame.gif?v=4" alt="Streak" class="drawer-stat-flame">
@@ -220,9 +245,9 @@
           </a>
         </li>
         <li>
-          <a href="../select-lesson/index.html" class="drawer-nav-item">
-            <span class="drawer-nav-icon"><i class="fa-solid fa-map-location-dot"></i></span>
-            <span class="drawer-nav-label">Học tập</span>
+          <a href="../roadmap/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-graduation-cap"></i></span>
+            <span class="drawer-nav-label">Học bài mới</span>
           </a>
         </li>
         <li>
@@ -235,6 +260,18 @@
           <a href="../ai-practice/index.html" class="drawer-nav-item">
             <span class="drawer-nav-icon"><i class="fa-solid fa-robot"></i></span>
             <span class="drawer-nav-label">Luyện tập với AI</span>
+          </a>
+        </li>
+        <li>
+          <a href="../minigames/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-gamepad"></i></span>
+            <span class="drawer-nav-label">Mini game</span>
+          </a>
+        </li>
+        <li>
+          <a href="../writing/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-pen-nib"></i></span>
+            <span class="drawer-nav-label">Luyện viết đoạn văn</span>
           </a>
         </li>
         <li>
@@ -256,7 +293,7 @@
           </a>
         </li>
         <li>
-          <a href="./index.html" class="drawer-nav-item active">
+          <a href="../shop/index.html" class="drawer-nav-item active">
             <span class="drawer-nav-icon"><i class="fa-solid fa-store"></i></span>
             <span class="drawer-nav-label">Shop quy đổi</span>
           </a>
@@ -275,23 +312,23 @@
   <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Điều hướng ngón cái">
     <a href="../home/index.html" class="bottom-nav-item">
       <i class="fa-solid fa-house bottom-nav-icon"></i>
-      <span class="bottom-nav-label">Trang chủ</span>
+      <span class="bottom-nav-label" data-i18n="bn.home">—</span>
     </a>
-    <a href="../select-lesson/index.html" class="bottom-nav-item">
+    <a href="../roadmap/index.html" class="bottom-nav-item">
       <i class="fa-solid fa-map-location-dot bottom-nav-icon"></i>
-      <span class="bottom-nav-label">Học tập</span>
+      <span class="bottom-nav-label" data-i18n="bn.learn">—</span>
     </a>
     <a href="../vocabulary/index.html" class="bottom-nav-item">
       <i class="fa-solid fa-book-open bottom-nav-icon"></i>
-      <span class="bottom-nav-label">Từ vựng</span>
+      <span class="bottom-nav-label" data-i18n="bn.vocab">—</span>
     </a>
     <a href="../ai-practice/index.html" class="bottom-nav-item">
       <i class="fa-solid fa-robot bottom-nav-icon"></i>
-      <span class="bottom-nav-label">Luyện AI</span>
+      <span class="bottom-nav-label" data-i18n="bn.ai">—</span>
     </a>
     <a href="../leaderboard/index.html" class="bottom-nav-item">
       <i class="fa-solid fa-trophy bottom-nav-icon"></i>
-      <span class="bottom-nav-label">Xếp hạng</span>
+      <span class="bottom-nav-label" data-i18n="bn.board">—</span>
     </a>
   </nav>
 
@@ -310,7 +347,7 @@
         </p>
       </div>
 
-      <!-- 3 Live Balance Cards -->
+      <!-- Live Balance Cards: Coin + EXP + Mạng (đồng bộ chỉ số với header hồ sơ) -->
       <div class="wallet-balance-grid">
         <div class="wallet-card gold">
           <div class="wallet-icon-box">
@@ -339,9 +376,9 @@
             <i class="fa-solid fa-heart-pulse"></i>
           </div>
           <div class="wallet-info">
-            <span class="wallet-label" data-i18n="sh.walletTotalLabel">Tổng XP đã tích lũy</span>
+            <span class="wallet-label" data-i18n="sh.walletHeartsLabel">Năng Lượng Sinh Mệnh</span>
             <span class="wallet-val" id="userHeartsDisplay">—</span>
-            <span class="wallet-sub" data-i18n="sh.walletTotalSub">XP chưa quy đổi vẫn có thể dùng để học</span>
+            <span class="wallet-sub" data-i18n="sh.walletHeartsSub">Duy trì sinh lực vượt ải ngục tối</span>
           </div>
         </div>
       </div>
@@ -591,6 +628,18 @@
       </button>
       <div id="modalBodyContent">
         <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= GLOBAL TRANSITION LOADING SCREEN ================= -->
+  <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
+    <div class="loading-content-box">
+      <div class="video-frame">
+        <canvas id="loadingRiveCanvas"></canvas>
+      </div>
+      <div class="loading-text-wrap">
+        <span class="loading-title" data-i18n="sh.loading">Đang tải dữ liệu cửa hàng…</span>
       </div>
     </div>
   </div>

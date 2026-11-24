@@ -72,7 +72,7 @@ export const vi: Record<string, string> = {
   'hm.todayBubble': 'Hôm nay',
 
   'hm.questsTitle': 'Nhiệm vụ hôm nay',
-  'hm.questsRefresh': 'Làm mới sau 8h',
+  'hm.questsRefresh': 'Làm mới mỗi ngày',
   'hm.questsEmpty': 'Hôm nay chưa có nhiệm vụ.',
   'hm.questDone': 'Hoàn thành',
 
@@ -231,7 +231,7 @@ export const en: Record<string, string> = {
   'hm.todayBubble': 'Today',
 
   'hm.questsTitle': "Today's quests",
-  'hm.questsRefresh': 'Resets in 8h',
+  'hm.questsRefresh': 'Resets daily',
   'hm.questsEmpty': 'No quests for today yet.',
   'hm.questDone': 'Completed',
 
@@ -390,7 +390,7 @@ export const ja: Record<string, string> = {
   'hm.todayBubble': '今日',
 
   'hm.questsTitle': '今日のクエスト',
-  'hm.questsRefresh': '8時間後に更新',
+  'hm.questsRefresh': '毎日更新',
   'hm.questsEmpty': '今日のクエストはまだありません。',
   'hm.questDone': '完了',
 

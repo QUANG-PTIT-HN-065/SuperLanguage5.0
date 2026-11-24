@@ -10,6 +10,7 @@ import { isLearnerAuthenticated, slanguageApi } from '../shared/api-client';
 import { initializeLearnerHeader, renderLearnerHeader } from '../shared/learner-header';
 import { applyI18n, getLocale, localeLabel, t, LOCALE_EVENT } from '../shared/i18n';
 import { clearSkeleton, showSkeleton } from '../shared/skeleton';
+import { playLoadingRive, stopLoadingRive } from '../shared/loading-rive';
 
 interface ActivityDay {
   activity_date: string;
@@ -106,21 +107,10 @@ class SlanguageProfile {
 
     window.addEventListener('pageshow', () => {
       const overlay = document.getElementById('slanguageLoadingOverlay');
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
       if (overlay) overlay.classList.remove('active');
-      if (video) {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
-      }
+      stopLoadingRive();
     });
-    window.addEventListener('pagehide', () => {
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
-    });
+    window.addEventListener('pagehide', () => stopLoadingRive());
 
     void this.loadAll();
   }
@@ -730,27 +720,12 @@ class SlanguageProfile {
 
   private triggerLoadingAndRedirect(targetUrl: string, duration = 1500): void {
     const overlay = document.getElementById('slanguageLoadingOverlay');
-    const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     if (overlay) {
       overlay.classList.add('active');
-      if (video) {
-        video.muted = false;
-        video.volume = 1.0;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            video.muted = true;
-            void video.play();
-          });
-        }
-      }
+      playLoadingRive();
     }
     setTimeout(() => {
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
+      stopLoadingRive();
       overlay?.classList.remove('active');
       window.location.href = targetUrl;
     }, duration);

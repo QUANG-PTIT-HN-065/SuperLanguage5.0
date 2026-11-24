@@ -77,6 +77,25 @@ superlanguage-5.0/
 
 ---
 
+## 🧪 Trang PROTOTYPE và trang PRODUCTION
+
+Hai cây thư mục HTML cùng tồn tại trong `Frontend/`. Chỉ cây thứ hai là bản chạy thật:
+
+| Đường dẫn | Loại | Ghi chú |
+| --- | --- | --- |
+| `Frontend/ai-practice/` | **PROTOTYPE** | Bản thiết kế gốc (dữ liệu giả, tự chạy TS bằng Babel standalone). UI đã được port vào `src/pages/ai-practice/`. |
+| `Frontend/shop/` | **PROTOTYPE** | Bản thiết kế gốc (dữ liệu giả). Đã port vào `src/pages/shop/`. |
+| `Frontend/quiz/` | **PROTOTYPE** | Bản thiết kế gốc. Quiz production là modal trong `src/pages/home/` (`src/types/home/lesson-quiz.ts`). |
+| `Frontend/index.html` | Production | Chỉ là trang chuyển tiếp `location.replace("./src/pages/home/index.html")`. |
+| `Frontend/src/pages/<tên>/index.html` | **PRODUCTION** | Mọi trang thật: login, register, verify-otp, forgot-password, select-language, home, select-lesson, vocabulary, ai-practice, shop, roadmap, leaderboard, minigame, profile, terms, các trang admin. |
+| `Frontend/src/types/<tên>/*.ts`, `Frontend/src/styles/<tên>/style.css` | **PRODUCTION** | Logic + style tương ứng của từng trang. |
+
+Sửa UI phải sửa trong `src/`; thư mục prototype chỉ để đối chiếu thiết kế.
+
+Lưu ý kỹ thuật: `vite.config.ts` gom `input` bằng `globSync("**/*.html")` (chỉ loại `node_modules/**`, `dist/**`), nên các trang prototype **vẫn được build** và vẫn chạy được ở `/ai-practice/`, `/shop/`, `/quiz/`. Muốn loại khỏi bundle thì xóa/di chuyển thư mục hoặc thêm vào danh sách `ignore`.
+
+---
+
 ## 📌 Phân tích Chức năng Chi tiết
 
 ### 1. Phân quyền Người dùng (Learner / User)
@@ -176,6 +195,10 @@ Trong phòng Chat AI, chọn **Đọc theo mẫu** rồi bắt đầu buổi luy
 Chat AI có thể dùng một dịch vụ `openai-edge-tts` chạy riêng. Cấu hình `EDGE_TTS_BASE_URL` trong `Backend/.env` trỏ tới địa chỉ gốc của dịch vụ (ví dụ `http://127.0.0.1:5050`); nếu dịch vụ yêu cầu khóa, đặt cùng giá trị `API_KEY` của dịch vụ vào `EDGE_TTS_API_KEY`. Backend chọn giọng Neural theo ngôn ngữ và trả audio MP3. Nếu dịch vụ chưa cấu hình hoặc không truy cập được, nút **Nghe** tự dùng lại giọng đọc của trình duyệt. Khóa dịch vụ chỉ lưu ở backend.
 
 `openai-edge-tts` gọi dịch vụ đọc trực tuyến của Microsoft Edge; đây là tích hợp không chính thức, nên giới hạn và khả năng hoạt động không được đảm bảo. Hãy xem giấy phép của [repo openai-edge-tts](https://github.com/travisvn/openai-edge-tts) và điều khoản của nhà cung cấp trước khi triển khai công khai.
+
+### Nhân vật Sal7, lịch sử và cách hiển thị câu trả lời
+
+Bong bóng trên sân khấu Rive chỉ hiển thị ba dấu chấm khi Sal7 đang suy nghĩ hoặc đang đọc (không hiển thị chữ trong bong bóng). Điều khiển nhân vật bằng ViewModel của file `.riv`: bấm vào sân khấu để mèo đi tới (`clickX`/`clickY` + trigger `clickwalk`), bấm kéo trực tiếp trên mèo để dời chỗ (`characterX`/`characterY`), bấm một lần vào mèo để bật phản ứng (`clickcat`). Câu trả lời của AI hiện dần theo giọng đọc: với giọng ADSUP, tốc độ chữ bám theo `duration` của file audio; với giọng trình duyệt, tốc độ ước lượng theo độ dài câu và tốc độ đọc, phần ghi chú ngữ pháp cùng nút bấm hiện sau khi đọc xong. Nút đồng hồ ở đầu khung chat mở panel lịch sử hội thoại (`GET /api/v1/chat-ai/conversations` và `/conversations/{id}/messages`), chọn một đoạn cũ để xem lại rồi tiếp tục nhắn vào chính đoạn đó.
 
 ### Bài học, tiến độ và ôn tập từ vựng
 

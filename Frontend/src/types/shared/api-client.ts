@@ -1,4 +1,4 @@
-const API_BASE_URL = (
+export const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
 ).replace(/\/+$/, "");
 
@@ -224,9 +224,40 @@ function isFormData(value: unknown): value is FormData {
   return typeof FormData !== "undefined" && value instanceof FormData;
 }
 
-// Hết token = hết phiên: không âm thầm gọi /auth/refresh để "cứu" phiên.
-// 401 khi đang có token → đăng xuất cưỡng chế (xóa cookie + modal + bắt đăng nhập lại).
-// 401 khi là khách (chưa từng có token) → chỉ báo yêu cầu đăng nhập, không dọa "hết hạn".
+// refresh single-flight: 401 đồng loạt từ nhiều request chỉ được đổi token MỘT lần,
+// vì Supabase rotation sẽ vô hiệu refresh_token cũ ngay lần dùng đầu tiên.
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function tryRefreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const refreshToken = readAuthCookie(REFRESH_TOKEN_KEY);
+      if (!refreshToken) return false;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (!response.ok) return false;
+        const payload = await response.json();
+        const tokens = payload?.data as AuthTokens | undefined;
+        if (!tokens?.access_token || !tokens?.refresh_token) return false;
+        saveAuthTokens(tokens);
+        return true;
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+// Access token hết hạn KHÔNG kết liễu phiên: chỉ refresh token chết mới đăng xuất.
+// 401 → thử /auth/refresh một lần rồi retry; refresh chết → xóa sạch cookie + modal.
+// Khách chưa từng có token (401) → chỉ báo yêu cầu đăng nhập, không dọa "hết hạn".
 function handleUnauthorized(token: string | null): never {
   if (token) {
     handleSessionExpired();
@@ -235,20 +266,27 @@ function handleUnauthorized(token: string | null): never {
   throw new Error("Vui lòng đăng nhập để thực hiện thao tác này.");
 }
 
-export async function slanguageApi<T = unknown>(
-  path: string,
-  options: ApiRequestOptions = {},
-): Promise<ApiResponse<T>> {
-  const { anonymous = false, ...requestOptions } = options;
-  const token = anonymous ? null : readAuthCookie(ACCESS_TOKEN_KEY);
+function buildHeaders(
+  requestOptions: Omit<ApiRequestOptions, "anonymous">,
+  token: string | null,
+  acceptAudio = false,
+): Headers {
   const headers = new Headers(requestOptions.headers);
   if (isFormData(requestOptions.body)) headers.delete("Content-Type");
+  else if (acceptAudio) headers.set("Accept", "audio/*");
   else headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  return headers;
+}
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+async function slanguageApiInner<T>(
+  path: string,
+  requestOptions: Omit<ApiRequestOptions, "anonymous">,
+  token: string | null,
+): Promise<Response> {
+  return fetch(`${API_BASE_URL}${path}`, {
     ...requestOptions,
-    headers,
+    headers: buildHeaders(requestOptions, token),
     body:
       requestOptions.body === undefined
         ? undefined
@@ -256,9 +294,29 @@ export async function slanguageApi<T = unknown>(
           ? requestOptions.body
           : JSON.stringify(requestOptions.body),
   });
+}
 
-  if (response.status === 401 && !anonymous) handleUnauthorized(token);
-  return parseResponse<T>(response);
+export async function slanguageApi<T = unknown>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<ApiResponse<T>> {
+  const { anonymous = false, ...requestOptions } = options;
+  if (anonymous) {
+    const response = await slanguageApiInner(path, requestOptions, null);
+    return parseResponse<T>(response);
+  }
+
+  let token: string | null = readAuthCookie(ACCESS_TOKEN_KEY);
+  let response = await slanguageApiInner(path, requestOptions, token);
+  if (response.status !== 401) return parseResponse<T>(response);
+
+  if (!token) handleUnauthorized(null);
+  if (await tryRefreshSession()) {
+    token = readAuthCookie(ACCESS_TOKEN_KEY);
+    response = await slanguageApiInner(path, requestOptions, token);
+    if (response.status !== 401) return parseResponse<T>(response);
+  }
+  handleUnauthorized(token);
 }
 
 export async function slanguageApiAudio(
@@ -266,17 +324,26 @@ export async function slanguageApiAudio(
   body?: unknown,
   method: "POST" | "GET" = "POST",
 ): Promise<Blob> {
-  const token = readAuthCookie(ACCESS_TOKEN_KEY);
-  const headers = new Headers({ Accept: "audio/*" });
-  if (method === "POST") headers.set("Content-Type", "application/json");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const send = async (token: string | null): Promise<Response> => {
+    const headers = buildHeaders({}, token, true);
+    if (method === "POST") headers.set("Content-Type", "application/json");
+    return fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers,
+      body: method === "POST" ? JSON.stringify(body) : undefined,
+    });
+  };
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    body: method === "POST" ? JSON.stringify(body) : undefined,
-  });
-
+  let token: string | null = readAuthCookie(ACCESS_TOKEN_KEY);
+  let response = await send(token);
+  if (response.status === 401 && token) {
+    if (await tryRefreshSession()) {
+      token = readAuthCookie(ACCESS_TOKEN_KEY);
+      response = await send(token);
+    } else {
+      handleUnauthorized(token);
+    }
+  }
   if (response.status === 401 && token) handleUnauthorized(token);
   if (!response.ok) {
     let payload: unknown;

@@ -1,4 +1,5 @@
 import { getAuthCookie, saveAuthTokens, saveLearnerIdentity, slanguageApi } from "../shared/api-client";
+import { playLoadingRive, stopLoadingRive } from "../shared/loading-rive";
 
 /**
  * ===================================================================
@@ -58,7 +59,6 @@ class VerifyOtpController {
   private registrationSuccessModal: HTMLElement | null = null;
   private btnGoToHomeAfterReg: HTMLButtonElement | null = null;
   private loadingOverlay: HTMLElement | null = null;
-  private loadingVideo: HTMLVideoElement | null = null;
 
   // Toast
   private toastElement: HTMLElement | null = null;
@@ -97,16 +97,7 @@ class VerifyOtpController {
     this.registrationSuccessModal = document.getElementById('registrationSuccessModal');
     this.btnGoToHomeAfterReg = document.getElementById('btnGoToHomeAfterReg') as HTMLButtonElement;
     this.loadingOverlay = document.getElementById('slanguageLoadingOverlay');
-    this.loadingVideo = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     this.toastElement = document.getElementById('otpToast');
-
-    // 3. Ensure loading video is muted and paused on startup
-    if (this.loadingVideo) {
-      this.loadingVideo.pause();
-      this.loadingVideo.muted = true;
-      this.loadingVideo.volume = 0;
-      this.loadingVideo.currentTime = 0;
-    }
 
     // 4. Update UI labels
     if (this.displayOtpEmail) {
@@ -215,24 +206,13 @@ class VerifyOtpController {
       });
     }
 
-    // 6. Page Visibility Audio Cutoff
+    // 6. Reset loading state when page is shown from bfcache or hidden
     window.addEventListener('pageshow', () => {
       if (this.loadingOverlay) this.loadingOverlay.classList.remove('active');
-      if (this.loadingVideo) {
-        this.loadingVideo.pause();
-        this.loadingVideo.muted = true;
-        this.loadingVideo.volume = 0;
-        this.loadingVideo.currentTime = 0;
-      }
+      stopLoadingRive();
     });
 
-    window.addEventListener('pagehide', () => {
-      if (this.loadingVideo) {
-        this.loadingVideo.pause();
-        this.loadingVideo.muted = true;
-        this.loadingVideo.volume = 0;
-      }
-    });
+    window.addEventListener('pagehide', () => stopLoadingRive());
   }
 
   private startOtpCountdown(): void {
@@ -382,29 +362,11 @@ class VerifyOtpController {
   private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
     if (this.loadingOverlay) {
       this.loadingOverlay.classList.add('active');
-      if (this.loadingVideo) {
-        this.loadingVideo.currentTime = 0;
-        this.loadingVideo.muted = false;
-        this.loadingVideo.volume = 1.0;
-        const playPromise = this.loadingVideo.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            if (this.loadingVideo) {
-              this.loadingVideo.muted = true;
-              this.loadingVideo.play();
-            }
-          });
-        }
-      }
+      playLoadingRive();
     }
 
     setTimeout(() => {
-      if (this.loadingVideo) {
-        this.loadingVideo.pause();
-        this.loadingVideo.muted = true;
-        this.loadingVideo.volume = 0;
-        this.loadingVideo.currentTime = 0;
-      }
+      stopLoadingRive();
       if (this.loadingOverlay) this.loadingOverlay.classList.remove('active');
       window.location.href = targetUrl;
     }, duration);

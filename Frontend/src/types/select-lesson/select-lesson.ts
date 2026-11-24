@@ -6,7 +6,7 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader, logoutLearner, renderLearnerHeader } from "../shared/learner-header";
 import { applyI18n, localeLabel, setLocale, t, LOCALE_EVENT, type UiLocale } from "../shared/i18n";
-import { readHearts } from "../shared/hearts";
+import { formatHearts, readHearts } from "../shared/hearts";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import "../home/lesson-quiz";
 
@@ -112,7 +112,9 @@ class SelectLessonManager {
           this.currentLang = profileLang;
           this.applyCurrentLanguage();
         }
-        this.isPremiumUser = String(profile.plan_id ?? '') === 'premium' || localStorage.getItem('slanguage_is_premium') === 'true';
+        const plan = meData.plan as Record<string, unknown> | undefined;
+        // plan từ /me đã trừ premium hết hạn (pass shop chỉ cấp theo plan_expires_at).
+        this.isPremiumUser = String(plan?.id ?? '') === 'premium';
       } else {
         // Khách xem catalogue như người dùng miễn phí, theo ngôn ngữ đang chọn trên trang
         this.isPremiumUser = false;
@@ -230,9 +232,8 @@ class SelectLessonManager {
     if (xpEl) xpEl.textContent = userXP.includes('XP') ? userXP : `${userXP} XP`;
 
     // Header Hearts
-    const userHearts = String(readHearts());
     const heartsEl = document.getElementById('headerHeartsVal');
-    if (heartsEl) heartsEl.textContent = `${userHearts}/5`;
+    if (heartsEl) heartsEl.textContent = formatHearts(readHearts());
 
     // Current User profile
     const rawUser = localStorage.getItem('slanguage_current_user');
@@ -614,13 +615,7 @@ class SelectLessonManager {
       });
       document.getElementById('premiumCloseBtn')?.addEventListener('click', () => this.closePremiumModal());
       document.getElementById('premiumActivateBtn')?.addEventListener('click', () => {
-        localStorage.setItem('slanguage_is_premium', 'true');
-        this.isPremiumUser = true;
-        this.sessionsList.forEach((session) => { session.locked = false; });
-        this.renderSessions();
-        this.updateStatusCard();
-        this.closePremiumModal();
-        this.showToast(t('sl.premiumActivated'));
+        window.location.href = '../shop/index.html';
       });
     }
     overlay.classList.add('active');
