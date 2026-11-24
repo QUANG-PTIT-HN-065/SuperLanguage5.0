@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.db.supabase import supabase_admin
 
-from app.api.endpoints import admin, auth, users, vocabulary, chat_ai, lessons, minigame, shop, leaderboard
+from app.api.endpoints import admin, auth, users, vocabulary, chat_ai, lessons, minigame, shop, leaderboard, writing
 
 
 
@@ -55,6 +55,11 @@ app.include_router(
     tags=["Mini-game"],
 )
 app.include_router(admin.router, prefix=f"{settings.API_V1_STR}/admin", tags=["admin"])
+app.include_router(
+    writing.router,
+    prefix=f"{settings.API_V1_STR}/writing",
+    tags=["writing"],
+)
 app.include_router(shop.router, prefix=f"{settings.API_V1_STR}/shop", tags=["shop"])
 app.include_router(
     leaderboard.router,

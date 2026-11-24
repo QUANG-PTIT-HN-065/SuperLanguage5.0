@@ -20,7 +20,7 @@ def _database_error(exc: Exception) -> HTTPException:
     if code == "P0002":
         return HTTPException(status.HTTP_404_NOT_FOUND, "Không tìm thấy tài khoản hoặc vật phẩm.")
     if code == "22023":
-        return HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Yêu cầu giao dịch không hợp lệ.")
+        return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Yêu cầu giao dịch không hợp lệ.")
     if code in {"23505", "23514"}:
         message = str(exc).lower()
         if "inventory" in message:

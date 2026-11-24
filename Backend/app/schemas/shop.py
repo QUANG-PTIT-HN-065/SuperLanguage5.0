@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 
-ShopCategory = Literal["boost", "heal", "shield"]
+ShopCategory = Literal["boost", "heal", "shield", "premium"]
 PurchaseLimitPeriod = Literal["daily", "monthly"]
 
 
@@ -45,6 +45,8 @@ class ShopState(BaseModel):
     xp_total: int = Field(ge=0)
     xp_balance: int = Field(ge=0)
     coin_balance: int = Field(ge=0)
+    premium_active: bool = False
+    premium_until: datetime | None = None
     items: list[ShopCatalogItem]
     inventory: list[ShopInventoryItem]
     transactions: list[ShopTransaction]

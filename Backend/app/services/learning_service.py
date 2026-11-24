@@ -264,7 +264,7 @@ def _ensure_path_topic_unlocked(
         path_id,
         profile["id"],
         ordered_topics,
-        is_premium=profile.get("plan_id") == "premium",
+        is_premium=is_premium_profile(profile),
     ).get(topic_id)
     if state is None or state["is_locked"]:
         raise HTTPException(
@@ -872,14 +872,14 @@ def grade_boss_quiz(
     payload = _decode_boss_token(profile, quiz_token)
     quiz = payload["quiz"]
     if not answers:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Chưa có đáp án nào để chấm.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Chưa có đáp án nào để chấm.")
     results = []
     seen: set[int] = set()
     for entry in answers:
         index = entry.get("index")
         if not isinstance(index, int) or index < 0 or index >= len(quiz) or index in seen:
             raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "Đáp án gửi lên không hợp lệ (trùng hoặc ngoài phạm vi câu hỏi).",
             )
         seen.add(index)
@@ -945,11 +945,11 @@ def boss_speak_text(profile: Dict[str, Any], quiz_token: str, index: int) -> tup
     payload = _decode_boss_token(profile, quiz_token)
     quiz = payload["quiz"]
     if index < 0 or index >= len(quiz):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Câu hỏi không tồn tại.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Câu hỏi không tồn tại.")
     question = quiz[index]
     if question["question_type"] != "fill_in":
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Chỉ câu điền từ mới có giọng đọc đáp án.",
         )
     language = payload.get("language", "en")

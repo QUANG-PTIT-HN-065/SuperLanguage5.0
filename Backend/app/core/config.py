@@ -29,10 +29,12 @@ class Settings(BaseSettings):
     SUPABASE_PUBLISHABLE_KEY: str
     SUPABASE_SECRET_KEY: str
     SUPABASE_JWKS_URL: str = ""
-    RESEND_API_KEY: str = ""  
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = ""
     GEMINI_API_KEYS: str = ""
     GEMINI_CHAT_MODEL: str = "gemini-3.5-flash-lite"
     MINIGAME_AI_MODEL: str = "gemini-3.5-flash-lite"
+    WRITING_AI_MODEL: str = "gemini-3.5-flash-lite"
     OPENAI_API_KEYS: str = ""
     OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
     DEEPSEEK_API_KEYS: str = ""
@@ -44,6 +46,12 @@ class Settings(BaseSettings):
     RAG_SIMILARITY_THRESHOLD:  float = 0.45
     RAG_TOP_K: int = 4
     RAG_EMBEDDING_MODEL: str = "gemini-embedding-001"
+
+    # Cloudinary (upload ảnh đại diện). Để trống = chưa cấu hình, endpoint sẽ báo 503.
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+    CLOUDINARY_AVATAR_FOLDER: str = "slanguage/avatars"
 
 
 settings = Settings()  # type: ignore[call-arg]

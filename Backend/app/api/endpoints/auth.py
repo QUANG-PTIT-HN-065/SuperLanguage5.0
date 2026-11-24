@@ -1,8 +1,10 @@
 import logging
-from typing import Any, Dict, NoReturn
+from typing import Any, Dict, NoReturn, Optional
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from app.core.config import settings
 from app.core.deps import get_bearer_token
 from app.core.login_rate_limit import check_login_rate_limit
 from app.db.supabase import new_auth_client, supabase_admin
@@ -14,13 +16,16 @@ from app.schemas.auth import (
     OTPVerifyRequest,
     RefreshRequest,
     RegisterRequest,
+    ResetPasswordOtpRequest,
 )
+from app.services import recovery_otp_service
 from app.services.profile_service import (
     get_profile,
     now_iso,
     touch_last_sign_in,
     validate_languages,
 )
+from app.services.vocabulary_service import effective_plan_id
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -60,12 +65,17 @@ def _raise_auth_error(exc: Exception, default_status: int, default_msg: str) -> 
 
     if "already registered" in msg or "already been registered" in msg:
         raise HTTPException(status.HTTP_409_CONFLICT, "Email này đã được đăng ký.") from exc
+    if "banned" in msg:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.",
+        ) from exc
     if "not confirmed" in msg:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "Email chưa được xác thực. Vui lòng kiểm tra hộp thư."
         ) from exc
     if "password" in msg and any(w in msg for w in ("weak", "least", "short", "characters")):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Mật khẩu chưa đủ mạnh.") from exc
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Mật khẩu chưa đủ mạnh.") from exc
     raise HTTPException(default_status, default_msg) from exc
 
 
@@ -76,6 +86,37 @@ def _tokens(session: Any) -> Dict[str, Any]:
         "token_type": "bearer",
         "expires_in": session.expires_in,
     }
+
+
+def _lookup_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    """Tra user theo email qua gotrue admin REST (supabase-py bản này không có
+    get_user_by_email; tham số ?email= cũng bị ignore nên phải lọc thủ công)."""
+    target = email.strip().lower()
+    page = 1
+    try:
+        while True:
+            response = httpx.get(
+                f"{settings.SUPABASE_URL}/auth/v1/admin/users",
+                headers={
+                    "apikey": settings.SUPABASE_SECRET_KEY,
+                    "Authorization": f"Bearer {settings.SUPABASE_SECRET_KEY}",
+                },
+                params={"page": page, "per_page": 1000},
+                timeout=30,
+            )
+            if response.status_code != 200:
+                logger.warning("Tra user theo email trả về HTTP %s", response.status_code)
+                return None
+            data = response.json()
+            for user in data.get("users") or []:
+                if (user.get("email") or "").strip().lower() == target:
+                    return user
+            if not data.get("has_next_page"):
+                return None
+            page += 1
+    except httpx.HTTPError:
+        logger.exception("Lỗi kết nối khi tra user theo email")
+        return None
 
 
 def _session_response(session: Any, user_id: str, require_admin: bool = False) -> Dict[str, Any]:
@@ -102,7 +143,7 @@ def _session_response(session: Any, user_id: str, require_admin: bool = False) -
                 "display_name": profile["display_name"],
                 "avatar_url": profile["avatar_url"],
                 "role": profile["role"],
-                "plan_id": profile.get("plan_id") or "free",
+                "plan_id": effective_plan_id(profile),
                 "status": profile.get("status", "active"),
             },
             "needs_onboarding": profile["onboarding_completed_at"] is None,
@@ -322,6 +363,40 @@ def send_otp(data: EmailRequest):
     }
 
 
+@router.post("/recover", response_model=BaseResponse[Dict[str, bool]])
+def recover(data: EmailRequest):
+    """Gửi email chứa mã OTP 8 số để khôi phục mật khẩu.
+
+    Email không tồn tại cũng nhận phản hồi thành công giống hệt (chống dò email).
+    """
+    email = str(data.email)
+    user = _lookup_user_by_email(email)
+    if not user or not user.get("id"):
+        return {
+            "status": "success",
+            "message": "Nếu email hợp lệ, mã OTP đã được gửi tới hộp thư của bạn.",
+            "data": {"sent": True},
+            "error": None,
+        }
+
+    code = recovery_otp_service.create(email)
+    try:
+        recovery_otp_service.send_otp_email(email, code)
+    except Exception as exc:
+        logger.exception("Gửi email OTP khôi phục thất bại")
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "Không thể gửi email OTP lúc này. Vui lòng thử lại sau.",
+        ) from exc
+
+    return {
+        "status": "success",
+        "message": "Nếu email hợp lệ, mã OTP đã được gửi tới hộp thư của bạn.",
+        "data": {"sent": True},
+        "error": None,
+    }
+
+
 @router.post("/resend-signup-otp", response_model=BaseResponse[Dict[str, bool]])
 def resend_signup_otp(data: EmailRequest):
     client = new_auth_client()
@@ -346,7 +421,7 @@ def resend_signup_otp(data: EmailRequest):
 def verify_signup_otp(body: OTPVerifyRequest):
     auth_client = new_auth_client()
     try:
-        # Xác thực mã OTP 6 chữ số người dùng nhập
+        # Xác thực mã OTP 8 chữ số người dùng nhập
         res = auth_client.auth.verify_otp({
             "email": body.email,
             "token": body.token,
@@ -368,3 +443,36 @@ def verify_signup_otp(body: OTPVerifyRequest):
         }
     except Exception as exc:
         raise HTTPException(status_code=400, detail="Mã OTP không hợp lệ hoặc đã hết hạn.")
+
+
+# ---------------------------------------------------------------------
+# Đặt lại mật khẩu bằng OTP đăng nhập (type "email")
+# ---------------------------------------------------------------------
+@router.post("/reset-password-otp", response_model=BaseResponse[None])
+def reset_password_otp(data: ResetPasswordOtpRequest):
+    """Khôi phục mật khẩu: verify mã OTP 8 số do app sinh (gửi qua /recover)
+    rồi đổi mật khẩu. Mã chỉ dùng một lần, hết hạn 10 phút, tối đa 5 lần đoán."""
+    if not recovery_otp_service.verify(str(data.email), data.token):
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "Mã OTP không hợp lệ hoặc đã hết hạn."
+        )
+
+    user = _lookup_user_by_email(str(data.email))
+    if not user or not user.get("id"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Tài khoản không tồn tại.")
+
+    try:
+        supabase_admin.auth.admin.update_user_by_id(user["id"], {"password": data.new_password})
+    except Exception as exc:
+        _raise_auth_error(
+            exc,
+            status.HTTP_502_BAD_GATEWAY,
+            "Không thể đổi mật khẩu lúc này. Vui lòng thử lại sau.",
+        )
+
+    return {
+        "status": "success",
+        "message": "Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.",
+        "data": None,
+        "error": None,
+    }

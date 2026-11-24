@@ -1337,6 +1337,77 @@ body.user-authenticated .guest-only {
   transform: translateY(-2px);
 }
 
+/* ================= ĐỔI MẬT KHẨU ================= */
+.password-input-wrap {
+  position: relative;
+}
+
+.password-input-wrap input {
+  padding-right: 46px;
+}
+
+.pwd-toggle {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  padding: 4px;
+  line-height: 1;
+}
+
+.pwd-toggle:hover {
+  color: var(--color-teal);
+}
+
+.pwd-hint {
+  display: block;
+  font-size: 0.8rem;
+  margin-top: 6px;
+  color: var(--text-muted);
+  min-height: 1em;
+}
+
+.pwd-strength {
+  height: 6px;
+  border-radius: 4px;
+  background: #e6eef0;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.pwd-strength-bar {
+  height: 100%;
+  width: 0;
+  border-radius: 4px;
+  background: #ef4444;
+  transition: width 0.25s ease, background 0.25s ease;
+}
+
+.pwd-message {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 4px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+}
+
+.pwd-message.is-error {
+  color: #b91c1c;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+}
+
+.pwd-message.is-success {
+  color: #047857;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+}
+
 /* ================= TAB 3: HUY HIỆU & CHỨNG CHỈ ================= */
 .badges-grid {
   display: grid;

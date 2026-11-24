@@ -49,6 +49,11 @@ class OTPVerifyRequest(BaseModel):
     token: str = Field(pattern=r"^\d{6,10}$")
 
 
+class ResetPasswordOtpRequest(OTPVerifyRequest):
+    token: str = Field(pattern=r"^\d{8}$")
+    new_password: str = Field(min_length=8, max_length=128)
+
+
 class RefreshRequest(BaseModel):
     refresh_token: str = Field(min_length=10)
 

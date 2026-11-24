@@ -1,6 +1,7 @@
-import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
+import { getAuthCookie, isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { renderLearnerHeader } from "../shared/learner-header";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
+import { LOCALE_EVENT, t } from "../shared/i18n";
 
 interface DailyQuest {
   id: string;
@@ -25,30 +26,48 @@ interface StreakDay {
   studied: boolean;
 }
 
-function asRecord(value: unknown, label: string): Record<string, unknown> {
+// Dữ liệu đã tải gần nhất — dùng render lại khi đổi locale GIAO DIỆN.
+interface DashboardCache {
+  overview: unknown;
+  streak: number;
+  quests: DailyQuest[];
+  days: StreakDay[];
+  entries: WeeklyLeaderboardEntry[];
+  weekStart: string;
+}
+
+let dashboardCache: DashboardCache | null = null;
+let lastFallbackKey = "hm.loadingData";
+let lastStatus: { key: string; isError: boolean; vars?: Record<string, string> } | null = null;
+
+function invalidData(labelKey: string): Error {
+  return new Error(t("hm.errInvalid", { label: t(labelKey) }));
+}
+
+function asRecord(value: unknown, labelKey: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error(`Backend trả về ${label} không hợp lệ.`);
+    throw invalidData(labelKey);
   }
   return value as Record<string, unknown>;
 }
 
-function asArray<T>(value: unknown, label: string): T[] {
+function asArray<T>(value: unknown, labelKey: string): T[] {
   if (!Array.isArray(value)) {
-    throw new Error(`Backend trả về ${label} không hợp lệ.`);
+    throw invalidData(labelKey);
   }
   return value as T[];
 }
 
-function asCount(value: unknown, label: string): number {
+function asCount(value: unknown, labelKey: string): number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
-    throw new Error(`Backend trả về ${label} không hợp lệ.`);
+    throw invalidData(labelKey);
   }
   return value;
 }
 
-function asText(value: unknown, label: string): string {
+function asText(value: unknown, labelKey: string): string {
   if (typeof value !== "string" || !value.trim()) {
-    throw new Error(`Backend trả về ${label} không hợp lệ.`);
+    throw invalidData(labelKey);
   }
   return value.trim();
 }
@@ -66,19 +85,29 @@ function getTodayKey(): string {
   return `${year}-${month}-${day}`;
 }
 
-function showStatus(message: string, isError = false): void {
+function showStatus(messageKey: string, isError = false, vars?: Record<string, string>): void {
   const status = document.getElementById("dashboardApiStatus");
   if (!status) return;
-  status.hidden = !message;
-  status.textContent = message;
+  if (!messageKey) {
+    lastStatus = null;
+    status.hidden = true;
+    status.textContent = "";
+    status.dataset.state = "loading";
+    return;
+  }
+  lastStatus = { key: messageKey, isError, vars };
+  status.hidden = false;
+  status.textContent = t(messageKey, vars);
   status.dataset.state = isError ? "error" : "loading";
 }
 
-function clearServerData(message: string): void {
+function clearServerData(messageKey: string): void {
+  lastFallbackKey = messageKey;
+  const message = t(messageKey);
   setText("headerXPVal", "—");
   setText("headerStreakVal", "—");
   setText("headerHeartsVal", "—");
-  setText("sidebarStreakValue", "— Ngày");
+  setText("sidebarStreakValue", t("hm.streakUnknown"));
   clearSkeleton("homeDailyQuests");
   document.getElementById("homeDailyQuests")?.replaceChildren(
     document.createTextNode(message),
@@ -98,18 +127,18 @@ function renderDailyQuests(quests: DailyQuest[]): void {
   container.replaceChildren();
 
   if (!quests.length) {
-    container.textContent = "Hôm nay chưa có nhiệm vụ.";
+    container.textContent = t("hm.questsEmpty");
     return;
   }
 
   for (const quest of quests) {
-    const row = asRecord(quest, "nhiệm vụ");
-    const title = asText(row.title, "tên nhiệm vụ");
-    const progress = asCount(row.progress, "tiến độ nhiệm vụ");
-    const target = asCount(row.target, "mục tiêu nhiệm vụ");
-    const unit = asText(row.unit, "đơn vị nhiệm vụ");
+    const row = asRecord(quest, "hm.lbl.quest");
+    const title = asText(row.title, "hm.lbl.questTitle");
+    const progress = asCount(row.progress, "hm.lbl.questProgress");
+    const target = asCount(row.target, "hm.lbl.questTarget");
+    const unit = asText(row.unit, "hm.lbl.questUnit");
     if (typeof row.completed !== "boolean") {
-      throw new Error("Backend trả về trạng thái nhiệm vụ không hợp lệ.");
+      throw invalidData("hm.lbl.questCompleted");
     }
 
     const item = document.createElement("div");
@@ -131,7 +160,7 @@ function renderDailyQuests(quests: DailyQuest[]): void {
     const progressElement = document.createElement("div");
     progressElement.className = "quest-reward";
     progressElement.textContent = row.completed
-      ? "Hoàn thành"
+      ? t("hm.questDone")
       : `${progress}/${target} ${unit}`;
     details.append(titleElement, progressElement);
     item.append(check, details);
@@ -144,14 +173,22 @@ function renderStreakWeek(days: StreakDay[]): void {
   if (!container) return;
   clearSkeleton(container);
   container.replaceChildren();
-  const labels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+  const labels = [
+    t("hm.daySun"),
+    t("hm.dayMon"),
+    t("hm.dayTue"),
+    t("hm.dayWed"),
+    t("hm.dayThu"),
+    t("hm.dayFri"),
+    t("hm.daySat"),
+  ];
   const today = getTodayKey();
 
   for (const value of days) {
-    const row = asRecord(value, "ngày học");
-    const date = asText(row.date, "ngày học");
+    const row = asRecord(value, "hm.lbl.day");
+    const date = asText(row.date, "hm.lbl.day");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || typeof row.studied !== "boolean") {
-      throw new Error("Backend trả về ngày học không hợp lệ.");
+      throw invalidData("hm.lbl.day");
     }
 
     const day = document.createElement("div");
@@ -161,14 +198,19 @@ function renderStreakWeek(days: StreakDay[]): void {
     label.textContent = labels[new Date(`${date}T00:00:00`).getDay()];
     const bubble = document.createElement("div");
     bubble.className = `day-bubble${row.studied ? " checked" : ""}`;
-    bubble.setAttribute("aria-label", row.studied ? "Đã học" : "Chưa học");
+    bubble.setAttribute("aria-label", row.studied ? t("hm.studied") : t("hm.notStudied"));
     if (row.studied) {
       const icon = document.createElement("i");
       icon.className = "fa-solid fa-check";
       bubble.append(icon);
     } else if (date === today) {
       bubble.classList.add("active-today");
-      bubble.textContent = "Hôm nay";
+      const flame = document.createElement("img");
+      flame.src = "../../../assets/streak-flame.gif?v=4";
+      flame.alt = "";
+      flame.className = "streak-flame-img streak-flame-day";
+      bubble.append(flame);
+      bubble.setAttribute("aria-label", t("hm.todayBubble"));
     } else {
       bubble.textContent = "·";
     }
@@ -184,21 +226,21 @@ function renderLeaderboard(entries: WeeklyLeaderboardEntry[]): void {
   container.replaceChildren();
 
   if (!entries.length) {
-    container.textContent = "Chưa có dữ liệu xếp hạng tuần này.";
+    container.textContent = t("hm.boardEmpty");
     return;
   }
 
   for (const value of entries) {
-    const row = asRecord(value, "thành viên xếp hạng");
-    const rank = asCount(row.rank, "thứ hạng");
-    const username = asText(row.username, "tên tài khoản");
+    const row = asRecord(value, "hm.lbl.rankEntry");
+    const rank = asCount(row.rank, "hm.lbl.rank");
+    const username = asText(row.username, "hm.lbl.username");
     const name =
       typeof row.display_name === "string" && row.display_name.trim()
         ? row.display_name.trim()
         : username;
-    const xp = asCount(row.xp_week, "XP tuần");
+    const xp = asCount(row.xp_week, "hm.lbl.xpWeek");
     if (typeof row.is_current_user !== "boolean") {
-      throw new Error("Backend trả về trạng thái người dùng xếp hạng không hợp lệ.");
+      throw invalidData("hm.lbl.rankUserState");
     }
 
     const item = document.createElement("div");
@@ -235,16 +277,16 @@ function renderLeaderboard(entries: WeeklyLeaderboardEntry[]): void {
 }
 
 async function loadLearnerDashboard(): Promise<void> {
-  clearServerData("Đang tải dữ liệu...");
+  clearServerData("hm.loadingData");
   if (!isLearnerAuthenticated()) {
-    if (localStorage.getItem("slanguage_is_logged_in") === "true") {
-      clearServerData("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.");
-      showStatus("Không tìm thấy access token. Vui lòng đăng nhập lại.", true);
+    if (getAuthCookie("slanguage_is_logged_in") === "true") {
+      clearServerData("hm.invalidSession");
+      showStatus("hm.noToken", true);
     }
     return;
   }
 
-  showStatus("Đang tải dữ liệu học tập từ máy chủ.");
+  showStatus("hm.loadingServer");
   showSkeleton("homeDailyQuests", "quest-rows", { tone: "amethyst" });
   showSkeleton(document.querySelector(".streak-days"), "streak-week", { tone: "amethyst" });
   showSkeleton("homeRankingList", "rank-rows", { tone: "amethyst" });
@@ -254,34 +296,59 @@ async function loadLearnerDashboard(): Promise<void> {
       slanguageApi<unknown>("/api/v1/me/dashboard"),
     ]);
 
-    const overview = asRecord(overviewResponse.data, "hồ sơ học viên");
-    const stats = asRecord(overview.stats, "thống kê học tập");
-    const dashboard = asRecord(dashboardResponse.data, "bảng điều khiển");
-    const streak = asCount(stats.current_streak, "chuỗi ngày học");
+    const overview = asRecord(overviewResponse.data, "hm.lbl.profile");
+    const stats = asRecord(overview.stats, "hm.lbl.stats");
+    const dashboard = asRecord(dashboardResponse.data, "hm.lbl.dashboard");
+    const streak = asCount(stats.current_streak, "hm.lbl.streak");
+    const quests = asArray<DailyQuest>(dashboard.daily_quests, "hm.lbl.quest");
+    const days = asArray<StreakDay>(dashboard.streak_week, "hm.lbl.streakWeek");
+    const entries = asArray<WeeklyLeaderboardEntry>(
+      dashboard.weekly_leaderboard,
+      "hm.lbl.leaderboard",
+    );
+    const weekStart = asText(dashboard.week_start, "hm.lbl.weekStart");
 
     renderLearnerHeader(overviewResponse.data);
-    setText("sidebarStreakValue", `${streak} Ngày`);
+    setText("sidebarStreakValue", t("hm.streakDays", { n: streak }));
 
-    renderDailyQuests(asArray<DailyQuest>(dashboard.daily_quests, "nhiệm vụ"));
-    renderStreakWeek(asArray<StreakDay>(dashboard.streak_week, "chuỗi ngày"));
-    renderLeaderboard(
-      asArray<WeeklyLeaderboardEntry>(
-        dashboard.weekly_leaderboard,
-        "bảng xếp hạng tuần",
-      ),
-    );
-    setText(
-      "homeLeaderboardPeriod",
-      `Tuần từ ${asText(dashboard.week_start, "ngày bắt đầu tuần")}`,
-    );
+    renderDailyQuests(quests);
+    renderStreakWeek(days);
+    renderLeaderboard(entries);
+    setText("homeLeaderboardPeriod", t("hm.weekFrom", { date: weekStart }));
+    dashboardCache = {
+      overview: overviewResponse.data,
+      streak,
+      quests,
+      days,
+      entries,
+      weekStart,
+    };
     showStatus("");
   } catch (error) {
-    clearServerData("Không thể tải dữ liệu.");
+    clearServerData("hm.loadFail");
     const message =
-      error instanceof Error ? error.message : "Lỗi không xác định khi tải dữ liệu.";
-    showStatus(`Không thể tải dữ liệu học tập từ backend: ${message}`, true);
+      error instanceof Error ? error.message : t("hm.unknownError");
+    showStatus("hm.loadFailDetail", true, { message });
   }
 }
+
+// Đổi locale GIAO DIỆN: render lại các vùng động bằng dữ liệu đã cache.
+window.addEventListener(LOCALE_EVENT, () => {
+  if (dashboardCache) {
+    renderLearnerHeader(dashboardCache.overview);
+    setText("sidebarStreakValue", t("hm.streakDays", { n: dashboardCache.streak }));
+    renderDailyQuests(dashboardCache.quests);
+    renderStreakWeek(dashboardCache.days);
+    renderLeaderboard(dashboardCache.entries);
+    setText("homeLeaderboardPeriod", t("hm.weekFrom", { date: dashboardCache.weekStart }));
+  } else {
+    clearServerData(lastFallbackKey);
+    setText("homeLeaderboardPeriod", t("hm.weekThis"));
+  }
+  if (lastStatus) {
+    showStatus(lastStatus.key, lastStatus.isError, lastStatus.vars);
+  }
+});
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => void loadLearnerDashboard(), {

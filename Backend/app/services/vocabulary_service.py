@@ -30,6 +30,14 @@ def is_premium_profile(profile: Dict[str, Any]) -> bool:
     return expires_at > datetime.now(timezone.utc)
 
 
+def effective_plan_id(profile: Dict[str, Any]) -> str:
+    """plan_id đã trừ premium hết hạn (pass shop ghi plan_id vĩnh viễn, chỉ hạn dùng hết hạn)."""
+    plan_id = profile.get("plan_id") or "free"
+    if plan_id == "premium" and not is_premium_profile(profile):
+        return "free"
+    return plan_id
+
+
 def _count_rows(query: Any) -> int:
     response = query.limit(1).execute()
     return int(response.count or 0)
@@ -155,7 +163,7 @@ def _topic_quiz_passed(profile: Dict[str, Any], topic_id: int) -> bool:
 def _attach_word_mastery(profile: Dict[str, Any], items: list[Dict[str, Any]]) -> None:
     word_ids = [item["id"] for item in items]
     mastery_by_word: Dict[int, int] = {}
-    if word_ids:
+    if word_ids and profile.get("id"):
         rows = (
             supabase_admin.table("user_words")
             .select("word_id,mastery_level")
@@ -288,7 +296,9 @@ def list_words(
 
     # Chủ đề đã vượt qua quiz ở Học tập được mở toàn bộ từ, không cắt theo trần ID free
     full_access = is_premium or (
-        topic_id is not None and _topic_quiz_passed(profile, topic_id)
+        topic_id is not None
+        and bool(profile.get("id"))
+        and _topic_quiz_passed(profile, topic_id)
     )
     total_words, free_word_ceiling = _free_word_ceiling(language_code)
     matching_word_ids = None
@@ -568,7 +578,7 @@ def _validate_admin_word(data: Dict[str, Any]) -> None:
         .data
     )
     if not language_rows:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Ngôn ngữ không tồn tại.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Ngôn ngữ không tồn tại.")
 
     topic_rows = (
         supabase_admin.table("topics")
@@ -580,7 +590,7 @@ def _validate_admin_word(data: Dict[str, Any]) -> None:
     )
     if len(topic_rows) != len(topic_ids):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Một hoặc nhiều chủ đề không tồn tại hoặc không thuộc ngôn ngữ đã chọn.",
         )
 

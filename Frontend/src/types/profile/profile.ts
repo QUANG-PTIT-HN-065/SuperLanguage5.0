@@ -2,11 +2,15 @@
  * Slanguage - Learner Profile & Analytics
  * Toàn bộ số liệu lấy từ backend: /me, /me/progress, /leaderboard,
  * /vocabulary/learning-paths (+ chi tiết) — không dùng dữ liệu hardcode.
+ * Chuỗi hiển thị đi qua i18n (t/applyI18n); navbar đổi ngôn ngữ GIAO DIỆN,
+ * còn ngôn ngữ mục tiêu (lộ trình học) chỉ đổi khi lưu hồ sơ.
  */
 
-import { slanguageApi } from '../shared/api-client';
+import { isLearnerAuthenticated, slanguageApi } from '../shared/api-client';
 import { initializeLearnerHeader, renderLearnerHeader } from '../shared/learner-header';
+import { applyI18n, getLocale, localeLabel, t, LOCALE_EVENT } from '../shared/i18n';
 import { clearSkeleton, showSkeleton } from '../shared/skeleton';
+import { playLoadingRive, stopLoadingRive } from '../shared/loading-rive';
 
 interface ActivityDay {
   activity_date: string;
@@ -29,27 +33,17 @@ interface BadgeDef {
   target: number;
 }
 
-const LANG_NAMES: Record<string, string> = {
-  ja: 'Tiếng Nhật (日本語)',
-  en: 'Tiếng Anh (English)',
-  vi: 'Tiếng Việt (Vietnamese)',
-};
 const LANG_FLAGS: Record<string, string> = {
   ja: new URL('../../../assets/flags/flag-jp.png', import.meta.url).href,
   en: new URL('../../../assets/flags/flag-en.png', import.meta.url).href,
   vi: new URL('../../../assets/flags/flag-vn.png', import.meta.url).href,
 };
-const GOAL_LABELS: Record<string, string> = {
-  travel: 'Du lịch',
-  work: 'Công việc',
-  study: 'Du học / Học thuật',
-  exam: 'Thi chứng chỉ',
-  hobby: 'Sở thích',
-  other: 'Khác',
-};
-const DAY_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+function numLocale(): string {
+  const locale = getLocale();
+  return locale === 'en' ? 'en-US' : locale === 'ja' ? 'ja-JP' : 'vi-VN';
+}
 function asRecord(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === 'object' ? (value as Record<string, unknown>) : {};
 }
@@ -91,7 +85,7 @@ class SlanguageProfile {
   private topics: PathTopic[] = [];
 
   constructor() {
-    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+    if (!isLearnerAuthenticated()) {
       window.location.replace('../login/index.html');
       return;
     }
@@ -102,27 +96,22 @@ class SlanguageProfile {
     this.bindTabs();
     this.bindForm();
     this.bindAvatarUpload();
+    this.bindPasswordForm();
     this.bindCertificates();
     this.bindPageTransitions();
     void initializeLearnerHeader({ loadProfile: false });
 
+    window.addEventListener(LOCALE_EVENT, () => {
+      applyI18n();
+      this.renderAll();
+    });
+
     window.addEventListener('pageshow', () => {
       const overlay = document.getElementById('slanguageLoadingOverlay');
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
       if (overlay) overlay.classList.remove('active');
-      if (video) {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
-      }
+      stopLoadingRive();
     });
-    window.addEventListener('pagehide', () => {
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
-    });
+    window.addEventListener('pagehide', () => stopLoadingRive());
 
     void this.loadAll();
   }
@@ -176,7 +165,7 @@ class SlanguageProfile {
       clearSkeleton('activityTableBody');
       clearSkeleton('badgesGrid');
       clearSkeleton('certGrid');
-      this.showToast(error instanceof Error ? error.message : 'Không thể tải hồ sơ từ máy chủ.');
+      this.showToast(error instanceof Error ? error.message : t('to.loadFail'));
     }
   }
 
@@ -191,41 +180,47 @@ class SlanguageProfile {
     this.renderDailyGoal(profile, stats);
     this.renderBadgesAndCerts(stats);
     this.populateFormFields();
-    this.filterNativeLanguageOption(profile);
   }
 
   private renderHero(profile: Record<string, unknown>, stats: Record<string, unknown>): void {
-    const name = asText(profile.display_name, asText(profile.username, 'Học viên'));
+    const name = asText(profile.display_name, asText(profile.username, t('role.learner')));
     const level = asCount(this.progress.level) || 1;
-    const band = level >= 20 ? 'Bậc Thầy Slanguage' : level >= 10 ? 'Chiến Binh Ngôn Ngữ' : level >= 5 ? 'Học Viên Chăm Chỉ' : 'Người Mới Khởi Đầu';
+    const band = level >= 20 ? t('hero.band4') : level >= 10 ? t('hero.band3') : level >= 5 ? t('hero.band2') : t('hero.band1');
     const idHex = asText(profile.id).replace(/-/g, '').slice(0, 6).toUpperCase();
     const createdAt = asText(profile.created_at);
     const joined = createdAt ? new Date(createdAt) : null;
     const lang = asText(profile.target_language, 'ja');
+    const langName = localeLabel(lang);
 
     setText('heroStudentName', name);
-    setText('heroStudentId', `Mã học viên: SLANG-${idHex || '------'}`);
+    setText('heroStudentId', `${t('hero.idPrefix')}SLANG-${idHex || '------'}`);
     const levelBadge = document.getElementById('heroLevelBadge');
-    if (levelBadge) levelBadge.innerHTML = `<i class="fa-solid fa-medal"></i> Cấp ${level} - ${band}`;
+    if (levelBadge) levelBadge.innerHTML = `<i class="fa-solid fa-medal"></i> ${t('hero.levelPrefix')}${level} - ${band}`;
     const joinedBadge = document.getElementById('heroJoinedBadge');
     if (joinedBadge) {
       joinedBadge.innerHTML = joined && !Number.isNaN(joined.getTime())
-        ? `<i class="fa-solid fa-calendar-check"></i> Tham gia: Tháng ${joined.getMonth() + 1}, ${joined.getFullYear()}`
-        : '<i class="fa-solid fa-calendar-check"></i> Tham gia: —';
+        ? `<i class="fa-solid fa-calendar-check"></i> ${t('hero.joinedPrefix', { m: joined.getMonth() + 1, y: joined.getFullYear() })}`
+        : `<i class="fa-solid fa-calendar-check"></i> ${t('hero.joinedUnknown')}`;
     }
     const targetBadge = document.getElementById('heroTargetLangBadge');
     if (targetBadge) {
-      targetBadge.innerHTML = `<img src="${LANG_FLAGS[lang] || LANG_FLAGS.ja}" alt="${escapeHtml(LANG_NAMES[lang] || lang)}" class="flag-icon-inline" width="20" height="14" style="width:20px;height:14px;object-fit:cover;"> Mục tiêu chính: ${escapeHtml(LANG_NAMES[lang] || lang)}`;
+      targetBadge.innerHTML = `<img src="${LANG_FLAGS[lang] || LANG_FLAGS.ja}" alt="${escapeHtml(langName)}" class="flag-icon-inline" width="20" height="14" style="width:20px;height:14px;object-fit:cover;"> ${t('hero.targetPrefix')}${escapeHtml(langName)}`;
     }
     const currentLevel = asText(profile.current_level, 'A1');
     const targetLevel = asText(profile.target_level, 'A1');
-    const goalLabel = GOAL_LABELS[asText(profile.learning_goal)] || 'Học tập';
-    setText('heroBioText', `Mục tiêu ${goalLabel}: đạt trình độ ${targetLevel} (hiện tại ${currentLevel}) · ${asCount(profile.daily_goal_xp)} XP / ${asCount(profile.daily_goal_minutes)} phút mỗi ngày.`);
+    const goalLabel = t('opt.' + asText(profile.learning_goal, 'other'));
+    setText('heroBioText', t('hero.bio', {
+      goal: goalLabel,
+      target: targetLevel,
+      current: currentLevel,
+      xp: asCount(profile.daily_goal_xp),
+      minutes: asCount(profile.daily_goal_minutes),
+    }));
 
-    setText('heroStreakVal', `${asCount(stats.current_streak)} Ngày`);
-    setText('heroXPVal', asCount(stats.xp_total).toLocaleString('vi-VN'));
-    setText('heroRankVal', this.rank === null ? '—' : `Hạng ${this.rank}`);
-    setText('heroLessonsVal', asCount(stats.lessons_completed).toLocaleString('vi-VN'));
+    setText('heroStreakVal', `${asCount(stats.current_streak)} ${t('unit.day')}`);
+    setText('heroXPVal', asCount(stats.xp_total).toLocaleString(numLocale()));
+    setText('heroRankVal', this.rank === null ? t('hero.rankNone') : `${t('hero.rankPrefix')}${this.rank}`);
+    setText('heroLessonsVal', asCount(stats.lessons_completed).toLocaleString(numLocale()));
   }
 
   private renderLanguageCircle(profile: Record<string, unknown>): void {
@@ -245,18 +240,18 @@ class SlanguageProfile {
       svg.classList.add(lang);
     }
     setText('langCirclePercent', `${percent}%`);
-    setText('langCircleTitle', LANG_NAMES[lang] || lang);
+    setText('langCircleTitle', localeLabel(lang));
     const flag = document.getElementById('langCircleFlag') as HTMLImageElement | null;
     if (flag) flag.src = LANG_FLAGS[lang] || LANG_FLAGS.ja;
     setText('langLevelPill', `${asText(profile.current_level, 'A1')} → ${asText(profile.target_level, 'A1')}`);
-    setText('langWordsPill', totalWords.toLocaleString('vi-VN'));
-    setText('langMasteredPill', mastered.toLocaleString('vi-VN'));
+    setText('langWordsPill', totalWords.toLocaleString(numLocale()));
+    setText('langMasteredPill', mastered.toLocaleString(numLocale()));
   }
 
   private renderGlobalStats(stats: Record<string, unknown>): void {
-    setText('statWordsLearned', asCount(stats.words_learned).toLocaleString('vi-VN'));
-    setText('statLessonsDone', asCount(stats.lessons_completed).toLocaleString('vi-VN'));
-    setText('statLongestStreak', `${asCount(stats.longest_streak)} Ngày`);
+    setText('statWordsLearned', asCount(stats.words_learned).toLocaleString(numLocale()));
+    setText('statLessonsDone', asCount(stats.lessons_completed).toLocaleString(numLocale()));
+    setText('statLongestStreak', `${asCount(stats.longest_streak)} ${t('unit.day')}`);
     setText('statStreakFreezes', String(asCount(stats.streak_freezes)));
   }
 
@@ -281,7 +276,7 @@ class SlanguageProfile {
     const y = (value: number): number => 155 - (value / maxVal) * 135;
     const x = (index: number): number => 45 + index * (590 / 6);
 
-    setText('chartTargetLabel', `Mục tiêu: ${goal} XP/ngày`);
+    setText('chartTargetLabel', t('ch.target', { n: goal }));
     const gridLine = document.getElementById('chartGridLine');
     const gridLabel = document.getElementById('chartGridLabel');
     const halfY = y(maxVal / 2);
@@ -341,12 +336,12 @@ class SlanguageProfile {
         valLabel.setAttribute('x', points[index].x.toFixed(1));
         valLabel.setAttribute('y', (points[index].y - (isPeak ? 14 : 12)).toFixed(1));
         valLabel.setAttribute('class', `point-val-label${isPeak ? ' peak' : ''}`);
-        valLabel.textContent = `${value} XP${isPeak ? ' ⭐' : ''}`;
+        valLabel.textContent = `${value} ${t('unit.xp')}${isPeak ? ' ⭐' : ''}`;
         const dayLabel = document.createElementNS(SVG_NS, 'text');
         dayLabel.setAttribute('x', points[index].x.toFixed(1));
         dayLabel.setAttribute('y', '174');
         dayLabel.setAttribute('class', `day-axis-label${isPeak ? ' peak' : ''}`);
-        dayLabel.textContent = dates[index] === today ? 'Hôm nay' : DAY_LABELS[index];
+        dayLabel.textContent = dates[index] === today ? t('ch.today') : t(`ch.d${index + 1}`);
         point.append(dot, valLabel, dayLabel);
         group.append(point);
       });
@@ -355,9 +350,9 @@ class SlanguageProfile {
     const total = values.reduce((sum, value) => sum + value, 0);
     const goalDays = this.activity.filter((row) => row.goal_met).length;
     const totalLabel = document.getElementById('weeklyTotalLabel');
-    if (totalLabel) totalLabel.innerHTML = `Tổng XP tuần này: <strong>${total.toLocaleString('vi-VN')}</strong>`;
+    if (totalLabel) totalLabel.innerHTML = `${t('ch.totalPrefix')}<strong>${total.toLocaleString(numLocale())}</strong>`;
     const goalDaysLabel = document.getElementById('weeklyGoalDaysLabel');
-    if (goalDaysLabel) goalDaysLabel.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${goalDays}/7 ngày đạt mục tiêu`;
+    if (goalDaysLabel) goalDaysLabel.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${t('ch.goalDays', { n: goalDays })}`;
   }
 
   private renderActivityTable(profile: Record<string, unknown>): void {
@@ -375,7 +370,7 @@ class SlanguageProfile {
       td.colSpan = 5;
       td.style.textAlign = 'center';
       td.style.color = 'var(--text-muted)';
-      td.textContent = 'Chưa có hoạt động học tập nào trong tuần này. Hãy bắt đầu một bài học ngay!';
+      td.textContent = t('hi.empty');
       tr.append(td);
       body.append(tr);
       return;
@@ -384,21 +379,21 @@ class SlanguageProfile {
       const tr = document.createElement('tr');
       const dateCell = document.createElement('td');
       const strong = document.createElement('strong');
-      strong.textContent = row.activity_date === today ? `Hôm nay (${formatDate(row.activity_date)})` : formatDate(row.activity_date);
+      strong.textContent = row.activity_date === today ? t('hi.today', { date: formatDate(row.activity_date) }) : formatDate(row.activity_date);
       dateCell.append(strong);
       const xpCell = document.createElement('td');
       const xpBadge = document.createElement('span');
       xpBadge.className = 'score-badge';
-      xpBadge.textContent = `${row.xp_earned} XP`;
+      xpBadge.textContent = `${row.xp_earned} ${t('unit.xp')}`;
       xpCell.append(xpBadge);
       const lessonsCell = document.createElement('td');
       lessonsCell.textContent = String(row.lessons_completed);
       const goalCell = document.createElement('td');
-      goalCell.textContent = `${goal} XP`;
+      goalCell.textContent = `${goal} ${t('unit.xp')}`;
       const statusCell = document.createElement('td');
       statusCell.innerHTML = row.goal_met
-        ? '<span style="color: #10b981; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> Đạt mục tiêu</span>'
-        : '<span style="color: #f59e0b; font-weight: 700;"><i class="fa-solid fa-circle-half-stroke"></i> Chưa đạt</span>';
+        ? `<span style="color: #10b981; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> ${t('hi.met')}</span>`
+        : `<span style="color: #f59e0b; font-weight: 700;"><i class="fa-solid fa-circle-half-stroke"></i> ${t('hi.notMet')}</span>`;
       tr.append(dateCell, xpCell, lessonsCell, goalCell, statusCell);
       body.append(tr);
     }
@@ -427,11 +422,11 @@ class SlanguageProfile {
     if (tip) {
       const remaining = goalXp - todayXp;
       tip.innerHTML = remaining > 0
-        ? `<i class="fa-solid fa-lightbulb" style="color: #f59e0b;"></i> Còn thiếu <strong>${remaining} XP</strong> để đạt mục tiêu hôm nay (bạn đặt ${goalMinutes} phút học/ngày). Hoàn thành một bài đọc + thử thách trong lộ trình để nhận XP!`
-        : `<i class="fa-solid fa-lightbulb" style="color: #f59e0b;"></i> Tuyệt vời! Bạn đã đạt mục tiêu <strong>${goalXp} XP</strong> hôm nay. Giữ vững chuỗi ${streak} ngày học nhé!`;
+        ? `<i class="fa-solid fa-lightbulb" style="color: #f59e0b;"></i> ${t('go.tipRemaining', { n: remaining, minutes: goalMinutes })}`
+        : `<i class="fa-solid fa-lightbulb" style="color: #f59e0b;"></i> ${t('go.tipDone', { n: goalXp, streak })}`;
     }
-    setText('habitReminder', asText(profile.reminder_time).slice(0, 5) || 'Chưa đặt');
-    setText('habitLongestStreak', `${longest} Ngày`);
+    setText('habitReminder', asText(profile.reminder_time).slice(0, 5) || t('ha.notSet'));
+    setText('habitLongestStreak', `${longest} ${t('unit.day')}`);
   }
 
   private badgeDefs(stats: Record<string, unknown>): BadgeDef[] {
@@ -441,29 +436,29 @@ class SlanguageProfile {
     const lessons = asCount(stats.lessons_completed);
     const xp = asCount(stats.xp_total);
     return [
-      { icon: '', flame: true, title: 'Chuỗi Lửa 7 Ngày', desc: 'Duy trì học ít nhất 1 bài mỗi ngày trong 7 ngày liên tiếp.', value: streak, target: 7 },
-      { icon: 'fa-fire', title: 'Bền Bỉ 14 Ngày', desc: 'Đạt kỷ lục chuỗi 14 ngày học liên tiếp.', value: longest, target: 14 },
-      { icon: 'fa-trophy', title: 'Kỷ Lục 30 Ngày', desc: 'Đạt kỷ lục chuỗi 30 ngày học liên tiếp.', value: longest, target: 30 },
-      { icon: 'fa-book-bookmark', title: 'Kho Báu 100 Từ', desc: 'Làm chủ 100 từ vựng đầu tiên trong lộ trình.', value: words, target: 100 },
-      { icon: 'fa-gem', title: 'Kho Báu 500 Từ', desc: 'Làm chủ 500 từ vựng trong lộ trình.', value: words, target: 500 },
-      { icon: 'fa-book-open', title: 'Học Giả 10 Bài', desc: 'Hoàn thành 10 bài học.', value: lessons, target: 10 },
-      { icon: 'fa-graduation-cap', title: 'Học Giả 50 Bài', desc: 'Hoàn thành 50 bài học.', value: lessons, target: 50 },
-      { icon: 'fa-star', title: 'Ngôi Sao 1,000 XP', desc: 'Tích lũy 1,000 XP học tập.', value: xp, target: 1000 },
+      { icon: '', flame: true, title: t('ba.b1t'), desc: t('ba.b1d'), value: streak, target: 7 },
+      { icon: 'fa-fire', title: t('ba.b2t'), desc: t('ba.b2d'), value: longest, target: 14 },
+      { icon: 'fa-trophy', title: t('ba.b3t'), desc: t('ba.b3d'), value: longest, target: 30 },
+      { icon: 'fa-book-bookmark', title: t('ba.b4t'), desc: t('ba.b4d'), value: words, target: 100 },
+      { icon: 'fa-gem', title: t('ba.b5t'), desc: t('ba.b5d'), value: words, target: 500 },
+      { icon: 'fa-book-open', title: t('ba.b6t'), desc: t('ba.b6d'), value: lessons, target: 10 },
+      { icon: 'fa-graduation-cap', title: t('ba.b7t'), desc: t('ba.b7d'), value: lessons, target: 50 },
+      { icon: 'fa-star', title: t('ba.b8t'), desc: t('ba.b8d'), value: xp, target: 1000 },
     ];
   }
 
   private certDefs(): { title: string; level: number }[] {
     return [
-      { title: 'Chứng chỉ Hoàn thành Cấp 5', level: 5 },
-      { title: 'Chứng chỉ Hoàn thành Cấp 10', level: 10 },
+      { title: t('ce.c1t'), level: 5 },
+      { title: t('ce.c2t'), level: 10 },
     ];
   }
 
   private renderBadgesAndCerts(stats: Record<string, unknown>): void {
     const badges = this.badgeDefs(stats);
     const unlocked = badges.filter((badge) => badge.value >= badge.target).length;
-    setText('badgesCountLabel', `Đã sở hữu: ${unlocked} / ${badges.length} huy hiệu danh dự`);
-    setText('habitBadgesCount', `${unlocked} / ${badges.length} Huy hiệu`);
+    setText('badgesCountLabel', t('ba.count', { n: unlocked, total: badges.length }));
+    setText('habitBadgesCount', t('ha.badgesCount', { n: unlocked, total: badges.length }));
 
     const grid = document.getElementById('badgesGrid');
     if (grid) {
@@ -479,7 +474,7 @@ class SlanguageProfile {
         if (badge.flame) {
           const img = document.createElement('img');
           img.src = new URL('../../../assets/streak-flame.gif?v=4', import.meta.url).href;
-          img.alt = 'Chuỗi Lửa';
+          img.alt = t('ba.b1t');
           img.className = 'streak-flame-img streak-flame-badge';
           iconBox.append(img);
         } else {
@@ -490,7 +485,11 @@ class SlanguageProfile {
         const title = document.createElement('h4');
         title.textContent = badge.title;
         const desc = document.createElement('p');
-        desc.textContent = `${badge.desc} (${Math.min(badge.value, badge.target).toLocaleString('vi-VN')}/${badge.target.toLocaleString('vi-VN')})`;
+        desc.textContent = t('ba.desc', {
+          desc: badge.desc,
+          v: Math.min(badge.value, badge.target).toLocaleString(numLocale()),
+          t: badge.target.toLocaleString(numLocale()),
+        });
         card.append(iconBox, title, desc);
         grid.append(card);
       }
@@ -499,33 +498,37 @@ class SlanguageProfile {
     const level = asCount(this.progress.level) || 1;
     const certs = this.certDefs();
     const certUnlocked = certs.filter((cert) => level >= cert.level).length;
-    setText('habitCertsCount', `${certUnlocked} Chứng chỉ`);
+    setText('habitCertsCount', t('ha.certsCount', { n: certUnlocked }));
     const certGrid = document.getElementById('certGrid');
     if (certGrid) {
       clearSkeleton(certGrid);
       certGrid.replaceChildren();
       const profile = asRecord(this.me.profile);
-      const name = asText(profile.display_name, asText(profile.username, 'Học viên'));
+      const name = asText(profile.display_name, asText(profile.username, t('role.learner')));
       const idHex = asText(profile.id).replace(/-/g, '').slice(0, 6).toUpperCase();
+      const langName = localeLabel(asText(profile.target_language, 'ja'));
       certs.forEach((cert, index) => {
         const isUnlocked = level >= cert.level;
         const card = document.createElement('div');
         card.className = 'cert-card';
         if (!isUnlocked) card.style.opacity = '0.6';
+        const certDate = isUnlocked
+          ? t('ce.dateUnlocked', { level: cert.level, xp: asCount(stats.xp_total).toLocaleString(numLocale()) })
+          : t('ce.dateLocked', { level: cert.level, current: level });
         card.innerHTML = `
           <div class="cert-stamp"><i class="fa-solid ${isUnlocked ? 'fa-stamp' : 'fa-lock'}"></i></div>
-          <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-yellow);">${isUnlocked ? 'Chứng chỉ hoàn tất' : 'Chưa đạt'}</span>
+          <span style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-yellow);">${isUnlocked ? t('ce.unlocked') : t('ce.locked')}</span>
           <h4>${escapeHtml(cert.title)}</h4>
-          <div class="cert-date">${isUnlocked ? `Đạt khi lên Cấp ${cert.level} • Tổng XP: ${asCount(stats.xp_total).toLocaleString('vi-VN')}` : `Yêu cầu: đạt Cấp ${cert.level} (hiện tại Cấp ${level})`}</div>
-          <p style="font-size: 0.88rem; color: #b7ccd6; line-height: 1.5; margin-bottom: 22px;">Học viên ${escapeHtml(name)} (SLANG-${idHex || '------'}) — lộ trình ${escapeHtml(LANG_NAMES[asText(profile.target_language, 'ja')] || '')}.</p>
+          <div class="cert-date">${certDate}</div>
+          <p style="font-size: 0.88rem; color: #b7ccd6; line-height: 1.5; margin-bottom: 22px;">${t('ce.body', { name: escapeHtml(name), id: idHex || '------', lang: escapeHtml(langName) })}</p>
         `;
         const button = document.createElement('button');
         button.className = 'btn-cert-download';
         button.dataset.cert = String(index);
         button.disabled = !isUnlocked;
         button.innerHTML = isUnlocked
-          ? '<i class="fa-solid fa-file-arrow-down"></i> Tải chứng chỉ (PDF)'
-          : '<i class="fa-solid fa-lock"></i> Chưa mở khóa';
+          ? `<i class="fa-solid fa-file-arrow-down"></i> ${t('ce.download')}`
+          : `<i class="fa-solid fa-lock"></i> ${t('ce.lockedBtn')}`;
         card.append(button);
         certGrid.append(card);
       });
@@ -556,7 +559,7 @@ class SlanguageProfile {
     });
     document.getElementById('btnResetForm')?.addEventListener('click', () => {
       this.populateFormFields();
-      this.showToast('Đã khôi phục thông tin đang lưu trên máy chủ.');
+      this.showToast(t('to.reset'));
     });
   }
 
@@ -571,7 +574,7 @@ class SlanguageProfile {
     if (![...select.options].some((option) => option.value === value)) {
       const option = document.createElement('option');
       option.value = value;
-      option.textContent = `${value} (hiện tại)`;
+      option.textContent = `${value}${t('opt.currentSuffix')}`;
       select.append(option);
     }
     select.value = value;
@@ -623,33 +626,192 @@ class SlanguageProfile {
       this.me = asRecord(response.data);
       renderLearnerHeader(response.data);
       this.renderAll();
-      this.showToast('✅ Đã lưu cập nhật hồ sơ cá nhân thành công!');
+      this.showToast(t('to.saved'));
     } catch (error) {
-      this.showToast(error instanceof Error ? error.message : 'Không thể lưu hồ sơ.');
+      this.showToast(error instanceof Error ? error.message : t('to.saveFail'));
     }
   }
 
   private bindAvatarUpload(): void {
-    document.getElementById('btnChangeAvatar')?.addEventListener('click', () => {
-      void this.changeAvatar();
+    const button = document.getElementById('btnChangeAvatar');
+    const fileInput = document.getElementById('avatarFileInput') as HTMLInputElement | null;
+    if (!button || !fileInput) return;
+    button.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = '';
+      if (file) void this.uploadAvatar(file);
     });
   }
 
-  private async changeAvatar(): Promise<void> {
-    const newUrl = prompt('Nhập URL ảnh đại diện mới (bắt đầu bằng https://, để trống để hủy):');
-    if (!newUrl) return;
-    if (!newUrl.startsWith('https://')) {
-      this.showToast('URL ảnh đại diện phải bắt đầu bằng https://');
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(new Error('Không thể đọc file ảnh.'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private async uploadAvatar(file: File): Promise<void> {
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      this.showToast('Chỉ chấp nhận ảnh JPG hoặc PNG.');
       return;
     }
+    if (file.size > 10 * 1024 * 1024) {
+      this.showToast('Ảnh vượt quá giới hạn 10MB.');
+      return;
+    }
+    const preview = document.getElementById('profileAvatarImg') as HTMLImageElement | null;
+    const previousSrc = preview?.src ?? '';
+    const button = document.getElementById('btnChangeAvatar') as HTMLButtonElement | null;
+    if (button) button.disabled = true;
     try {
-      const response = await slanguageApi('/api/v1/me', { method: 'PATCH', body: { avatar_url: newUrl } });
+      if (preview) preview.src = await this.readFileAsDataUrl(file);
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await slanguageApi('/api/v1/me/avatar', { method: 'POST', body: formData });
       this.me = asRecord(response.data);
       renderLearnerHeader(response.data);
-      this.populateFormFields();
-      this.showToast('Đã cập nhật ảnh đại diện học viên!');
+      const urlInput = document.getElementById('profAvatarUrl') as HTMLInputElement | null;
+      if (urlInput) urlInput.value = asText(asRecord(this.me.profile).avatar_url);
+      this.showToast('✅ Đã cập nhật ảnh đại diện!');
     } catch (error) {
-      this.showToast(error instanceof Error ? error.message : 'Không thể cập nhật ảnh đại diện.');
+      if (preview) preview.src = previousSrc;
+      this.showToast(error instanceof Error ? error.message : 'Không thể tải ảnh đại diện lên.');
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  private bindPasswordForm(): void {
+    const form = document.getElementById('passwordChangeForm') as HTMLFormElement | null;
+    if (!form) return;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      void this.changePassword();
+    });
+    form.querySelectorAll<HTMLButtonElement>('.pwd-toggle').forEach((toggle) => {
+      toggle.addEventListener('click', () => {
+        const input = document.getElementById(toggle.dataset.target ?? '') as HTMLInputElement | null;
+        if (!input) return;
+        const reveal = input.type === 'password';
+        input.type = reveal ? 'text' : 'password';
+        toggle.innerHTML = reveal
+          ? '<i class="fa-solid fa-eye-slash"></i>'
+          : '<i class="fa-solid fa-eye"></i>';
+      });
+    });
+    document.getElementById('pwdNew')?.addEventListener('input', () => this.renderPasswordStrength());
+    document.getElementById('pwdConfirm')?.addEventListener('input', () => this.renderPasswordMatch());
+  }
+
+  private renderPasswordStrength(): void {
+    const value = (document.getElementById('pwdNew') as HTMLInputElement | null)?.value ?? '';
+    const wrap = document.getElementById('pwdStrength');
+    const bar = document.getElementById('pwdStrengthBar');
+    const label = document.getElementById('pwdStrengthLabel');
+    if (!wrap || !bar || !label) return;
+    if (!value) {
+      wrap.hidden = true;
+      bar.style.width = '0%';
+      label.textContent = '';
+      this.renderPasswordMatch();
+      return;
+    }
+    wrap.hidden = false;
+    let score = 0;
+    if (value.length >= 8) score += 1;
+    if (value.length >= 12) score += 1;
+    if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1;
+    if (/\d/.test(value)) score += 1;
+    if (/[^A-Za-z0-9]/.test(value)) score += 1;
+    const levels = [
+      { width: '20%', color: '#ef4444', text: 'Rất yếu' },
+      { width: '40%', color: '#f97316', text: 'Yếu' },
+      { width: '60%', color: '#f59e0b', text: 'Trung bình' },
+      { width: '80%', color: '#10b981', text: 'Mạnh' },
+      { width: '100%', color: '#059669', text: 'Rất mạnh' },
+    ];
+    const level = levels[Math.max(0, Math.min(score, levels.length) - 1)];
+    bar.style.width = level.width;
+    bar.style.background = level.color;
+    label.textContent = `Độ mạnh: ${level.text}`;
+    label.style.color = level.color;
+    this.renderPasswordMatch();
+  }
+
+  private renderPasswordMatch(): void {
+    const newPassword = (document.getElementById('pwdNew') as HTMLInputElement | null)?.value ?? '';
+    const confirm = (document.getElementById('pwdConfirm') as HTMLInputElement | null)?.value ?? '';
+    const hint = document.getElementById('pwdMatchHint');
+    if (!hint) return;
+    if (!confirm) {
+      hint.textContent = '';
+      return;
+    }
+    const match = confirm === newPassword;
+    hint.textContent = match ? '✓ Mật khẩu xác nhận khớp' : '✗ Mật khẩu xác nhận chưa khớp';
+    hint.style.color = match ? '#059669' : '#b91c1c';
+  }
+
+  private showPasswordMessage(message: string, isError: boolean): void {
+    const element = document.getElementById('pwdMessage');
+    if (!element) return;
+    element.textContent = message;
+    element.hidden = false;
+    element.classList.toggle('is-error', isError);
+    element.classList.toggle('is-success', !isError);
+  }
+
+  private async changePassword(): Promise<void> {
+    const oldInput = document.getElementById('pwdOld') as HTMLInputElement | null;
+    const newInput = document.getElementById('pwdNew') as HTMLInputElement | null;
+    const confirmInput = document.getElementById('pwdConfirm') as HTMLInputElement | null;
+    const button = document.getElementById('btnChangePassword') as HTMLButtonElement | null;
+    const oldPassword = oldInput?.value ?? '';
+    const newPassword = newInput?.value ?? '';
+    const confirm = confirmInput?.value ?? '';
+
+    if (!oldPassword) {
+      this.showPasswordMessage('Vui lòng nhập mật khẩu hiện tại.', true);
+      return;
+    }
+    if (newPassword.length < 8) {
+      this.showPasswordMessage('Mật khẩu mới phải có ít nhất 8 ký tự.', true);
+      return;
+    }
+    if (newPassword !== confirm) {
+      this.showPasswordMessage('Mật khẩu xác nhận chưa khớp.', true);
+      return;
+    }
+    if (newPassword === oldPassword) {
+      this.showPasswordMessage('Mật khẩu mới phải khác mật khẩu cũ.', true);
+      return;
+    }
+
+    if (button) {
+      button.disabled = true;
+      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang cập nhật...';
+    }
+    try {
+      await slanguageApi('/api/v1/me/password', {
+        method: 'POST',
+        body: { old_password: oldPassword, new_password: newPassword },
+      });
+      if (oldInput) oldInput.value = '';
+      if (newInput) newInput.value = '';
+      if (confirmInput) confirmInput.value = '';
+      this.renderPasswordStrength();
+      this.showPasswordMessage('✅ Đổi mật khẩu thành công!', false);
+      this.showToast('✅ Đã đổi mật khẩu thành công!');
+    } catch (error) {
+      this.showPasswordMessage(error instanceof Error ? error.message : 'Không thể đổi mật khẩu.', true);
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.innerHTML = '<i class="fa-solid fa-key"></i> Cập nhật mật khẩu';
+      }
     }
   }
 
@@ -666,17 +828,17 @@ class SlanguageProfile {
     if (!cert) return;
     const profile = asRecord(this.me.profile);
     const stats = asRecord(this.me.stats);
-    const name = escapeHtml(asText(profile.display_name, asText(profile.username, 'Học viên')));
+    const name = escapeHtml(asText(profile.display_name, asText(profile.username, t('role.learner'))));
     const idHex = asText(profile.id).replace(/-/g, '').slice(0, 6).toUpperCase();
-    const lang = escapeHtml(LANG_NAMES[asText(profile.target_language, 'ja')] || '');
-    const printedAt = new Date().toLocaleDateString('vi-VN');
+    const lang = escapeHtml(localeLabel(asText(profile.target_language, 'ja')));
+    const printedAt = new Date().toLocaleDateString(numLocale());
     const win = window.open('', '_blank');
     if (!win) {
-      this.showToast('Trình duyệt đã chặn cửa sổ in chứng chỉ. Hãy cho phép popup và thử lại.');
+      this.showToast(t('to.certBlocked'));
       return;
     }
     win.document.write(`<!DOCTYPE html>
-<html lang="vi"><head><meta charset="utf-8"><title>${escapeHtml(cert.title)}</title>
+<html lang="${getLocale()}"><head><meta charset="utf-8"><title>${escapeHtml(cert.title)}</title>
 <style>
   body { font-family: Georgia, serif; background: #f4f8fa; margin: 0; padding: 40px; }
   .cert { max-width: 800px; margin: 0 auto; background: #fff; border: 10px double #0077B6; padding: 60px 50px; text-align: center; }
@@ -690,25 +852,18 @@ class SlanguageProfile {
   @media print { button { display: none; } body { background: #fff; padding: 0; } }
 </style></head><body>
 <div class="cert">
-  <h1>SLANGUAGE — CHỨNG CHỈ HỌC TẬP</h1>
+  <h1>${t('cp.heading')}</h1>
   <div class="line"></div>
-  <p>Chứng nhận học viên</p>
+  <p>${t('cp.certify')}</p>
   <h2>${name}</h2>
-  <div class="code">Mã học viên: SLANG-${idHex || '------'}</div>
-  <p>đã hoàn thành mốc <strong>${escapeHtml(cert.title)}</strong><br>trên lộ trình ${lang} với tổng <strong>${asCount(stats.xp_total).toLocaleString('vi-VN')} XP</strong>.</p>
+  <div class="code">${t('cp.codePrefix')}SLANG-${idHex || '------'}</div>
+  <p>${t('cp.completedPrefix')} <strong>${escapeHtml(cert.title)}</strong><br>${t('cp.onPath')} ${lang} ${t('cp.withTotal')} <strong>${asCount(stats.xp_total).toLocaleString(numLocale())} ${t('unit.xp')}</strong>.</p>
   <div class="line"></div>
-  <div class="meta"><span>Ngày in: ${printedAt}</span><span>Slanguage Learning Platform</span></div>
+  <div class="meta"><span>${t('cp.printedAt')} ${printedAt}</span><span>${t('cp.platform')}</span></div>
 </div>
-<button onclick="window.print()">In / Lưu PDF</button>
+<button onclick="window.print()">${t('cp.printBtn')}</button>
 </body></html>`);
     win.document.close();
-  }
-
-  private filterNativeLanguageOption(profile: Record<string, unknown>): void {
-    const native = asText(profile.native_language, 'vi');
-    document.querySelectorAll<HTMLButtonElement>('.lang-dropdown-item').forEach((item) => {
-      item.style.display = item.getAttribute('data-lang') === native ? 'none' : 'flex';
-    });
   }
 
   private bindPageTransitions(): void {
@@ -725,27 +880,12 @@ class SlanguageProfile {
 
   private triggerLoadingAndRedirect(targetUrl: string, duration = 1500): void {
     const overlay = document.getElementById('slanguageLoadingOverlay');
-    const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     if (overlay) {
       overlay.classList.add('active');
-      if (video) {
-        video.muted = false;
-        video.volume = 1.0;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            video.muted = true;
-            void video.play();
-          });
-        }
-      }
+      playLoadingRive();
     }
     setTimeout(() => {
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
+      stopLoadingRive();
       overlay?.classList.remove('active');
       window.location.href = targetUrl;
     }, duration);
@@ -771,7 +911,7 @@ class SlanguageProfile {
     toast.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 5px; border-bottom: 1px solid rgba(255, 183, 3, 0.25); width: 100%;">
         <img src="${new URL('../../../assets/logo.png', import.meta.url).href}" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0;">
-        <span style="font-size: 0.85rem; font-weight: 700; color: #FFB703; letter-spacing: 0.2px;">S Language thông báo:</span>
+        <span style="font-size: 0.85rem; font-weight: 700; color: #FFB703; letter-spacing: 0.2px;">${escapeHtml(t('to.brand'))}</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px; font-size: 0.96rem; font-weight: 700; color: #ffffff;">
         <span>${escapeHtml(message)}</span>

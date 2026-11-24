@@ -14,6 +14,10 @@ from app.schemas.minigame import (
 logger = logging.getLogger(__name__)
 _DEFAULT_MODEL = "gemini-3.5-flash-lite"
 
+# Model nhẹ hay bị Google trả 503 "high demand" theo cơn; thử tiếp model kế
+# trong danh sách thay vì báo lỗi ngay.
+_FALLBACK_MODELS = ("gemini-3.5-flash", "gemini-3.1-flash-lite")
+
 
 class MiniGameAIError(RuntimeError):
     """Raised when the dedicated mini-game judge cannot return a valid result."""
@@ -58,26 +62,30 @@ def evaluate_minigame_answer(
         raise MiniGameAIError("No mini-game AI provider key is configured.")
 
     model = (getattr(settings, "MINIGAME_AI_MODEL", "") or "").strip() or _DEFAULT_MODEL
+    models = list(dict.fromkeys([model, *_FALLBACK_MODELS, _DEFAULT_MODEL]))
     last_error: Exception | None = None
-    for key in keys:
-        try:
-            client = genai.Client(api_key=key)
-            response = client.models.generate_content(
-                model=model,
-                contents=_build_prompt(request),
-                config=types.GenerateContentConfig(
-                    temperature=0,
-                    response_mime_type="application/json",
-                ),
-            )
-            raw_text = (response.text or "").strip()
-            payload = json.loads(raw_text)
-            return MiniGameEvaluationResponse.model_validate(payload)
-        except (json.JSONDecodeError, ValidationError, ValueError) as exc:
-            last_error = exc
-            logger.warning("Mini-game AI returned an invalid evaluation.")
-        except Exception as exc:
-            last_error = exc
-            logger.warning("Mini-game AI provider failed (%s).", type(exc).__name__)
+    for name in models:
+        for key in keys:
+            try:
+                client = genai.Client(api_key=key)
+                response = client.models.generate_content(
+                    model=name,
+                    contents=_build_prompt(request),
+                    config=types.GenerateContentConfig(
+                        temperature=0,
+                        response_mime_type="application/json",
+                    ),
+                )
+                raw_text = (response.text or "").strip()
+                payload = json.loads(raw_text)
+                return MiniGameEvaluationResponse.model_validate(payload)
+            except (json.JSONDecodeError, ValidationError, ValueError) as exc:
+                last_error = exc
+                logger.warning("Mini-game AI returned an invalid evaluation (%s).", name)
+            except Exception as exc:
+                last_error = exc
+                logger.warning(
+                    "Mini-game AI provider failed on %s (%s).", name, type(exc).__name__
+                )
 
     raise MiniGameAIError("Mini-game AI did not return a valid evaluation.") from last_error

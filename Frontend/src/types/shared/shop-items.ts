@@ -1,5 +1,5 @@
 import { slanguageApi } from "./api-client";
-import { refillHearts } from "./hearts";
+import { fillHearts, formatHearts } from "./hearts";
 import { showToast } from "../ui/toast";
 
 export interface ActiveBoost {
@@ -36,7 +36,7 @@ export async function tryHealHearts(): Promise<boolean> {
   } catch {
     return false;
   }
-  const hearts = refillHearts(5);
-  showToast({ type: "success", message: `Đã dùng Hồi Phục Máu Siêu Tốc (+5 ❤️) — máu hiện tại ${hearts}/5, học tiếp nào!` });
+  const hearts = fillHearts();
+  showToast({ type: "success", message: `Đã dùng Hồi Phục Máu Siêu Tốc — máu hiện tại ${formatHearts(hearts)}, học tiếp nào!` });
   return true;
 }

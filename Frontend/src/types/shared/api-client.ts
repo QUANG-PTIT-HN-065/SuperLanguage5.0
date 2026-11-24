@@ -1,9 +1,17 @@
-const API_BASE_URL = (
+export const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
 ).replace(/\/+$/, "");
 
 const ACCESS_TOKEN_KEY = "slanguage_access_token";
 const REFRESH_TOKEN_KEY = "slanguage_refresh_token";
+const IDENTITY_KEYS = [
+  "slanguage_is_logged_in",
+  "slanguage_user_id",
+  "slanguage_user_name",
+  "slanguage_user_email",
+] as const;
+const AUTH_COOKIE_KEYS = [ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, ...IDENTITY_KEYS];
+const AUTH_COOKIE_MAX_AGE_S = 7 * 24 * 60 * 60;
 
 const LOGIN_PAGE_URL = "../login/index.html";
 const SESSION_EXPIRED_MESSAGE = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
@@ -16,10 +24,58 @@ const PUBLIC_PAGE_DIRS = [
   "/select-language/",
   "/terms/",
   "/minigame/",
+  "/home/",
+  "/select-lesson/",
+  "/vocabulary/",
+  "/leaderboard/",
   "/LoginAdmin/",
   "/dasboardAdmin/",
   "/vocabularyAdmin/",
 ];
+
+function readAuthCookie(name: string): string | null {
+  const prefix = `${name}=`;
+  for (const part of document.cookie.split(";")) {
+    const cookie = part.trim();
+    if (cookie.startsWith(prefix)) {
+      const raw = cookie.slice(prefix.length);
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
+      }
+    }
+  }
+  return null;
+}
+
+function writeAuthCookie(name: string, value: string): void {
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${AUTH_COOKIE_MAX_AGE_S}; SameSite=Lax`;
+}
+
+export function setAuthCookie(name: string, value: string): void {
+  writeAuthCookie(name, value);
+}
+
+export function removeAuthCookie(name: string): void {
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
+}
+
+export function getAuthCookie(name: string): string | null {
+  return readAuthCookie(name);
+}
+
+// Phiên cũ (trước khi chuyển sang cookie) vẫn nằm trong localStorage →
+// nâng cấp một lần rồi xoá để không còn hai nguồn sự thật.
+function migrateLegacyAuthStorage(): void {
+  for (const key of AUTH_COOKIE_KEYS) {
+    const legacy = localStorage.getItem(key);
+    if (legacy === null) continue;
+    if (!readAuthCookie(key)) writeAuthCookie(key, legacy);
+    localStorage.removeItem(key);
+  }
+}
+migrateLegacyAuthStorage();
 
 let sessionExpiryPopupShown = false;
 
@@ -81,20 +137,20 @@ async function parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
 }
 
 export function isLearnerAuthenticated(): boolean {
-  return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
+  return Boolean(readAuthCookie(ACCESS_TOKEN_KEY));
 }
 
 export function saveAuthTokens(tokens: AuthTokens): void {
   if (!tokens.access_token || !tokens.refresh_token) {
     throw new Error("Backend không trả về phiên đăng nhập hợp lệ.");
   }
-  localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
-  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  writeAuthCookie(ACCESS_TOKEN_KEY, tokens.access_token);
+  writeAuthCookie(REFRESH_TOKEN_KEY, tokens.refresh_token);
 }
 
 export function clearAuthTokens(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  removeAuthCookie(ACCESS_TOKEN_KEY);
+  removeAuthCookie(REFRESH_TOKEN_KEY);
 }
 
 // Key giữ lại khi đăng xuất: email cho tính năng "Ghi nhớ đăng nhập".
@@ -116,10 +172,10 @@ export function saveLearnerIdentity(user: {
   email: string;
   display_name?: string | null;
 }): void {
-  localStorage.setItem("slanguage_is_logged_in", "true");
-  if (user.id) localStorage.setItem("slanguage_user_id", user.id);
-  localStorage.setItem("slanguage_user_name", user.display_name || user.email);
-  localStorage.setItem("slanguage_user_email", user.email);
+  writeAuthCookie("slanguage_is_logged_in", "true");
+  if (user.id) writeAuthCookie("slanguage_user_id", user.id);
+  writeAuthCookie("slanguage_user_name", user.display_name || user.email);
+  writeAuthCookie("slanguage_user_email", user.email);
 }
 
 function isPublicAuthPage(): boolean {
@@ -134,10 +190,7 @@ function redirectToLoginPage(): void {
 export function handleSessionExpired(): void {
   clearAuthTokens();
   clearLearnerCache();
-  localStorage.removeItem("slanguage_is_logged_in");
-  localStorage.removeItem("slanguage_user_id");
-  localStorage.removeItem("slanguage_user_name");
-  localStorage.removeItem("slanguage_user_email");
+  for (const key of IDENTITY_KEYS) removeAuthCookie(key);
   if (sessionExpiryPopupShown) return;
   sessionExpiryPopupShown = true;
   showSessionExpiredModal();
@@ -167,68 +220,73 @@ function showSessionExpiredModal(): void {
     ?.addEventListener("click", redirectToLoginPage);
 }
 
-async function refreshAccessToken(previousAccessToken?: string): Promise<string> {
-  const baselineToken = previousAccessToken ?? localStorage.getItem(ACCESS_TOKEN_KEY);
-  // Nhiều request song song có thể cùng gặp 401; request nào refresh xong trước
-  // sẽ lưu token mới — request sau dùng lại thay vì POST trùng hoặc kết luận
-  // nhầm phiên đã chết (Supabase xoay refresh token, lần gọi sau có thể bị chặn).
-  const newerSavedToken = (): string | null => {
-    const current = localStorage.getItem(ACCESS_TOKEN_KEY);
-    return current && current !== baselineToken ? current : null;
-  };
-
-  const savedByParallelCall = newerSavedToken();
-  if (savedByParallelCall) return savedByParallelCall;
-
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!refreshToken) {
-    handleSessionExpired();
-    throw new Error(SESSION_EXPIRED_MESSAGE);
-  }
-
-  const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
-  if (response.status === 401 || response.status === 403) {
-    // Refresh token cũng đã chết/thu hồi: phiên không thể cứu, đăng xuất bắt buộc
-    const savedByParallelCallAfterFailure = newerSavedToken();
-    if (savedByParallelCallAfterFailure) return savedByParallelCallAfterFailure;
-    handleSessionExpired();
-    throw new Error(SESSION_EXPIRED_MESSAGE);
-  }
-  const result = await parseResponse<{
-    access_token: string;
-    refresh_token: string;
-  }>(response);
-
-  if (!result.data.access_token || !result.data.refresh_token) {
-    throw new Error("Backend không trả về phiên đăng nhập mới.");
-  }
-  saveAuthTokens(result.data);
-  return result.data.access_token;
-}
-
 function isFormData(value: unknown): value is FormData {
   return typeof FormData !== "undefined" && value instanceof FormData;
 }
 
-export async function slanguageApi<T = unknown>(
-  path: string,
-  options: ApiRequestOptions = {},
-  allowRefresh = true,
-): Promise<ApiResponse<T>> {
-  const { anonymous = false, ...requestOptions } = options;
-  const token = anonymous ? null : localStorage.getItem(ACCESS_TOKEN_KEY);
+// refresh single-flight: 401 đồng loạt từ nhiều request chỉ được đổi token MỘT lần,
+// vì Supabase rotation sẽ vô hiệu refresh_token cũ ngay lần dùng đầu tiên.
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function tryRefreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const refreshToken = readAuthCookie(REFRESH_TOKEN_KEY);
+      if (!refreshToken) return false;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (!response.ok) return false;
+        const payload = await response.json();
+        const tokens = payload?.data as AuthTokens | undefined;
+        if (!tokens?.access_token || !tokens?.refresh_token) return false;
+        saveAuthTokens(tokens);
+        return true;
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
+// Access token hết hạn KHÔNG kết liễu phiên: chỉ refresh token chết mới đăng xuất.
+// 401 → thử /auth/refresh một lần rồi retry; refresh chết → xóa sạch cookie + modal.
+// Khách chưa từng có token (401) → chỉ báo yêu cầu đăng nhập, không dọa "hết hạn".
+function handleUnauthorized(token: string | null): never {
+  if (token) {
+    handleSessionExpired();
+    throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
+  throw new Error("Vui lòng đăng nhập để thực hiện thao tác này.");
+}
+
+function buildHeaders(
+  requestOptions: Omit<ApiRequestOptions, "anonymous">,
+  token: string | null,
+  acceptAudio = false,
+): Headers {
   const headers = new Headers(requestOptions.headers);
   if (isFormData(requestOptions.body)) headers.delete("Content-Type");
+  else if (acceptAudio) headers.set("Accept", "audio/*");
   else headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
+  return headers;
+}
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+async function slanguageApiInner<T>(
+  path: string,
+  requestOptions: Omit<ApiRequestOptions, "anonymous">,
+  token: string | null,
+): Promise<Response> {
+  return fetch(`${API_BASE_URL}${path}`, {
     ...requestOptions,
-    headers,
+    headers: buildHeaders(requestOptions, token),
     body:
       requestOptions.body === undefined
         ? undefined
@@ -236,25 +294,29 @@ export async function slanguageApi<T = unknown>(
           ? requestOptions.body
           : JSON.stringify(requestOptions.body),
   });
+}
 
-  if (response.status === 401 && !anonymous) {
-    if (!token) {
-      handleSessionExpired();
-      throw new Error(SESSION_EXPIRED_MESSAGE);
-    }
-    if (allowRefresh) {
-      const refreshedToken = await refreshAccessToken(token);
-      return slanguageApi<T>(
-        path,
-        {
-          ...requestOptions,
-          headers: { ...requestOptions.headers, Authorization: `Bearer ${refreshedToken}` },
-        },
-        false,
-      );
-    }
+export async function slanguageApi<T = unknown>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<ApiResponse<T>> {
+  const { anonymous = false, ...requestOptions } = options;
+  if (anonymous) {
+    const response = await slanguageApiInner(path, requestOptions, null);
+    return parseResponse<T>(response);
   }
-  return parseResponse<T>(response);
+
+  let token: string | null = readAuthCookie(ACCESS_TOKEN_KEY);
+  let response = await slanguageApiInner(path, requestOptions, token);
+  if (response.status !== 401) return parseResponse<T>(response);
+
+  if (!token) handleUnauthorized(null);
+  if (await tryRefreshSession()) {
+    token = readAuthCookie(ACCESS_TOKEN_KEY);
+    response = await slanguageApiInner(path, requestOptions, token);
+    if (response.status !== 401) return parseResponse<T>(response);
+  }
+  handleUnauthorized(token);
 }
 
 export async function slanguageApiAudio(
@@ -262,11 +324,9 @@ export async function slanguageApiAudio(
   body?: unknown,
   method: "POST" | "GET" = "POST",
 ): Promise<Blob> {
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
-  const send = (accessToken: string | null) => {
-    const headers = new Headers({ Accept: "audio/*" });
+  const send = async (token: string | null): Promise<Response> => {
+    const headers = buildHeaders({}, token, true);
     if (method === "POST") headers.set("Content-Type", "application/json");
-    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     return fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
@@ -274,10 +334,17 @@ export async function slanguageApiAudio(
     });
   };
 
+  let token: string | null = readAuthCookie(ACCESS_TOKEN_KEY);
   let response = await send(token);
   if (response.status === 401 && token) {
-    response = await send(await refreshAccessToken(token));
+    if (await tryRefreshSession()) {
+      token = readAuthCookie(ACCESS_TOKEN_KEY);
+      response = await send(token);
+    } else {
+      handleUnauthorized(token);
+    }
   }
+  if (response.status === 401 && token) handleUnauthorized(token);
   if (!response.ok) {
     let payload: unknown;
     try {
