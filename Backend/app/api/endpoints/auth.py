@@ -75,7 +75,7 @@ def _raise_auth_error(exc: Exception, default_status: int, default_msg: str) -> 
             status.HTTP_403_FORBIDDEN, "Email chưa được xác thực. Vui lòng kiểm tra hộp thư."
         ) from exc
     if "password" in msg and any(w in msg for w in ("weak", "least", "short", "characters")):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Mật khẩu chưa đủ mạnh.") from exc
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Mật khẩu chưa đủ mạnh.") from exc
     raise HTTPException(default_status, default_msg) from exc
 
 

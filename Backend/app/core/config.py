@@ -47,5 +47,11 @@ class Settings(BaseSettings):
     RAG_TOP_K: int = 4
     RAG_EMBEDDING_MODEL: str = "gemini-embedding-001"
 
+    # Cloudinary (upload ảnh đại diện). Để trống = chưa cấu hình, endpoint sẽ báo 503.
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+    CLOUDINARY_AVATAR_FOLDER: str = "slanguage/avatars"
+
 
 settings = Settings()  # type: ignore[call-arg]

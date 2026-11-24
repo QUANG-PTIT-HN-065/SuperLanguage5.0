@@ -15,6 +15,12 @@ interface ToastEntry {
   startedAt: number;
 }
 
+const MARKER_ICONS: Record<ToastType, string> = {
+  success: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
+  error: '<path d="M12 6.5v6.5"/><path d="M12 17.2h.01"/>',
+  info: '<path d="M12 11v6"/><path d="M12 6.8h.01"/>',
+};
+
 const MAX_TOASTS = 3;
 const DEFAULT_DURATION = 3000;
 const entries: ToastEntry[] = [];
@@ -79,6 +85,7 @@ export function showToast({ type, message, duration = DEFAULT_DURATION }: ToastO
   const marker = document.createElement("span");
   marker.className = "slg-toast__marker";
   marker.setAttribute("aria-hidden", "true");
+  marker.innerHTML = `<svg viewBox="0 0 24 24">${MARKER_ICONS[type]}</svg>`;
 
   const copy = document.createElement("p");
   copy.className = "slg-toast__message";

@@ -100,3 +100,16 @@ class OnboardingRequest(BaseModel):
         if LEVEL_ORDER.index(self.target_level) < LEVEL_ORDER.index(self.current_level):
             raise ValueError("Trình độ mục tiêu không được thấp hơn trình độ hiện tại.")
         return self
+
+
+class ChangePasswordRequest(BaseModel):
+    """POST /me/password: đổi mật khẩu, bắt buộc xác minh mật khẩu cũ."""
+
+    old_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+    @model_validator(mode="after")
+    def new_must_differ(self) -> "ChangePasswordRequest":
+        if self.old_password == self.new_password:
+            raise ValueError("Mật khẩu mới phải khác mật khẩu cũ.")
+        return self

@@ -343,9 +343,10 @@
             class="profile-avatar-img"
             id="profileAvatarImg"
           >
-          <button class="avatar-edit-btn" id="btnChangeAvatar" title="Thay đổi ảnh đại diện (JPG/PNG, tối đa 10MB)" data-i18n-title="avatar.title">
+          <button class="avatar-edit-btn" id="btnChangeAvatar" title="Thay đổi ảnh đại diện (JPG/PNG, tối đa 10MB)">
             <i class="fa-solid fa-camera"></i>
           </button>
+          <input type="file" id="avatarFileInput" accept="image/jpeg,image/png" hidden>
         </div>
 
         <div class="profile-meta">
@@ -775,6 +776,53 @@
             </button>
             <button type="submit" class="btn-save-profile" data-i18n="fo.save">
               <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi hồ sơ
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- ================= ĐỔI MẬT KHẨU ================= -->
+      <div class="profile-form-card" style="margin-top: 28px;">
+        <div class="section-head" style="margin-bottom: 28px;">
+          <h3><i class="fa-solid fa-lock"></i> Đổi mật khẩu</h3>
+          <span style="font-size: 0.85rem; color: var(--text-muted);">Xác minh mật khẩu cũ trước khi đặt mật khẩu mới (tối thiểu 8 ký tự)</span>
+        </div>
+
+        <form id="passwordChangeForm">
+          <div class="form-field">
+            <label for="pwdOld">Mật khẩu hiện tại *</label>
+            <div class="password-input-wrap">
+              <input type="password" id="pwdOld" autocomplete="current-password" required maxlength="128" placeholder="Nhập mật khẩu đang dùng">
+              <button type="button" class="pwd-toggle" data-target="pwdOld" aria-label="Hiện hoặc ẩn mật khẩu"><i class="fa-solid fa-eye"></i></button>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div class="form-field">
+              <label for="pwdNew">Mật khẩu mới *</label>
+              <div class="password-input-wrap">
+                <input type="password" id="pwdNew" autocomplete="new-password" required minlength="8" maxlength="128" placeholder="Tối thiểu 8 ký tự">
+                <button type="button" class="pwd-toggle" data-target="pwdNew" aria-label="Hiện hoặc ẩn mật khẩu"><i class="fa-solid fa-eye"></i></button>
+              </div>
+              <div class="pwd-strength" id="pwdStrength" hidden><div class="pwd-strength-bar" id="pwdStrengthBar"></div></div>
+              <span class="pwd-hint" id="pwdStrengthLabel"></span>
+            </div>
+
+            <div class="form-field">
+              <label for="pwdConfirm">Xác nhận mật khẩu mới *</label>
+              <div class="password-input-wrap">
+                <input type="password" id="pwdConfirm" autocomplete="new-password" required minlength="8" maxlength="128" placeholder="Nhập lại mật khẩu mới">
+                <button type="button" class="pwd-toggle" data-target="pwdConfirm" aria-label="Hiện hoặc ẩn mật khẩu"><i class="fa-solid fa-eye"></i></button>
+              </div>
+              <span class="pwd-hint" id="pwdMatchHint"></span>
+            </div>
+          </div>
+
+          <p class="pwd-message" id="pwdMessage" role="alert" hidden></p>
+
+          <div class="form-actions-row">
+            <button type="submit" class="btn-save-profile" id="btnChangePassword">
+              <i class="fa-solid fa-key"></i> Cập nhật mật khẩu
             </button>
           </div>
         </form>
