@@ -86,7 +86,7 @@ const MENU_KEYS: [string, string, string][] = [
 // [needle trong href, khóa tiêu đề, khóa mô tả (rỗng nếu chỉ có tiêu đề)]
 const SHELL_LINKS: [string, string, string][] = [
   ['home/index.html', 'nav.home', ''],
-  ['roadmap/index.html', 'nav.newLesson', 'nav.newLessonDesc'],
+  ['select-lesson/index.html', 'nav.newLesson', 'nav.newLessonDesc'],
   ['vocabulary/index.html', 'nav.vocabTrain', 'nav.vocabTrainDesc'],
   ['ai-practice/index.html', 'nav.aiTrain', 'nav.aiTrainDesc'],
   ['writing/index.html', 'nav.write', 'nav.writeDesc'],
