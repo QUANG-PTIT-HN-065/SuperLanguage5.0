@@ -1954,8 +1954,23 @@ body.roadmap-sheet-open {
 
 .lesson-result__reward {
   display: grid;
-  gap: 3px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 3px 10px;
   padding: 13px 10px;
+}
+
+.lesson-reward-img {
+  grid-row: span 2;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.lesson-reward-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
 }
 
 .lesson-result__reward + .lesson-result__reward { border-left: 1px solid var(--learner-rule); }

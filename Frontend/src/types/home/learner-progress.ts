@@ -10,7 +10,7 @@
  * Không tạo số liệu, cấp độ hay mục tiêu nếu API không trả về.
  */
 
-import { slanguageApi } from "../shared/api-client";
+import { setAuthCookie, slanguageApi } from "../shared/api-client";
 
 export const XP_PER_LEVEL = 100;
 
@@ -155,9 +155,9 @@ export async function fetchLearnerOverview(): Promise<LearnerOverview> {
  * Chỉ ghi khi đã có dữ liệu thành công, không tạo giá trị giả.
  */
 export function cacheOverview(overview: LearnerOverview): void {
-  localStorage.setItem("slanguage_user_name", overview.profile.displayName);
+  setAuthCookie("slanguage_user_name", overview.profile.displayName);
   if (overview.profile.email) {
-    localStorage.setItem("slanguage_user_email", overview.profile.email);
+    setAuthCookie("slanguage_user_email", overview.profile.email);
   }
   if (overview.profile.targetLanguage) {
     localStorage.setItem("slanguage_active_language", overview.profile.targetLanguage);

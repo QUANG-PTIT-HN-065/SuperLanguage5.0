@@ -2271,6 +2271,24 @@ textarea {
   color: #803523;
 }
 
+.lesson-feedback__heart {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--learner-signal-soft);
+  color: #803523;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lesson-feedback__heart i {
+  font-size: 0.72rem;
+}
+
 .lesson-actions {
   display: flex;
   justify-content: flex-end;
@@ -2278,11 +2296,21 @@ textarea {
 }
 
 .lesson-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-top: 16px;
   padding: 10px 12px;
   border-top: 1px solid var(--learner-rule);
   color: #4b6269;
   font-size: 0.86rem;
+}
+
+.lesson-notice__img {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 
 .lesson-notice[data-state="error"] {

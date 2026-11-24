@@ -4,8 +4,17 @@
  * flashcard interactions, XP tracker, streak logic, and lesson preview modal.
  */
 
-import { slanguageApi } from '../shared/api-client';
-import { logoutLearner } from '../shared/learner-header';
+import { getAuthCookie, setAuthCookie, slanguageApi } from '../shared/api-client';
+import { initializeLearnerHeader, logoutLearner } from '../shared/learner-header';
+import { applyI18n, getLocale, initI18n, localeLabel, setLocale, t, LOCALE_EVENT, type UiLocale } from '../shared/i18n';
+import { playLoadingRive, stopLoadingRive } from '../shared/loading-rive';
+
+// Cờ của ngôn ngữ GIAO DIỆN (navbar chỉ đổi locale UI, không đổi ngôn ngữ học).
+const UI_FLAGS: Record<UiLocale, string> = {
+  en: new URL('../../../assets/flags/flag-en.png', import.meta.url).href,
+  ja: new URL('../../../assets/flags/flag-jp.png', import.meta.url).href,
+  vi: new URL('../../../assets/flags/flag-vn.png', import.meta.url).href,
+};
 
 // Interface for language specific data
 interface LanguageData {
@@ -115,6 +124,7 @@ class SlanguageDashboard {
   private langCarouselTimer: number | null = null;
   private currentSlideIndex: number = 0;
   private isCarouselPaused: boolean = false;
+  private lastQuizAnswer: boolean | null = null;
 
   constructor() {
     this.init();
@@ -125,34 +135,44 @@ class SlanguageDashboard {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('auth')) {
       this.isLoggedIn = urlParams.get('auth') === '1' || urlParams.get('auth') === 'true';
-      localStorage.setItem('slanguage_is_logged_in', this.isLoggedIn ? 'true' : 'false');
+      setAuthCookie('slanguage_is_logged_in', this.isLoggedIn ? 'true' : 'false');
     } else if (urlParams.has('logout')) {
       this.isLoggedIn = false;
-      localStorage.setItem('slanguage_is_logged_in', 'false');
+      setAuthCookie('slanguage_is_logged_in', 'false');
     } else {
-      this.isLoggedIn = localStorage.getItem('slanguage_is_logged_in') === 'true';
+      this.isLoggedIn = getAuthCookie('slanguage_is_logged_in') === 'true';
     }
 
     this.applyAuthState();
 
-
+    // Dịch shell navbar + các phần tử data-i18n theo locale GIAO DIỆN đã lưu.
+    initI18n();
+    // Shared shell chịu trách nhiệm drawer di động + dropdown "Học tập";
+    // bindControls=false vì home đã tự bind lang/user dropdown và logout.
+    void initializeLearnerHeader({ loadProfile: false, bindControls: false });
+    this.syncUiLocale();
 
     // Check saved language or default to Japanese
     const savedLang = localStorage.getItem('slanguage_active_language') as 'en' | 'ja' | 'vi';
     if (savedLang && languagesDB[savedLang]) {
       this.currentLang = savedLang;
     }
-    // Filter header language dropdown to exclude user's native language
-    this.filterHeaderLanguageDropdown();
 
     // Check saved user name and sync with Header & Leaderboard
-    const savedUserName = localStorage.getItem('slanguage_user_name') || 'Học viên';
+    const savedUserName = getAuthCookie('slanguage_user_name') || 'Học viên';
     document.querySelectorAll('.user-info-text .name').forEach(el => {
       el.textContent = savedUserName;
     });
 
     this.bindEvents();
     this.render();
+
+    // Đổi locale UI: dịch lại tĩnh + render lại vùng động bằng dữ liệu sẵn có.
+    window.addEventListener(LOCALE_EVENT, () => {
+      applyI18n();
+      this.render();
+      this.syncUiLocale();
+    });
   }
 
   private applyAuthState(): void {
@@ -165,7 +185,7 @@ class SlanguageDashboard {
     }
     const heroBadgeLabel = document.getElementById('heroBadgeLabel');
     if (heroBadgeLabel) {
-      heroBadgeLabel.textContent = this.isLoggedIn ? 'Đang học' : 'Đang chọn';
+      heroBadgeLabel.textContent = this.isLoggedIn ? t('hm.badgeLearning') : t('hm.badgeChoosing');
     }
   }
 
@@ -226,17 +246,18 @@ class SlanguageDashboard {
       }
     }
 
-    // Language Dropdown Items
+    // Navbar Language Dropdown Items — chỉ đổi ngôn ngữ GIAO DIỆN (UI locale),
+    // không PATCH target_language, không ghi localStorage ngôn ngữ học.
     const langDropdownItems = document.querySelectorAll<HTMLButtonElement>('.lang-dropdown-item');
     langDropdownItems.forEach(item => {
       item.addEventListener('click', (e) => {
-        const lang = (e.currentTarget as HTMLElement).getAttribute('data-lang') as 'en' | 'ja' | 'vi';
-        if (lang && lang !== this.getNativeLanguage()) {
-          this.switchLanguage(lang);
-          if (langDropdown && langDropdownBtn) {
-            langDropdown.classList.remove('open');
-            langDropdownBtn.setAttribute('aria-expanded', 'false');
-          }
+        const code = (e.currentTarget as HTMLElement).getAttribute('data-lang') as UiLocale | null;
+        if (code && code !== getLocale()) {
+          setLocale(code);
+        }
+        if (langDropdown && langDropdownBtn) {
+          langDropdown.classList.remove('open');
+          langDropdownBtn.setAttribute('aria-expanded', 'false');
         }
       });
     });
@@ -273,14 +294,14 @@ class SlanguageDashboard {
 
     if (btnKnow) {
       btnKnow.addEventListener('click', () => {
-        this.showToast('Đã ghi nhận lựa chọn. Điểm sẽ cập nhật sau khi kết quả được lưu.');
+        this.showToast(t('hm.toastFlashcardKnown'));
         if (flashcardBox) flashcardBox.classList.remove('flipped');
       });
     }
 
     if (btnAgain) {
       btnAgain.addEventListener('click', () => {
-        this.showToast('Đã thêm từ này vào danh sách cần ôn lại hôm nay 📌');
+        this.showToast(t('hm.toastFlashcardAgain'));
         if (flashcardBox) flashcardBox.classList.remove('flipped');
       });
     }
@@ -319,25 +340,14 @@ class SlanguageDashboard {
     // Page navigation transitions
     this.bindPageTransitions();
 
-    // Reset and mute video if page is shown from bfcache or when hidden
+    // Reset loading animation if page is shown from bfcache or when hidden
     window.addEventListener('pageshow', () => {
       const overlay = document.getElementById('slanguageLoadingOverlay');
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
       if (overlay) overlay.classList.remove('active');
-      if (video) {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
-      }
+      stopLoadingRive();
     });
 
-    window.addEventListener('pagehide', () => {
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
-    });
+    window.addEventListener('pagehide', () => stopLoadingRive());
   }
 
 
@@ -447,27 +457,12 @@ class SlanguageDashboard {
 
   private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
     const overlay = document.getElementById('slanguageLoadingOverlay');
-    const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     if (overlay) {
       overlay.classList.add('active');
-      if (video) {
-        video.muted = false;
-        video.volume = 1.0;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            video.muted = true;
-            video.play();
-          });
-        }
-      }
+      playLoadingRive();
     }
     setTimeout(() => {
-      if (video) {
-        video.pause();
-        video.muted = true;
-      }
+      stopLoadingRive();
       if (overlay) {
         overlay.classList.remove('active');
       }
@@ -478,7 +473,7 @@ class SlanguageDashboard {
   public switchLanguage(lang: 'en' | 'ja' | 'vi'): void {
     const nativeLang = this.getNativeLanguage();
     if (lang === nativeLang) {
-      this.showToast(`Bạn không thể chọn ngôn ngữ mẹ đẻ (${languagesDB[lang].name}) làm ngôn ngữ học tập!`, languagesDB[lang].flagImg);
+      this.showToast(t('hm.toastNativeBlock', { name: localeLabel(lang) }), languagesDB[lang].flagImg);
       return;
     }
     this.currentLang = lang;
@@ -486,7 +481,7 @@ class SlanguageDashboard {
     localStorage.setItem('slanguage_current_lang', lang);
     void slanguageApi('/api/v1/me', { method: 'PATCH', body: { target_language: lang } }).catch(() => {});
     this.render();
-    this.showToast(`Đã chuyển sang học: ${languagesDB[lang].name}`, languagesDB[lang].flagImg);
+    this.showToast(t('hm.toastSwitched', { name: localeLabel(lang) }), languagesDB[lang].flagImg);
   }
 
   private getNativeLanguage(): 'en' | 'ja' | 'vi' {
@@ -497,52 +492,38 @@ class SlanguageDashboard {
     return 'vi';
   }
 
-  private filterHeaderLanguageDropdown(): void {
-    const nativeLang = this.getNativeLanguage();
+  // Đồng bộ tiêu đề tab, cờ navbar và chữ modal quiz theo locale GIAO DIỆN.
+  private syncUiLocale(): void {
+    document.title = t('hm.pageTitle');
+    const currentLangFlag = document.getElementById('currentLangFlag') as HTMLImageElement | null;
+    if (currentLangFlag) currentLangFlag.src = UI_FLAGS[getLocale()];
 
-    // 1. Hide native language option from header dropdown menu
-    const dropdownItems = document.querySelectorAll<HTMLElement>('.lang-dropdown-item');
-    dropdownItems.forEach(item => {
-      const lang = item.getAttribute('data-lang');
-      if (lang === nativeLang) {
-        item.style.display = 'none';
-      } else {
-        item.style.display = 'flex';
-      }
-    });
-
-    // 2. Ensure current target language is not user's native language
-    if (this.currentLang === nativeLang) {
-      const fallback: 'en' | 'ja' | 'vi' = nativeLang === 'vi' ? 'ja' : (nativeLang === 'ja' ? 'en' : 'ja');
-      this.currentLang = fallback;
-      localStorage.setItem('slanguage_active_language', fallback);
-      localStorage.setItem('slanguage_current_lang', fallback);
+    const modal = document.getElementById('lessonModalOverlay');
+    const quizTitle = document.getElementById('quizModalTitle');
+    if (modal && modal.classList.contains('active')) {
+      if (quizTitle) quizTitle.textContent = this.quizTitleText();
+      if (this.lastQuizAnswer !== null) this.renderQuizFeedback(this.lastQuizAnswer);
+    } else {
+      if (quizTitle) quizTitle.textContent = t('hm.quizTitle');
+      const questionText = document.getElementById('quizQuestionText');
+      if (questionText) questionText.textContent = t('hm.quizLoading');
     }
+  }
+
+  private quizTitleText(): string {
+    const data = languagesDB[this.currentLang];
+    return `${data.flag} ${t('hm.quizTitle')}: ${localeLabel(data.id)}`;
   }
 
   private render(): void {
     const data = languagesDB[this.currentLang];
     if (!data) return;
 
-    // Update active state in top navbar & dropdown
-    document.querySelectorAll<HTMLButtonElement>('.lang-dropdown-item').forEach(item => {
-      item.classList.toggle('active', item.getAttribute('data-lang') === this.currentLang);
-    });
-
+    // Navbar dropdown hiển thị locale GIAO DIỆN (translateShell đảm nhiệm),
+    // không đồng bộ theo ngôn ngữ học nữa.
     document.querySelectorAll<HTMLButtonElement>('.lang-btn').forEach(btn => {
       btn.classList.toggle('active', btn.getAttribute('data-lang') === this.currentLang);
     });
-
-    // Update current selected language label & flag on dropdown button
-    const currentLangLabel = document.getElementById('currentLangLabel');
-    const currentLangFlag = document.getElementById('currentLangFlag') as HTMLImageElement;
-    if (currentLangLabel) {
-      currentLangLabel.textContent = data.name;
-    }
-    if (currentLangFlag) {
-      currentLangFlag.src = data.flagImg;
-      currentLangFlag.alt = data.name;
-    }
 
     // Update active card in showcase grid & banner carousel
     document.querySelectorAll<HTMLElement>('.lang-card').forEach(card => {
@@ -554,10 +535,10 @@ class SlanguageDashboard {
       const statusBadge = slide.querySelector('.lang-banner-badge');
       if (statusBadge) {
         if (isCurrent) {
-          statusBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> Đang học`;
+          statusBadge.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${t('hm.badgeLearning')}`;
           statusBadge.className = 'lang-banner-badge is-learning';
         } else {
-          statusBadge.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> Khóa học tiêu chuẩn`;
+          statusBadge.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> ${t('hm.badgeStandard')}`;
           statusBadge.className = 'lang-banner-badge';
         }
       }
@@ -566,12 +547,12 @@ class SlanguageDashboard {
     // Update Hero elements
     const heroLangBadge = document.getElementById('heroActiveLang');
     if (heroLangBadge) {
-      heroLangBadge.innerHTML = `<img src="${data.flagImg}" alt="${data.name}" class="flag-icon-badge"> <span>${data.name}</span>`;
+      heroLangBadge.innerHTML = `<img src="${data.flagImg}" alt="${localeLabel(data.id)}" class="flag-icon-badge"> <span>${localeLabel(data.id)}</span>`;
     }
 
     const heroSubtitle = document.getElementById('heroCourseTitle');
     if (heroSubtitle) {
-      heroSubtitle.textContent = `Lộ trình: ${data.courseTitle}`;
+      heroSubtitle.textContent = `${t('hm.heroRoadmapPrefix')}${data.courseTitle}`;
     }
 
     const heroLessonName = document.getElementById('heroLessonName');
@@ -614,9 +595,10 @@ class SlanguageDashboard {
 
     if (!modal || !quizTitle || !quizContainer) return;
 
-    quizTitle.textContent = `${data.flag} Bài Luyện Nhanh: ${data.name}`;
+    quizTitle.textContent = this.quizTitleText();
     quizContainer.innerHTML = '';
     if (quizFeedback) quizFeedback.innerHTML = '';
+    this.lastQuizAnswer = null;
 
     const q = data.quizQuestion;
     const questionText = document.getElementById('quizQuestionText');
@@ -636,36 +618,43 @@ class SlanguageDashboard {
   }
 
   private handleQuizAnswer(selectedIdx: number, correctIdx: number, btnElement: HTMLElement): void {
-    const feedback = document.getElementById('quizFeedback');
     const buttons = document.querySelectorAll<HTMLButtonElement>('.quiz-option-btn');
     buttons.forEach(b => (b.disabled = true));
 
-    if (selectedIdx === correctIdx) {
+    const isCorrect = selectedIdx === correctIdx;
+    this.lastQuizAnswer = isCorrect;
+
+    if (isCorrect) {
       btnElement.classList.add('selected-correct');
-      if (feedback) {
-        feedback.innerHTML = `
-          <div style="background: #E0F2FE; border: 1px solid #0077B6; color: #0077B6; padding: 14px; border-radius: 12px; margin-top: 14px; font-weight: 700;">
-            <i class="fa-solid fa-circle-check"></i> Chính xác tuyệt đối!
-          </div>
-        `;
-      }
     } else {
       btnElement.style.background = '#FDE8EC';
       btnElement.style.borderColor = '#DC143C';
       btnElement.style.color = '#9E002B';
-      if (feedback) {
-        feedback.innerHTML = `
-          <div style="background: #FDE8EC; border: 1px solid #DC143C; color: #9E002B; padding: 14px; border-radius: 12px; margin-top: 14px; font-weight: 600;">
-            <i class="fa-solid fa-circle-xmark"></i> Chưa chính xác rồi, hãy thử ôn tập lại từ này nhé!
-          </div>
-        `;
-      }
+    }
+    this.renderQuizFeedback(isCorrect);
+  }
+
+  private renderQuizFeedback(isCorrect: boolean): void {
+    const feedback = document.getElementById('quizFeedback');
+    if (!feedback) return;
+    if (isCorrect) {
+      feedback.innerHTML = `
+        <div style="background: #E0F2FE; border: 1px solid #0077B6; color: #0077B6; padding: 14px; border-radius: 12px; margin-top: 14px; font-weight: 700;">
+          <i class="fa-solid fa-circle-check"></i> ${t('hm.quizCorrect')}
+        </div>
+      `;
+    } else {
+      feedback.innerHTML = `
+        <div style="background: #FDE8EC; border: 1px solid #DC143C; color: #9E002B; padding: 14px; border-radius: 12px; margin-top: 14px; font-weight: 600;">
+          <i class="fa-solid fa-circle-xmark"></i> ${t('hm.quizWrong')}
+        </div>
+      `;
     }
   }
 
   private playAudioSimulation(): void {
     const data = languagesDB[this.currentLang];
-    this.showToast(`🔊 Đang phát phát âm mẫu (${data.name})...`);
+    this.showToast(t('hm.toastAudio', { name: localeLabel(data.id) }));
 
     // Use Web Speech API if supported in browser
     if ('speechSynthesis' in window) {
@@ -705,7 +694,7 @@ class SlanguageDashboard {
     toast.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(255, 183, 3, 0.25);">
         <img src="../assets/logo.png" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));">
-        <span style="font-size: 0.85rem; font-weight: 700; color: #FFB703; letter-spacing: 0.2px;">S Language thông báo:</span>
+        <span style="font-size: 0.85rem; font-weight: 700; color: #FFB703; letter-spacing: 0.2px;">${t('hm.toastBrand')}</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px; font-size: 0.96rem; font-weight: 700; color: #ffffff;">
         <span>${message}</span>

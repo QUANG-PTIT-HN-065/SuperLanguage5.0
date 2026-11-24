@@ -1,5 +1,6 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
-import { MAX_HEARTS, readHearts, spendHearts } from "../shared/hearts";
+import { formatHearts, readHearts, spendHearts } from "../shared/hearts";
+import { t } from "../shared/i18n";
 import { activateBestBoost, tryHealHearts } from "../shared/shop-items";
 import type {
   LessonContent,
@@ -8,6 +9,8 @@ import type {
 } from "./lesson-practice-generator";
 import { launchConfetti } from "../ui/confetti";
 import { showToast } from "../ui/toast";
+
+const HEAL_POTION_IMG = new URL("../../../assets/potion_red.png", import.meta.url).href;
 
 interface CheckedAnswer {
   selected_option_id: string;
@@ -34,6 +37,7 @@ interface AnswerReview {
   selected: string;
   correct: string;
   explanation: string | null;
+  isCorrect: boolean;
 }
 
 interface MatchingMistake {
@@ -74,7 +78,7 @@ let checkedAnswer: CheckedAnswer | null = null;
 let matchingState: MatchingState | null = null;
 let activeRequest = false;
 let completed = false;
-let lessonHearts = MAX_HEARTS;
+let lessonHearts = readHearts();
 let lastXpAwarded = 0;
 let lastXpTotal = 0;
 let lastLessonId = 0;
@@ -97,16 +101,26 @@ function nonNegativeInt(value: unknown): number {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : -1;
 }
 
-function setNotice(message: string, isError = false): void {
+function setNotice(message: string, isError = false, imageSrc?: string): void {
   if (!lessonNotice) return;
   lessonNotice.hidden = !message;
-  lessonNotice.textContent = message;
+  lessonNotice.replaceChildren();
+  if (imageSrc) {
+    const image = document.createElement("img");
+    image.className = "lesson-notice__img";
+    image.src = imageSrc;
+    image.alt = "";
+    image.width = 26;
+    image.height = 26;
+    lessonNotice.append(image);
+  }
+  lessonNotice.append(document.createTextNode(message));
   lessonNotice.dataset.state = isError ? "error" : "";
 }
 
 function updateHeartsDisplay(): void {
   const heartsElement = document.getElementById("headerHeartsVal");
-  if (heartsElement) heartsElement.textContent = `${lessonHearts}/${MAX_HEARTS}`;
+  if (heartsElement) heartsElement.textContent = formatHearts(lessonHearts);
 }
 
 async function loadLessonContent(lessonId: number): Promise<LessonContent> {
@@ -384,7 +398,10 @@ function renderQuestion(): void {
   if (progressFill) progressFill.style.width = `${progress}%`;
   progressTrack?.setAttribute("aria-valuenow", String(progress));
   const feedback = document.getElementById("lessonFeedback");
-  if (feedback) feedback.textContent = "";
+  if (feedback) {
+    feedback.hidden = true;
+    feedback.classList.remove("is-in");
+  }
   if (checkButton) {
     checkButton.hidden = false;
     checkButton.disabled = true;
@@ -540,6 +557,7 @@ export async function openLesson(lessonId: number, pushHistory: boolean, skipRea
         setNotice(
           "Hết máu — sinh lực đang khóa hồi 24 giờ. Mua Hồi Phục Máu Siêu Tốc trong Cửa hàng để học tiếp ngay.",
           true,
+          HEAL_POTION_IMG,
         );
         return;
       }
@@ -585,6 +603,108 @@ function updateFillInAnswer(event: Event): void {
   if (checkButton) checkButton.disabled = !selectedOptionId;
 }
 
+type LessonCue = "correct" | "wrong" | "pass" | "fail";
+
+const LESSON_CUE_NOTES: Record<LessonCue, number[]> = {
+  correct: [880, 1318.5],
+  wrong: [392, 261.6],
+  pass: [659.3, 830.6, 1046.5, 1318.5],
+  fail: [440, 349.2, 261.6],
+};
+
+const VERDICT_ANIMATIONS = ["is-in", "is-shake", "is-glow"];
+
+let audioContext: AudioContext | null = null;
+let verdictToastTimer = 0;
+
+/** Trình duyệt chỉ cho mở AudioContext sau một thao tác chạm của người dùng. */
+function unlockLessonAudio(): void {
+  const Constructor = window.AudioContext
+    ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Constructor) return;
+  try {
+    audioContext ??= new Constructor();
+    if (audioContext.state === "suspended") void audioContext.resume();
+  } catch {
+    audioContext = null;
+  }
+}
+
+/** Âm báo tổng hợp bằng WebAudio để khỏi nạp thêm file audio cho ba lượt đúng/sai/tổng kết. */
+function playLessonCue(cue: LessonCue): void {
+  const context = audioContext;
+  if (!context || context.state === "closed") return;
+  const rising = cue === "correct" || cue === "pass";
+  try {
+    let at = context.currentTime;
+    for (const frequency of LESSON_CUE_NOTES[cue]) {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = rising ? "sine" : "triangle";
+      oscillator.frequency.setValueAtTime(frequency, at);
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(rising ? 0.16 : 0.12, at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(at);
+      oscillator.stop(at + 0.24);
+      at += rising ? 0.09 : 0.14;
+    }
+  } catch {
+    // Bỏ qua khi trình duyệt chặn phát âm thanh.
+  }
+}
+
+function replayAnimation(element: HTMLElement, className: string): void {
+  element.classList.remove(...VERDICT_ANIMATIONS);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+
+function showVerdictToast(isCorrect: boolean, heartsLost: boolean): void {
+  const toast = document.getElementById("lessonVerdictToast");
+  if (!toast) return;
+  toast.dataset.state = isCorrect ? "correct" : "incorrect";
+  const icon = toast.querySelector<HTMLElement>(".lesson-toast__icon");
+  if (icon) icon.className = `lesson-toast__icon fa-solid ${isCorrect ? "fa-circle-check" : "fa-heart-crack"}`;
+  const text = toast.querySelector<HTMLElement>(".lesson-toast__text");
+  if (text) {
+    text.textContent = isCorrect
+      ? t("sl.verdictCorrect")
+      : heartsLost
+        ? t("sl.verdictHearts", { hearts: formatHearts(lessonHearts) })
+        : t("sl.verdictWrong");
+  }
+  replayAnimation(toast, "is-in");
+  window.clearTimeout(verdictToastTimer);
+  verdictToastTimer = window.setTimeout(() => toast.classList.remove("is-in"), 1800);
+}
+
+function showVerdict(isCorrect: boolean, detail: string, heartsLost: boolean): void {
+  const banner = document.getElementById("lessonFeedback");
+  if (!banner) return;
+  banner.dataset.state = isCorrect ? "correct" : "incorrect";
+  const icon = banner.querySelector<HTMLElement>(".lesson-verdict__icon i");
+  if (icon) icon.className = `fa-solid ${isCorrect ? "fa-circle-check" : "fa-circle-xmark"}`;
+  const heading = banner.querySelector<HTMLElement>(".lesson-verdict__title");
+  if (heading) heading.textContent = t(isCorrect ? "sl.verdictCorrect" : "sl.verdictWrong");
+  const text = banner.querySelector<HTMLElement>(".lesson-verdict__text");
+  if (text) text.textContent = detail;
+  const chip = banner.querySelector<HTMLElement>(".lesson-verdict__chip");
+  if (chip) {
+    chip.hidden = !heartsLost;
+    if (heartsLost) {
+      const chipText = chip.querySelector<HTMLElement>(".lesson-verdict__chip-text");
+      if (chipText) chipText.textContent = t("sl.verdictHearts", { hearts: formatHearts(lessonHearts) });
+    }
+  }
+  banner.hidden = false;
+  replayAnimation(banner, "is-in");
+  if (questionPanel) replayAnimation(questionPanel, isCorrect ? "is-glow" : "is-shake");
+  showVerdictToast(isCorrect, heartsLost);
+  playLessonCue(isCorrect ? "correct" : "wrong");
+}
+
 async function checkAnswer(): Promise<void> {
   if (!lesson || !selectedOptionId || checkedAnswer || activeRequest || !checkButton) return;
   const question = lesson.questions[questionIndex];
@@ -598,13 +718,23 @@ async function checkAnswer(): Promise<void> {
     const selected = answer.selected_option_id;
     const correct = answer.correct_option_id;
     checkedAnswer = answer;
-    if (!answer.is_correct && question.question_type === "matching" && matchingState) {
-      for (const mistake of matchingState.mistakes) {
+    if (question.question_type === "matching") {
+      for (const mistake of matchingState?.mistakes ?? []) {
         answerReviews.push({
           prompt: `Ghép từ “${mistake.word}” với nghĩa tương ứng.`,
           selected: mistake.selectedMeaning,
           correct: mistake.correctMeaning,
           explanation: null,
+          isCorrect: false,
+        });
+      }
+      if (answer.is_correct) {
+        answerReviews.push({
+          prompt: question.prompt || t("sl.reviewMatchingAll"),
+          selected: t("sl.reviewMatchingAll"),
+          correct: t("sl.reviewMatchingAll"),
+          explanation: answer.explanation,
+          isCorrect: true,
         });
       }
     } else {
@@ -617,6 +747,7 @@ async function checkAnswer(): Promise<void> {
         selected: selectedText,
         correct: correctText,
         explanation: answer.explanation,
+        isCorrect: answer.is_correct,
       });
     }
 
@@ -632,39 +763,41 @@ async function checkAnswer(): Promise<void> {
     }
     const answerInput = optionsContainer?.querySelector<HTMLInputElement>("[data-answer-input]");
     if (answerInput) answerInput.disabled = true;
-    const feedback = document.getElementById("lessonFeedback");
-    if (feedback) {
-      const questionFeedback = question.question_type === "matching"
-        ? answer.is_correct
-          ? "Ghép chính xác tất cả các cặp."
-          : "Có cặp ghép chưa chính xác. Xem lại đáp án ở phần tổng kết."
-        : question.question_type === "fill_in" && !answer.is_correct
-          ? `Chưa đúng. Đáp án là “${correct}”.`
-          : answer.is_correct
-            ? "Chính xác."
-            : "Chưa đúng. Đáp án đúng đã được đánh dấu.";
-      feedback.textContent = `${questionFeedback}${checkedAnswer.explanation ? ` ${checkedAnswer.explanation}` : ""}`;
-      feedback.dataset.state = answer.is_correct ? "correct" : "incorrect";
-    }
+    const hint = question.question_type === "matching"
+      ? answer.is_correct
+        ? "Ghép chính xác tất cả các cặp."
+        : "Có cặp ghép chưa chính xác. Xem lại đáp án ở phần tổng kết."
+      : !answer.is_correct && question.question_type === "fill_in"
+        ? `Đáp án đúng là “${correct}”.`
+        : !answer.is_correct
+          ? "Đáp án đúng đã được đánh dấu màu xanh."
+          : "";
+    let heartsLost = false;
     if (!answer.is_correct) {
       lessonHearts = spendHearts(1);
       updateHeartsDisplay();
-      if (feedback) feedback.textContent += ` (-1 ❤️, còn ${lessonHearts}/${MAX_HEARTS} máu)`;
-      if (lessonHearts === 0) {
-        const healed = await tryHealHearts();
-        if (healed) {
-          lessonHearts = readHearts();
-          updateHeartsDisplay();
-        } else {
-          checkButton.hidden = true;
-          if (nextButton) nextButton.hidden = true;
-          setNotice(
-            "Hết máu — bài học kết thúc tại đây. Mua Hồi Phục Máu Siêu Tốc trong Cửa hàng hoặc chờ sinh lực hồi để học tiếp.",
-            true,
-          );
-          showToast({ type: "error", message: "Hết máu! Sinh lực khóa hồi 24 giờ — bài học dừng lại." });
-          return;
-        }
+      heartsLost = true;
+    }
+    showVerdict(
+      answer.is_correct,
+      [hint, answer.explanation ?? ""].filter(Boolean).join(" "),
+      heartsLost,
+    );
+    if (heartsLost && lessonHearts === 0) {
+      const healed = await tryHealHearts();
+      if (healed) {
+        lessonHearts = readHearts();
+        updateHeartsDisplay();
+      } else {
+        checkButton.hidden = true;
+        if (nextButton) nextButton.hidden = true;
+        setNotice(
+          "Hết máu — bài học kết thúc tại đây. Mua Hồi Phục Máu Siêu Tốc trong Cửa hàng hoặc chờ sinh lực hồi để học tiếp.",
+          true,
+          HEAL_POTION_IMG,
+        );
+        showToast({ type: "error", message: "Hết máu! Sinh lực khóa hồi 24 giờ — bài học dừng lại." });
+        return;
       }
     }
     const progress = Math.round(((questionIndex + 1) / lesson.questions.length) * 100);
@@ -693,49 +826,109 @@ function formatScore(score: number, count: number): string {
 }
 
 function renderAnswerReviews(): void {
-  const trigger = document.getElementById("toggleIncorrectAnswers") as HTMLButtonElement | null;
-  const label = document.getElementById("incorrectAnswersLabel");
-  const accordion = document.getElementById("incorrectAnswers");
-  const list = document.getElementById("incorrectAnswerList");
-  if (!trigger || !label || !accordion || !list) return;
+  const section = document.getElementById("lessonReview");
+  const list = document.getElementById("lessonReviewList");
+  if (!section || !list) return;
 
-  const incorrect = answerReviews;
-  trigger.hidden = incorrect.length === 0;
-  trigger.setAttribute("aria-expanded", "false");
-  label.textContent = `Câu làm sai · ${incorrect.length}`;
-  accordion.classList.remove("is-open");
-  accordion.setAttribute("aria-hidden", "true");
-  accordion.setAttribute("inert", "");
+  const correctCount = answerReviews.filter((entry) => entry.isCorrect).length;
+  const wrongCount = answerReviews.length - correctCount;
+  const total = lesson?.questions.length ?? answerReviews.length;
+  const setCount = (id: string, value: number): void => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = String(value);
+  };
+  setCount("reviewCountAll", answerReviews.length);
+  setCount("reviewCountCorrect", correctCount);
+  setCount("reviewCountWrong", wrongCount);
+
+  section.hidden = answerReviews.length === 0;
   list.replaceChildren();
+  for (const [index, entry] of answerReviews.entries()) {
+    list.append(answerReviewCard(entry, index, total));
+  }
+  applyReviewFilter(wrongCount > 0 ? "wrong" : "all");
+}
 
-  for (const [index, answer] of incorrect.entries()) {
-    const item = document.createElement("article");
-    item.className = "lesson-result__incorrect-item";
-    const question = document.createElement("h3");
-    question.textContent = `${index + 1}. ${answer.prompt}`;
-    const selected = document.createElement("p");
-    selected.className = "lesson-result__answer lesson-result__answer--wrong";
-    const selectedLabel = document.createElement("strong");
-    selectedLabel.textContent = "Bạn chọn";
-    selected.append(selectedLabel, document.createTextNode(answer.selected));
-    const correct = document.createElement("p");
-    correct.className = "lesson-result__answer lesson-result__answer--correct";
-    const correctLabel = document.createElement("strong");
-    correctLabel.textContent = "Đáp án đúng";
-    correct.append(correctLabel, document.createTextNode(answer.correct));
-    item.append(question, selected, correct);
-    if (answer.explanation) {
-      const explanation = document.createElement("p");
-      explanation.className = "lesson-result__explanation";
-      explanation.textContent = answer.explanation;
-      item.append(explanation);
-    }
-    list.append(item);
+function answerReviewCard(entry: AnswerReview, index: number, total: number): HTMLElement {
+  const card = document.createElement("article");
+  card.className = `lesson-review__card ${entry.isCorrect ? "is-correct" : "is-wrong"}`;
+  card.dataset.result = entry.isCorrect ? "correct" : "wrong";
+
+  const header = document.createElement("div");
+  header.className = "lesson-review__card-head";
+  const number = document.createElement("span");
+  number.textContent = t("sl.reviewQuestion", { n: index + 1, total });
+  const status = document.createElement("span");
+  status.className = "lesson-review__status";
+  status.textContent = t(entry.isCorrect ? "sl.reviewStatusCorrect" : "sl.reviewStatusWrong");
+  header.append(number, status);
+
+  const question = document.createElement("p");
+  question.className = "lesson-review__prompt";
+  question.textContent = entry.prompt;
+
+  const answers = document.createElement("div");
+  answers.className = `lesson-review__answers${entry.isCorrect ? " lesson-review__answers--single" : ""}`;
+  answers.append(reviewAnswerBox(
+    entry.isCorrect ? "correct" : "wrong",
+    t("sl.reviewYourAnswer"),
+    entry.selected,
+  ));
+  if (!entry.isCorrect) {
+    answers.append(reviewAnswerBox("correct", t("sl.reviewCorrectAnswer"), entry.correct));
+  }
+
+  card.append(header, question, answers);
+  if (entry.explanation) {
+    const explanation = document.createElement("p");
+    explanation.className = "lesson-review__explanation";
+    const label = document.createElement("strong");
+    label.textContent = t("sl.reviewExplanation");
+    explanation.append(label, document.createTextNode(` ${entry.explanation}`));
+    card.append(explanation);
+  }
+  return card;
+}
+
+function reviewAnswerBox(
+  state: "correct" | "wrong",
+  label: string,
+  value: string,
+): HTMLElement {
+  const box = document.createElement("div");
+  box.className = `lesson-review__box lesson-review__box--${state}`;
+  const boxLabel = document.createElement("span");
+  boxLabel.className = "lesson-review__box-label";
+  boxLabel.textContent = label;
+  const boxValue = document.createElement("span");
+  boxValue.textContent = value;
+  box.append(boxLabel, boxValue);
+  return box;
+}
+
+function applyReviewFilter(filter: "all" | "correct" | "wrong"): void {
+  const list = document.getElementById("lessonReviewList");
+  const empty = document.getElementById("lessonReviewEmpty");
+  for (const button of document.querySelectorAll<HTMLButtonElement>(".lesson-review__filter")) {
+    const active = button.dataset.reviewFilter === filter;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+  let visible = 0;
+  for (const card of list?.querySelectorAll<HTMLElement>(".lesson-review__card") || []) {
+    const show = filter === "all" || card.dataset.result === filter;
+    card.hidden = !show;
+    if (show) visible += 1;
+  }
+  if (empty) {
+    empty.textContent = t(filter === "wrong" ? "sl.reviewEmptyWrong" : "sl.reviewEmptyOther");
+    empty.hidden = visible > 0;
   }
 }
 
 function animateScore(score: number, count: number): void {
   const scoreValue = document.getElementById("lessonScoreValue");
+  const scoreStat = document.getElementById("lessonStatScore");
   const announcement = document.getElementById("lessonScoreAnnouncement");
   const ring = document.getElementById("lessonScoreRing") as SVGCircleElement | null;
   const ringLabel = document.querySelector<HTMLElement>(".lesson-result__score-ring");
@@ -746,6 +939,8 @@ function animateScore(score: number, count: number): void {
   ring.style.strokeDasharray = `${circumference}`;
   ring.style.strokeDashoffset = `${circumference}`;
   ringLabel?.setAttribute("aria-label", `Kết quả: ${formatScore(score, count)} câu đúng`);
+  scoreValue.textContent = formatScore(score, count);
+  if (scoreStat) scoreStat.textContent = String(Math.round((score / count) * 100));
 
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const duration = reducedMotion ? 0 : 1000;
@@ -755,6 +950,7 @@ function animateScore(score: number, count: number): void {
     const eased = 1 - (1 - progress) ** 3;
     const currentScore = Math.round(score * eased);
     scoreValue.textContent = formatScore(currentScore, count);
+    if (scoreStat) scoreStat.textContent = String(Math.round((currentScore / count) * 100));
     ring.style.strokeDashoffset = `${circumference * (1 - (score / count) * eased)}`;
     if (progress < 1) window.requestAnimationFrame(draw);
     else if (announcement) announcement.textContent = `Bạn đạt ${formatScore(score, count)} câu đúng.`;
@@ -765,6 +961,7 @@ function animateScore(score: number, count: number): void {
 function animateXp(amount: number): void {
   const element = document.getElementById("lessonResultXp");
   if (!element) return;
+  element.textContent = `+${amount} XP`;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const duration = reducedMotion ? 0 : 800;
   const startedAt = performance.now();
@@ -816,7 +1013,7 @@ function closeResultDialog(): void {
   }
 }
 
-function renderResult(result: LessonCompletion, lessonId: number): void {
+function renderResult(result: LessonCompletion, lessonId: number, fallbackNote = ""): void {
   if (!resultPanel || !lesson) return;
   const { score, question_count: count, passed, xp_awarded: xpAwarded, current_streak: streak } = result;
   const xpReceived = result.already_completed ? 0 : xpAwarded;
@@ -873,11 +1070,32 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
   if (returnButton) returnButton.textContent = "Để sau";
   if (returnButton) returnButton.hidden = passed;
   if (streakElement) streakElement.textContent = `${streak} ngày`;
+  const correctStat = document.getElementById("lessonStatCorrect");
+  if (correctStat) correctStat.textContent = formatScore(score, count);
+  const heartsStat = document.getElementById("lessonStatHearts");
+  if (heartsStat) heartsStat.textContent = formatHearts(lessonHearts);
+  const badge = document.getElementById("lessonResultBadge");
+  if (badge) {
+    badge.dataset.state = passed ? "passed" : "failed";
+    const icon = badge.querySelector<HTMLElement>("i");
+    if (icon) icon.className = `fa-solid ${passed ? "fa-trophy" : "fa-heart-crack"}`;
+  }
 
-  renderAnswerReviews();
+  try {
+    renderAnswerReviews();
+  } catch {
+    const section = document.getElementById("lessonReview");
+    if (section) section.hidden = true;
+  }
   renderScoreDelta(score, lessonId);
   animateScore(score, count);
   animateXp(xpReceived);
+
+  const resultNotice = document.getElementById("lessonResultNotice");
+  if (resultNotice) {
+    resultNotice.textContent = fallbackNote;
+    resultNotice.hidden = !fallbackNote;
+  }
 
   localStorage.setItem("slanguage_user_xp", String(result.xp_total));
   localStorage.setItem("slanguage_user_streak", String(streak));
@@ -893,13 +1111,34 @@ function renderResult(result: LessonCompletion, lessonId: number): void {
     (passed ? continueButton : retryButton)?.focus();
   });
 
+  playLessonCue(passed ? "pass" : "fail");
   if (passed && !result.already_completed) {
     launchConfetti(resultPanel);
   }
 }
 
+/** Kết quả tính tạm ở trình duyệt khi máy chủ không chịu ghi nhận — vẫn đủ cho màn tổng kết. */
+function localCompletion(lessonId: number): LessonCompletion {
+  const count = lesson?.questions.length ?? answerReviews.length;
+  const score = answerReviews.filter((entry) => entry.isCorrect).length;
+  const xpTotal = Math.max(0, nonNegativeInt(localStorage.getItem("slanguage_user_xp")));
+  return {
+    score,
+    question_count: count,
+    passed: count > 0 && score === count,
+    xp_awarded: 0,
+    xp_total: xpTotal,
+    level: Math.floor(xpTotal / 100) + 1,
+    xp_into_level: xpTotal % 100,
+    current_streak: Math.max(0, nonNegativeInt(localStorage.getItem("slanguage_user_streak"))),
+    already_completed: false,
+    boost: null,
+  };
+}
+
 async function finishLesson(): Promise<void> {
   if (!lesson || activeRequest) return;
+  const lessonId = lesson.lesson.id;
   activeRequest = true;
   if (nextButton) nextButton.disabled = true;
   if (exitButton) exitButton.disabled = true;
@@ -907,11 +1146,15 @@ async function finishLesson(): Promise<void> {
   try {
     const result = await requestCompletion(lesson);
     if (questionPanel) questionPanel.hidden = true;
-    renderResult(result, lesson.lesson.id);
+    renderResult(result, lessonId);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Không thể lưu kết quả bài học.";
-    setNotice(message, true);
-    showToast({ type: "error", message });
+    if (questionPanel) questionPanel.hidden = true;
+    renderResult(
+      localCompletion(lessonId),
+      lessonId,
+      `Máy chủ chưa ghi nhận được kết quả (${message}) — điểm dưới đây là tính toán tạm trên trình duyệt, XP chưa được cộng.`,
+    );
   } finally {
     activeRequest = false;
     if (nextButton) nextButton.disabled = false;
@@ -1019,15 +1262,14 @@ resultPanel?.addEventListener("close", () => {
   }
   leaveLesson(false);
 });
-document.getElementById("toggleIncorrectAnswers")?.addEventListener("click", (event) => {
-  const trigger = event.currentTarget as HTMLButtonElement;
-  const expanded = trigger.getAttribute("aria-expanded") !== "true";
-  const accordion = document.getElementById("incorrectAnswers");
-  trigger.setAttribute("aria-expanded", String(expanded));
-  accordion?.classList.toggle("is-open", expanded);
-  accordion?.setAttribute("aria-hidden", String(!expanded));
-  if (accordion) accordion.inert = !expanded;
-});
+workspace?.addEventListener("pointerdown", unlockLessonAudio);
+window.addEventListener("keydown", unlockLessonAudio, { once: true });
+for (const button of document.querySelectorAll<HTMLButtonElement>(".lesson-review__filter")) {
+  button.addEventListener("click", () => {
+    const filter = button.dataset.reviewFilter;
+    if (filter === "all" || filter === "correct" || filter === "wrong") applyReviewFilter(filter);
+  });
+}
 
 window.addEventListener("popstate", () => {
   const lessonId = positiveInt(new URLSearchParams(window.location.search).get("lesson_id"));

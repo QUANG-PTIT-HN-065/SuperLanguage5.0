@@ -264,7 +264,7 @@ def _ensure_path_topic_unlocked(
         path_id,
         profile["id"],
         ordered_topics,
-        is_premium=profile.get("plan_id") == "premium",
+        is_premium=is_premium_profile(profile),
     ).get(topic_id)
     if state is None or state["is_locked"]:
         raise HTTPException(

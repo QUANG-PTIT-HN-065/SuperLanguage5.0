@@ -29,10 +29,12 @@ class Settings(BaseSettings):
     SUPABASE_PUBLISHABLE_KEY: str
     SUPABASE_SECRET_KEY: str
     SUPABASE_JWKS_URL: str = ""
-    RESEND_API_KEY: str = ""  
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = ""
     GEMINI_API_KEYS: str = ""
     GEMINI_CHAT_MODEL: str = "gemini-3.5-flash-lite"
     MINIGAME_AI_MODEL: str = "gemini-3.5-flash-lite"
+    WRITING_AI_MODEL: str = "gemini-3.5-flash-lite"
     OPENAI_API_KEYS: str = ""
     OPENAI_CHAT_MODEL: str = "gpt-4o-mini"
     DEEPSEEK_API_KEYS: str = ""

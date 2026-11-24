@@ -4,9 +4,11 @@
  * mức ghi nhớ (user_words) và XP đồng bộ trực tiếp với backend.
  */
 
-import { slanguageApi } from "../shared/api-client";
+import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { initializeLearnerHeader, logoutLearner } from "../shared/learner-header";
 import { clearSkeleton, showSkeleton } from "../shared/skeleton";
+import { applyI18n, getLocale, localeLabel, setLocale, t, LOCALE_EVENT, type UiLocale } from "../shared/i18n";
+import { playLoadingRive, stopLoadingRive } from "../shared/loading-rive";
 
 interface VocabItem {
   id: number;
@@ -41,13 +43,14 @@ const LANG_META: Record<string, LanguageMeta> = {
   vi: { name: 'Tiếng Việt', flagImg: '../../../assets/flags/flag-vn.png', ttsCode: 'vi-VN' },
 };
 
+// Khóa i18n cho nhãn loại từ (part_of_speech từ API giữ nguyên, chỉ dịch nhãn UI).
 const POS_LABELS: Record<string, string> = {
-  noun: 'Danh từ',
-  verb: 'Động từ',
-  adjective: 'Tính từ',
-  adverb: 'Trạng từ',
-  phrase: 'Cụm từ',
-  other: 'Khác',
+  noun: 'vc.pos.noun',
+  verb: 'vc.pos.verb',
+  adjective: 'vc.pos.adjective',
+  adverb: 'vc.pos.adverb',
+  phrase: 'vc.pos.phrase',
+  other: 'vc.pos.other',
 };
 
 const STUDY_HREF = '../select-lesson/index.html';
@@ -83,12 +86,11 @@ class SlanguageVocabulary {
   private quizRemainingTime = 15;
   private currentQuizItem: VocabItem | null = null;
   private dataState: 'loading' | 'ready' | 'empty' | 'error' = 'loading';
+  private loadErrorRaw = '';
+  private lastFeedback: 'correct' | 'wrong' | 'timeout' | null = null;
+  private lastFeedbackXp = 0;
 
   constructor() {
-    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
-      window.location.replace('../login/index.html');
-      return;
-    }
     this.loadInitialState();
     this.initNavbar();
     this.initModeTabs();
@@ -97,6 +99,11 @@ class SlanguageVocabulary {
     this.initVocabularyVault();
     this.bindShortcuts();
     this.bindPageTransitions();
+    // Đổi ngôn ngữ GIAO DIỆN: dịch lại HTML tĩnh + render lại vùng động từ dữ liệu đã cache.
+    window.addEventListener(LOCALE_EVENT, () => {
+      applyI18n();
+      this.refreshDynamicUi();
+    });
     showSkeleton('vaultGrid', 'vault-cards', { tone: 'cool', count: 8 });
     showSkeleton('flashcardBox', 'flashcard', { tone: 'cool', overlay: true });
     showSkeleton(document.querySelector('#tabQuiz .quiz-arena-container'), 'quiz', { tone: 'cool', overlay: true });
@@ -109,9 +116,10 @@ class SlanguageVocabulary {
   // ================= REAL DATA =================
   private async fetchTopicWords(topicId: number): Promise<Record<string, unknown>[]> {
     const items: Record<string, unknown>[] = [];
+    const langQuery = isLearnerAuthenticated() ? '' : `&language=${encodeURIComponent(this.currentLang)}`;
     for (let offset = 0; offset < 500; offset += 100) {
       const response = await slanguageApi<{ items?: unknown }>(
-        `/api/v1/vocabulary/words?topic_id=${topicId}&limit=100&offset=${offset}`,
+        `/api/v1/vocabulary/words?topic_id=${topicId}&limit=100&offset=${offset}${langQuery}`,
       );
       const page = Array.isArray(response.data.items) ? response.data.items : [];
       items.push(...page.map(asRecord));
@@ -127,24 +135,29 @@ class SlanguageVocabulary {
       if (LANG_META[savedLang]) this.currentLang = savedLang;
       const savedXP = localStorage.getItem('slanguage_user_xp');
       if (savedXP) this.currentXP = parseInt(savedXP, 10) || 0;
-      this.updateDropdownUI();
       this.updateXPDisplays();
+      const langQuery = isLearnerAuthenticated()
+        ? ''
+        : `?language=${encodeURIComponent(this.currentLang)}`;
 
-      const pathsResponse = await slanguageApi<unknown>('/api/v1/vocabulary/learning-paths');
+      const pathsResponse = await slanguageApi<unknown>(`/api/v1/vocabulary/learning-paths${langQuery}`);
       const paths = Array.isArray(pathsResponse.data) ? pathsResponse.data.map(asRecord) : [];
       const path = paths.find((item) => item.language_code === this.currentLang);
-      if (!path) throw new Error('Chưa có lộ trình học cho ngôn ngữ này.');
+      if (!path) throw new Error(t('vc.errNoPath'));
 
       const detailResponse = await slanguageApi<{ topics?: unknown }>(
-        `/api/v1/vocabulary/learning-paths/${path.id}`,
+        `/api/v1/vocabulary/learning-paths/${path.id}${langQuery}`,
       );
       const topics = Array.isArray(detailResponse.data.topics)
         ? detailResponse.data.topics.map(asRecord)
         : [];
-      const passed = topics.filter((topic) => topic.is_completed === true);
+      // Khách chưa đăng nhập: duyệt nửa đầu miễn phí của lộ trình (như tài khoản free)
+      const passed = isLearnerAuthenticated()
+        ? topics.filter((topic) => topic.is_completed === true)
+        : topics.slice(0, Math.ceil(topics.length / 2));
       this.passedTopics = passed.map((topic) => ({
         id: Number(topic.id),
-        name: asText(topic.name) || `Chủ đề ${topic.id}`,
+        name: asText(topic.name) || t('vc.topicFallback', { id: String(topic.id) }),
         wordCount: 0,
       }));
 
@@ -154,10 +167,7 @@ class SlanguageVocabulary {
         this.dataState = 'empty';
         this.populateDeckSelect();
         this.initHeroStats();
-        this.showNotices(this.noticeHtml(
-          'Bạn chưa vượt qua chủ đề nào ở Học tập, nên chưa có từ vựng để ôn tại đây.',
-          'study',
-        ));
+        this.showNotices(this.noticeHtml(t('vc.noticeNoTopics'), 'study'));
         return;
       }
 
@@ -202,10 +212,7 @@ class SlanguageVocabulary {
       this.renderVault();
       this.startSpeedQuizQuestion();
       if (!words.length) {
-        this.showNotices(this.noticeHtml(
-          'Các chủ đề đã vượt qua chưa có từ vựng trong cơ sở dữ liệu.',
-          'study',
-        ));
+        this.showNotices(this.noticeHtml(t('vc.noticeNoWords'), 'study'));
       }
     } catch (error) {
       this.dataState = 'error';
@@ -213,16 +220,16 @@ class SlanguageVocabulary {
       this.currentDeck = [];
       this.populateDeckSelect();
       this.initHeroStats();
-      const message = error instanceof Error ? error.message : 'Lỗi không xác định.';
-      this.showNotices(this.noticeHtml(`Không thể tải từ vựng: ${escapeHtml(message)}`, 'retry'));
+      this.loadErrorRaw = error instanceof Error ? error.message : t('vc.errUnknown');
+      this.showNotices(this.noticeHtml(t('vc.errLoad', { message: escapeHtml(this.loadErrorRaw) }), 'retry'));
     }
   }
 
   private noticeHtml(message: string, action?: 'study' | 'retry'): string {
     const link = action === 'study'
-      ? `<a href="${STUDY_HREF}" class="vocab-notice-link" style="display:inline-block;margin-top:14px;padding:10px 22px;border-radius:999px;background:#0077B6;color:#fff;font-weight:700;text-decoration:none;">Mở Học tập để vượt qua chủ đề đầu tiên →</a>`
+      ? `<a href="${STUDY_HREF}" class="vocab-notice-link" style="display:inline-block;margin-top:14px;padding:10px 22px;border-radius:999px;background:#0077B6;color:#fff;font-weight:700;text-decoration:none;">${t('vc.noticeStudyLink')}</a>`
       : action === 'retry'
-        ? `<button type="button" class="vocab-notice-link" style="display:inline-block;margin-top:14px;padding:10px 22px;border-radius:999px;background:#0077B6;color:#fff;font-weight:700;border:none;cursor:pointer;">Thử lại</button>`
+        ? `<button type="button" class="vocab-notice-link" style="display:inline-block;margin-top:14px;padding:10px 22px;border-radius:999px;background:#0077B6;color:#fff;font-weight:700;border:none;cursor:pointer;">${t('vc.noticeRetry')}</button>`
         : '';
     return `
       <div class="vocab-panel-notice" style="grid-column:1 / -1;text-align:center;padding:36px 20px;color:#64748b;">
@@ -272,20 +279,74 @@ class SlanguageVocabulary {
     if (deckSelect) deckSelect.disabled = this.dataState !== 'ready';
   }
 
+  // ================= LOCALE REFRESH =================
+  // Render lại các vùng chữ động từ dữ liệu đã cache khi đổi ngôn ngữ giao diện.
+  private refreshDynamicUi(): void {
+    this.initHeroStats();
+    // Lúc đang tải chưa có dữ liệu: giữ option "Đang tải chủ đề..." (đã dịch qua data-i18n).
+    if (this.dataState !== 'loading') this.populateDeckSelect();
+    this.updateXPDisplays();
+    if (this.dataState === 'ready') {
+      const flashcardBox = document.getElementById('flashcardBox');
+      const wasFlipped = flashcardBox?.classList.contains('flipped') ?? false;
+      this.renderCurrentCard();
+      if (wasFlipped) flashcardBox?.classList.add('flipped');
+      this.renderVault();
+      this.refreshQuizTexts();
+    } else if (this.dataState === 'empty') {
+      const key = this.passedTopics.length ? 'vc.noticeNoWords' : 'vc.noticeNoTopics';
+      this.showNotices(this.noticeHtml(t(key), 'study'));
+    } else if (this.dataState === 'error') {
+      this.showNotices(this.noticeHtml(t('vc.errLoad', { message: escapeHtml(this.loadErrorRaw) }), 'retry'));
+    }
+  }
+
+  private refreshQuizTexts(): void {
+    const optionsGrid = document.getElementById('quizOptionsGrid');
+    if (this.allWords.length < 2) {
+      if (optionsGrid) {
+        optionsGrid.innerHTML = `<p style="grid-column:1 / -1;text-align:center;color:#64748b;font-weight:600;">${t('vc.quizNeedTwo')}</p>`;
+      }
+      return;
+    }
+    const subHintEl = document.getElementById('quizSubHint');
+    if (subHintEl && this.currentQuizItem) {
+      subHintEl.textContent = this.currentQuizItem.phonetic
+        ? t('vc.quizPhonetic', { value: this.currentQuizItem.phonetic })
+        : t('vc.quizTopic', { value: this.currentQuizItem.tag });
+    }
+    const feedbackBanner = document.getElementById('quizFeedbackBanner');
+    const feedbackMsg = document.getElementById('quizFeedbackMsg');
+    if (feedbackBanner?.classList.contains('show') && feedbackMsg && this.currentQuizItem && this.lastFeedback) {
+      if (this.lastFeedback === 'correct') {
+        feedbackMsg.textContent = t('vc.quizCorrect', { xp: this.lastFeedbackXp });
+      } else if (this.lastFeedback === 'wrong') {
+        feedbackMsg.textContent = t('vc.quizWrong', { answer: this.currentQuizItem.meaning });
+      } else {
+        feedbackMsg.textContent = t('vc.quizTimeout', { answer: this.currentQuizItem.meaning });
+      }
+    }
+  }
+
   private populateDeckSelect(): void {
     const deckSelect = document.getElementById('deckSelect') as HTMLSelectElement | null;
     if (!deckSelect) return;
+    const previousValue = deckSelect.value;
     deckSelect.replaceChildren();
     const all = document.createElement('option');
     all.value = 'all';
-    all.textContent = `Tất cả chủ đề đã hoàn thành (${this.allWords.length} từ)`;
+    all.textContent = t('vc.deckAll', { n: this.allWords.length });
     deckSelect.append(all);
     for (const topic of this.passedTopics) {
       if (!topic.wordCount) continue;
       const option = document.createElement('option');
       option.value = String(topic.id);
-      option.textContent = `${topic.name} (${topic.wordCount} từ)`;
+      option.textContent = t('vc.deckTopic', { name: topic.name, n: topic.wordCount });
       deckSelect.append(option);
+    }
+    // Giữ lựa chọn hiện tại khi dựng lại option (đổi locale không reset bộ lọc).
+    if (Array.from(deckSelect.options).some((option) => option.value === previousValue)) {
+      deckSelect.value = previousValue;
     }
     deckSelect.disabled = this.dataState !== 'ready';
   }
@@ -314,8 +375,6 @@ class SlanguageVocabulary {
     const langDropdownBtn = document.getElementById('langDropdownBtn');
     const langItems = document.querySelectorAll('.lang-dropdown-item');
 
-    this.updateDropdownUI();
-
     if (langDropdown && langDropdownBtn) {
       langDropdownBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -323,17 +382,16 @@ class SlanguageVocabulary {
       });
     }
 
+    // Dropdown navbar chỉ đổi ngôn ngữ GIAO DIỆN (i18n), không đụng ngôn ngữ học.
     langItems.forEach(item => {
       item.addEventListener('click', () => {
-        const selectedLang = item.getAttribute('data-lang') as 'ja' | 'en' | 'vi';
-        if (selectedLang && selectedLang !== this.currentLang) {
-          this.switchLanguage(selectedLang);
-        }
+        const code = item.getAttribute('data-lang') as UiLocale | null;
+        if (code && code !== getLocale()) setLocale(code);
         if (langDropdown) langDropdown.classList.remove('open');
       });
     });
 
-    const isLoggedIn = localStorage.getItem('slanguage_is_logged_in') === 'true';
+    const isLoggedIn = isLearnerAuthenticated();
     if (isLoggedIn) {
       document.body.classList.add('user-authenticated');
       document.body.classList.remove('user-guest');
@@ -368,44 +426,6 @@ class SlanguageVocabulary {
     });
   }
 
-  private updateDropdownUI(): void {
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-
-    const meta = LANG_META[this.currentLang] || LANG_META.ja;
-    const currentLangFlag = document.getElementById('currentLangFlag') as HTMLImageElement;
-    const currentLangLabel = document.getElementById('currentLangLabel');
-
-    if (currentLangFlag) currentLangFlag.src = meta.flagImg;
-    if (currentLangLabel) currentLangLabel.textContent = meta.name;
-
-    document.querySelectorAll<HTMLElement>('.lang-dropdown-item').forEach(item => {
-      const lang = item.getAttribute('data-lang');
-      item.style.display = lang === nativeLang ? 'none' : 'flex';
-      item.classList.toggle('active', lang === this.currentLang);
-    });
-  }
-
-  public switchLanguage(lang: 'ja' | 'en' | 'vi'): void {
-    const rawNative = (localStorage.getItem('slanguage_native_language') || 'vi').toLowerCase();
-    const nativeLang = rawNative.includes('vi') || rawNative.includes('việt') ? 'vi' : (rawNative.includes('en') || rawNative.includes('anh') ? 'en' : (rawNative.includes('ja') || rawNative.includes('nhật') ? 'ja' : 'vi'));
-    if (lang === nativeLang) {
-      this.showToast(`Bạn không thể chọn ngôn ngữ mẹ đẻ để học!`);
-      return;
-    }
-
-    void (async () => {
-      try {
-        await slanguageApi('/api/v1/me', { method: 'PATCH', body: { target_language: lang } });
-        localStorage.setItem('slanguage_current_lang', lang);
-        localStorage.setItem('slanguage_active_language', lang);
-        window.location.reload();
-      } catch {
-        this.showToast('Không thể chuyển ngôn ngữ học. Vui lòng thử lại.');
-      }
-    })();
-  }
-
   private updateVaultCounts(): void {
     const total = this.allWords.length;
     const mastered = this.allWords.filter(it => it.status === 'mastered').length;
@@ -435,24 +455,24 @@ class SlanguageVocabulary {
 
   // ================= HERO STATS =================
   private initHeroStats(): void {
-    const meta = LANG_META[this.currentLang] || LANG_META.ja;
+    const langName = localeLabel(this.currentLang);
     const heroTitle = document.getElementById('vocabHeroTitle');
     const heroDesc = document.getElementById('vocabHeroDesc');
 
     if (heroTitle) {
       heroTitle.textContent = this.dataState === 'ready' || this.dataState === 'empty'
-        ? `Từ vựng ${meta.name}: ${this.passedTopics.length} chủ đề đã hoàn thành`
-        : `Từ vựng ${meta.name}`;
+        ? t('vc.heroTitleDone', { lang: langName, n: this.passedTopics.length })
+        : t('vc.heroTitle', { lang: langName });
     }
     if (heroDesc) {
       if (this.dataState === 'ready') {
-        heroDesc.textContent = `Đang ôn ${this.allWords.length} từ vựng thật thuộc các chủ đề bạn đã vượt qua ở Học tập. Mức độ ghi nhớ và XP được đồng bộ trực tiếp với máy chủ.`;
+        heroDesc.textContent = t('vc.heroDescReady', { n: this.allWords.length });
       } else if (this.dataState === 'empty') {
-        heroDesc.textContent = 'Hoàn thành bài quiz của một chủ đề ở Học tập để mở khóa bộ từ vựng của chủ đề đó tại đây.';
+        heroDesc.textContent = t('vc.heroDescEmpty');
       } else if (this.dataState === 'error') {
-        heroDesc.textContent = 'Không thể tải dữ liệu từ vựng từ máy chủ. Vui lòng thử lại.';
+        heroDesc.textContent = t('vc.heroDescError');
       } else {
-        heroDesc.textContent = 'Đang tải từ vựng từ các chủ đề bạn đã hoàn thành ở Học tập...';
+        heroDesc.textContent = t('vc.heroDescLoading');
       }
     }
 
@@ -490,7 +510,7 @@ class SlanguageVocabulary {
         this.updateCurrentDeck(deckSelect.value);
         this.renderCurrentCard();
         this.renderVault();
-        this.showToast(`Đã lọc danh sách: ${deckSelect.options[deckSelect.selectedIndex].text}`);
+        this.showToast(t('vc.toastFiltered', { name: deckSelect.options[deckSelect.selectedIndex].text }));
       });
     }
   }
@@ -529,7 +549,7 @@ class SlanguageVocabulary {
         if (!this.currentDeck.length) return;
         this.shuffleDeck();
         this.renderCurrentCard();
-        this.showToast('Đã xáo trộn thứ tự bộ thẻ! 🔀');
+        this.showToast(t('vc.toastShuffled'));
       });
     }
 
@@ -580,9 +600,9 @@ class SlanguageVocabulary {
     if (fcExampleTarget) fcExampleTarget.textContent = item.exampleTarget;
     if (fcExampleMeaning) fcExampleMeaning.textContent = item.exampleMeaning;
     if (fcNuance) {
-      const posLabel = POS_LABELS[item.partOfSpeech];
-      fcNuance.innerHTML = `💡 <strong>Mức ghi nhớ:</strong> ${item.masteryLevel}/5`
-        + (posLabel ? ` · <strong>Loại từ:</strong> ${escapeHtml(posLabel)}` : '');
+      const posKey = POS_LABELS[item.partOfSpeech];
+      fcNuance.innerHTML = `💡 <strong>${t('vc.masteryLabel')}</strong> ${item.masteryLevel}/5`
+        + (posKey ? ` · <strong>${t('vc.posLabel')}</strong> ${escapeHtml(t(posKey))}` : '');
     }
 
     const cardIndexLabel = document.getElementById('cardIndexLabel');
@@ -603,7 +623,7 @@ class SlanguageVocabulary {
       this.activeCardIndex++;
     } else {
       this.activeCardIndex = 0;
-      this.showToast('Bạn đã duyệt hết vòng thẻ này! Vòng lặp mới bắt đầu. 🔁');
+      this.showToast(t('vc.toastLoop'));
     }
     this.renderCurrentCard();
   }
@@ -641,7 +661,7 @@ class SlanguageVocabulary {
   private speakText(text: string): void {
     if (!text) return;
     if (!('speechSynthesis' in window)) {
-      this.showToast('Trình duyệt chưa hỗ trợ Text-to-speech');
+      this.showToast(t('vc.toastNoTts'));
       return;
     }
     window.speechSynthesis.cancel();
@@ -678,6 +698,7 @@ class SlanguageVocabulary {
     const optionsGrid = document.getElementById('quizOptionsGrid');
     const feedbackBanner = document.getElementById('quizFeedbackBanner');
     if (feedbackBanner) feedbackBanner.classList.remove('show', 'wrong-border');
+    this.lastFeedback = null;
 
     if (deck.length < 2) {
       if (this.quizTimerInterval) clearInterval(this.quizTimerInterval);
@@ -686,7 +707,7 @@ class SlanguageVocabulary {
       if (targetWordEl) targetWordEl.textContent = '—';
       if (subHintEl) subHintEl.textContent = '';
       if (optionsGrid) {
-        optionsGrid.innerHTML = '<p style="grid-column:1 / -1;text-align:center;color:#64748b;font-weight:600;">Cần ít nhất 2 từ vựng để luyện tập.</p>';
+        optionsGrid.innerHTML = `<p style="grid-column:1 / -1;text-align:center;color:#64748b;font-weight:600;">${t('vc.quizNeedTwo')}</p>`;
       }
       return;
     }
@@ -699,8 +720,8 @@ class SlanguageVocabulary {
 
     if (targetWordEl) targetWordEl.textContent = this.currentQuizItem.word;
     if (subHintEl) subHintEl.textContent = this.currentQuizItem.phonetic
-      ? `Phiên âm: ${this.currentQuizItem.phonetic}`
-      : `Chủ đề: ${this.currentQuizItem.tag}`;
+      ? t('vc.quizPhonetic', { value: this.currentQuizItem.phonetic })
+      : t('vc.quizTopic', { value: this.currentQuizItem.tag });
 
     const options: string[] = [this.currentQuizItem.meaning];
     const otherItems = deck.filter(it => it.id !== this.currentQuizItem!.id);
@@ -771,16 +792,19 @@ class SlanguageVocabulary {
       const bonusXP = 15 + (this.quizStreak * 5);
       this.quizScore += bonusXP;
       void this.persistReview(this.currentQuizItem, 'Tốt', bonusXP);
+      this.lastFeedback = 'correct';
+      this.lastFeedbackXp = bonusXP;
 
       if (feedbackBanner && feedbackMsg) {
         feedbackBanner.classList.add('show');
         feedbackBanner.classList.remove('wrong-border');
-        feedbackMsg.textContent = `Chính xác xuất sắc! +${bonusXP} XP 🔥 (Đã ghi nhận ôn tập)`;
+        feedbackMsg.textContent = t('vc.quizCorrect', { xp: bonusXP });
       }
     } else {
       selectedBtn.classList.add('wrong');
       this.quizStreak = 0;
       void this.persistReview(this.currentQuizItem, 'Khó', 0);
+      this.lastFeedback = 'wrong';
 
       allButtons.forEach(b => {
         if (b.textContent?.includes(this.currentQuizItem!.meaning)) {
@@ -790,7 +814,7 @@ class SlanguageVocabulary {
 
       if (feedbackBanner && feedbackMsg) {
         feedbackBanner.classList.add('show', 'wrong-border');
-        feedbackMsg.textContent = `Chưa chính xác! Đáp án đúng: "${this.currentQuizItem.meaning}"`;
+        feedbackMsg.textContent = t('vc.quizWrong', { answer: this.currentQuizItem.meaning });
       }
     }
 
@@ -811,11 +835,14 @@ class SlanguageVocabulary {
     const feedbackMsg = document.getElementById('quizFeedbackMsg');
     if (feedbackBanner && feedbackMsg && this.currentQuizItem) {
       feedbackBanner.classList.add('show', 'wrong-border');
-      feedbackMsg.textContent = `Hết giờ! Đáp án đúng là: "${this.currentQuizItem.meaning}"`;
+      feedbackMsg.textContent = t('vc.quizTimeout', { answer: this.currentQuizItem.meaning });
+      this.lastFeedback = 'timeout';
     }
   }
 
   private async persistReview(item: VocabItem, rating: 'Khó' | 'Tốt', xp: number): Promise<void> {
+    // Khách: không lưu tiến độ, chỉ làm mẫu trên giao diện
+    if (!isLearnerAuthenticated()) return;
     try {
       const response = await slanguageApi<{ mastery_level?: unknown }>(
         `/api/v1/vocabulary/words/${item.id}/review`,
@@ -828,7 +855,7 @@ class SlanguageVocabulary {
       this.renderVault();
       if (this.currentDeck.includes(item)) this.renderCurrentCard();
     } catch {
-      this.showToast('Không thể lưu mức ghi nhớ lên máy chủ.');
+      this.showToast(t('vc.toastSaveFail'));
       return;
     }
 
@@ -840,7 +867,7 @@ class SlanguageVocabulary {
         });
         this.addXP(xp);
       } catch {
-        this.showToast('Không thể cộng XP lên máy chủ.');
+        this.showToast(t('vc.toastXpFail'));
       }
     }
   }
@@ -903,7 +930,7 @@ class SlanguageVocabulary {
       vaultGrid.innerHTML = `
         <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #64748b;">
           <i class="fa-solid fa-folder-open" style="font-size: 2.5rem; margin-bottom: 12px; opacity: 0.5;"></i>
-          <p style="font-size: 1.05rem; font-weight: 600;">Không tìm thấy từ vựng phù hợp với bộ lọc.</p>
+          <p style="font-size: 1.05rem; font-weight: 600;">${t('vc.vaultEmpty')}</p>
         </div>
       `;
       return;
@@ -915,8 +942,8 @@ class SlanguageVocabulary {
 
       const isMastered = item.status === 'mastered';
       const st = isMastered
-        ? { label: 'Đã thuộc', cls: 'mastered' }
-        : { label: `Chưa thuộc (${item.masteryLevel}/5)`, cls: 'unmastered' };
+        ? { label: t('vc.statusMastered'), cls: 'mastered' }
+        : { label: t('vc.statusUnmastered', { n: item.masteryLevel }), cls: 'unmastered' };
 
       card.innerHTML = `
         <div class="vwc-header">
@@ -931,10 +958,10 @@ class SlanguageVocabulary {
         <div class="vwc-footer">
           <span class="vwc-status-badge ${st.cls}">${st.label}</span>
           <div class="vwc-actions">
-            <button type="button" class="vwc-btn btn-speak" title="Nghe phát âm">
+            <button type="button" class="vwc-btn btn-speak" title="${t('vc.cardSpeakTitle')}">
               <i class="fa-solid fa-volume-high"></i>
             </button>
-            <button type="button" class="vwc-btn btn-study" title="Đưa vào thẻ Flashcard ôn ngay">
+            <button type="button" class="vwc-btn btn-study" title="${t('vc.cardStudyTitle')}">
               <i class="fa-solid fa-play"></i>
             </button>
           </div>
@@ -958,7 +985,7 @@ class SlanguageVocabulary {
           const flashTab = document.querySelector('[data-tab="flashcard"]') as HTMLButtonElement;
           if (flashTab) flashTab.click();
           this.renderCurrentCard();
-          this.showToast(`Đang mở thẻ ôn tập: "${item.word}" 🚀`);
+          this.showToast(t('vc.toastOpenCard', { word: item.word }));
         }
       });
 
@@ -985,13 +1012,14 @@ class SlanguageVocabulary {
 
   // ================= UTILITIES =================
   private updateXPDisplays(): void {
-    const label = `${this.currentXP.toLocaleString('vi-VN')} XP`;
+    const localeTag = getLocale() === 'en' ? 'en-US' : getLocale() === 'ja' ? 'ja-JP' : 'vi-VN';
+    const label = `${this.currentXP.toLocaleString(localeTag)} ${t('unit.xp')}`;
     const navXPVal = document.getElementById('navXPVal');
     if (navXPVal) navXPVal.textContent = label;
     const headerXP = document.getElementById('headerXPVal');
     if (headerXP) {
       headerXP.textContent = headerXP.closest('.hud-chip--xp')
-        ? this.currentXP.toLocaleString('vi-VN')
+        ? this.currentXP.toLocaleString(localeTag)
         : label;
     }
   }
@@ -1024,7 +1052,7 @@ class SlanguageVocabulary {
     toast.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 5px; border-bottom: 1px solid rgba(255, 183, 3, 0.25); width: 100%;">
         <img src="../../../assets/logo.png" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0;">
-        <span style="font-size: 0.85rem; font-weight: 700; color: #FFB703; letter-spacing: 0.2px;">S Language thông báo:</span>
+        <span style="font-size: 0.85rem; font-weight: 700; color: #FFB703; letter-spacing: 0.2px;">${t('to.brand')}</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; color: #ffffff;">
         <span>${escapeHtml(message)}</span>
@@ -1065,35 +1093,20 @@ class SlanguageVocabulary {
 
     window.addEventListener('pageshow', () => {
       const overlay = document.getElementById('slanguageLoadingOverlay');
-      const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
       if (overlay) overlay.classList.remove('active');
-      if (video) {
-        video.pause();
-        video.muted = true;
-        video.currentTime = 0;
-      }
+      stopLoadingRive();
     });
   }
 
   private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
     const overlay = document.getElementById('slanguageLoadingOverlay');
-    const video = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     if (overlay) {
       overlay.classList.add('active');
-      if (video) {
-        video.muted = false;
-        video.volume = 1.0;
-        video.currentTime = 0;
-        const playPromise = video.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            video.muted = true;
-            video.play().catch(() => {});
-          });
-        }
-      }
+      playLoadingRive();
     }
     setTimeout(() => {
+      stopLoadingRive();
+      if (overlay) overlay.classList.remove('active');
       window.location.href = targetUrl;
     }, duration);
   }

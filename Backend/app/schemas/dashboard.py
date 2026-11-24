@@ -1,11 +1,10 @@
 from datetime import date
-from typing import Literal
 
 from pydantic import BaseModel
 
 
 class DailyQuest(BaseModel):
-    id: Literal["lessons", "words", "quiz"]
+    id: str
     title: str
     progress: int
     target: int

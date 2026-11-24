@@ -11,9 +11,10 @@
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <link rel="stylesheet" href="../../styles/profile/style.css">
-  <!-- Auth Guard: Chỉ cho phép truy cập khi đã đăng nhập, ngược lại điều hướng về Trang chủ với vai trò Guest -->
+  <link rel="stylesheet" href="../../styles/shared/learner-shell.css">
+  <!-- Auth Guard: token nằm trong cookie (không còn localStorage) -->
   <script>
-    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+    if (!/(?:^|;\s*)slanguage_access_token=[^;]+/.test(document.cookie)) {
       window.location.replace('../login/index.html');
     }
   </script>
@@ -24,17 +25,50 @@
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
+        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng" aria-expanded="false" title="Menu điều hướng">
+          <i class="fa-solid fa-bars"></i>
+        </button>
         <a href="../home/index.html" class="brand-logo">
           <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </a>
 
-        <nav>
+        <nav class="desktop-nav">
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="../select-lesson/index.html">Học tập</a></li>
-            <li><a href="../vocabulary/index.html">Từ vựng</a></li>
-            <li><a href="../ai-practice/index.html">Luyện tập AI</a></li>
+            <li class="nav-dropdown-item">
+              <button type="button" class="nav-link-dropdown-btn" id="learnNavDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                <span>Học tập</span>
+                <i class="fa-solid fa-chevron-down nav-dropdown-chevron"></i>
+              </button>
+              <div class="nav-dropdown-menu" id="learnNavDropdownMenu">
+                <a href="../roadmap/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Học bài mới</span>
+                    <span class="nav-dropdown-desc">Lộ trình học theo từng mốc</span>
+                  </div>
+                </a>
+                <a href="../vocabulary/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện từ vựng</span>
+                    <span class="nav-dropdown-desc">Flashcard & kho từ vựng</span>
+                  </div>
+                </a>
+                <a href="../ai-practice/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện tập với AI</span>
+                    <span class="nav-dropdown-desc">Hội thoại tương tác trợ lý AI</span>
+                  </div>
+                </a>
+                <a href="../writing/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện viết đoạn văn</span>
+                    <span class="nav-dropdown-desc">AI ra đề và chấm bài chi tiết</span>
+                  </div>
+                </a>
+              </div>
+            </li>
+            <li><a href="../minigames/index.html">Mini game</a></li>
             <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
           </ul>
         </nav>
@@ -43,73 +77,105 @@
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
           <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
-          <span id="headerStreakVal">0 Ngày</span>
+          <span id="headerStreakVal">—</span>
         </div>
         <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
           <i class="fa-solid fa-star"></i>
-          <span id="headerXPVal">0 XP</span>
+          <span id="headerXPVal">—</span>
         </div>
         <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
           <i class="fa-solid fa-heart"></i>
-          <span id="headerHeartsVal">5/5</span>
+          <span id="headerHeartsVal">—</span>
         </div>
 
-        <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
         <div class="lang-dropdown auth-only" id="langDropdown">
           <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
-            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
+            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
             <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
             <i class="fa-solid fa-chevron-down lang-chevron"></i>
           </button>
           <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
             <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
-              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon">
+              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Nhật (日本語)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
-              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon">
+              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">English (Tiếng Anh)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
-              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon">
+              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Việt (Vietnamese)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
           </div>
         </div>
 
-        <!-- User Account Dropdown (Shown when logged in) -->
         <div class="user-dropdown auth-only" id="userDropdown">
-          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
-            <img src="../../../assets/logo.png" alt="Avatar" class="user-avatar-mini">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
+            <img alt="Ảnh đại diện" class="user-avatar-mini" id="headerAvatar">
             <div class="user-info-text">
-              <div class="name">Học viên</div>
+              <div class="name" id="headerUserName">Học viên</div>
               <div class="role">Học viên</div>
             </div>
             <i class="fa-solid fa-chevron-down user-chevron"></i>
           </button>
           <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
-            <a href="./index.html" class="user-dropdown-item" role="menuitem">
+            <div class="dropdown-user-header" id="dropdownUserHeader">
+              <div class="dropdown-user-meta">
+                <img alt="Avatar" class="dropdown-user-avatar" id="dropdownUserAvatar">
+                <div class="dropdown-user-details">
+                  <div class="dropdown-user-name" id="dropdownUserName">Học viên</div>
+                  <div class="dropdown-user-role">Học viên Slanguage</div>
+                </div>
+              </div>
+              <div class="dropdown-stats-grid">
+                <div class="dropdown-stat-chip streak" title="Chuỗi ngày học liên tục">
+                  <img src="../../../assets/streak-flame.gif?v=4" alt="Streak" class="streak-flame-img">
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">Chuỗi</span>
+                    <span class="dropdown-stat-value" id="dropdownStreakVal">—</span>
+                  </div>
+                </div>
+                <div class="dropdown-stat-chip xp" title="Điểm kinh nghiệm tích lũy">
+                  <i class="fa-solid fa-star"></i>
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">EXP</span>
+                    <span class="dropdown-stat-value" id="dropdownXPVal">—</span>
+                  </div>
+                </div>
+                <div class="dropdown-stat-chip hearts" title="Năng lượng làm bài">
+                  <i class="fa-solid fa-heart"></i>
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">Mạng</span>
+                    <span class="dropdown-stat-value" id="dropdownHeartsVal">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="user-dropdown-divider mobile-only-divider"></div>
+
+            <a href="../profile/index.html" class="user-dropdown-item active-page" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
               <div class="menu-item-text">
                 <span class="title">Thông tin cá nhân</span>
-                <span class="sub">Hồ sơ & cài đặt tài khoản</span>
+                <span class="sub">Hồ sơ &amp; cài đặt tài khoản</span>
               </div>
             </a>
-            <a href="#tabProgress" class="user-dropdown-item" role="menuitem">
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
               <div class="menu-item-text">
                 <span class="title">Tiến độ học tập</span>
-                <span class="sub">Thống kê XP & chuỗi ngày</span>
+                <span class="sub">Thống kê XP &amp; chuỗi ngày</span>
               </div>
             </a>
-                        <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
+            <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
               <div class="menu-item-text">
                 <span class="title">Shop quy đổi</span>
-                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
+                <span class="sub">Đổi 5 XP = 1 Coin &amp; vật phẩm</span>
               </div>
             </a>
             <div class="user-dropdown-divider"></div>
@@ -123,7 +189,6 @@
           </div>
         </div>
 
-        <!-- Guest Auth Buttons (Shown when NOT logged in) -->
         <div class="guest-nav-auth guest-only" id="guestNavAuth">
           <a href="../login/index.html" class="nav-auth-login">Đăng nhập</a>
           <a href="../register/index.html" class="nav-auth-register">Đăng ký</a>
@@ -131,6 +196,141 @@
       </div>
     </div>
   </header>
+
+  <!-- Mobile Side Drawer & Backdrop Overlay (< 1286px) -->
+  <div class="mobile-drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <aside class="mobile-side-drawer" id="sideDrawer" aria-label="Menu điều hướng di động" aria-hidden="true">
+    <div class="drawer-header">
+      <a href="../home/index.html" class="drawer-brand">
+        <img src="../../../assets/logo.png" alt="Slanguage Logo" class="drawer-logo-img">
+        <span class="drawer-brand-name">S<span class="brand-language">language</span></span>
+      </a>
+      <button type="button" class="drawer-close-btn" id="drawerCloseBtn" aria-label="Đóng menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="drawer-user-card" id="drawerUserCard">
+      <img alt="Avatar" class="drawer-avatar" id="drawerUserAvatar">
+      <div class="drawer-user-info">
+        <div class="drawer-user-name" id="drawerUserName">Học viên</div>
+        <div class="drawer-user-role" id="drawerUserRole">Học viên Slanguage</div>
+      </div>
+    </div>
+
+    <div class="drawer-stats-grid">
+      <div class="drawer-stat-pill streak" title="Chuỗi ngày liên tục">
+        <img src="../../../assets/streak-flame.gif?v=4" alt="Streak" class="drawer-stat-flame">
+        <span id="drawerStreakVal">—</span>
+      </div>
+      <div class="drawer-stat-pill xp" title="Điểm kinh nghiệm">
+        <i class="fa-solid fa-star"></i>
+        <span id="drawerXPVal">—</span>
+      </div>
+      <div class="drawer-stat-pill hearts" title="Mạng học tập">
+        <i class="fa-solid fa-heart"></i>
+        <span id="drawerHeartsVal">—</span>
+      </div>
+    </div>
+
+    <div class="drawer-divider"></div>
+
+    <nav class="drawer-nav">
+      <div class="drawer-section-title">Menu chính</div>
+      <ul class="drawer-nav-list">
+        <li>
+          <a href="../home/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-house"></i></span>
+            <span class="drawer-nav-label">Trang chủ</span>
+          </a>
+        </li>
+        <li>
+          <a href="../roadmap/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-graduation-cap"></i></span>
+            <span class="drawer-nav-label">Học bài mới</span>
+          </a>
+        </li>
+        <li>
+          <a href="../vocabulary/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-book-open"></i></span>
+            <span class="drawer-nav-label">Luyện từ vựng</span>
+          </a>
+        </li>
+        <li>
+          <a href="../ai-practice/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-robot"></i></span>
+            <span class="drawer-nav-label">Luyện tập với AI</span>
+          </a>
+        </li>
+        <li>
+          <a href="../minigames/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-gamepad"></i></span>
+            <span class="drawer-nav-label">Mini game</span>
+          </a>
+        </li>
+        <li>
+          <a href="../writing/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-pen-nib"></i></span>
+            <span class="drawer-nav-label">Luyện viết đoạn văn</span>
+          </a>
+        </li>
+        <li>
+          <a href="../leaderboard/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-trophy"></i></span>
+            <span class="drawer-nav-label">Bảng xếp hạng</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section-title">Tài khoản &amp; Tiện ích</div>
+      <ul class="drawer-nav-list">
+        <li>
+          <a href="../profile/index.html" class="drawer-nav-item active">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-id-badge"></i></span>
+            <span class="drawer-nav-label">Thông tin cá nhân</span>
+          </a>
+        </li>
+        <li>
+          <a href="../shop/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-store"></i></span>
+            <span class="drawer-nav-label">Shop quy đổi</span>
+          </a>
+        </li>
+        <li>
+          <a href="../login/index.html" class="drawer-nav-item drawer-logout" id="drawerLogoutBtn">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span>
+            <span class="drawer-nav-label">Đăng xuất</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Mobile Bottom Navigation Bar (< 1286px) -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Điều hướng ngón cái">
+    <a href="../home/index.html" class="bottom-nav-item">
+      <i class="fa-solid fa-house bottom-nav-icon"></i>
+      <span class="bottom-nav-label" data-i18n="bn.home">—</span>
+    </a>
+    <a href="../roadmap/index.html" class="bottom-nav-item">
+      <i class="fa-solid fa-map-location-dot bottom-nav-icon"></i>
+      <span class="bottom-nav-label" data-i18n="bn.learn">—</span>
+    </a>
+    <a href="../vocabulary/index.html" class="bottom-nav-item">
+      <i class="fa-solid fa-book-open bottom-nav-icon"></i>
+      <span class="bottom-nav-label" data-i18n="bn.vocab">—</span>
+    </a>
+    <a href="../ai-practice/index.html" class="bottom-nav-item">
+      <i class="fa-solid fa-robot bottom-nav-icon"></i>
+      <span class="bottom-nav-label" data-i18n="bn.ai">—</span>
+    </a>
+    <a href="../leaderboard/index.html" class="bottom-nav-item">
+      <i class="fa-solid fa-trophy bottom-nav-icon"></i>
+      <span class="bottom-nav-label" data-i18n="bn.board">—</span>
+    </a>
+  </nav>
 
   <!-- ================= PROFILE HERO HEADER ================= -->
   <section class="profile-hero">
@@ -175,19 +375,19 @@
       <div class="hero-stats-ribbon">
         <div class="stat-box">
           <div class="stat-box-val fire"><img src="../../../assets/streak-flame.gif?v=4" alt="Streak flame" class="streak-flame-img streak-flame-chip"> <span id="heroStreakVal">0 Ngày</span></div>
-          <div class="stat-box-label">Chuỗi học tập</div>
+          <div class="stat-box-label" data-i18n="hero.statStreak">Chuỗi học tập</div>
         </div>
         <div class="stat-box">
           <div class="stat-box-val gold"><i class="fa-solid fa-star"></i> <span id="heroXPVal">0</span></div>
-          <div class="stat-box-label">Tổng XP tích lũy</div>
+          <div class="stat-box-label" data-i18n="hero.statXp">Tổng XP tích lũy</div>
         </div>
         <div class="stat-box">
           <div class="stat-box-val mint"><i class="fa-solid fa-trophy"></i> <span id="heroRankVal">—</span></div>
-          <div class="stat-box-label">Bảng Vàng Tuần</div>
+          <div class="stat-box-label" data-i18n="hero.statRank">Bảng Vàng Tuần</div>
         </div>
         <div class="stat-box">
           <div class="stat-box-val"><i class="fa-solid fa-book-open"></i> <span id="heroLessonsVal">0</span></div>
-          <div class="stat-box-label">Bài đã hoàn thành</div>
+          <div class="stat-box-label" data-i18n="hero.statLessons">Bài đã hoàn thành</div>
         </div>
       </div>
     </div>
@@ -196,13 +396,13 @@
   <!-- ================= TABS NAVIGATION ================= -->
   <div class="tabs-bar">
     <div class="tabs-container">
-      <button class="tab-btn active" data-tab="tabProgress">
+      <button class="tab-btn active" data-tab="tabProgress" data-i18n="tab.progress">
         <i class="fa-solid fa-chart-pie"></i> Tiến độ học tập & Phân tích
       </button>
-      <button class="tab-btn" data-tab="tabPersonalInfo">
+      <button class="tab-btn" data-tab="tabPersonalInfo" data-i18n="tab.info">
         <i class="fa-solid fa-user-pen"></i> Thông tin cá nhân & Thiết lập
       </button>
-      <button class="tab-btn" data-tab="tabBadges">
+      <button class="tab-btn" data-tab="tabBadges" data-i18n="tab.badges">
         <i class="fa-solid fa-award"></i> Huy hiệu & Chứng chỉ đã đạt
       </button>
     </div>
@@ -219,8 +419,8 @@
           <!-- Active Language Circular Progress Overview -->
           <div class="lang-progress-card">
             <div class="section-head">
-              <h3><i class="fa-solid fa-chart-pie"></i> Tiến độ ngôn ngữ đang học</h3>
-              <span style="font-size: 0.85rem; color: var(--text-muted);">Tính từ từ vựng đã làm chủ trong lộ trình</span>
+              <h3 data-i18n="lc.head"><i class="fa-solid fa-chart-pie"></i> Tiến độ ngôn ngữ đang học</h3>
+              <span style="font-size: 0.85rem; color: var(--text-muted);" data-i18n="lc.sub">Tính từ từ vựng đã làm chủ trong lộ trình</span>
             </div>
 
             <div class="language-circular-grid">
@@ -230,42 +430,42 @@
                     <circle class="circle-bg" cx="50" cy="50" r="38" />
                     <circle class="circle-fill ja" id="langCircleFill" cx="50" cy="50" r="38" stroke-dasharray="238.8" stroke-dashoffset="238.8" />
                     <text x="50" y="54" class="circle-percent" id="langCirclePercent">0%</text>
-                    <text x="50" y="68" class="circle-label">Tiến độ</text>
+                    <text x="50" y="68" class="circle-label" data-i18n="lc.progress">Tiến độ</text>
                   </svg>
                 </div>
                 <div class="circle-card-info">
                   <div class="circle-card-title">
                     <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon-inline" id="langCircleFlag" width="20" height="14" style="width:20px;height:14px;object-fit:cover;">
                     <span class="lang-title-text" id="langCircleTitle">—</span>
-                    <span class="lang-prog-tag">Ngôn ngữ chính</span>
+                    <span class="lang-prog-tag" data-i18n="lc.main">Ngôn ngữ chính</span>
                   </div>
                   <div class="circle-card-stats">
-                    <div class="stat-pill"><i class="fa-solid fa-layer-group"></i> Trình độ: <strong id="langLevelPill">—</strong></div>
-                    <div class="stat-pill"><i class="fa-solid fa-book-bookmark"></i> <strong id="langWordsPill">0</strong> từ trong lộ trình</div>
-                    <div class="stat-pill"><i class="fa-solid fa-circle-check"></i> <strong id="langMasteredPill">0</strong> từ đã làm chủ</div>
+                    <div class="stat-pill" data-i18n="lc.levelPrefix"><i class="fa-solid fa-layer-group"></i> Trình độ: <strong id="langLevelPill">—</strong></div>
+                    <div class="stat-pill"><i class="fa-solid fa-book-bookmark"></i> <strong id="langWordsPill">0</strong> <span data-i18n="lc.wordsSuffix">từ trong lộ trình</span></div>
+                    <div class="stat-pill"><i class="fa-solid fa-circle-check"></i> <strong id="langMasteredPill">0</strong> <span data-i18n="lc.masteredSuffix">từ đã làm chủ</span></div>
                   </div>
                 </div>
               </div>
             </div>
 
             <div class="section-head" style="margin-top: 24px;">
-              <h3><i class="fa-solid fa-database"></i> Chỉ số học tập tổng hợp</h3>
+              <h3 data-i18n="st.head"><i class="fa-solid fa-database"></i> Chỉ số học tập tổng hợp</h3>
             </div>
             <ul style="list-style: none; display: flex; flex-direction: column; gap: 12px; font-size: 0.9rem;">
               <li style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f4f5; padding-bottom: 8px;">
-                <span style="color: var(--text-muted);"><i class="fa-solid fa-book-bookmark"></i> Tổng từ vựng đã học</span>
+                <span style="color: var(--text-muted);" data-i18n="st.words"><i class="fa-solid fa-book-bookmark"></i> Tổng từ vựng đã học</span>
                 <strong id="statWordsLearned">0</strong>
               </li>
               <li style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f4f5; padding-bottom: 8px;">
-                <span style="color: var(--text-muted);"><i class="fa-solid fa-book-open"></i> Bài học đã hoàn thành</span>
+                <span style="color: var(--text-muted);" data-i18n="st.lessons"><i class="fa-solid fa-book-open"></i> Bài học đã hoàn thành</span>
                 <strong id="statLessonsDone">0</strong>
               </li>
               <li style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f4f5; padding-bottom: 8px;">
-                <span style="color: var(--text-muted);"><img src="../../../assets/streak-flame.gif?v=4" alt="Kỷ lục streak" class="streak-flame-img streak-flame-inline"> Kỷ lục chuỗi ngày học</span>
+                <span style="color: var(--text-muted);" data-i18n="st.longest"><img src="../../../assets/streak-flame.gif?v=4" alt="Kỷ lục streak" class="streak-flame-img streak-flame-inline"> Kỷ lục chuỗi ngày học</span>
                 <strong style="color: #ffaa5a;" id="statLongestStreak">0 Ngày</strong>
               </li>
               <li style="display: flex; justify-content: space-between;">
-                <span style="color: var(--text-muted);"><i class="fa-solid fa-snowflake"></i> Lượt đóng băng streak còn lại</span>
+                <span style="color: var(--text-muted);" data-i18n="st.freezes"><i class="fa-solid fa-snowflake"></i> Lượt đóng băng streak còn lại</span>
                 <strong style="color: var(--color-teal);" id="statStreakFreezes">0</strong>
               </li>
             </ul>
@@ -274,7 +474,7 @@
           <!-- Weekly Activity Area Chart (Biểu đồ miền) -->
           <div class="weekly-chart-card">
             <div class="section-head">
-              <h3><i class="fa-solid fa-chart-area"></i> Biểu đồ học tập tuần này (XP/ngày)</h3>
+              <h3 data-i18n="ch.head"><i class="fa-solid fa-chart-area"></i> Biểu đồ học tập tuần này (XP/ngày)</h3>
               <div style="font-size: 0.85rem; color: var(--color-teal); font-weight: 700; display: flex; align-items: center; gap: 6px;">
                 <span class="target-indicator-dot"></span> <span id="chartTargetLabel">Mục tiêu: — XP/ngày</span>
               </div>
@@ -300,7 +500,7 @@
                 <!-- Target Reference Line -->
                 <line x1="40" y1="106.3" x2="640" y2="106.3" class="area-target-line" stroke-dasharray="5,4" id="chartTargetLine" />
                 <text x="32" y="110" class="area-grid-label target" id="chartTargetValue">—</text>
-                <text x="642" y="110" class="area-target-tag">Mục tiêu</text>
+                <text x="642" y="110" class="area-target-tag" data-i18n="ch.targetTag">Mục tiêu</text>
 
                 <!-- Baseline 0 -->
                 <line x1="40" y1="155.0" x2="640" y2="155.0" class="area-baseline" />
@@ -326,18 +526,18 @@
           <!-- Recent Lesson History -->
           <div class="recent-history-card">
             <div class="section-head">
-              <h3><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử học tập tuần này</h3>
-              <a href="../home/index.html" style="font-size: 0.85rem; color: var(--color-teal); text-decoration: none; font-weight: 700;">Học tiếp <i class="fa-solid fa-arrow-right"></i></a>
+              <h3 data-i18n="hi.head"><i class="fa-solid fa-clock-rotate-left"></i> Lịch sử học tập tuần này</h3>
+              <a href="../home/index.html" style="font-size: 0.85rem; color: var(--color-teal); text-decoration: none; font-weight: 700;" data-i18n="hi.continue">Học tiếp <i class="fa-solid fa-arrow-right"></i></a>
             </div>
 
             <table class="history-table">
               <thead>
                 <tr>
-                  <th>Ngày</th>
-                  <th>XP nhận</th>
-                  <th>Bài hoàn thành</th>
-                  <th>Mục tiêu</th>
-                  <th>Trạng thái</th>
+                  <th data-i18n="hi.date">Ngày</th>
+                  <th data-i18n="hi.xp">XP nhận</th>
+                  <th data-i18n="hi.lessons">Bài hoàn thành</th>
+                  <th data-i18n="hi.goal">Mục tiêu</th>
+                  <th data-i18n="hi.status">Trạng thái</th>
                 </tr>
               </thead>
               <tbody id="activityTableBody"></tbody>
@@ -350,13 +550,13 @@
           <!-- Daily Goal Progress -->
           <div class="skills-card" style="margin-bottom: 28px;">
             <div class="section-head">
-              <h3><i class="fa-solid fa-bullseye"></i> Mục tiêu mỗi ngày</h3>
+              <h3 data-i18n="go.head"><i class="fa-solid fa-bullseye"></i> Mục tiêu mỗi ngày</h3>
             </div>
 
             <div class="skill-items-grid">
               <div class="skill-box">
                 <div class="skill-header">
-                  <span class="title"><i class="fa-solid fa-star"></i> XP hôm nay</span>
+                  <span class="title" data-i18n="go.xp"><i class="fa-solid fa-star"></i> XP hôm nay</span>
                   <span class="score" id="goalXpScore">0/0</span>
                 </div>
                 <div class="prog-track" style="margin: 0;">
@@ -366,7 +566,7 @@
 
               <div class="skill-box">
                 <div class="skill-header">
-                  <span class="title"><i class="fa-solid fa-book-open"></i> Bài học hôm nay</span>
+                  <span class="title" data-i18n="go.lessons"><i class="fa-solid fa-book-open"></i> Bài học hôm nay</span>
                   <span class="score" id="goalLessonsScore">0/0</span>
                 </div>
                 <div class="prog-track" style="margin: 0;">
@@ -376,7 +576,7 @@
 
               <div class="skill-box">
                 <div class="skill-header">
-                  <span class="title"><i class="fa-solid fa-fire"></i> Chuỗi ngày so với kỷ lục</span>
+                  <span class="title" data-i18n="go.streak"><i class="fa-solid fa-fire"></i> Chuỗi ngày so với kỷ lục</span>
                   <span class="score" id="goalStreakScore">0/0</span>
                 </div>
                 <div class="prog-track" style="margin: 0;">
@@ -393,23 +593,23 @@
           <!-- Study Habit Card -->
           <div class="skills-card">
             <div class="section-head">
-              <h3><i class="fa-solid fa-calendar-days"></i> Thói quen & Kỷ luật</h3>
+              <h3 data-i18n="ha.head"><i class="fa-solid fa-calendar-days"></i> Thói quen & Kỷ luật</h3>
             </div>
             <ul style="list-style: none; display: flex; flex-direction: column; gap: 14px; font-size: 0.9rem;">
               <li style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f4f5; padding-bottom: 8px;">
-                <span style="color: var(--text-muted);"><i class="fa-solid fa-clock"></i> Giờ nhắc nhở học bài</span>
+                <span style="color: var(--text-muted);" data-i18n="ha.reminder"><i class="fa-solid fa-clock"></i> Giờ nhắc nhở học bài</span>
                 <strong id="habitReminder">—</strong>
               </li>
               <li style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f4f5; padding-bottom: 8px;">
-                <span style="color: var(--text-muted);"><img src="../../../assets/streak-flame.gif?v=4" alt="Kỷ lục streak" class="streak-flame-img streak-flame-inline"> Kỷ lục chuỗi streak dài nhất</span>
+                <span style="color: var(--text-muted);" data-i18n="ha.longest"><img src="../../../assets/streak-flame.gif?v=4" alt="Kỷ lục streak" class="streak-flame-img streak-flame-inline"> Kỷ lục chuỗi streak dài nhất</span>
                 <strong style="color: #ffaa5a;" id="habitLongestStreak">0 Ngày</strong>
               </li>
               <li style="display: flex; justify-content: space-between; border-bottom: 1px solid #f0f4f5; padding-bottom: 8px;">
-                <span style="color: var(--text-muted);"><i class="fa-solid fa-award"></i> Tổng huy hiệu đã mở khóa</span>
+                <span style="color: var(--text-muted);" data-i18n="ha.badges"><i class="fa-solid fa-award"></i> Tổng huy hiệu đã mở khóa</span>
                 <strong style="color: var(--color-teal);" id="habitBadgesCount">0 / 8 Huy hiệu</strong>
               </li>
               <li style="display: flex; justify-content: space-between;">
-                <span style="color: var(--text-muted);"><i class="fa-solid fa-certificate"></i> Chứng chỉ hoàn thành</span>
+                <span style="color: var(--text-muted);" data-i18n="ha.certs"><i class="fa-solid fa-certificate"></i> Chứng chỉ hoàn thành</span>
                 <strong style="color: var(--color-teal);" id="habitCertsCount">0 Chứng chỉ</strong>
               </li>
             </ul>
@@ -422,159 +622,159 @@
     <div class="tab-content" id="tabPersonalInfo">
       <div class="profile-form-card">
         <div class="section-head" style="margin-bottom: 28px;">
-          <h3><i class="fa-solid fa-user-gear"></i> Chỉnh sửa thông tin học viên</h3>
-          <span style="font-size: 0.85rem; color: var(--text-muted);">Thông tin này giúp cá nhân hóa chương trình học của bạn</span>
+          <h3 data-i18n="fo.head"><i class="fa-solid fa-user-gear"></i> Chỉnh sửa thông tin học viên</h3>
+          <span style="font-size: 0.85rem; color: var(--text-muted);" data-i18n="fo.sub">Thông tin này giúp cá nhân hóa chương trình học của bạn</span>
         </div>
 
         <form id="profileEditForm">
           <div class="form-grid-2">
             <div class="form-field">
-              <label for="profFullName">Tên hiển thị *</label>
+              <label for="profFullName" data-i18n="fo.name">Tên hiển thị *</label>
               <input type="text" id="profFullName" maxlength="50" required>
             </div>
 
             <div class="form-field">
-              <label for="profUsername">Tên đăng nhập (chữ thường, số, gạch dưới)</label>
+              <label for="profUsername" data-i18n="fo.username">Tên đăng nhập (chữ thường, số, gạch dưới)</label>
               <input type="text" id="profUsername" pattern="[a-z0-9_]{3,30}" maxlength="30" required>
             </div>
           </div>
 
           <div class="form-grid-2">
             <div class="form-field">
-              <label for="profEmail">Địa chỉ Email (không thể đổi)</label>
+              <label for="profEmail" data-i18n="fo.email">Địa chỉ Email (không thể đổi)</label>
               <input type="email" id="profEmail" readonly style="background: #eef4f6; cursor: not-allowed;">
             </div>
 
             <div class="form-field">
-              <label for="profBirthYear">Năm sinh</label>
+              <label for="profBirthYear" data-i18n="fo.birth">Năm sinh</label>
               <input type="number" id="profBirthYear" min="1900" max="2026" placeholder="VD: 2004">
             </div>
           </div>
 
           <div class="form-grid-2">
             <div class="form-field">
-              <label for="profCountry">Mã quốc gia (2 chữ cái)</label>
+              <label for="profCountry" data-i18n="fo.country">Mã quốc gia (2 chữ cái)</label>
               <input type="text" id="profCountry" maxlength="2" placeholder="VN" style="text-transform: uppercase;">
             </div>
 
             <div class="form-field">
-              <label for="profNativeLang">Ngôn ngữ mẹ đẻ</label>
+              <label for="profNativeLang" data-i18n="fo.native">Ngôn ngữ mẹ đẻ</label>
               <select id="profNativeLang">
-                <option value="vi">🇻🇳 Tiếng Việt</option>
-                <option value="en">🇬🇧 Tiếng Anh</option>
-                <option value="ja">🇯🇵 Tiếng Nhật</option>
+                <option value="vi" data-i18n="nat.vi">🇻🇳 Tiếng Việt</option>
+                <option value="en" data-i18n="nat.en">🇬🇧 Tiếng Anh</option>
+                <option value="ja" data-i18n="nat.ja">🇯🇵 Tiếng Nhật</option>
               </select>
             </div>
           </div>
 
           <div class="form-grid-2">
             <div class="form-field">
-              <label for="profTargetLang">Ngôn ngữ ưu tiên học tập hiện tại</label>
+              <label for="profTargetLang" data-i18n="fo.target">Ngôn ngữ ưu tiên học tập hiện tại</label>
               <select id="profTargetLang">
-                <option value="ja">🇯🇵 Tiếng Nhật (JLPT N5-N1)</option>
-                <option value="en">🇬🇧 Tiếng Anh (Giao tiếp & IELTS)</option>
-                <option value="vi">🇻🇳 Tiếng Việt (Thành ngữ & Chuyên sâu)</option>
+                <option value="ja" data-i18n="tgt.ja">🇯🇵 Tiếng Nhật (JLPT N5-N1)</option>
+                <option value="en" data-i18n="tgt.en">🇬🇧 Tiếng Anh (Giao tiếp & IELTS)</option>
+                <option value="vi" data-i18n="tgt.vi">🇻🇳 Tiếng Việt (Thành ngữ & Chuyên sâu)</option>
               </select>
             </div>
 
             <div class="form-field">
-              <label for="profLearningGoal">Mục đích học tập</label>
+              <label for="profLearningGoal" data-i18n="fo.goal">Mục đích học tập</label>
               <select id="profLearningGoal">
-                <option value="travel">Du lịch</option>
-                <option value="work">Công việc</option>
-                <option value="study">Du học / Học thuật</option>
-                <option value="exam">Thi chứng chỉ</option>
-                <option value="hobby">Sở thích</option>
-                <option value="other">Khác</option>
+                <option value="travel" data-i18n="opt.travel">Du lịch</option>
+                <option value="work" data-i18n="opt.work">Công việc</option>
+                <option value="study" data-i18n="opt.study">Du học / Học thuật</option>
+                <option value="exam" data-i18n="opt.exam">Thi chứng chỉ</option>
+                <option value="hobby" data-i18n="opt.hobby">Sở thích</option>
+                <option value="other" data-i18n="opt.other">Khác</option>
               </select>
             </div>
           </div>
 
           <div class="form-grid-2">
             <div class="form-field">
-              <label for="profCurrentLevel">Trình độ hiện tại</label>
+              <label for="profCurrentLevel" data-i18n="fo.current">Trình độ hiện tại</label>
               <select id="profCurrentLevel">
-                <option value="A1">A1 - Mới bắt đầu</option>
-                <option value="A2">A2 - Sơ cấp</option>
-                <option value="B1">B1 - Trung cấp</option>
-                <option value="B2">B2 - Trung cao cấp</option>
-                <option value="C1">C1 - Cao cấp</option>
-                <option value="C2">C2 - Thành thạo</option>
+                <option value="A1" data-i18n="lvl.A1">A1 - Mới bắt đầu</option>
+                <option value="A2" data-i18n="lvl.A2">A2 - Sơ cấp</option>
+                <option value="B1" data-i18n="lvl.B1">B1 - Trung cấp</option>
+                <option value="B2" data-i18n="lvl.B2">B2 - Trung cao cấp</option>
+                <option value="C1" data-i18n="lvl.C1">C1 - Cao cấp</option>
+                <option value="C2" data-i18n="lvl.C2">C2 - Thành thạo</option>
               </select>
             </div>
 
             <div class="form-field">
-              <label for="profTargetLevel">Trình độ mục tiêu</label>
+              <label for="profTargetLevel" data-i18n="fo.targetLevel">Trình độ mục tiêu</label>
               <select id="profTargetLevel">
-                <option value="A1">A1 - Mới bắt đầu</option>
-                <option value="A2">A2 - Sơ cấp</option>
-                <option value="B1">B1 - Trung cấp</option>
-                <option value="B2">B2 - Trung cao cấp</option>
-                <option value="C1">C1 - Cao cấp</option>
-                <option value="C2">C2 - Thành thạo</option>
+                <option value="A1" data-i18n="lvl.A1">A1 - Mới bắt đầu</option>
+                <option value="A2" data-i18n="lvl.A2">A2 - Sơ cấp</option>
+                <option value="B1" data-i18n="lvl.B1">B1 - Trung cấp</option>
+                <option value="B2" data-i18n="lvl.B2">B2 - Trung cao cấp</option>
+                <option value="C1" data-i18n="lvl.C1">C1 - Cao cấp</option>
+                <option value="C2" data-i18n="lvl.C2">C2 - Thành thạo</option>
               </select>
             </div>
           </div>
 
           <div class="form-grid-2">
             <div class="form-field">
-              <label for="profDailyGoalXp">Mục tiêu XP mỗi ngày</label>
+              <label for="profDailyGoalXp" data-i18n="fo.xp">Mục tiêu XP mỗi ngày</label>
               <select id="profDailyGoalXp">
-                <option value="10">10 XP / ngày (Khởi động)</option>
-                <option value="20">20 XP / ngày (Nhẹ nhàng)</option>
-                <option value="30">30 XP / ngày (Tiêu chuẩn)</option>
-                <option value="50">50 XP / ngày (Chăm chỉ)</option>
-                <option value="100">100 XP / ngày (Bứt phá)</option>
-                <option value="200">200 XP / ngày (Cường độ cao)</option>
-                <option value="500">500 XP / ngày (Siêu chiến binh)</option>
+                <option value="10" data-i18n="dxp.10">10 XP / ngày (Khởi động)</option>
+                <option value="20" data-i18n="dxp.20">20 XP / ngày (Nhẹ nhàng)</option>
+                <option value="30" data-i18n="dxp.30">30 XP / ngày (Tiêu chuẩn)</option>
+                <option value="50" data-i18n="dxp.50">50 XP / ngày (Chăm chỉ)</option>
+                <option value="100" data-i18n="dxp.100">100 XP / ngày (Bứt phá)</option>
+                <option value="200" data-i18n="dxp.200">200 XP / ngày (Cường độ cao)</option>
+                <option value="500" data-i18n="dxp.500">500 XP / ngày (Siêu chiến binh)</option>
               </select>
             </div>
 
             <div class="form-field">
-              <label for="profDailyGoalMinutes">Mục tiêu phút học mỗi ngày</label>
+              <label for="profDailyGoalMinutes" data-i18n="fo.minutes">Mục tiêu phút học mỗi ngày</label>
               <select id="profDailyGoalMinutes">
-                <option value="5">5 phút / ngày</option>
-                <option value="10">10 phút / ngày</option>
-                <option value="15">15 phút / ngày</option>
-                <option value="30">30 phút / ngày</option>
-                <option value="45">45 phút / ngày</option>
-                <option value="60">60 phút / ngày</option>
-                <option value="120">120 phút / ngày</option>
-                <option value="240">240 phút / ngày</option>
+                <option value="5" data-i18n="dmin.5">5 phút / ngày</option>
+                <option value="10" data-i18n="dmin.10">10 phút / ngày</option>
+                <option value="15" data-i18n="dmin.15">15 phút / ngày</option>
+                <option value="30" data-i18n="dmin.30">30 phút / ngày</option>
+                <option value="45" data-i18n="dmin.45">45 phút / ngày</option>
+                <option value="60" data-i18n="dmin.60">60 phút / ngày</option>
+                <option value="120" data-i18n="dmin.120">120 phút / ngày</option>
+                <option value="240" data-i18n="dmin.240">240 phút / ngày</option>
               </select>
             </div>
           </div>
 
           <div class="form-grid-2">
             <div class="form-field">
-              <label for="profDailyGoalLessons">Mục tiêu số bài mỗi ngày</label>
+              <label for="profDailyGoalLessons" data-i18n="fo.lessons">Mục tiêu số bài mỗi ngày</label>
               <select id="profDailyGoalLessons">
-                <option value="1">1 bài / ngày</option>
-                <option value="2">2 bài / ngày</option>
-                <option value="3">3 bài / ngày</option>
-                <option value="5">5 bài / ngày</option>
-                <option value="10">10 bài / ngày</option>
-                <option value="20">20 bài / ngày</option>
+                <option value="1" data-i18n="dles.1">1 bài / ngày</option>
+                <option value="2" data-i18n="dles.2">2 bài / ngày</option>
+                <option value="3" data-i18n="dles.3">3 bài / ngày</option>
+                <option value="5" data-i18n="dles.5">5 bài / ngày</option>
+                <option value="10" data-i18n="dles.10">10 bài / ngày</option>
+                <option value="20" data-i18n="dles.20">20 bài / ngày</option>
               </select>
             </div>
 
             <div class="form-field">
-              <label for="profReminderTime">Thời gian nhắc nhở học bài</label>
+              <label for="profReminderTime" data-i18n="fo.reminder">Thời gian nhắc nhở học bài</label>
               <input type="time" id="profReminderTime">
             </div>
           </div>
 
           <div class="form-field">
-            <label for="profAvatarUrl">URL ảnh đại diện (bắt đầu bằng https://)</label>
+            <label for="profAvatarUrl" data-i18n="fo.avatar">URL ảnh đại diện (bắt đầu bằng https://)</label>
             <input type="url" id="profAvatarUrl" maxlength="500" placeholder="https://...">
           </div>
 
           <!-- Actions -->
           <div class="form-actions-row">
-            <button type="button" class="btn-save-profile" id="btnResetForm" style="background: #eef4f6; color: var(--color-dark); border: 1px solid var(--border-color);">
+            <button type="button" class="btn-save-profile" id="btnResetForm" style="background: #eef4f6; color: var(--color-dark); border: 1px solid var(--border-color);" data-i18n="fo.reset">
               Khôi phục ban đầu
             </button>
-            <button type="submit" class="btn-save-profile">
+            <button type="submit" class="btn-save-profile" data-i18n="fo.save">
               <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi hồ sơ
             </button>
           </div>
@@ -634,7 +834,7 @@
       
       <!-- Badges Showcase -->
       <div class="section-head" style="margin-bottom: 20px;">
-        <h3><i class="fa-solid fa-medal"></i> Bộ sưu tập huy hiệu thành tích</h3>
+        <h3 data-i18n="ba.head"><i class="fa-solid fa-medal"></i> Bộ sưu tập huy hiệu thành tích</h3>
         <span style="font-size: 0.88rem; color: var(--color-teal); font-weight: 700;" id="badgesCountLabel">Đã sở hữu: 0 / 8 huy hiệu danh dự</span>
       </div>
 
@@ -642,8 +842,8 @@
 
       <!-- Certificates -->
       <div class="section-head" style="margin: 36px 0 20px;">
-        <h3><i class="fa-solid fa-certificate"></i> Chứng chỉ hoàn thành khóa học</h3>
-        <span style="font-size: 0.85rem; color: var(--text-muted);">Chứng chỉ điện tử có giá trị định danh học viên</span>
+        <h3 data-i18n="ce.head"><i class="fa-solid fa-certificate"></i> Chứng chỉ hoàn thành khóa học</h3>
+        <span style="font-size: 0.85rem; color: var(--text-muted);" data-i18n="ce.sub">Chứng chỉ điện tử có giá trị định danh học viên</span>
       </div>
 
       <div class="cert-grid" id="certGrid"></div>
@@ -757,7 +957,7 @@
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" muted src="../../../assets/loading.mp4" loop playsinline></video>
+        <canvas id="loadingRiveCanvas"></canvas>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>

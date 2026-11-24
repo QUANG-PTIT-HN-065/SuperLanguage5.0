@@ -127,7 +127,7 @@
     <!-- ================= STAGE 3: SET NEW PASSWORD ================= -->
     <div class="stage-panel" id="stageNewPass">
       <div class="success-otp-badge">
-        <i class="fa-solid fa-shield-halved"></i> Xác thực mã OTP thành công! Thiết lập mật khẩu mới bên dưới.
+        <i class="fa-solid fa-shield-halved"></i> Kiểm tra mã OTP và lưu mật khẩu mới của bạn.
       </div>
 
       <form id="formResetPassword" novalidate>
@@ -138,12 +138,12 @@
               type="password" 
               id="newPassword" 
               class="form-input" 
-              placeholder="Tối thiểu 6 ký tự" 
+              placeholder="Tối thiểu 8 ký tự" 
               required
             >
             <i class="fa-solid fa-lock input-icon"></i>
           </div>
-          <div class="error-msg" id="newPassError">Mật khẩu mới phải từ 6 ký tự trở lên.</div>
+          <div class="error-msg" id="newPassError">Mật khẩu mới phải từ 8 ký tự trở lên.</div>
         </div>
 
         <div class="form-group">
@@ -185,7 +185,7 @@
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" muted src="../../../assets/loading.mp4" loop playsinline></video>
+        <canvas id="loadingRiveCanvas"></canvas>
       </div>
       <div class="loading-text-wrap">
         <span class="loading-title">Đang tải, hãy đợi...</span>

@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -33,7 +33,7 @@ def get_current_user(token: str = Depends(get_bearer_token)) -> Dict[str, Any]:
     return payload
 
 
-def get_current_profile(payload: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
+def _profile_for_user(payload: Dict[str, Any]) -> Dict[str, Any]:
     """Lấy profile của user hiện tại và chặn tài khoản bị khóa/đã xóa."""
     profile = get_profile(payload["sub"])
     if profile is None:
@@ -41,6 +41,30 @@ def get_current_profile(payload: Dict[str, Any] = Depends(get_current_user)) -> 
     if profile["status"] != "active" or profile.get("deleted_at"):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Tài khoản đã bị khóa hoặc vô hiệu hóa.")
     return profile
+
+
+def get_current_profile(payload: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
+    return _profile_for_user(payload)
+
+
+def get_optional_profile(
+    creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> Optional[Dict[str, Any]]:
+    """Cho trang khách: không gửi Authorization -> None (đọc như tài khoản free).
+    Gửi token nhưng token hỏng/hết hạn -> vẫn 401 để frontend đăng xuất cưỡng chế."""
+    if creds is None or not creds.credentials:
+        return None
+    return _profile_for_user(get_current_user(creds.credentials))
+
+
+def guest_profile(language: Optional[str] = None) -> Dict[str, Any]:
+    """Hồ sơ đọc-thôi cho khách chưa đăng nhập: như tài khoản free, không có id."""
+    return {
+        "id": None,
+        "target_language": language or "ja",
+        "plan_id": "free",
+        "status": "active",
+    }
 
 
 def get_current_admin_profile(
