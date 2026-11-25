@@ -15,7 +15,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.core.deps import get_current_profile
 from app.core.config import settings
-from app.core.ai_quota import consume_daily_ai_call
+from app.core.ai_quota import consume_daily_ai_call, read_daily_ai_usage
 from app.schemas.chat_ai import (
     AudioTranscriptionResponse,
     AudioUploadResponse,
@@ -302,6 +302,18 @@ async def _prepare_pronunciation_audio(audio_bytes: bytes) -> bytes:
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "Không thể chuẩn bị âm thanh để chấm phát âm. Vui lòng thử lại sau.",
         ) from exc
+
+
+@router.get("/quota", response_model=BaseResponse[Dict[str, Any]])
+def get_ai_quota(
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[Dict[str, Any]]:
+    """Hạn mức lượt AI hôm nay của tài khoản (chỉ đọc, không trừ lượt)."""
+    return BaseResponse(
+        status="success",
+        message="Đã tải hạn mức AI hôm nay.",
+        data=read_daily_ai_usage(profile),
+    )
 
 
 @router.get("/conversations", response_model=BaseResponse[list[ConversationResponse]])

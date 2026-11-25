@@ -93,8 +93,8 @@ class AIPracticeManager {
   private isPending: boolean = false;
   private voiceEnabled: boolean = true;
   private voiceRate: number = 1.0;
-  private practiceCount: number = 0;
-  private earnedXP: number = 0;
+  private aiQuotaUsed: number = 0;
+  private aiQuotaLimit: number = 15;
   private isRecording: boolean = false;
   private speechRecognizer: any = null;
   private micHeld = false;
@@ -139,9 +139,8 @@ class AIPracticeManager {
   private jumpBtnEl: HTMLElement | null = null;
   private suggestionsRowEl: HTMLElement | null = null;
   private suggestionsListEl!: HTMLElement;
-  private practiceCountEl!: HTMLElement;
-  private earnedXPEl!: HTMLElement;
-  private headerXPEl!: HTMLElement;
+  private quotaUsedEl!: HTMLElement;
+  private remainingQuotaEl!: HTMLElement;
   private langDropdownEl!: HTMLElement;
   private langDropdownBtnEl!: HTMLButtonElement;
   private userDropdownEl!: HTMLElement;
@@ -212,6 +211,7 @@ class AIPracticeManager {
     this.renderWelcomeGreeting();
     void this.loadVoiceTones();
     void this.loadOwnProfile();
+    void this.refreshQuota();
     void initializeLearnerHeader({ bindControls: false });
 
     // Đổi ngôn ngữ GIAO DIỆN: dịch lại chrome tĩnh + render lại chrome động.
@@ -328,9 +328,8 @@ class AIPracticeManager {
     this.jumpBtnEl = document.getElementById('btnJumpLatest');
     this.suggestionsRowEl = document.getElementById('quickSuggestions');
     this.suggestionsListEl = document.getElementById('suggestionChipsList') as HTMLElement;
-    this.practiceCountEl = document.getElementById('practiceSessionCount') as HTMLElement;
-    this.earnedXPEl = document.getElementById('earnedPracticeXP') as HTMLElement;
-    this.headerXPEl = document.getElementById('headerXPVal') as HTMLElement;
+    this.quotaUsedEl = document.getElementById('practiceSessionCount') as HTMLElement;
+    this.remainingQuotaEl = document.getElementById('remainingQuotaCount') as HTMLElement;
     this.langDropdownEl = document.getElementById('langDropdown') as HTMLElement;
     this.langDropdownBtnEl = document.getElementById('langDropdownBtn') as HTMLButtonElement;
     this.userDropdownEl = document.getElementById('userDropdown') as HTMLElement;
@@ -376,12 +375,6 @@ class AIPracticeManager {
     const savedLang = (localStorage.getItem('slanguage_current_lang') || localStorage.getItem('slanguage_active_language') || 'ja') as TargetLang;
     if (savedLang && ['ja', 'en', 'vi'].includes(savedLang)) {
       this.currentLang = savedLang;
-    }
-
-    // User XP
-    const userXP = localStorage.getItem('slanguage_user_xp') || '2,450 XP';
-    if (this.headerXPEl) {
-      this.headerXPEl.textContent = userXP.includes('XP') ? userXP : `${userXP} XP`;
     }
 
     // User Profile
@@ -1110,12 +1103,13 @@ class AIPracticeManager {
         feedback: this.speakFeedback(result.ai_feedback),
         timestamp: this.getFormattedTime()
       }, true);
-      this.awardXP();
+      void this.refreshQuota();
       this.setEngine('ai.engineDone');
     } catch (error) {
       const message = error instanceof Error ? error.message : t('ai.errConnect');
       this.setEngineRaw(message);
       this.showToast(message);
+      void this.refreshQuota();
     } finally {
       this.removeTypingIndicator();
       this.isPending = false;
@@ -1268,7 +1262,7 @@ class AIPracticeManager {
         translation,
         timestamp: this.getFormattedTime()
       }, true);
-      this.awardXP();
+      void this.refreshQuota();
       this.setEngine('ai.engineDone');
     } catch (error) {
       document.getElementById(userId)?.remove();
@@ -1278,6 +1272,7 @@ class AIPracticeManager {
       const message = error instanceof Error ? error.message : t('ai.errConnect');
       this.setEngineRaw(message);
       this.showToast(message);
+      void this.refreshQuota();
     } finally {
       this.removeTypingIndicator();
       this.isPending = false;
@@ -1827,29 +1822,29 @@ class AIPracticeManager {
     window.speechSynthesis.speak(utter);
   }
 
-  private awardXP(): void {
-    this.practiceCount++;
-    this.earnedXP += 5;
-
-    if (this.practiceCountEl) {
-      this.practiceCountEl.textContent = this.practiceCount.toString();
-    }
-    if (this.earnedXPEl) {
-      this.earnedXPEl.textContent = `+${this.earnedXP} XP`;
-    }
-
-    // Persist XP to user total
-    const currentXP = parseInt(localStorage.getItem('slanguage_user_xp') || '2450', 10) || 2450;
-    const newXP = currentXP + 5;
-    localStorage.setItem('slanguage_user_xp', newXP.toString());
-
-    if (this.headerXPEl) {
-      this.headerXPEl.textContent = `${newXP.toLocaleString()} XP`;
+  /**
+   * Hạn mức AI là của server theo tài khoản (15 lượt/ngày, múi giờ người dùng).
+   * Chat không cộng XP nên chỉ cần đọc lại lượt đã dùng sau mỗi lượt đổi.
+   */
+  private async refreshQuota(): Promise<void> {
+    try {
+      const response = await slanguageApi<{ used: number; daily_limit: number; remaining: number }>(
+        '/api/v1/chat-ai/quota',
+      );
+      const data = response.data;
+      const limit = typeof data?.daily_limit === 'number' ? data.daily_limit : this.aiQuotaLimit;
+      const used = typeof data?.used === 'number' ? data.used : this.aiQuotaUsed;
+      this.aiQuotaLimit = limit;
+      this.aiQuotaUsed = Math.min(Math.max(used, 0), limit);
+    } catch {
+      // Giữ số liệu đang hiển thị: hạn mức chỉ là thông tin, không chặn được việc học.
     }
 
-    // Show toast for every 2 interactions
-    if (this.practiceCount % 2 === 0) {
-      this.showToast(t('ai.toastXp', { xp: newXP }));
+    if (this.quotaUsedEl) {
+      this.quotaUsedEl.textContent = `${this.aiQuotaUsed}/${this.aiQuotaLimit}`;
+    }
+    if (this.remainingQuotaEl) {
+      this.remainingQuotaEl.textContent = String(this.aiQuotaLimit - this.aiQuotaUsed);
     }
   }
 

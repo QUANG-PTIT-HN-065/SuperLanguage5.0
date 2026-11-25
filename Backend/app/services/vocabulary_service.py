@@ -7,6 +7,8 @@ from app.db.supabase import supabase_admin
 from app.services.profile_service import get_plan, raise_db_error
 
 FREE_ACCESS_PERCENT = 50
+# Đúng một lần là thuộc: mastery_level >= 1 đã tính là đã thuộc (migration 18).
+MASTERY_MASTERED_MIN = 1
 # Free accounts unlock the first half of the catalog (basics first); premium unlocks all.
 
 
@@ -112,7 +114,7 @@ def _attach_word_progress(profile: Dict[str, Any], topics: list[Dict[str, Any]])
             supabase_admin.table("user_words")
             .select("word_id")
             .eq("user_id", profile["id"])
-            .eq("mastery_level", 5)
+            .gte("mastery_level", MASTERY_MASTERED_MIN)
             .in_("word_id", list(all_word_ids))
             .execute()
             .data
@@ -177,7 +179,7 @@ def _attach_word_mastery(profile: Dict[str, Any], items: list[Dict[str, Any]]) -
     for item in items:
         mastery = mastery_by_word.get(item["id"], 0)
         item["mastery_level"] = mastery
-        item["is_mastered"] = mastery >= 5
+        item["is_mastered"] = mastery >= MASTERY_MASTERED_MIN
 
 
 def _ordered_topic_ids(language_code: str) -> list[int]:

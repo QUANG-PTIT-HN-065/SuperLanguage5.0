@@ -10,6 +10,9 @@ import { clearSkeleton, showSkeleton } from "../shared/skeleton";
 import { applyI18n, getLocale, localeLabel, setLocale, t, LOCALE_EVENT, type UiLocale } from "../shared/i18n";
 import { playLoadingRive, stopLoadingRive } from "../shared/loading-rive";
 
+/** Đúng một lần là thuộc (migration 18): mastery_level >= 1 đã tính là đã thuộc. */
+const MASTERY_MASTERED_MIN = 1;
+
 interface VocabItem {
   id: number;
   topicId: number;
@@ -196,7 +199,7 @@ class SlanguageVocabulary {
             exampleMeaning: asText(raw.example_meaning),
             partOfSpeech: asText(raw.part_of_speech),
             masteryLevel: mastery,
-            status: mastery >= 5 ? 'mastered' : 'unmastered',
+            status: mastery >= MASTERY_MASTERED_MIN ? 'mastered' : 'unmastered',
           });
         }
       });
@@ -601,7 +604,8 @@ class SlanguageVocabulary {
     if (fcExampleMeaning) fcExampleMeaning.textContent = item.exampleMeaning;
     if (fcNuance) {
       const posKey = POS_LABELS[item.partOfSpeech];
-      fcNuance.innerHTML = `💡 <strong>${t('vc.masteryLabel')}</strong> ${item.masteryLevel}/5`
+      fcNuance.innerHTML = `💡 <strong>${t('vc.masteryLabel')}</strong> `
+        + escapeHtml(item.status === 'mastered' ? t('vc.masteryKnown') : t('vc.masteryLearning'))
         + (posKey ? ` · <strong>${t('vc.posLabel')}</strong> ${escapeHtml(t(posKey))}` : '');
     }
 
@@ -850,7 +854,7 @@ class SlanguageVocabulary {
       );
       const mastery = Number(response.data.mastery_level) || 0;
       item.masteryLevel = mastery;
-      item.status = mastery >= 5 ? 'mastered' : 'unmastered';
+      item.status = mastery >= MASTERY_MASTERED_MIN ? 'mastered' : 'unmastered';
       this.updateVaultCounts();
       this.renderVault();
       if (this.currentDeck.includes(item)) this.renderCurrentCard();
@@ -943,7 +947,7 @@ class SlanguageVocabulary {
       const isMastered = item.status === 'mastered';
       const st = isMastered
         ? { label: t('vc.statusMastered'), cls: 'mastered' }
-        : { label: t('vc.statusUnmastered', { n: item.masteryLevel }), cls: 'unmastered' };
+        : { label: t('vc.statusUnmastered'), cls: 'unmastered' };
 
       card.innerHTML = `
         <div class="vwc-header">

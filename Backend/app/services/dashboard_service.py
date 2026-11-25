@@ -19,10 +19,13 @@ WORDS_DAILY_TARGET = 10
 QUIZ_PASS_PERCENT = 95
 QUEST_COUNT = 3
 
-# Kho 27 nhiệm vụ hằng ngày gắn với các chức năng của hệ thống.
+# Kho nhiệm vụ hằng ngày gắn với các chức năng của hệ thống.
 # Mỗi người dùng mỗi ngày random lấy QUEST_COUNT nhiệm vụ (seed = user_id + ngày
 # trong timezone của họ) nên kết quả ổn định khi tải lại nhưng đổi theo ngày.
 # metric: khóa tiến độ do get_learner_dashboard tính từ các bảng có sẵn.
+# Chỉ nhận những nhiệm vụ tiến độ tăng được NGAY TRONG NGÀY: nhiệm vụ chuỗi ngày
+# (streak) chỉ nhảy số khi sang ngày mới nên người học không bao giờ làm xong
+# đúng ngày nó được rút (vd "Duy trì chuỗi học ít nhất 3 ngày" hiện 1/3).
 QUEST_POOL: tuple[Dict[str, Any], ...] = (
     {"id": "lesson_1", "title": "Hoàn thành 1 bài học", "metric": "lessons", "target": 1, "unit": "bài"},
     {"id": "lesson_2", "title": "Hoàn thành 2 bài học", "metric": "lessons", "target": 2, "unit": "bài"},
@@ -50,7 +53,6 @@ QUEST_POOL: tuple[Dict[str, Any], ...] = (
     {"id": "reading_3", "title": "Luyện đọc hiểu 3 lượt với AI", "metric": "readingTurns", "target": 3, "unit": "lượt"},
     {"id": "shop_1", "title": "Mua hoặc đổi 1 vật phẩm trong cửa hàng", "metric": "shopTx", "target": 1, "unit": "món"},
     {"id": "boost_1", "title": "Dùng 1 vật phẩm hỗ trợ trong lúc học", "metric": "boostUses", "target": 1, "unit": "lượt"},
-    {"id": "streak_3", "title": "Duy trì chuỗi học ít nhất 3 ngày", "metric": "streak", "target": 3, "unit": "ngày"},
 )
 
 
@@ -267,16 +269,6 @@ def get_learner_dashboard(profile: Dict[str, Any]) -> LearnerDashboard:
         .execute()
         .data,
     )
-    stats_rows = _quest_rows(
-        "user_stats",
-        lambda: supabase_admin.table("user_stats")
-        .select("current_streak")
-        .eq("user_id", user_id)
-        .limit(1)
-        .execute()
-        .data,
-    )
-
     activities_by_date = {
         str(row["activity_date"]): row # type: ignore
         for row in activity_rows
@@ -346,10 +338,6 @@ def get_learner_dashboard(profile: Dict[str, Any]) -> LearnerDashboard:
         "readingTurns": len(reading_rows),
         "shopTx": len(shop_rows),
         "boostUses": len(boost_rows),
-        "streak": _required_count(
-            (stats_rows[0].get("current_streak") if stats_rows else 0) or 0,
-            "chuỗi ngày học",
-        ),
     }
 
     daily_quests = select_daily_quests(user_id, today, metrics, lessons_target)

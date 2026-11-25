@@ -92,6 +92,19 @@ def _models() -> list[str]:
     return list(dict.fromkeys(name for name in ordered if name))
 
 
+def _level_rule(level: str) -> str:
+    """Văn phong đời thường theo từng trình độ — dùng chung cho ra đề và chấm bài."""
+    return (
+        f"Văn phong bắt buộc cho trình độ {(level or 'A2').upper()}: "
+        "chỉ dùng từ ngữ đời thường mà người bản xứ dùng khi nói chuyện hằng ngày. "
+        "Cấm từ ngữ học thuật, văn bản hành chính, báo cáo nghiên cứu, thuật ngữ chuyên ngành "
+        "và từ trừu tượng hiếm gặp (ví dụ tiếng Anh: utilize, commence, demonstrate, consequently, "
+        "furthermore, phenomenon, paradigm, facilitate, thereof; tiếng Nhật: 使用～する, 実施する, "
+        "すなわち, 当該, ～ aforementioned). Ưu tiên động từ đơn giản, cụ thể và câu ngắn. "
+        "Không viết như bài luận thi đại học hay bài báo khoa học."
+    )
+
+
 def _generate_json(prompt: str) -> Any:
     keys = [key.strip() for key in settings.GEMINI_API_KEYS.split(",") if key.strip()]
     if not keys:
@@ -140,6 +153,10 @@ def generate_topics(language: str, level: str, count: int) -> list[WritingTopic]
         payload = _generate_json(f"""Bạn là giáo viên soạn đề bài viết.
 Sinh {count} đề viết đoạn văn bằng {_language_name(language)} cho học viên trình độ {normalized}.
 Mỗi đề phải rõ ràng, đời thường, không cần kiến thức chuyên môn.
+{_level_rule(normalized)}
+title và prompt cũng phải viết bằng từ ngữ đời thường; mỗi đề gắn với một việc thực tế
+(ăn uống, đi lại, bạn bè, công việc hằng ngày, sở thích, mua sắm, thời tiết).
+Không ra đề nghị luận học thuật, không đòi hỏi số liệu, nghiên cứu hay lý thuyết.
 min_words là số từ tối thiểu phù hợp với {normalized} (CEFR: A1 40-60, A2 60-90, B1 90-130, B2 130-170, C1+ 180-260; JLPT tiếng Nhật: N5 30-50, N4 50-80, N3 80-120, N2 120-180, N1 180-260).
 checklist: 3 gợi ý ngắn bằng tiếng Việt giúp học viên tự kiểm tra bài.
 Chỉ trả về một JSON array hợp lệ, không markdown:
@@ -161,8 +178,9 @@ def evaluate_writing(
     text: str,
 ) -> WritingEvaluation:
     """Chấm đoạn văn theo 4 tiêu chí, trả về nhận xét + câu sửa."""
+    target_level = (level or "A2").upper()
     payload = _generate_json(f"""Bạn là giám khảo chấm writing nghiêm khắc nhưng khích lệ.
-Ngôn ngữ bài viết: {_language_name(language)}. Trình độ mục tiêu: {(level or 'A2').upper()}.
+Ngôn ngữ bài viết: {_language_name(language)}. Trình độ mục tiêu: {target_level}.
 Đề bài: {topic_title!r} — {topic_prompt!r}
 Bài của học viên:
 \"\"\"{text}\"\"\"
@@ -172,9 +190,14 @@ Mỗi tiêu chí cho điểm 0-10 và một comment ngắn bằng tiếng Việt
 overall là điểm tổng làm tròn 0-10 (không phải trung bình cộng máy móc).
 corrections: lấy tối đa 8 câu có lỗi, nguyên văn câu sai (original), câu đã sửa (corrected),
 và issue ngắn bằng tiếng Việt giải thích lỗi. Bỏ qua câu đã đúng.
-natural_version: viết lại cả đoạn văn giữ ý của học viên nhưng tự nhiên đúng trình độ
-{(level or 'A2').upper()}. next_step: 1 việc cụ thể học viên nên luyện tiếp.
-summary: 2-3 câu tiếng Việt, chỉ ra điểm mạnh trước, điểm yếu sau.
+{_level_rule(target_level)}
+natural_version: viết lại cả đoạn văn giữ đúng ý của học viên, chỉ sửa chỗ thật sự cần,
+và giữ nguyên độ đơn giản của câu. Không nâng cấp từ vựng lên mức học thuật, không thêm
+liên từ trang trọng, không biến đoạn văn của người học A1/A2 thành bài luận.
+Học viên viết câu ngắn thì bản viết lại vẫn là câu ngắn.
+corrections[].corrected cũng vậy: sửa lỗi ngữ pháp, giữ cách dùng từ đời thường của học viên.
+next_step: 1 việc cụ thể học viên nên luyện tiếp.
+summary: 2-3 câu tiếng Việt giản dị, không thuật ngữ ngôn ngữ học, chỉ ra điểm mạnh trước, điểm yếu sau.
 Chỉ trả về một JSON object hợp lệ, không markdown:
 {{"overall":7,"criteria":[{{"name":"Content","score":7,"comment":"..."}}],
 "summary":"...","corrections":[{{"original":"...","corrected":"...","issue":"..."}}],

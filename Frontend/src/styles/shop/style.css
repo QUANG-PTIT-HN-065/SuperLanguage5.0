@@ -1612,6 +1612,59 @@ body.user-guest .lang-dropdown {
   color: #e2e8f0;
 }
 
+/* Phân trang nhật ký giao dịch — bảng luôn dừng ở HISTORY_PAGE_SIZE dòng. */
+.history-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* display:flex ở trên sẽ thắng thuộc tính hidden, phải khai báo lại. */
+.history-pager[hidden] {
+  display: none;
+}
+
+.pager-btn {
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.pager-btn:hover:not(:disabled) {
+  background: rgba(0, 180, 216, 0.3);
+  color: #ffb703;
+}
+
+.pager-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pager-info {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .history-pager {
+    justify-content: center;
+  }
+}
+
 .tx-badge {
   display: inline-flex;
   align-items: center;

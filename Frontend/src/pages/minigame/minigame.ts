@@ -834,10 +834,10 @@ function updateTimerHUD(): void {
   if (!el || !box) return;
   el.textContent = `${game.timeLeft}s`;
   if (game.timeLeft <= 10) {
-    el.className = 'font-vt text-2xl leading-none text-rose-400 font-bold animate-pulse';
+    el.className = 'font-display text-2xl tabular-nums leading-none text-rose-400 font-bold animate-pulse';
     box.className = 'px-3 py-1.5 rounded-xl bg-rose-950/90 border border-rose-500 text-center min-w-[74px]';
   } else {
-    el.className = 'font-vt text-2xl leading-none text-cyan-200 font-bold';
+    el.className = 'font-display text-2xl tabular-nums leading-none text-cyan-200 font-bold';
     box.className = 'px-3 py-1.5 rounded-xl bg-slate-950 border border-cyan-400/50 text-center min-w-[74px]';
   }
 }
@@ -988,6 +988,24 @@ function updateSynergyPreview(): void {
 }
 
 // ==================== ATTACK EVALUATION & COMBAT ====================
+/** Viết hoa, dấu câu và khoảng trắng không được làm hỏng lượt chơi. */
+function normalizePlayerText(value: string): string {
+  return value.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** `sentence` phải đã qua normalizePlayerText; `form` là một dạng từ của thẻ. */
+function containsWordForm(sentence: string, form: string, lang: string): boolean {
+  const needle = normalizePlayerText(form).replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu, '');
+  if (!needle) return false;
+  return lang === 'en'
+    ? new RegExp(`\\b${escapeRegExp(needle)}\\b`).test(sentence)
+    : sentence.includes(needle);
+}
+
 export async function handleCastAttack(e: Event): Promise<void> {
   e.preventDefault();
   if (game.isGameOver || game.isTransitioning || game.isEvaluating) return;
@@ -1007,10 +1025,10 @@ export async function handleCastAttack(e: Event): Promise<void> {
   }
 
   // Kiểm tra Vùng Cấm Từ (Taboo Mutator)
+  const normalizedInput = normalizePlayerText(rawInput);
   if (game.mutator?.type === 'taboo' && game.mutator.forbidden) {
-    const lower = rawInput.toLowerCase();
     const violated = game.mutator.forbidden.find((fw) =>
-      game.lang === 'en' ? new RegExp(`\\b${fw}\\b`, 'i').test(lower) : rawInput.includes(fw)
+      containsWordForm(normalizedInput, fw, game.lang)
     );
     if (violated) {
       triggerWrongAnswer(`Vi phạm Vùng Cấm Từ! Bạn đã dùng từ bị cấm "${violated}".`, stats.isAllIn);
@@ -1018,23 +1036,9 @@ export async function handleCastAttack(e: Event): Promise<void> {
     }
   }
 
-  // Kiểm tra xem tất cả các từ vựng đã chọn có xuất hiện trong câu không
-  const lowerSentence = rawInput.toLowerCase();
-  const missingCards = stats.selectedCards.filter((card) => {
-    const forms = Array.isArray(card.forms) && card.forms.length ? card.forms : [card.word];
-    return !forms.some((form) => {
-      if (game.lang === 'en') {
-        return new RegExp(`\\b${form.toLowerCase()}\\b`, 'i').test(lowerSentence);
-      }
-      return rawInput.includes(form);
-    });
-  });
-
-  if (missingCards.length > 0) {
-    const names = missingCards.map((c) => `"${c.word}"`).join(', ');
-    triggerWrongAnswer(`Câu của bạn chưa chứa từ vựng đã chọn: ${names}.`, stats.isAllIn);
-    return;
-  }
+  // Thẻ từ có mặt trong câu hay không, ở dạng chia nào (practice/practicing, eat/ate,
+  // する/します) là do AI trọng tài quyết định. So khớp chuỗi ở đây chỉ nhận đúng nguyên
+  // dạng ghi trên thẻ nên từng chặn nhầm những câu chia từ hợp lệ.
 
   if (stats.isAllIn && stats.selectedCards.length < 2) {
     triggerWrongAnswer('Chế độ Cược Tất Tay yêu cầu ghép ít nhất 2 thẻ từ vựng trong cùng 1 câu!', true);
@@ -2015,7 +2019,7 @@ function updateAndDrawVFX(): void {
   }
 
   if (ctx) {
-    ctx.font = 'bold 11px "Press Start 2P", monospace';
+    ctx.font = 'bold 12px K2D, sans-serif';
     for (let i = game.floatingTexts.length - 1; i >= 0; i--) {
       const ft = game.floatingTexts[i];
       ft.y -= 0.45;

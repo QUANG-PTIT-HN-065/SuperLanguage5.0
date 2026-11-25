@@ -9,6 +9,7 @@ from app.schemas.learning import (
     BossQuizGradeRequest,
     BossQuizRequest,
     BossQuizSpeakRequest,
+    DungeonProgressUpdate,
     LessonAnswerResult,
     LessonAnswerSubmit,
     LessonCompletionResult,
@@ -19,10 +20,12 @@ from app.services.learning_service import (
     boss_speak_text,
     complete_lesson,
     generate_boss_quiz,
+    get_dungeon_progress,
     get_lesson_questions,
     get_topic_readings,
     grade_boss_quiz,
     list_topic_lessons,
+    save_dungeon_progress,
     submit_lesson_answer,
 )
 
@@ -52,6 +55,32 @@ def get_topic_lessons(
         status="success",
         message="Đã tải danh sách bài học.",
         data=list_topic_lessons(topic_id, profile, path_id),
+    )
+
+
+@router.get("/topics/{topic_id}/dungeon-progress", response_model=BaseResponse[Dict[str, Any]])
+def get_dungeon_progress_route(
+    topic_id: int = Path(ge=1),
+    profile: Dict[str, Any] = Depends(get_current_profile),
+):
+    return BaseResponse(
+        status="success",
+        message="Đã tải tiến trình ải.",
+        data={"completed_nodes": get_dungeon_progress(profile, topic_id)},
+    )
+
+
+@router.post("/topics/{topic_id}/dungeon-progress", response_model=BaseResponse[Dict[str, Any]])
+def save_dungeon_progress_route(
+    payload: DungeonProgressUpdate,
+    topic_id: int = Path(ge=1),
+    profile: Dict[str, Any] = Depends(get_current_profile),
+):
+    completed = save_dungeon_progress(profile, topic_id, payload.completed_nodes)
+    return BaseResponse(
+        status="success",
+        message="Đã lưu tiến trình ải.",
+        data={"completed_nodes": completed},
     )
 
 
