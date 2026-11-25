@@ -10,7 +10,7 @@ from app.db.supabase import supabase_admin
 
 logger = logging.getLogger(__name__)
 
-DAILY_AI_CALL_LIMIT = 15
+DAILY_AI_CALL_LIMIT = 50
 _DEFAULT_TIMEZONE = "Asia/Ho_Chi_Minh"
 
 

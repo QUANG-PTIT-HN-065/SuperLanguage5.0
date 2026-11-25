@@ -1014,7 +1014,7 @@ class AIPracticeManager {
     this.mediaRecorder = null;
     this.recordChunks = [];
     this.releaseStream();
-    this.micBtnEl.classList.remove('recording', 'is-armed');
+    this.micBtnEl.classList.remove('recording');
     const tooShort = Date.now() - this.recordStartedAt < 700 || blob.size < 1500;
     this.stopSpeechRecognition();
     if (tooShort) {
@@ -1065,19 +1065,12 @@ class AIPracticeManager {
       }
     }
     this.releaseStream();
-    this.micBtnEl.classList.remove('recording', 'is-armed');
+    this.micBtnEl.classList.remove('recording');
   }
 
   private releaseStream(): void {
     this.mediaStream?.getTracks().forEach((track) => track.stop());
     this.mediaStream = null;
-  }
-
-  /** Sal7 gợi ý xong nội dung mới thì tự mở mic cho lượt kế tiếp. */
-  private armMicForNextTurn(): void {
-    if (this.currentMode !== 'pronounce' || this.isPending || this.isRecording) return;
-    this.micBtnEl.classList.add('is-armed');
-    void this.startRecordSession();
   }
 
   private async submitPronunciation(audio: Blob): Promise<void> {
@@ -1452,10 +1445,10 @@ class AIPracticeManager {
         onDone: () => {
           extras.hidden = false;
           this.scrollToBottom();
-          if (this.currentMode === 'pronounce') this.armMicForNextTurn();
         }
       };
-      // Đàm thoại: chỉ hiện chữ, không bật giọng đọc và không tự mở mic.
+      // Sal7 đọc xong KHÔNG tự mở mic: người dùng tự bấm nút mic cho lượt kế tiếp.
+      // Đàm thoại: chỉ hiện chữ, không bật giọng đọc.
       const useAutoVoice = this.voiceEnabled && this.currentMode === 'pronounce';
       if (!useAutoVoice) {
         this.hideBubble();

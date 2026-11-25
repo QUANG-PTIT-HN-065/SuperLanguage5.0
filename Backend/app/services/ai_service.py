@@ -24,7 +24,7 @@ _FEEDBACK_MARKER = "[Feedback in Vietnamese]"
 # Bản đầy đủ (không lite) trả lời ổn định hơn và ít bị Google báo 503 "high demand".
 _DEFAULT_GEMINI_CHAT_MODEL = "gemini-3.5-flash"
 # Model nhẹ hay bị chặn theo cơn; thử hết danh sách rồi mới rơi sang provider khác.
-_CHAT_FALLBACK_MODELS = ("gemini-3.5-flash-lite", "gemini-3.1-flash-lite")
+_CHAT_FALLBACK_MODELS = ("gemini-3.6-flash","gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3-flash-preview")
 _CHAT_PLAN_SCHEMA = {
     "type": "object",
     "properties": {

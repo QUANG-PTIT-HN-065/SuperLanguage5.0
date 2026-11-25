@@ -2823,20 +2823,6 @@ body {
   display: none !important;
 }
 
-/* Mic tự mở cho lượt nói kế tiếp */
-.btn-mic.is-armed {
-  background: rgba(122, 226, 207, 0.18);
-  border-color: #7ae2cf;
-  color: #7ae2cf;
-  animation: micArmedPulse 1.5s infinite;
-}
-
-@keyframes micArmedPulse {
-  0% { box-shadow: 0 0 0 0 rgba(122, 226, 207, 0.55); }
-  70% { box-shadow: 0 0 0 12px rgba(122, 226, 207, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(122, 226, 207, 0); }
-}
-
 .input-row .chat-textarea:disabled,
 .input-row .btn-send:disabled {
   opacity: 0.45;
@@ -2901,7 +2887,6 @@ body {
     scroll-snap-type: none;
   }
   .chat-jump-latest,
-  .btn-mic.is-armed,
   .btn-mic.recording {
     animation: none;
   }
