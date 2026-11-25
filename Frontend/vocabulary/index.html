@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slanguage - Luyện Từ Vựng Thông Minh</title>
+  <link rel="icon" type="image/png" href="../assets/logo.png">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="./style.css">
+  <!-- Auth Guard: Chỉ cho phép truy cập khi đã đăng nhập, ngược lại điều hướng về Trang chủ với vai trò Guest -->
+  <script>
+    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
+      window.location.replace('../login/index.html');
+    }
+  </script>
+</head>
+<body class="user-authenticated">
+
+      <!-- ================= TOP NAVBAR ================= -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="nav-left">
+        <!-- Hamburger Menu Button (< 768px) -->
+        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng" aria-expanded="false" title="Menu điều hướng">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <a href="../home/index.html" class="brand-logo">
+          <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </a>
+
+        <nav class="desktop-nav">
+          <ul class="nav-links">
+            <li><a href="../home/index.html">Trang chủ</a></li>
+            <li class="nav-dropdown-item">
+              <button type="button" class="nav-link-dropdown-btn active" id="learnNavDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                <span>Học tập</span>
+                <i class="fa-solid fa-chevron-down nav-dropdown-chevron"></i>
+              </button>
+              <div class="nav-dropdown-menu" id="learnNavDropdownMenu">
+                <a href="../roadmap/index.html" class="nav-dropdown-link">
+                  <span class="nav-dropdown-icon"><i class="fa-solid fa-graduation-cap"></i></span>
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Học bài mới</span>
+                    <span class="nav-dropdown-desc">Lộ trình học theo từng mốc</span>
+                  </div>
+                </a>
+                <a href="./index.html" class="nav-dropdown-link active">
+                  <span class="nav-dropdown-icon"><i class="fa-solid fa-book-open"></i></span>
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện từ vựng</span>
+                    <span class="nav-dropdown-desc">Flashcard & kho từ vựng</span>
+                  </div>
+                </a>
+                <a href="../ai-practice/index.html" class="nav-dropdown-link">
+                  <span class="nav-dropdown-icon"><i class="fa-solid fa-robot"></i></span>
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện tập với AI</span>
+                    <span class="nav-dropdown-desc">Hội thoại tương tác trợ lý AI</span>
+                  </div>
+                </a>
+                <a href="../mini-game/index.html" class="nav-dropdown-link">
+                  <span class="nav-dropdown-icon"><i class="fa-solid fa-pen-nib"></i></span>
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện tập kỹ năng viết</span>
+                    <span class="nav-dropdown-desc">Mini game thử thách kỹ năng viết</span>
+                  </div>
+                </a>
+              </div>
+            </li>
+            <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
+          </ul>
+        </nav>
+      </div>
+
+      <div class="nav-right">
+        <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
+          <img src="../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <span id="headerStreakVal">14 Ngày</span>
+        </div>
+        <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
+          <i class="fa-solid fa-star"></i>
+          <span id="headerXPVal">2,450 XP</span>
+        </div>
+        <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
+          <i class="fa-solid fa-heart"></i>
+          <span id="headerHeartsVal">5/5</span>
+        </div>
+
+        <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
+        <div class="lang-dropdown auth-only" id="langDropdown">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
+            <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
+            <i class="fa-solid fa-chevron-down lang-chevron"></i>
+          </button>
+          <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
+            <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
+              <img src="../assets/flags/flag-jp.png" alt="JP" class="flag-icon">
+              <span class="lang-name">Tiếng Nhật (日本語)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
+              <img src="../assets/flags/flag-en.png" alt="EN" class="flag-icon">
+              <span class="lang-name">English (Tiếng Anh)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
+              <img src="../assets/flags/flag-vn.png" alt="VN" class="flag-icon">
+              <span class="lang-name">Tiếng Việt (Vietnamese)</span>
+              <i class="fa-solid fa-check check-icon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- User Account Dropdown (Shown when logged in) -->
+        <div class="user-dropdown auth-only" id="userDropdown">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini" id="headerAvatar">
+            <div class="user-info-text">
+              <div class="name" id="headerUserName">Vua Xứ Thanh</div>
+              <div class="role">Học viên</div>
+            </div>
+            <i class="fa-solid fa-chevron-down user-chevron"></i>
+          </button>
+          <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <!-- Mobile User Profile & Stats Header (Chứa thông tin cá nhân & chỉ số chuỗi, exp, mạng) -->
+            <div class="dropdown-user-header" id="dropdownUserHeader">
+              <div class="dropdown-user-meta">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="dropdown-user-avatar" id="dropdownUserAvatar">
+                <div class="dropdown-user-details">
+                  <div class="dropdown-user-name" id="dropdownUserName">Vua Xứ Thanh</div>
+                  <div class="dropdown-user-role">Học viên Slanguage</div>
+                </div>
+              </div>
+              <div class="dropdown-stats-grid">
+                <div class="dropdown-stat-chip streak" title="Chuỗi ngày học liên tục">
+                  <img src="../assets/streak-flame.gif?v=4" alt="Streak" class="streak-flame-img">
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">Chuỗi</span>
+                    <span class="dropdown-stat-value" id="dropdownStreakVal">18 Ngày</span>
+                  </div>
+                </div>
+                <div class="dropdown-stat-chip xp" title="Điểm kinh nghiệm tích lũy">
+                  <i class="fa-solid fa-star"></i>
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">EXP</span>
+                    <span class="dropdown-stat-value" id="dropdownXPVal">2,450 XP</span>
+                  </div>
+                </div>
+                <div class="dropdown-stat-chip hearts" title="Năng lượng làm bài">
+                  <i class="fa-solid fa-heart"></i>
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">Mạng</span>
+                    <span class="dropdown-stat-value" id="dropdownHeartsVal">5/5</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="user-dropdown-divider mobile-only-divider"></div>
+
+            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Thông tin cá nhân</span>
+                <span class="sub">Hồ sơ & cài đặt tài khoản</span>
+              </div>
+            </a>
+            <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Tiến độ học tập</span>
+                <span class="sub">Thống kê XP & chuỗi ngày</span>
+              </div>
+            </a>
+                        <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Shop quy đổi</span>
+                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
+              </div>
+            </a>
+            <div class="user-dropdown-divider"></div>
+            <a href="../login/index.html" class="user-dropdown-item logout-item" id="navLogoutItem" role="menuitem">
+              <div class="menu-item-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></div>
+              <div class="menu-item-text">
+                <span class="title">Đăng xuất</span>
+                <span class="sub">Thoát khỏi phiên học</span>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Guest Auth Buttons (Shown when NOT logged in) -->
+        <div class="guest-nav-auth guest-only" id="guestNavAuth">
+          <a href="../login/index.html" class="nav-auth-login">Đăng nhập</a>
+          <a href="../register/index.html" class="nav-auth-register">Đăng ký</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Side Drawer & Backdrop Overlay (< 768px) -->
+  <div class="mobile-drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <aside class="mobile-side-drawer" id="sideDrawer" aria-label="Menu điều hướng di động" aria-hidden="true">
+    <div class="drawer-header">
+      <a href="../home/index.html" class="drawer-brand">
+        <img src="../assets/logo.png" alt="Slanguage Logo" class="drawer-logo-img">
+        <span class="drawer-brand-name">S<span class="brand-language">language</span></span>
+      </a>
+      <button type="button" class="drawer-close-btn" id="drawerCloseBtn" aria-label="Đóng menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- User Profile Card inside Drawer -->
+    <div class="drawer-user-card" id="drawerUserCard">
+      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Avatar" class="drawer-avatar" id="drawerUserAvatar">
+      <div class="drawer-user-info">
+        <div class="drawer-user-name" id="drawerUserName">Vua Xứ Thanh</div>
+        <div class="drawer-user-role" id="drawerUserRole">Học viên Slanguage</div>
+      </div>
+    </div>
+
+    <!-- Quick Stats in Drawer -->
+    <div class="drawer-stats-grid">
+      <div class="drawer-stat-pill streak" title="Chuỗi ngày liên tục">
+        <img src="../assets/streak-flame.gif?v=4" alt="Streak" class="drawer-stat-flame">
+        <span id="drawerStreakVal">18 Ngày</span>
+      </div>
+      <div class="drawer-stat-pill xp" title="Điểm kinh nghiệm">
+        <i class="fa-solid fa-star"></i>
+        <span id="drawerXPVal">2,450 XP</span>
+      </div>
+      <div class="drawer-stat-pill hearts" title="Mạng học tập">
+        <i class="fa-solid fa-heart"></i>
+        <span id="drawerHeartsVal">5/5</span>
+      </div>
+    </div>
+
+    <div class="drawer-divider"></div>
+
+    <!-- 5 Main Navigation Links -->
+    <nav class="drawer-nav">
+      <div class="drawer-section-title">Menu chính</div>
+      <ul class="drawer-nav-list">
+        <li>
+          <a href="../home/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-house"></i></span>
+            <span class="drawer-nav-label">Trang chủ</span>
+          </a>
+        </li>
+        <li>
+          <a href="../roadmap/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-map-location-dot"></i></span>
+            <span class="drawer-nav-label">Học tập</span>
+          </a>
+        </li>
+        <li>
+          <a href="./index.html" class="drawer-nav-item active">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-book-open"></i></span>
+            <span class="drawer-nav-label">Luyện từ vựng</span>
+          </a>
+        </li>
+        <li>
+          <a href="../ai-practice/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-robot"></i></span>
+            <span class="drawer-nav-label">Luyện tập với AI</span>
+          </a>
+        </li>
+        <li>
+          <a href="../mini-game/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-pen-nib"></i></span>
+            <span class="drawer-nav-label">Luyện tập kỹ năng viết</span>
+          </a>
+        </li>
+        <li>
+          <a href="../leaderboard/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-trophy"></i></span>
+            <span class="drawer-nav-label">Bảng xếp hạng</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section-title">Tài khoản & Tiện ích</div>
+      <ul class="drawer-nav-list">
+        <li>
+          <a href="../profile/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-id-badge"></i></span>
+            <span class="drawer-nav-label">Thông tin cá nhân</span>
+          </a>
+        </li>
+        <li>
+          <a href="../shop/index.html" class="drawer-nav-item ">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-store"></i></span>
+            <span class="drawer-nav-label">Shop quy đổi</span>
+          </a>
+        </li>
+        <li>
+          <a href="../login/index.html" class="drawer-nav-item drawer-logout" id="drawerLogoutBtn">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span>
+            <span class="drawer-nav-label">Đăng xuất</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Mobile Bottom Navigation Bar (< 768px) -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Điều hướng ngón cái">
+    <a href="../home/index.html" class="bottom-nav-item ">
+      <i class="fa-solid fa-house bottom-nav-icon"></i>
+      <span class="bottom-nav-label">Trang chủ</span>
+    </a>
+    <a href="../roadmap/index.html" class="bottom-nav-item ">
+      <i class="fa-solid fa-map-location-dot bottom-nav-icon"></i>
+      <span class="bottom-nav-label">Học tập</span>
+    </a>
+    <a href="./index.html" class="bottom-nav-item active">
+      <i class="fa-solid fa-book-open bottom-nav-icon"></i>
+      <span class="bottom-nav-label">Từ vựng</span>
+    </a>
+    <a href="../ai-practice/index.html" class="bottom-nav-item ">
+      <i class="fa-solid fa-robot bottom-nav-icon"></i>
+      <span class="bottom-nav-label">Luyện AI</span>
+    </a>
+    <a href="../leaderboard/index.html" class="bottom-nav-item ">
+      <i class="fa-solid fa-trophy bottom-nav-icon"></i>
+      <span class="bottom-nav-label">Xếp hạng</span>
+    </a>
+  </nav>
+
+  <!-- ================= MAIN VOCABULARY WRAPPER ================= -->
+  <main class="vocab-main">
+
+    <!-- HERO HEADER -->
+    <section class="vocab-hero-card">
+      <div class="vocab-hero-left">
+        <h1 class="hero-title" id="vocabHeroTitle">Luyện Từ Vựng Thông Minh: Tiếng Nhật (JLPT N5)</h1>
+        <p class="hero-desc" id="vocabHeroDesc">
+          Hệ thống lặp lại ngắt quãng thông minh tự động đo lường độ phản xạ của não bộ, nhắc lại đúng thời điểm vàng trước khi bạn kịp quên.
+        </p>
+      </div>
+
+      <div class="vocab-hero-stats">
+        <div class="stat-box">
+          <span class="stat-number" id="statTotalWords">145</span>
+          <span class="stat-label">Tổng từ đã nạp</span>
+        </div>
+        <div class="stat-box highlight">
+          <span class="stat-number" id="statMasteredWords">98</span>
+          <span class="stat-label">Đã thuộc</span>
+        </div>
+        <div class="stat-box urgent">
+          <span class="stat-number" id="statReviewWords">12</span>
+          <span class="stat-label">Chưa thuộc</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-number" id="statRetentionRate">94%</span>
+          <span class="stat-label">Tỷ lệ ghi nhớ</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION NAVIGATION TABS -->
+    <section class="mode-nav-bar">
+      <div class="mode-tabs">
+        <button type="button" class="mode-tab active" data-tab="flashcard">
+          <i class="fa-solid fa-layer-group"></i> Thẻ Flashcard 3D
+        </button>
+        <button type="button" class="mode-tab" data-tab="quiz">
+          <i class="fa-solid fa-bolt-lightning"></i> Luyện tập từ vựng
+        </button>
+        <button type="button" class="mode-tab" data-tab="vault">
+          <i class="fa-solid fa-book-bookmark"></i> Sổ Tay Từ Vựng
+        </button>
+      </div>
+
+      <div class="deck-filter-wrap">
+        <span class="deck-label"><i class="fa-solid fa-filter"></i> Chủ đề:</span>
+        <select id="deckSelect" class="deck-select">
+          <option value="all">Tất cả từ vựng</option>
+          <option value="daily">Giao tiếp thường nhật</option>
+          <option value="work">Công việc & Thương mại</option>
+          <option value="idioms">Thành ngữ & Cụm từ hay</option>
+          <option value="urgent">Cần ôn gấp</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- ================= TAB 1: 3D FLASHCARD INTERACTIVE ================= -->
+    <section class="tab-panel active" id="tabFlashcard">
+      <div class="flashcard-deck-container">
+        
+        <!-- Header deck info & Progress -->
+        <div class="deck-status-bar">
+          <div class="deck-counter">
+            <span class="label">Tiến trình thẻ:</span>
+            <strong id="cardIndexLabel">1</strong> / <span id="cardTotalLabel">10</span>
+          </div>
+
+          <div class="deck-progress-bar">
+            <div class="deck-progress-fill" id="cardProgressFill" style="width: 10%;"></div>
+          </div>
+
+          <div class="deck-actions">
+            <button type="button" class="deck-tool-btn" id="btnShuffle" title="Xáo trộn thứ tự thẻ">
+              <i class="fa-solid fa-shuffle"></i>
+            </button>
+            <button type="button" class="deck-tool-btn" id="btnSpeakerPrompt" title="Phát âm từ vựng">
+              <i class="fa-solid fa-volume-high"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3D Card Stage with Side Arrow Navigation -->
+        <div class="flashcard-stage-wrapper">
+          <button type="button" class="card-side-arrow-btn prev" id="btnPrevCard" title="Thẻ trước (Phím mũi tên trái ←)" aria-label="Thẻ trước">
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+
+          <div class="flashcard-stage">
+            <div class="flashcard-3d-box" id="flashcardBox" title="Chạm vào thẻ hoặc nhấn Phím Space để lật mặt sau">
+              <div class="flashcard-inner">
+                
+                <!-- FRONT FACE -->
+                <div class="flashcard-face flashcard-front">
+                  <div class="face-header">
+                    <span class="face-tag" id="fcTag">Kanji & Từ vựng N5</span>
+                  </div>
+
+                  <div class="face-body">
+                    <div class="fc-main-word" id="fcWord">美味しい</div>
+                    <div class="fc-phonetic-wrap">
+                      <span class="fc-phonetic" id="fcPhonetic">/oɪ.ʃiː/ - Oishii</span>
+                      <button type="button" class="fc-sound-btn" id="fcSoundBtnFront" title="Nghe phát âm chuẩn">
+                        <i class="fa-solid fa-volume-high"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BACK FACE -->
+                <div class="flashcard-face flashcard-back">
+                  <div class="face-header">
+                    <span class="face-tag back" id="fcBackTag">Nghĩa & Ứng dụng thực tế</span>
+                  </div>
+
+                  <div class="face-body">
+                    <div class="fc-meaning" id="fcMeaning">Ngon miệng, thơm ngon, đậm đà</div>
+                    
+                    <div class="fc-example-card">
+                      <div class="example-label"><i class="fa-solid fa-quote-left"></i> Câu ví dụ giao tiếp:</div>
+                      <div class="example-target" id="fcExampleTarget">「このラーメンはとても美味しいですね！」</div>
+                      <div class="example-meaning" id="fcExampleMeaning">"Món ramen này thực sự rất là ngon miệng đấy nhỉ!"</div>
+                      <button type="button" class="fc-example-sound-btn" id="fcSoundBtnBack" title="Nghe câu ví dụ">
+                        <i class="fa-solid fa-volume-high"></i> Nghe đọc mẫu câu
+                      </button>
+                    </div>
+
+                    <div class="fc-nuance-box" id="fcNuance">
+                      💡 <strong>Mẹo ghi nhớ:</strong> Thường dùng sau khi vừa nếm thử đồ ăn/uống, có thể nói kéo dài "Oishiii~" để thể hiện sự thích thú.
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="card-side-arrow-btn next" id="btnNextCard" title="Thẻ kế tiếp (Phím mũi tên phải →)" aria-label="Thẻ kế tiếp">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= TAB 2: SPEED QUIZ ARENA ================= -->
+    <section class="tab-panel" id="tabQuiz">
+      <div class="quiz-arena-container">
+        
+        <div class="quiz-status-header">
+          <div class="quiz-streak-box">
+            <img src="../assets/streak-flame.gif?v=4" alt="Streak flame" class="streak-flame-img streak-flame-chip"> Chuỗi đúng: <strong id="quizStreakCount">0</strong>
+          </div>
+          <div class="quiz-timer-box">
+            <i class="fa-solid fa-stopwatch"></i> <span id="quizTimerText">15s</span>
+          </div>
+        </div>
+
+        <div class="quiz-card-box">
+          <div class="quiz-question-type">
+            <button type="button" class="quiz-sound-btn" id="quizPlaySound" title="Nghe phát âm">
+              <i class="fa-solid fa-volume-high"></i> Nghe từ
+            </button>
+          </div>
+
+          <div class="quiz-target-word" id="quizTargetWord">美味しい (Oishii)</div>
+          <div class="quiz-sub-hint" id="quizSubHint">Phát âm: /oɪ.ʃiː/</div>
+
+          <div class="quiz-options-grid" id="quizOptionsGrid">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <div class="quiz-feedback-banner" id="quizFeedbackBanner">
+          <div class="feedback-msg" id="quizFeedbackMsg">Chính xác! 🔥 (Đã thuộc)</div>
+          <button type="button" class="quiz-next-btn" id="quizNextBtn">
+            Câu tiếp theo <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= TAB 3: VOCABULARY VAULT ================= -->
+    <section class="tab-panel" id="tabVault">
+      <div class="vault-container">
+        
+        <div class="vault-controls-bar">
+          <div class="search-input-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="vaultSearchInput" placeholder="Tìm kiếm từ vựng, phiên âm, hoặc nghĩa tiếng Việt...">
+          </div>
+
+          <div class="vault-filter-pills" id="vaultFilterPills">
+            <button type="button" class="vault-pill active" data-filter="all">Tất cả (<span id="vaultCountAll">0</span>)</button>
+            <button type="button" class="vault-pill" data-filter="mastered">Đã thuộc (<span id="vaultCountMastered">0</span>)</button>
+            <button type="button" class="vault-pill" data-filter="unmastered">Chưa thuộc (<span id="vaultCountUnmastered">0</span>)</button>
+          </div>
+        </div>
+
+        <div class="vault-grid" id="vaultGrid">
+          <!-- Dynamically populated word cards -->
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+    <footer class="footer">
+    <div class="footer-container">
+      <!-- Cột 1: Giới thiệu thương hiệu -->
+      <div class="footer-col">
+        <div class="brand-logo" style="margin-bottom: 14px;">
+          <img src="../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <span class="brand-name">S<span class="brand-language">language</span></span>
+        </div>
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
+        </p>
+      </div>
+
+      <!-- Cột 2: Chương trình học -->
+      <div class="footer-col">
+        <h4>Chương trình học</h4>
+        <ul>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
+        </ul>
+      </div>
+
+      <!-- Cột 3: Thông tin liên hệ -->
+      <div class="footer-col">
+        <h4>Thông tin liên hệ</h4>
+        <ul class="footer-contact-list">
+          <li>
+            <i class="fa-solid fa-phone"></i>
+            <div>
+              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <a href="tel:19006868" class="contact-val">1900 6868</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-envelope"></i>
+            <div>
+              <span class="contact-label">Email học vụ:</span>
+              <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-location-dot"></i>
+            <div>
+              <span class="contact-label">Trụ sở học thuật:</span>
+              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-clock"></i>
+            <div>
+              <span class="contact-label">Thời gian làm việc:</span>
+              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Cột 4: Cam kết chất lượng -->
+      <div class="footer-col">
+        <h4>Cam kết chất lượng</h4>
+        <ul class="footer-commit-list">
+          <li>
+            <i class="fa-solid fa-shield-halved"></i>
+            <div>
+              <strong>Chuẩn đầu ra quốc tế</strong>
+              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-rotate-left"></i>
+            <div>
+              <strong>Cam kết hoàn học phí</strong>
+              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-user-graduate"></i>
+            <div>
+              <strong>Đồng hành 1-1 chuyên sâu</strong>
+              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+            </div>
+          </li>
+          <li>
+            <i class="fa-solid fa-infinity"></i>
+            <div>
+              <strong>Quyền lợi học trọn đời</strong>
+              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu.</div>
+      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
+    </div>
+  </footer>
+
+  <!-- ================= TOAST NOTIFICATION CONTAINER ================= -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- GLOBAL TRANSITION LOADING SCREEN -->
+  <div id="slanguageLoadingOverlay" class="loading-screen-overlay" style="pointer-events: none;">
+    <div class="loading-content-box">
+      <div class="video-frame">
+        <video id="loadingVideoPlayer" muted src="../assets/loading.mp4" loop playsinline></video>
+      </div>
+      <div class="loading-text-wrap">
+        <span class="loading-title">Đang tải, hãy đợi...</span>
+      </div>
+    </div>
+  </div>
+
+      <!-- Nạp và thực thi trực tiếp file TypeScript qua Babel Standalone (Không dùng file .js) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.4/babel.min.js"></script>
+  <script>
+    fetch('./vocabulary.ts')
+      .then(function(r) { return r.text(); })
+      .then(function(code) {
+        var js = Babel.transform(code, { filename: 'vocabulary.ts', presets: ['typescript'] }).code;
+        var s = document.createElement('script');
+        s.textContent = js;
+        document.body.appendChild(s);
+      })
+      .catch(function(err) { console.error('Error loading vocabulary.ts:', err); });
+  </script>
+</body>
+</html>
