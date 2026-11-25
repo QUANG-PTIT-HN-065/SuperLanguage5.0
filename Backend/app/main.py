@@ -1,4 +1,6 @@
 import logging
+import threading
+import time
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -64,6 +66,28 @@ app.include_router(
     prefix=f"{settings.API_V1_STR}/leaderboard",
     tags=["leaderboard"],
 )
+
+
+def _run_inactive_account_cleanup_worker() -> None:
+    """Nền định kỳ xóa tài khoản đã hết thời hạn cảnh báo 7 ngày."""
+    from app.services.admin import process_inactive_account_deletions
+
+    while True:
+        try:
+            process_inactive_account_deletions()
+        except Exception as exc:
+            logger.warning("Không thể chạy tác vụ xóa tài khoản không hoạt động: %s", exc)
+        time.sleep(6 * 60 * 60)
+
+
+@app.on_event("startup")
+def start_inactive_account_cleanup_worker() -> None:
+    worker = threading.Thread(
+        target=_run_inactive_account_cleanup_worker,
+        name="inactive-account-cleanup",
+        daemon=True,
+    )
+    worker.start()
 
 @app.get("/")
 def read_root():

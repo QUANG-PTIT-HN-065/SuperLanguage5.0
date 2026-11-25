@@ -641,7 +641,7 @@
                   </div>
                 </div>
                 <div class="overflow-x-auto">
-                  <table class="w-full min-w-[760px] table-fixed text-left text-sm">
+                  <table class="w-full min-w-190 table-fixed text-left text-sm">
                     <colgroup>
                       <col class="w-[30%]">
                       <col class="w-[14%]">
@@ -682,6 +682,20 @@
           </div>
 
           <div class="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+            <div class="p-4 border-b border-slate-200 flex flex-col xl:flex-row gap-3 xl:items-end xl:justify-between">
+              <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
+                <input id="searchUserInput" type="search" placeholder="Tìm theo tên, username hoặc email..." class="h-10 w-full sm:w-72 px-3 border border-slate-300 rounded-xl text-sm">
+                <select id="filterUserStatus" class="h-10 px-3 border border-slate-300 rounded-xl text-sm bg-white">
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="active">Đang hoạt động</option>
+                  <option value="inactive">Không hoạt động ≥ 24 tháng</option>
+                  <option value="suspended">Đang bị khóa</option>
+                </select>
+              </div>
+              <button id="btnDeleteInactiveUsers" type="button" class="h-10 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold">
+                Xóa tài khoản không hoạt động 24 tháng
+              </button>
+            </div>
             <div class="overflow-x-auto">
               <table class="w-full text-left text-sm border-collapse">
                 <thead>
@@ -691,12 +705,22 @@
                     <th class="py-3 px-4">Gói tài khoản</th>
                     <th class="py-3 px-4">Tổng XP & Streak</th>
                     <th class="py-3 px-4">Trạng thái</th>
+                    <th class="py-3 px-4">Hoạt động lần cuối</th>
+                    <th class="py-3 px-4 text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody id="usersTableBody" class="divide-y divide-slate-100">
                   <!-- Users rows from Supabase -->
                 </tbody>
               </table>
+            </div>
+            <div class="px-4 py-3 border-t border-slate-200 flex items-center justify-between gap-3">
+              <span id="userPaginationInfo" class="text-xs text-slate-500">Đang tải...</span>
+              <div class="flex items-center gap-2">
+                <button id="prevUserPage" type="button" class="h-8 px-3 rounded-lg border border-slate-300 text-xs font-semibold disabled:opacity-40">Trước</button>
+                <span id="userPageNumber" class="text-xs font-bold text-slate-700">1/1</span>
+                <button id="nextUserPage" type="button" class="h-8 px-3 rounded-lg border border-slate-300 text-xs font-semibold disabled:opacity-40">Sau</button>
+              </div>
             </div>
           </div>
         </div>
@@ -716,13 +740,21 @@
             </div>
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
               <p class="text-sm font-semibold text-slate-600">Chuỗi Ngày Học Dài Nhất</p>
-              <h3 class="font-title text-2xl font-bold text-emerald-600 mt-1">365 ngày 🔥</h3>
+              <h3 id="statAnalyticsMaxStreak" class="font-title text-2xl font-bold text-emerald-600 mt-1">...</h3>
               <p class="text-xs text-slate-500 mt-2">Kỷ lục chuyên cần học viên</p>
             </div>
             <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
               <p class="text-sm font-semibold text-slate-600">Tỷ Lệ Đạt Mục Tiêu Hằng Ngày</p>
-              <h3 class="font-title text-2xl font-bold text-amber-600 mt-1">94.8%</h3>
-              <p class="text-xs text-slate-500 mt-2">Tính trên số bài hoàn thành</p>
+              <h3 id="statAnalyticsGoalMet" class="font-title text-2xl font-bold text-amber-600 mt-1">...</h3>
+              <p class="text-xs text-slate-500 mt-2">Tỷ lệ hoạt động 7 ngày đạt goal_met</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
+              <p class="text-sm font-semibold text-slate-600">Độ Chính Xác Bài Học</p>
+              <h3 id="statAnalyticsLessonAccuracy" class="font-title text-2xl font-bold text-indigo-600 mt-1">...</h3>
+              <p class="text-xs text-slate-500 mt-2">Tổng điểm / tổng câu hỏi trong 7 ngày gần nhất</p>
             </div>
           </div>
         </div>
@@ -777,6 +809,17 @@
 
   <!-- Toast Container -->
   <div id="toastContainer" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <div id="actionConfirmModal" class="fixed inset-0 z-60 hidden items-center justify-center bg-slate-950/40 p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl border border-slate-200 p-5">
+      <h3 id="actionConfirmTitle" class="font-title text-lg font-bold text-slate-900">Xác nhận hành động</h3>
+      <p id="actionConfirmDescription" class="mt-2 text-sm leading-6 text-slate-600"></p>
+      <div class="mt-5 flex justify-end gap-2">
+        <button id="actionConfirmCancel" type="button" class="h-10 px-4 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700">Hủy</button>
+        <button id="actionConfirmAccept" type="button" class="h-10 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-sm font-bold text-white">Xác nhận</button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="../../types/admin/dashboard.ts"></script>
 </body>

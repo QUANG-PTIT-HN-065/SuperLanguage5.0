@@ -97,7 +97,7 @@ async function postJson<T>(path: string, body: unknown, accessToken?: string): P
 
 export async function adminApi<T>(
   path: string,
-  options: { method?: "GET" | "POST" | "PUT" | "DELETE"; body?: unknown } = {},
+  options: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; body?: unknown } = {},
 ): Promise<T> {
   let accessToken = sessionStorage.getItem(ACCESS_TOKEN_KEY);
   if (!accessToken) {
