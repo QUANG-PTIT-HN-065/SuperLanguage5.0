@@ -31,7 +31,7 @@ class DailyAIQuotaTests(unittest.TestCase):
         function_name, parameters = client.rpc.call_args.args
         self.assertEqual(function_name, "consume_daily_ai_calls")
         self.assertEqual(parameters["p_user_id"], "authenticated-user")
-        self.assertEqual(parameters["p_daily_limit"], 15)
+        self.assertEqual(parameters["p_daily_limit"], DAILY_AI_CALL_LIMIT)
         self.assertRegex(parameters["p_usage_date"], r"^\d{4}-\d{2}-\d{2}$")
 
     @patch("app.core.ai_quota.supabase_admin")

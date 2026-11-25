@@ -94,7 +94,7 @@ class AIPracticeManager {
   private voiceEnabled: boolean = true;
   private voiceRate: number = 1.0;
   private aiQuotaUsed: number = 0;
-  private aiQuotaLimit: number = 15;
+  private aiQuotaLimit: number = 50;
   private isRecording: boolean = false;
   private speechRecognizer: any = null;
   private micHeld = false;
@@ -1816,7 +1816,7 @@ class AIPracticeManager {
   }
 
   /**
-   * Hạn mức AI là của server theo tài khoản (15 lượt/ngày, múi giờ người dùng).
+   * Hạn mức AI là của server theo tài khoản (50 lượt/ngày, múi giờ người dùng).
    * Chat không cộng XP nên chỉ cần đọc lại lượt đã dùng sau mỗi lượt đổi.
    */
   private async refreshQuota(): Promise<void> {
