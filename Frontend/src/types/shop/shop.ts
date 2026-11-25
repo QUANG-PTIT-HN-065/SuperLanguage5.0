@@ -64,6 +64,8 @@ const CATEGORY_IMAGES: Partial<Record<ShopItem["category"], string>> = {
   shield: "../../../assets/potion_blue.png",
 };
 
+const HISTORY_PAGE_SIZE = 8;
+
 function itemVisual(
   id: string,
   iconClass: string,
@@ -83,6 +85,11 @@ class SlanguageShopApp {
   private readonly itemsGrid = document.getElementById("shopItemsGrid");
   private readonly inventoryList = document.getElementById("inventoryList");
   private readonly historyBody = document.getElementById("historyTableBody");
+  private readonly historyPager = document.getElementById("historyPager");
+  private readonly historyPagerInfo = document.getElementById("historyPagerInfo");
+  private readonly historyPrevButton = document.getElementById("btnHistoryPrev") as HTMLButtonElement | null;
+  private readonly historyNextButton = document.getElementById("btnHistoryNext") as HTMLButtonElement | null;
+  private historyPage = 1;
   private readonly modalOverlay = document.getElementById("shopModalOverlay");
   private readonly modalBody = document.getElementById("modalBodyContent");
   private readonly loadingMessage = this.createMessageElement();
@@ -171,6 +178,8 @@ class SlanguageShopApp {
       const itemId = row.dataset.useItemId;
       if (itemId) this.confirmUseItem(itemId);
     });
+    this.historyPrevButton?.addEventListener("click", () => this.stepHistoryPage(-1));
+    this.historyNextButton?.addEventListener("click", () => this.stepHistoryPage(1));
   }
 
   private async loadState(): Promise<void> {
@@ -181,6 +190,7 @@ class SlanguageShopApp {
     try {
       const response = await slanguageApi<ShopState>("/api/v1/shop");
       this.state = response.data;
+      this.historyPage = 1;
       this.render();
       this.loadingMessage.textContent = "";
     } catch (error) {
@@ -625,14 +635,44 @@ class SlanguageShopApp {
   private renderHistory(): void {
     clearSkeleton(this.historyBody);
     if (!this.historyBody || !this.state) return;
-    this.historyBody.innerHTML = this.state.transactions.length
-      ? this.state.transactions.map((transaction) => `<tr>
+    const pageCount = this.historyPageCount();
+    this.historyPage = Math.min(Math.max(this.historyPage, 1), pageCount);
+    const start = (this.historyPage - 1) * HISTORY_PAGE_SIZE;
+    const rows = this.state.transactions.slice(start, start + HISTORY_PAGE_SIZE);
+    this.historyBody.innerHTML = rows.length
+      ? rows.map((transaction) => `<tr>
           <td>${this.escape(transaction.type === "exchange" ? t("sh.txExchange") : t("sh.txPurchase"))}</td>
           <td><strong>${this.escape(transaction.title)}</strong><br><small>${this.escape(transaction.details)}</small></td>
           <td>${transaction.xp_delta ? `${this.format(transaction.xp_delta)} XP` : ""} ${transaction.coin_delta > 0 ? "+" : ""}${this.format(transaction.coin_delta)} Coin</td>
           <td>${this.escape(new Date(transaction.created_at).toLocaleString("vi-VN"))}</td>
         </tr>`).join("")
       : `<tr><td colspan="4" class="empty-state">${this.escape(t("sh.emptyHistory"))}</td></tr>`;
+    this.renderHistoryPager(pageCount);
+  }
+
+  private historyPageCount(): number {
+    return Math.max(1, Math.ceil((this.state?.transactions.length ?? 0) / HISTORY_PAGE_SIZE));
+  }
+
+  private stepHistoryPage(delta: number): void {
+    const next = this.historyPage + delta;
+    if (next < 1 || next > this.historyPageCount()) return;
+    this.historyPage = next;
+    this.renderHistory();
+  }
+
+  private renderHistoryPager(pageCount: number): void {
+    if (!this.historyPager) return;
+    this.historyPager.hidden = pageCount <= 1;
+    if (pageCount <= 1) return;
+    if (this.historyPagerInfo) {
+      this.historyPagerInfo.textContent = t("sh.historyPageInfo", {
+        page: this.historyPage,
+        total: pageCount,
+      });
+    }
+    if (this.historyPrevButton) this.historyPrevButton.disabled = this.historyPage <= 1;
+    if (this.historyNextButton) this.historyNextButton.disabled = this.historyPage >= pageCount;
   }
 
   private setBusy(busy: boolean): void {

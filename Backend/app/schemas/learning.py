@@ -50,6 +50,12 @@ class LessonCompletionResult(BaseModel):
     boost: LessonBoostInfo | None = None
 
 
+class DungeonProgressUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    completed_nodes: list[str] = Field(max_length=40)
+
+
 class VocabularyWordReview(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

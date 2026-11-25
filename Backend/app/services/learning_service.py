@@ -954,3 +954,64 @@ def boss_speak_text(profile: Dict[str, Any], quiz_token: str, index: int) -> tup
         )
     language = payload.get("language", "en")
     return question["answer"], _LANGUAGE_NAMES.get(language, "English")
+
+
+DUNGEON_NODE_LIMIT = 40
+DUNGEON_NODE_PATTERN = re.compile(r"^t\d{1,9}_s[1-5]_(?:hub|easy|normal|hard)$")
+
+
+def _clean_dungeon_nodes(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    nodes: list[str] = []
+    for item in value[:DUNGEON_NODE_LIMIT]:
+        if isinstance(item, str) and DUNGEON_NODE_PATTERN.match(item) and item not in nodes:
+            nodes.append(item)
+    return nodes
+
+
+def get_dungeon_progress(profile: Dict[str, Any], topic_id: int) -> list[str]:
+    """Các ải đã vượt trong chủ đề, lưu theo tài khoản nên không mất khi đăng xuất."""
+    try:
+        data = supabase_admin.rpc(
+            "get_dungeon_progress",
+            {"p_user_id": str(profile["id"]), "p_topic_id": topic_id},
+        ).execute().data
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải tiến trình ải. Vui lòng thử lại.",
+        ) from exc
+    return _clean_dungeon_nodes(data)
+
+
+def save_dungeon_progress(
+    profile: Dict[str, Any], topic_id: int, completed_nodes: list[str]
+) -> list[str]:
+    """Hợp nhất danh sách ải vừa vượt vào tiến trình đã lưu, trả về danh sách đầy đủ."""
+    if not isinstance(completed_nodes, list) or len(completed_nodes) > DUNGEON_NODE_LIMIT:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Danh sách ải hoàn thành không hợp lệ.",
+        )
+    for node in completed_nodes:
+        if not isinstance(node, str) or not DUNGEON_NODE_PATTERN.match(node):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                f"Định danh ải không hợp lệ: {node}",
+            )
+    try:
+        data = supabase_admin.rpc(
+            "save_dungeon_progress",
+            {
+                "p_user_id": str(profile["id"]),
+                "p_topic_id": topic_id,
+                "p_completed_nodes": completed_nodes,
+            },
+        ).execute().data
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể lưu tiến trình ải. Vui lòng thử lại.",
+        ) from exc
+    return _clean_dungeon_nodes(data)

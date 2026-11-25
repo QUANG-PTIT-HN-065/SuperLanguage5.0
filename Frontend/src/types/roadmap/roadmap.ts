@@ -149,6 +149,9 @@ const HUB_ICONS = [
   'fa-solid fa-crown',
 ];
 
+/** Nhánh độ khó mở lần lượt trong cùng một tầng: Dễ → Vừa → Khó. */
+const TIER_ORDER: DungeonDifficulty[] = ['easy', 'normal', 'hard'];
+
 const DIFF_META: Record<DungeonDifficulty, { icon: string; xp: number; hearts: number; titleKey: string; objectiveKeys: string[] }> = {
   easy: {
     icon: 'fa-solid fa-feather-pointed',
@@ -285,7 +288,7 @@ class SlanguageDungeonTree {
   private bossToken: string | null = null;
   private bossQuestions: BossPublicQuestion[] = [];
   private bossAnswers: Array<{ index: number; value: unknown }> = [];
-  private failReason: 'hearts' | 'boss' | null = null;
+  private failReason: 'hearts' | 'boss' | 'trial' | null = null;
   private matchPairs: Map<string, string> = new Map();
   private matchSelectedWord: string | null = null;
   private fillInput: HTMLInputElement | null = null;
@@ -598,13 +601,26 @@ class SlanguageDungeonTree {
     }
   }
 
+  /** Nạp tiến trình lưu trên tài khoản: đăng xuất hay đổi máy không mất ải đã qua. */
+  private mergeServerProgress(response: { data?: unknown } | null): void {
+    const completed = response ? asRecord(response.data).completed_nodes : null;
+    if (!Array.isArray(completed)) return;
+    const before = this.mastered.size;
+    for (const id of completed) {
+      if (typeof id === 'string') this.mastered.add(id);
+    }
+    if (this.mastered.size !== before) this.persistProgress();
+  }
+
   private async loadDungeon(): Promise<void> {
     try {
-      const [wordsResponse, lessonsResponse, readingsResponse] = await Promise.all([
+      const [wordsResponse, lessonsResponse, readingsResponse, progressResponse] = await Promise.all([
         slanguageApi(`/api/v1/vocabulary/words?topic_id=${this.topicId}&limit=100`),
         slanguageApi(`/api/v1/lessons/topics/${this.topicId}/lessons?path_id=${this.pathId}`),
         slanguageApi(`/api/v1/lessons/topics/${this.topicId}/readings`).catch(() => null),
+        slanguageApi(`/api/v1/lessons/topics/${this.topicId}/dungeon-progress`).catch(() => null),
       ]);
+      this.mergeServerProgress(progressResponse);
       const wordItems = Array.isArray(asRecord(wordsResponse.data).items)
         ? (asRecord(wordsResponse.data).items as unknown[])
         : [];
@@ -767,8 +783,9 @@ class SlanguageDungeonTree {
   }
 
   private applyStatuses(): void {
-    // Đọc xong bài đọc (hub) chỉ mở 3 nhánh thử thách của tầng đó; tầng sau
-    // mở khi vượt ÍT NHẤT 1 ải bất kỳ của tầng trước.
+    // Đọc xong bài đọc (hub) mở nhánh đầu tiên của tầng đó; mỗi nhánh sau chỉ mở
+    // khi đã QUA nhánh ngay trước (Dễ → Vừa → Khó). Tầng sau mở khi vượt ÍT NHẤT
+    // 1 ải bất kỳ của tầng trước.
     const stageOpen = (stage: number): boolean =>
       stage === 1 ||
       this.nodes
@@ -777,12 +794,23 @@ class SlanguageDungeonTree {
     for (const node of this.nodes) {
       if (this.mastered.has(node.id)) {
         node.status = 'mastered';
-      } else if (!stageOpen(node.stage) || (!node.isHub && !this.mastered.has(this.hubId(node.stage)))) {
+      } else if (!stageOpen(node.stage) || (!node.isHub && (!this.mastered.has(this.hubId(node.stage)) || !this.tierUnlocked(node)))) {
         node.status = 'locked';
       } else {
         node.status = 'available';
       }
     }
+  }
+
+  /** Nhánh độ khó chỉ mở khi nhánh liền trước trong cùng tầng đã được master. */
+  private tierUnlocked(node: DungeonNode): boolean {
+    const rank = node.difficulty ? TIER_ORDER.indexOf(node.difficulty) : -1;
+    if (rank <= 0) return true;
+    const previousTier = TIER_ORDER[rank - 1];
+    return this.nodes.some((other) => !other.isHub
+      && other.stage === node.stage
+      && other.difficulty === previousTier
+      && this.mastered.has(other.id));
   }
 
   private persistProgress(): void {
@@ -793,6 +821,18 @@ class SlanguageDungeonTree {
     this.mastered.add(node.id);
     this.persistProgress();
     this.applyStatuses();
+    this.syncProgressToServer();
+  }
+
+  /**
+   * Đẩy toàn bộ tiến trình lên tài khoản (server hợp nhất, không ghi đè thiết bị khác).
+   * Lỗi mạng thì bỏ qua: localStorage vẫn là bản sao để chơi offline.
+   */
+  private syncProgressToServer(): void {
+    void slanguageApi(`/api/v1/lessons/topics/${this.topicId}/dungeon-progress`, {
+      method: 'POST',
+      body: { completed_nodes: [...this.mastered] },
+    }).catch(() => {});
   }
 
   private renderTree(): void {
@@ -1883,7 +1923,7 @@ class SlanguageDungeonTree {
         this.updateStatsDisplays();
         this.openSummary(false, 0, '', t('rm.failedBody', { time: formatHeartLock(heartLockRemainingMs()) }), false);
       } else {
-        const correctCount = this.answerReviews.filter((entry) => entry.isCorrect).length;
+        const correctCount = this.trialCorrectCount();
         this.openSummary(false, 0, '', t('rm.bossNotDefeated', { count: correctCount }), true);
       }
       return;
@@ -2026,8 +2066,27 @@ class SlanguageDungeonTree {
         await this.finishBossQuiz(node);
         return;
       }
+      if (this.trialCorrectCount() < this.currentQuestionsList.length) {
+        this.failTrial();
+        return;
+      }
       await this.completeTrialNode(node);
     }
+  }
+
+  private trialCorrectCount(): number {
+    return this.answerReviews.filter((entry) => entry.isCorrect).length;
+  }
+
+  /**
+   * ải thường chỉ qua khi đúng cả 15 câu (giống điều kiện server ghi nhận boss):
+   * sai bất kỳ câu nào → không tích mastered, không XP, nhánh tiếp theo vẫn khóa.
+   */
+  private failTrial(): void {
+    this.currentTrialPhase = 'failed';
+    this.failReason = 'trial';
+    const total = this.currentQuestionsList.length;
+    this.openSummary(false, 0, '', t('rm.trialNotPassed', { correct: this.trialCorrectCount(), total }), true);
   }
 
   private async completeTrialNode(node: DungeonNode, winNote?: string): Promise<void> {

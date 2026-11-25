@@ -1104,6 +1104,27 @@ body.user-guest .lang-dropdown {
   border: 3px solid rgba(255, 255, 255, 0.2);
 }
 
+/* Avatar mặc định là <span> chứa chữ cái: span nội dòng không nhận width/height
+   nên border-radius bo theo hộp chữ và thành hình bầu dục méo. */
+.avatar-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: linear-gradient(135deg, #0077b6 0%, #7ae2cf 100%);
+  color: #fff;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.podium-avatar.avatar-placeholder {
+  font-size: 2rem;
+}
+
+.learner-avatar.avatar-placeholder {
+  font-size: 1rem;
+}
+
 .podium-card.top-1 .podium-avatar {
   width: 104px;
   height: 104px;

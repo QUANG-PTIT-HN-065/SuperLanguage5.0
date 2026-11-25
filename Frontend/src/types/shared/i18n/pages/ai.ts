@@ -2,7 +2,6 @@
 export const vi: Record<string, string> = {
   'ai.pageTitle': 'Slanguage - Luyện Tập Giao Tiếp Với AI',
 
-  'ai.badgeXp': '+5 XP MỖI LƯỢT ĐỐI THOẠI',
   'ai.badgeVoice': 'GIỌNG NÓI & NHẬN DIỆN MIC',
   'ai.heroTitle1': 'Luyện Tập Giao Tiếp Cùng ',
   'ai.heroTitle2': 'Sal7 Trí Tuệ Nhân Tạo',
@@ -14,7 +13,7 @@ export const vi: Record<string, string> = {
   'ai.heroAnd': ' và ',
   'ai.heroEnd': '.',
   'ai.statChats': 'Lượt trò chuyện hôm nay',
-  'ai.statXp': 'XP nhận từ AI',
+  'ai.statRemaining': 'Lượt còn lại hôm nay',
 
   'ai.modeFree': 'Đàm thoại',
   'ai.modeFreeTitle': 'Đàm thoại tự do theo kho bài học (RAG), không tự bật giọng đọc',
@@ -66,6 +65,7 @@ export const vi: Record<string, string> = {
   'ai.historyUntitled': 'Cuộc trò chuyện không tên',
   'ai.engineHistory': 'Chat AI: Đang xem lại hội thoại cũ',
   'ai.dailyLimitTitle': 'Hạn mức 15 lượt AI mỗi ngày theo múi giờ của bạn',
+  'ai.remainingTitle': 'Số lượt AI còn lại trong ngày theo múi giờ của bạn',
   'ai.dailyLimitHint': 'Hạn mức: 15 lượt AI mỗi ngày',
   'ai.loading': 'Đang tải, hãy đợi...',
 
@@ -114,7 +114,6 @@ export const vi: Record<string, string> = {
   'ai.toastNothingHeard': 'Chưa nghe rõ lời nói. Hãy nhấn giữ mic và nói lại.',
   'ai.toastMicOpenFail': 'Không thể mở micro. Vui lòng thử lại.',
   'ai.toastTooLong': 'Tin nhắn không được vượt quá 4000 ký tự.',
-  'ai.toastXp': '⭐ +5 XP: Luyện tập đối thoại thành công! (Tổng: {xp} XP)',
   'ai.toastSettingsSaved': 'Đã lưu thiết lập giọng đọc. Chat AI sử dụng backend và RAG.',
   'ai.toastPreviewFail': 'Không nghe thử được giọng này, thử lại sau.',
   'ai.errNoConversation': 'Máy chủ chưa trả về phòng trò chuyện hợp lệ.',
@@ -144,14 +143,13 @@ export const vi: Record<string, string> = {
   'ai.footerC3d': 'Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.',
   'ai.footerC4t': 'Quyền lợi học trọn đời',
   'ai.footerC4d': 'Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.',
-  'ai.footerCopyright': '© 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.',
+  'ai.footerCopyright': '© 2026 Slanguage Education Platform. Mọi quyền được bảo lưu.',
   'ai.footerTagline': 'Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt',
 };
 
 export const en: Record<string, string> = {
   'ai.pageTitle': 'Slanguage - AI Conversation Practice',
 
-  'ai.badgeXp': '+5 XP PER CONVERSATION TURN',
   'ai.badgeVoice': 'VOICE & MIC RECOGNITION',
   'ai.heroTitle1': 'Practice Conversation with ',
   'ai.heroTitle2': 'Sal7, Your AI Tutor',
@@ -163,7 +161,7 @@ export const en: Record<string, string> = {
   'ai.heroAnd': ' and ',
   'ai.heroEnd': '.',
   'ai.statChats': 'Chats today',
-  'ai.statXp': 'XP earned from AI',
+  'ai.statRemaining': 'Turns left today',
 
   'ai.modeFree': 'Conversation',
   'ai.modeFreeTitle': 'Free chat answered from the lesson RAG, voice stays off',
@@ -215,6 +213,7 @@ export const en: Record<string, string> = {
   'ai.historyUntitled': 'Untitled conversation',
   'ai.engineHistory': 'AI Chat: Reviewing a previous conversation',
   'ai.dailyLimitTitle': '15 AI requests allowed per day in your timezone',
+  'ai.remainingTitle': 'AI requests still available today in your timezone',
   'ai.dailyLimitHint': 'Quota: 15 AI requests per day',
   'ai.loading': 'Loading, please wait...',
 
@@ -263,7 +262,6 @@ export const en: Record<string, string> = {
   'ai.toastNothingHeard': 'Nothing was heard clearly. Hold the mic and speak again.',
   'ai.toastMicOpenFail': 'Could not open the microphone. Please try again.',
   'ai.toastTooLong': 'Messages must not exceed 4000 characters.',
-  'ai.toastXp': '⭐ +5 XP: Conversation practice successful! (Total: {xp} XP)',
   'ai.toastSettingsSaved': 'Voice settings saved. AI chat uses the backend and RAG.',
   'ai.toastPreviewFail': 'Could not preview this voice, please try again later.',
   'ai.errNoConversation': 'The server did not return a valid chat room.',
@@ -293,14 +291,13 @@ export const en: Record<string, string> = {
   'ai.footerC3d': 'A team of teaching assistants & personalized AI assistants available 24/7.',
   'ai.footerC4t': 'Lifetime learning benefits',
   'ai.footerC4d': 'Account preservation and continuous free updates to the material library.',
-  'ai.footerCopyright': '© 2026 Slanguage Education Platform. All rights reserved; ownership belongs to your mom.',
+  'ai.footerCopyright': '© 2026 Slanguage Education Platform. All rights reserved.',
   'ai.footerTagline': 'Learn three languages English-Japanese-Vietnamese for free',
 };
 
 export const ja: Record<string, string> = {
   'ai.pageTitle': 'Slanguage - AI会話練習',
 
-  'ai.badgeXp': '会話1ターンごとに+5 XP',
   'ai.badgeVoice': '音声＆マイク認識',
   'ai.heroTitle1': '会話練習は ',
   'ai.heroTitle2': 'Sal7（人工知能）と一緒に',
@@ -312,7 +309,7 @@ export const ja: Record<string, string> = {
   'ai.heroAnd': '・',
   'ai.heroEnd': '。',
   'ai.statChats': '本日の会話数',
-  'ai.statXp': 'AIから獲得したXP',
+  'ai.statRemaining': '本日の残り回数',
 
   'ai.modeFree': '会話',
   'ai.modeFreeTitle': '教材RAGで自由に会話（音声は自動再生しない）',
@@ -364,6 +361,7 @@ export const ja: Record<string, string> = {
   'ai.historyUntitled': '名称なしの会話',
   'ai.engineHistory': 'AIチャット：以前の会話を表示中',
   'ai.dailyLimitTitle': '1日あたりAI利用は15回まで（ご自身のタイムゾーン基準）',
+  'ai.remainingTitle': '本日まだ使えるAI利用回数（ご自身のタイムゾーン基準）',
   'ai.dailyLimitHint': '利用上限：1日15回',
   'ai.loading': '読み込み中...',
 
@@ -412,7 +410,6 @@ export const ja: Record<string, string> = {
   'ai.toastNothingHeard': 'はっきり聞き取れませんでした。マイクを押して話し直してください。',
   'ai.toastMicOpenFail': 'マイクを開けませんでした。もう一度お試しください。',
   'ai.toastTooLong': 'メッセージは4000文字以内にしてください。',
-  'ai.toastXp': '⭐ +5 XP: 会話練習成功！（合計: {xp} XP）',
   'ai.toastSettingsSaved': '音声設定を保存しました。AIチャットはバックエンドとRAGを使用します。',
   'ai.toastPreviewFail': 'この音声を試聴できません。後でお試しください。',
   'ai.errNoConversation': 'サーバーから有効なチャットルームが返されませんでした。',
@@ -442,6 +439,6 @@ export const ja: Record<string, string> = {
   'ai.footerC3d': '助教チームとパーソナライズされたAIアシスタントが24時間365日サポート。',
   'ai.footerC4t': '生涯学習の特典',
   'ai.footerC4d': 'アカウントの永久保持と教材ライブラリの継続的な無料更新。',
-  'ai.footerCopyright': '© 2026 Slanguage Education Platform. 無断転載を禁じます。所有権はお母様に帰属します。',
+  'ai.footerCopyright': '© 2026 Slanguage Education Platform. 無断転載を禁じます。',
   'ai.footerTagline': '英語・日本語・ベトナム語の3言語を無料で学習',
 };

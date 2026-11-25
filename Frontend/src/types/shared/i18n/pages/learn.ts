@@ -114,7 +114,7 @@ export const vi: Record<string, string> = {
   'sl.footerC3d': 'Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.',
   'sl.footerC4t': 'Quyền lợi học trọn đời',
   'sl.footerC4d': 'Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.',
-  'sl.footerCopyright': '© 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.',
+  'sl.footerCopyright': '© 2026 Slanguage Education Platform. Mọi quyền được bảo lưu.',
   'sl.footerTagline': 'Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt',
 };
 
