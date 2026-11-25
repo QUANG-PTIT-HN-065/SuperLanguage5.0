@@ -48,20 +48,27 @@ interface ShopState {
   transactions: ShopTransaction[];
 }
 
-// Ảnh vật phẩm dùng lại thiết kế prototype (item_id lạ thì suy ra theo nhóm)
+// Ảnh vật phẩm dùng lại thiết kế prototype (item_id lạ thì suy ra theo nhóm).
+// Phải đưa qua new URL(..., import.meta.url) để Vite nhúng ảnh vào bản build: chuỗi
+// đường dẫn thô chỉ chạy trên dev server (server phục vụ cả thư mục assets/ gốc), còn
+// site deploy thì trong dist/assets chỉ có ảnh đã băm tên, file gốc không có → 404.
+const POTION_RED = new URL("../../../assets/potion_red.png", import.meta.url).href;
+const POTION_YELLOW = new URL("../../../assets/potion_yellow.png", import.meta.url).href;
+const POTION_BLUE = new URL("../../../assets/potion_blue.png", import.meta.url).href;
+
 const ITEM_IMAGES: Record<string, string> = {
-  heal_hearts: "../../../assets/potion_red.png",
-  heal_potion: "../../../assets/potion_red.png",
-  boost_xp_10: "../../../assets/potion_yellow.png",
-  double_xp: "../../../assets/potion_yellow.png",
-  streak_freeze: "../../../assets/potion_blue.png",
+  heal_hearts: POTION_RED,
+  heal_potion: POTION_RED,
+  boost_xp_10: POTION_YELLOW,
+  double_xp: POTION_YELLOW,
+  streak_freeze: POTION_BLUE,
 };
 
 // 'premium' không có ảnh bình thuốc → itemVisual tự rơi về icon vương miện.
 const CATEGORY_IMAGES: Partial<Record<ShopItem["category"], string>> = {
-  heal: "../../../assets/potion_red.png",
-  boost: "../../../assets/potion_yellow.png",
-  shield: "../../../assets/potion_blue.png",
+  heal: POTION_RED,
+  boost: POTION_YELLOW,
+  shield: POTION_BLUE,
 };
 
 const HISTORY_PAGE_SIZE = 8;
