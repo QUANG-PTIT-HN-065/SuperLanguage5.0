@@ -4,7 +4,7 @@
  * Supports Speech-to-Text (Mic), Text-to-Speech (Audio Voice), Grammar Corrections & XP Rewards.
  */
 
-import { isLearnerAuthenticated, slanguageApi, slanguageApiAudio } from '../shared/api-client';
+import { isLearnerAuthenticated, slanguageApi, slanguageApiAudio, slanguageApiStream } from '../shared/api-client';
 import { bindMobileSideDrawer, initializeLearnerHeader, logoutLearner } from '../shared/learner-header';
 import { bindPageTransitions } from '../shared/page-transition';
 import {
@@ -1139,30 +1139,7 @@ class AIPracticeManager {
     this.setEngine('ai.engineWaiting');
     try {
       await this.ensureConversation(fullText);
-      const response = await slanguageApi<{
-        ai_response: string;
-        ai_feedback?: string | null;
-      }>(
-        '/api/v1/chat-ai/send-message',
-        {
-          method: 'POST',
-          body: {
-            conversation_id: this.conversationId,
-            user_message: fullText,
-          },
-        },
-      );
-      const reply = response.data?.ai_response;
-      if (typeof reply !== 'string' || !reply.trim()) throw new Error(t('ai.errNoReply'));
-      this.removeTypingIndicator();
-      const { text: mainText, translation } = this.splitTranslation(this.stripFeedbackLeak(reply));
-      this.renderMessage({
-        id: 'bot_' + Date.now(),
-        sender: 'bot',
-        text: mainText,
-        translation,
-        timestamp: this.getFormattedTime()
-      }, true);
+      await this.sendAndStreamMessage(fullText);
       void this.refreshQuota();
       this.setEngine('ai.engineDone');
     } catch (error) {
@@ -1378,30 +1355,7 @@ class AIPracticeManager {
     this.setEngine('ai.engineWaiting');
     try {
       await this.ensureConversation(text);
-      const response = await slanguageApi<{
-        ai_response: string;
-        ai_feedback?: string | null;
-      }>(
-        '/api/v1/chat-ai/send-message',
-        {
-          method: 'POST',
-          body: {
-            conversation_id: this.conversationId,
-            user_message: text,
-          },
-        },
-      );
-      const reply = response.data?.ai_response;
-      if (typeof reply !== 'string' || !reply.trim()) throw new Error(t('ai.errNoReply'));
-      this.removeTypingIndicator();
-      const { text: mainText, translation } = this.splitTranslation(this.stripFeedbackLeak(reply));
-      this.renderMessage({
-        id: 'bot_' + Date.now(),
-        sender: 'bot',
-        text: mainText,
-        translation,
-        timestamp: this.getFormattedTime()
-      }, true);
+      await this.sendAndStreamMessage(text);
       void this.refreshQuota();
       this.setEngine('ai.engineDone');
     } catch (error) {
@@ -1418,6 +1372,73 @@ class AIPracticeManager {
       this.isPending = false;
       this.updateInputControls();
     }
+  }
+
+  /** Gửi tin nhắn qua SSE streaming và cập nhật bong bóng chat theo thời gian thực. */
+  private async sendAndStreamMessage(userMessage: string): Promise<void> {
+    const botId = 'bot_' + Date.now();
+    let bubbleCreated = false;
+    let streamedRaw = '';
+    let finalReply = '';
+    let streamError: string | null = null;
+
+    try {
+      await slanguageApiStream(
+        '/api/v1/chat-ai/send-message-stream',
+        {
+          conversation_id: this.conversationId,
+          user_message: userMessage,
+        },
+        (event) => {
+          if (event.type === 'error') {
+            streamError = event.message || t('ai.errConnect');
+            return;
+          }
+          if (event.type === 'chunk' && event.delta) {
+            if (!bubbleCreated) {
+              this.removeTypingIndicator();
+              this.renderMessage({
+                id: botId,
+                sender: 'bot',
+                text: '',
+                timestamp: this.getFormattedTime(),
+              }, false);
+              bubbleCreated = true;
+            }
+            streamedRaw += event.delta;
+            const textEl = document.querySelector(`#${botId} .msg-text`);
+            if (textEl) textEl.textContent = streamedRaw;
+            this.scrollToBottom();
+            return;
+          }
+          if (event.type === 'done') {
+            finalReply = event.ai_response || streamedRaw;
+          }
+        },
+      );
+    } catch (err) {
+      if (bubbleCreated) document.getElementById(botId)?.remove();
+      throw err;
+    }
+
+    if (streamError) {
+      if (bubbleCreated) document.getElementById(botId)?.remove();
+      throw new Error(streamError);
+    }
+
+    const reply = finalReply || streamedRaw;
+    if (!reply.trim()) throw new Error(t('ai.errNoReply'));
+
+    this.removeTypingIndicator();
+    if (bubbleCreated) document.getElementById(botId)?.remove();
+    const { text: mainText, translation } = this.splitTranslation(this.stripFeedbackLeak(reply));
+    this.renderMessage({
+      id: botId,
+      sender: 'bot',
+      text: mainText,
+      translation,
+      timestamp: this.getFormattedTime(),
+    }, false);
   }
 
   /** Tạo phòng hội thoại theo ngôn ngữ HỌC hiện tại nếu phiên chưa có phòng. */
