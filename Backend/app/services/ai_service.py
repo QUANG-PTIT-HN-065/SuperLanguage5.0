@@ -29,13 +29,12 @@ _IN_SCOPE_MARKER = "[IN_SCOPE]"
 _OUT_OF_SCOPE_MARKER = "[OUT_OF_SCOPE]"
 _FEEDBACK_MARKER = "[Feedback in Vietnamese]"
 # Tên model Gemini thực sự có sẵn (tránh model "3.5/3.6" không tồn tại gây 503).
-_DEFAULT_GEMINI_CHAT_MODEL = "gemini-2.5-flash"
+_DEFAULT_GEMINI_CHAT_MODEL = "gemini-3.8-flash"
 # Thử model chính trước, rồi các bản lite/khi bị quá tải; tên phải thực sự có sẵn.
 _CHAT_FALLBACK_MODELS = (
-    "gemini-2.5-flash-lite",
-    "gemini-1.5-flash",
-    "gemini-2.0-flash",
-    "gemini-2.5-pro",
+    "gemini-3.1-flash-lite",
+    "gemini-3-flash-preview",
+    "gemini-3.5-flash-lite",
 )
 _CHAT_PLAN_SCHEMA = {
     "type": "object",
@@ -1091,21 +1090,21 @@ def _complete_with_audio(
                             response_mime_type="application/json",
                         ),
                     )
-                    if response and response.text:
-                        return response.text.strip()
-                    _log_empty_provider_response(f"{label}[{model}]", key_index, failures)
-                    last_exc = None
-                    break
-                except Exception as exc:
-                    last_exc = exc
-                    category, _ = _failure_category(exc)
-                    if category in ("rate_limit_or_quota", "provider_server_error") and attempt < _MAX_CHAT_RETRIES:
-                        _sleep_with_backoff(attempt)
-                        continue
-                    _log_provider_failure(f"{label}[{model}]", key_index, exc, failures)
-                    if category == "provider_server_error":
-                        server_error_key_count += 1
-                    break
+                if response and response.text:
+                    return response.text.strip()
+                _log_empty_provider_response(f"{label}[{model}]", key_index, failures)
+                last_exc = None
+                break
+            except Exception as exc:
+                last_exc = exc
+                category, _ = _failure_category(exc)
+                if category in ("rate_limit_or_quota", "provider_server_error") and attempt < _MAX_CHAT_RETRIES:
+                    _sleep_with_backoff(attempt)
+                    continue
+                _log_provider_failure(f"{label}[{model}]", key_index, exc, failures)
+                if category == "provider_server_error":
+                    server_error_key_count += 1
+                break
             if server_error_key_count >= _MAX_SERVER_ERROR_KEYS_PER_MODEL:
                 logger.warning(
                     "%s[%s] bị 503 trên %d key, bỏ sớm sang model khác.",

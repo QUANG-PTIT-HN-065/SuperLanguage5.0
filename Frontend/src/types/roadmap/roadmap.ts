@@ -578,7 +578,7 @@ class SlanguageDungeonTree {
     if (lang === this.currentLang) return;
     localStorage.setItem('slanguage_current_lang', lang);
     localStorage.setItem('slanguage_active_language', lang);
-    void slanguageApi('/api/v1/me', { method: 'PATCH', body: { target_language: lang } }).catch(() => {});
+    void slanguageApi('/api/v1/me', { method: 'PATCH', body: { target_language: lang } }).catch(() => { });
     this.showToast(t('rm.switchLangToast'));
     window.location.assign('../select-lesson/index.html');
   }
@@ -837,7 +837,7 @@ class SlanguageDungeonTree {
     void slanguageApi(`/api/v1/lessons/topics/${this.topicId}/dungeon-progress`, {
       method: 'POST',
       body: { completed_nodes: [...this.mastered] },
-    }).catch(() => {});
+    }).catch(() => { });
   }
 
   private renderTree(): void {
@@ -1110,11 +1110,11 @@ class SlanguageDungeonTree {
     const cp2y = y0 + dy * 0.75;
 
     return `M ${x0.toFixed(1)} ${y0.toFixed(1)} ` +
-           `C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ` +
-           `${(midX - amp * 0.2).toFixed(1)} ${midY.toFixed(1)}, ` +
-           `${midX.toFixed(1)} ${midY.toFixed(1)} ` +
-           `S ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ` +
-           `${x1.toFixed(1)} ${y1.toFixed(1)}`;
+      `C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ` +
+      `${(midX - amp * 0.2).toFixed(1)} ${midY.toFixed(1)}, ` +
+      `${midX.toFixed(1)} ${midY.toFixed(1)} ` +
+      `S ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ` +
+      `${x1.toFixed(1)} ${y1.toFixed(1)}`;
   }
 
   private async openModal(node: DungeonNode): Promise<void> {
@@ -1583,11 +1583,10 @@ class SlanguageDungeonTree {
     const icons = Array.from({ length: iconCount }, (_, index) =>
       `<i class="fa-solid fa-heart" style="color:${cap === null || index < this.currentHearts ? '#ef4444' : '#334155'};"></i>`
     ).join('');
-    this.modalTrialHearts.innerHTML = `${icons}<span class="trial-hearts-note">${
-      isHeartsLocked()
-        ? t('rm.heartsLockedNote', { time: formatHeartLock(heartLockRemainingMs()) })
-        : t('rm.wrongPenaltyNote', { penalty })
-    }</span>`;
+    this.modalTrialHearts.innerHTML = `${icons}<span class="trial-hearts-note">${isHeartsLocked()
+      ? t('rm.heartsLockedNote', { time: formatHeartLock(heartLockRemainingMs()) })
+      : t('rm.wrongPenaltyNote', { penalty })
+      }</span>`;
   }
 
   private renderCurrentQuestion(): void {

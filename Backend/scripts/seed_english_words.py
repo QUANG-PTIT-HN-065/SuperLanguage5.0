@@ -6,11 +6,18 @@ Run from the Backend directory with the project's environment configured:
 The script uses SUPABASE_SECRET_KEY, reuses existing words/topics, and is safe to rerun.
 """
 
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from dotenv import load_dotenv
+
+BACKEND_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(BACKEND_DIR))
+ENV_PATH = BACKEND_DIR / ".env"
+if ENV_PATH.exists():
+    load_dotenv(ENV_PATH)
 
 from app.db.supabase import supabase_admin  # noqa: E402
 
@@ -6255,16 +6262,7 @@ def _topic_id(topic: Dict[str, Any]) -> int:
     if len(rows) > 1:
         raise RuntimeError(f"Có nhiều chủ đề trùng tên {topic['name']!r}.")
     if rows:
-        topic_id = int(rows[0]["id"])
-        update_data: Dict[str, Any] = {
-            "description": topic["description"],
-            "icon_url": topic.get("icon_url"),
-            "sort_order": topic["sort_order"],
-        }
-        if "readings" in topic and topic["readings"] is not None:
-            update_data["readings"] = topic["readings"]
-        supabase_admin.table("topics").update(update_data).eq("id", topic_id).execute()
-        return topic_id
+        return int(rows[0]["id"])
 
     insert_data: Dict[str, Any] = {
         "language_code": LANGUAGE_CODE,
@@ -6331,7 +6329,6 @@ def main() -> None:
     topic_ids = {topic["name"]: _topic_id(topic) for topic in TOPICS}
     existing_words = _existing_words()
     pending_words: Dict[str, dict] = {}
-    words_to_update: List[dict] = []
 
     for _, word in entries:
         normalized = word["word"].strip().casefold()
@@ -6350,18 +6347,6 @@ def main() -> None:
                     "audio_url": word["audio_url"],
                 },
             )
-        else:
-            words_to_update.append(
-                {
-                    "id": existing_words[normalized],
-                    "phonetic": word["phonetic"],
-                    "meaning": word["meaning"],
-                    "part_of_speech": word["part_of_speech"],
-                    "example_sentence": word["example_sentence"],
-                    "example_meaning": word["example_meaning"],
-                    "level": word["level"],
-                }
-            )
 
     inserted_count = 0
     for batch in _chunks(list(pending_words.values()), WORDS_PER_BATCH):
@@ -6371,18 +6356,6 @@ def main() -> None:
         for row in created.data:
             existing_words[str(row["word"]).strip().casefold()] = int(row["id"])
         inserted_count += len(created.data)
-
-    for item in words_to_update:
-        supabase_admin.table("words").update(
-            {
-                "phonetic": item["phonetic"],
-                "meaning": item["meaning"],
-                "part_of_speech": item["part_of_speech"],
-                "example_sentence": item["example_sentence"],
-                "example_meaning": item["example_meaning"],
-                "level": item["level"],
-            }
-        ).eq("id", item["id"]).execute()
 
     links = [
         {
@@ -6398,9 +6371,44 @@ def main() -> None:
             ignore_duplicates=True,
         ).execute()
 
+    # Đồng bộ các chủ đề vào lộ trình học (learning_path_topics) để mở khoá bài học và dungeon
+    paths = (
+        supabase_admin.table("learning_paths")
+        .select("id")
+        .eq("language_code", LANGUAGE_CODE)
+        .order("sort_order")
+        .order("id")
+        .execute()
+        .data
+        or []
+    )
+    if not paths:
+        path_created = (
+            supabase_admin.table("learning_paths")
+            .insert({
+                "language_code": LANGUAGE_CODE,
+                "name": f"Lộ trình tự động · {LANGUAGE_CODE.upper()}",
+                "description": "Tự dựng từ các chủ đề theo thứ tự hiển thị.",
+                "sort_order": 100,
+            })
+            .execute()
+            .data[0]
+        )
+        target_path_id = path_created["id"]
+    else:
+        target_path_id = paths[0]["id"]
+
+    supabase_admin.table("learning_path_topics").delete().eq("learning_path_id", target_path_id).execute()
+    path_topic_links = [
+        {"learning_path_id": target_path_id, "topic_id": topic_ids[topic["name"]], "sort_order": index + 1}
+        for index, topic in enumerate(TOPICS)
+    ]
+    supabase_admin.table("learning_path_topics").insert(path_topic_links).execute()
+
     print(
         f"Seed hoàn tất: {len(entries)} từ trong {len(TOPICS)} chủ đề; "
-        f"đã thêm {inserted_count} từ mới, cập nhật {len(words_to_update)} từ và xử lý {len(links)} liên kết chủ đề."
+        f"đã thêm {inserted_count} từ mới, xử lý {len(links)} liên kết chủ đề (word_topics) "
+        f"và đồng bộ {len(path_topic_links)} chủ đề vào lộ trình học (learning_path_topics)."
     )
 
 

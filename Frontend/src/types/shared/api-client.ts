@@ -222,22 +222,55 @@ function showSessionExpiredModal(): void {
 }
 
 export async function refreshAccessToken(previousAccessToken?: string): Promise<string> {
-  const baselineToken = previousAccessToken ?? localStorage.getItem(ACCESS_TOKEN_KEY);
+  const baselineToken = previousAccessToken ?? readAuthCookie(ACCESS_TOKEN_KEY);
   // Nhiều request song song có thể cùng gặp 401; request nào refresh xong trước
   // sẽ lưu token mới — request sau dùng lại thay vì POST trùng hoặc kết luận
   // nhầm phiên đã chết (Supabase xoay refresh token, lần gọi sau có thể bị chặn).
   const newerSavedToken = (): string | null => {
-    const current = localStorage.getItem(ACCESS_TOKEN_KEY);
+    const current = readAuthCookie(ACCESS_TOKEN_KEY);
     return current && current !== baselineToken ? current : null;
   };
 
   const savedByParallelCall = newerSavedToken();
   if (savedByParallelCall) return savedByParallelCall;
 
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-  if (!refreshToken) {
-    handleSessionExpired();
-    throw new Error(SESSION_EXPIRED_MESSAGE);
+  // Fallback: delegate to tryRefreshSession
+  const ok = await tryRefreshSession();
+  if (ok) {
+    const refreshed = readAuthCookie(ACCESS_TOKEN_KEY);
+    if (refreshed) return refreshed;
+  }
+  handleSessionExpired();
+  throw new Error(SESSION_EXPIRED_MESSAGE);
+}
+
+// refresh single-flight: 401 đồng loạt từ nhiều request chỉ được đổi token MỘT lần,
+// vì Supabase rotation sẽ vô hiệu refresh_token cũ ngay lần dùng đầu tiên.
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function tryRefreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const refreshToken = readAuthCookie(REFRESH_TOKEN_KEY);
+      if (!refreshToken) return false;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+        if (!response.ok) return false;
+        const payload = await response.json();
+        const tokens = payload?.data as AuthTokens | undefined;
+        if (!tokens?.access_token || !tokens?.refresh_token) return false;
+        saveAuthTokens(tokens);
+        return true;
+      } catch {
+        return false;
+      }
+    })().finally(() => {
+      refreshInFlight = null;
+    });
   }
 
   const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
@@ -283,25 +316,34 @@ function isJwtExpiringSoon(token: string, bufferMs = 30_000): boolean {
 }
 
 export async function getValidAccessToken(): Promise<string | null> {
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const token = readAuthCookie(ACCESS_TOKEN_KEY);
   if (!token) return null;
   if (!isJwtExpiringSoon(token)) return token;
   return refreshAccessToken(token);
 }
 
-export async function slanguageApi<T = unknown>(
-  path: string,
-  options: ApiRequestOptions = {},
-  allowRefresh = true,
-): Promise<ApiResponse<T>> {
-  const { anonymous = false, ...requestOptions } = options;
-  const token = anonymous ? null : await getValidAccessToken();
+function buildHeaders(
+  requestOptions: Omit<ApiRequestOptions, "anonymous">,
+  token: string | null,
+): Headers {
   const headers = new Headers(requestOptions.headers);
-  if (isFormData(requestOptions.body)) headers.delete("Content-Type");
-  else headers.set("Content-Type", "application/json");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (isFormData(requestOptions.body)) {
+    headers.delete("Content-Type");
+  } else {
+    headers.set("Content-Type", "application/json");
+  }
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  return headers;
+}
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+async function slanguageApiInner(
+  path: string,
+  requestOptions: Omit<ApiRequestOptions, "anonymous">,
+  token: string | null,
+): Promise<Response> {
+  return fetch(`${API_BASE_URL}${path}`, {
     ...requestOptions,
     headers,
     body:
@@ -312,22 +354,26 @@ export async function slanguageApi<T = unknown>(
           : JSON.stringify(requestOptions.body),
   });
 
-  if (response.status === 401 && !anonymous) {
-    if (!token) {
-      handleSessionExpired();
-      throw new Error(SESSION_EXPIRED_MESSAGE);
-    }
-    if (allowRefresh) {
-      const refreshedToken = await refreshAccessToken(token);
-      return slanguageApi<T>(
-        path,
-        {
-          ...requestOptions,
-          headers: { ...requestOptions.headers, Authorization: `Bearer ${refreshedToken}` },
-        },
-        false,
-      );
-    }
+export async function slanguageApi<T = unknown>(
+  path: string,
+  options: ApiRequestOptions = {},
+  allowRefresh = true,
+): Promise<ApiResponse<T>> {
+  const { anonymous = false, ...requestOptions } = options;
+  if (anonymous) {
+    const response = await slanguageApiInner(path, requestOptions, null);
+    return parseResponse<T>(response);
+  }
+
+  let token: string | null = readAuthCookie(ACCESS_TOKEN_KEY);
+  let response = await slanguageApiInner(path, requestOptions, token);
+  if (response.status !== 401) return parseResponse<T>(response);
+
+  if (!token) handleUnauthorized(null);
+  if (allowRefresh && (await tryRefreshSession())) {
+    token = readAuthCookie(ACCESS_TOKEN_KEY);
+    response = await slanguageApiInner(path, requestOptions, token);
+    if (response.status !== 401) return parseResponse<T>(response);
   }
   return parseResponse<T>(response);
 }
@@ -337,9 +383,9 @@ export async function slanguageApiAudio(
   body?: unknown,
   method: "POST" | "GET" = "POST",
 ): Promise<Blob> {
-  const token = await getValidAccessToken();
   const send = (accessToken: string | null) => {
     const headers = new Headers({ Accept: "audio/*" });
+    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     if (method === "POST") headers.set("Content-Type", "application/json");
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     return fetch(`${API_BASE_URL}${path}`, {

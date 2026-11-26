@@ -42,7 +42,7 @@ class AIServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, ("Try this example.", "Câu ví dụ dễ hiểu."))
         self.assertEqual(
             client.models.generate_content.call_args.kwargs["model"],
-            "gemini-3.5-flash-lite",
+            "gemini-2.5-flash",
         )
         prompt_config = client.models.generate_content.call_args.kwargs["config"]
         self.assertIn("CHỈ trả lời", prompt_config.system_instruction)
@@ -155,7 +155,7 @@ class AIServiceTests(unittest.IsolatedAsyncioTestCase):
         client_factory,
     ):
         settings.GEMINI_API_KEYS = "gemini-key"
-        settings.GEMINI_CHAT_MODEL = "gemini-3.5-flash-lite"
+        settings.GEMINI_CHAT_MODEL = "gemini-2.5-flash"
         settings.OPENAI_API_KEYS = ""
         settings.DEEPSEEK_API_KEYS = ""
         client = client_factory.return_value
@@ -273,7 +273,7 @@ class AIServiceTests(unittest.IsolatedAsyncioTestCase):
         logs = "\n".join(captured.output)
         self.assertIn("authentication_or_permission", logs)
         self.assertIn("billing_or_balance", logs)
-        self.assertIn("Gemini:authentication_or_permission=1", logs)
+        self.assertIn("Gemini:authentication_or_permission=5", logs)
         self.assertIn("DeepSeek:billing_or_balance=1", logs)
         self.assertNotIn("private-gemini-key", logs)
         self.assertNotIn("private-deepseek-key", logs)
