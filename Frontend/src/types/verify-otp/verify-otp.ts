@@ -17,20 +17,26 @@ interface LanguageDetail {
   title: string;
 }
 
+// Cờ phải đi qua new URL(..., import.meta.url): chuỗi thô không được Vite nhúng
+// vào dist và còn sai độ sâu so với URL trang nên ảnh vỡ cả trên dev lẫn bản build.
+const FLAG_VN = new URL('../../../assets/flags/flag-vn.png', import.meta.url).href;
+const FLAG_EN = new URL('../../../assets/flags/flag-en.png', import.meta.url).href;
+const FLAG_JP = new URL('../../../assets/flags/flag-jp.png', import.meta.url).href;
+
 const LANGUAGE_MAP: Record<AppLanguage, LanguageDetail> = {
   vi: {
     name: 'Tiếng Việt',
-    flag: '../assets/flags/flag-vn.png',
+    flag: FLAG_VN,
     title: 'Tiếng Việt (Bản Xứ)'
   },
   en: {
     name: 'English',
-    flag: '../assets/flags/flag-en.png',
+    flag: FLAG_EN,
     title: 'Tiếng Anh (IELTS & Giao tiếp)'
   },
   ja: {
     name: '日本語',
-    flag: '../assets/flags/flag-jp.png',
+    flag: FLAG_JP,
     title: 'Tiếng Nhật (JLPT N5)'
   }
 };

@@ -16,6 +16,9 @@ const UI_FLAGS: Record<UiLocale, string> = {
   vi: new URL('../../../assets/flags/flag-vn.png', import.meta.url).href,
 };
 
+// Logo nhỏ trong toast — cùng lý do: phải để Vite nhúng ảnh vào dist.
+const BRAND_LOGO_URL = new URL('../../../assets/logo.png', import.meta.url).href;
+
 // Interface for language specific data
 interface LanguageData {
   id: 'en' | 'ja' | 'vi';
@@ -49,7 +52,7 @@ const languagesDB: Record<string, LanguageData> = {
     name: 'Tiếng Nhật',
     nativeName: '日本語',
     flag: '🇯🇵',
-    flagImg: '../assets/flags/flag-jp.png',
+    flagImg: new URL('../../../assets/flags/flag-jp.png', import.meta.url).href,
     courseTitle: 'Tiếng Nhật Sơ Cấp JLPT N5',
     currentLesson: 'Bài 14: Gọi món trong quán ăn Tokyo & Mẫu câu V-tai desu',
     lessonProgress: 72,
@@ -73,7 +76,7 @@ const languagesDB: Record<string, LanguageData> = {
     name: 'Tiếng Anh',
     nativeName: 'English',
     flag: '🇺🇸',
-    flagImg: '../assets/flags/flag-us.png',
+    flagImg: new URL('../../../assets/flags/flag-us.png', import.meta.url).href,
     courseTitle: 'English for Global Workplace & Fluency',
     currentLesson: 'Unit 9: Business Negotiation & Idiomatic Expressions',
     lessonProgress: 85,
@@ -97,7 +100,7 @@ const languagesDB: Record<string, LanguageData> = {
     name: 'Tiếng Việt',
     nativeName: 'Tiếng Việt',
     flag: '🇻🇳',
-    flagImg: '../assets/flags/flag-vn.png',
+    flagImg: new URL('../../../assets/flags/flag-vn.png', import.meta.url).href,
     courseTitle: 'Tiếng Việt Ứng Dụng & Giao Tiếp Đời Sống',
     currentLesson: 'Bài 6: Văn hóa ứng xử & Thành ngữ thường dùng',
     lessonProgress: 94,
@@ -693,7 +696,7 @@ class SlanguageDashboard {
 
     toast.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(255, 183, 3, 0.25);">
-        <img src="../assets/logo.png" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));">
+        <img src="${BRAND_LOGO_URL}" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3));">
         <span style="font-size: 0.85rem; font-weight: 700; color: #FFB703; letter-spacing: 0.2px;">${t('hm.toastBrand')}</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px; font-size: 0.96rem; font-weight: 700; color: #ffffff;">

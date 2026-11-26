@@ -598,7 +598,7 @@ function initializeAvatarUploader(): void {
 
   avatarUploader = new AvatarUploader({
     container,
-    initialAvatarUrl: "../../../assets/logo.png",
+    initialAvatarUrl: new URL("../../../assets/logo.png", import.meta.url).href,
     onAvatarSelected: (dataUrl) => {
       currentPendingAvatar = dataUrl;
       const hiddenInput = document.getElementById("hiddenAvatarUrl") as HTMLInputElement | null;

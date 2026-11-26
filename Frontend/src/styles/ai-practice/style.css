@@ -1876,16 +1876,10 @@ body.user-guest .lang-dropdown {
 
 
 
-/* ================= HEADER BRAND & STAT PILL BADGES ================= */
-.navbar .brand-name,
-.navbar .brand-name .brand-language {
-  color: #ffffff !important;
-  background: none !important;
-  -webkit-text-fill-color: #ffffff !important;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
-  font-weight: 800 !important;
-}
-
+/* ================= STAT PILL BADGES ================= */
+/* Wordmark "Slanguage" dùng theo learner-shell.css (S trắng + "language" gradient);
+   từng có rule .navbar .brand-name .brand-language !important ở đây, mạnh hơn shell
+   nên cả chữ thành trắng, lệch với các tab khác. */
 .stat-chip.streak,
 .stat-chip.xp,
 .stat-chip.hearts {

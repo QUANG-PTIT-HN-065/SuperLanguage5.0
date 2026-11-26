@@ -48,9 +48,9 @@ class SelectLessonManager {
   private catalogLoaded = false;
 
   private readonly langMetadata: Record<TargetLang, LanguageMeta> = {
-    ja: { code: 'ja', name: 'Tiếng Nhật', flag: '../../../assets/flags/flag-jp.png' },
-    en: { code: 'en', name: 'English', flag: '../../../assets/flags/flag-en.png' },
-    vi: { code: 'vi', name: 'Tiếng Việt', flag: '../../../assets/flags/flag-vn.png' }
+    ja: { code: 'ja', name: 'Tiếng Nhật', flag: new URL('../../../assets/flags/flag-jp.png', import.meta.url).href },
+    en: { code: 'en', name: 'English', flag: new URL('../../../assets/flags/flag-en.png', import.meta.url).href },
+    vi: { code: 'vi', name: 'Tiếng Việt', flag: new URL('../../../assets/flags/flag-vn.png', import.meta.url).href }
   };
 
   private sessionsList: SessionData[] = [];

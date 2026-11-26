@@ -473,7 +473,7 @@ class SlanguageProfile {
         iconBox.className = 'badge-icon-box';
         if (badge.flame) {
           const img = document.createElement('img');
-          img.src = new URL('../../../assets/streak-flame.gif?v=4', import.meta.url).href;
+          img.src = new URL('../../../assets/streak-flame.gif', import.meta.url).href;
           img.alt = t('ba.b1t');
           img.className = 'streak-flame-img streak-flame-badge';
           iconBox.append(img);

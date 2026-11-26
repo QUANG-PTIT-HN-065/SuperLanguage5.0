@@ -41,9 +41,9 @@ interface LanguageMeta {
 }
 
 const LANG_META: Record<string, LanguageMeta> = {
-  ja: { name: 'Tiếng Nhật', flagImg: '../../../assets/flags/flag-jp.png', ttsCode: 'ja-JP' },
-  en: { name: 'Tiếng Anh', flagImg: '../../../assets/flags/flag-en.png', ttsCode: 'en-US' },
-  vi: { name: 'Tiếng Việt', flagImg: '../../../assets/flags/flag-vn.png', ttsCode: 'vi-VN' },
+  ja: { name: 'Tiếng Nhật', flagImg: new URL('../../../assets/flags/flag-jp.png', import.meta.url).href, ttsCode: 'ja-JP' },
+  en: { name: 'Tiếng Anh', flagImg: new URL('../../../assets/flags/flag-en.png', import.meta.url).href, ttsCode: 'en-US' },
+  vi: { name: 'Tiếng Việt', flagImg: new URL('../../../assets/flags/flag-vn.png', import.meta.url).href, ttsCode: 'vi-VN' },
 };
 
 // Khóa i18n cho nhãn loại từ (part_of_speech từ API giữ nguyên, chỉ dịch nhãn UI).
@@ -1055,7 +1055,7 @@ class SlanguageVocabulary {
 
     toast.innerHTML = `
       <div style="display: flex; align-items: center; gap: 8px; padding-bottom: 5px; border-bottom: 1px solid rgba(255, 183, 3, 0.25); width: 100%;">
-        <img src="../../../assets/logo.png" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0;">
+        <img src="${new URL('../../../assets/logo.png', import.meta.url).href}" alt="S Language Logo" style="width: 20px; height: 20px; object-fit: contain; flex-shrink: 0;">
         <span style="font-size: 0.85rem; font-weight: 700; color: #FFB703; letter-spacing: 0.2px;">${t('to.brand')}</span>
       </div>
       <div style="display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; color: #ffffff;">

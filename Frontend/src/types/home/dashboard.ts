@@ -40,6 +40,9 @@ let dashboardCache: DashboardCache | null = null;
 let lastFallbackKey = "hm.loadingData";
 let lastStatus: { key: string; isError: boolean; vars?: Record<string, string> } | null = null;
 
+// Qua new URL để Vite băm và nhúng ảnh vào dist — chuỗi thô sẽ vỡ khi build.
+const STREAK_FLAME_URL = new URL("../../../assets/streak-flame.gif", import.meta.url).href;
+
 function invalidData(labelKey: string): Error {
   return new Error(t("hm.errInvalid", { label: t(labelKey) }));
 }
@@ -206,7 +209,7 @@ function renderStreakWeek(days: StreakDay[]): void {
     } else if (date === today) {
       bubble.classList.add("active-today");
       const flame = document.createElement("img");
-      flame.src = "../../../assets/streak-flame.gif?v=4";
+      flame.src = STREAK_FLAME_URL;
       flame.alt = "";
       flame.className = "streak-flame-img streak-flame-day";
       bubble.append(flame);

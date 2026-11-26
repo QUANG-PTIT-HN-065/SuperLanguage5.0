@@ -564,6 +564,11 @@ class SlanguageDungeonTree {
     window.addEventListener('resize', () => {
       this.drawConnectingBranches();
     });
+    // Màn xoay đã đổi kích thước canvas trước cả event resize: vẽ lại trễ một nhịp
+    // để đường nối không bám theo toạ độ cũ.
+    window.addEventListener('orientationchange', () => {
+      window.setTimeout(() => this.drawConnectingBranches(), 100);
+    });
 
     this.bindPageTransitions();
   }
@@ -1092,6 +1097,10 @@ class SlanguageDungeonTree {
     else if (difficulty === 'hard') amp = 45;
     else if (difficulty === 'normal') amp = 25;
     else amp = 20;
+
+    // Biên độ uốn tỉ lệ theo bề rộng: màn điện thoại hẹp vẫn giữ dáng lượn như bản laptop.
+    const widthFactor = Math.min(1, Math.max(0.42, window.innerWidth / 900));
+    amp *= widthFactor;
 
     const cp1x = x0 + dx * 0.15 + amp * 0.8;
     const cp1y = y0 + dy * 0.25;

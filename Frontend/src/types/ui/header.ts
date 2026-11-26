@@ -27,9 +27,9 @@ interface LanguageMeta {
 }
 
 const LANGUAGES: Record<LanguageCode, LanguageMeta> = {
-  ja: { label: "Tiếng Nhật", flag: "/assets/flags/flag-jp.png" },
-  en: { label: "Tiếng Anh", flag: "/assets/flags/flag-en.png" },
-  vi: { label: "Tiếng Việt", flag: "/assets/flags/flag-vn.png" },
+  ja: { label: "Tiếng Nhật", flag: new URL("../../../assets/flags/flag-jp.png", import.meta.url).href },
+  en: { label: "Tiếng Anh", flag: new URL("../../../assets/flags/flag-en.png", import.meta.url).href },
+  vi: { label: "Tiếng Việt", flag: new URL("../../../assets/flags/flag-vn.png", import.meta.url).href },
 };
 
 let xpShown = 0;
