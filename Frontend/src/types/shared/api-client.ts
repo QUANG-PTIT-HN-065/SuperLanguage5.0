@@ -135,20 +135,22 @@ export async function parseResponse<T>(response: Response): Promise<ApiResponse<
 }
 
 export function isLearnerAuthenticated(): boolean {
-  return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
+  return Boolean(readAuthCookie(ACCESS_TOKEN_KEY) || localStorage.getItem(ACCESS_TOKEN_KEY));
 }
 
 export function saveAuthTokens(tokens: AuthTokens): void {
   if (!tokens.access_token || !tokens.refresh_token) {
     throw new Error("Backend không trả về phiên đăng nhập hợp lệ.");
   }
-  localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
-  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  writeAuthCookie(ACCESS_TOKEN_KEY, tokens.access_token);
+  writeAuthCookie(REFRESH_TOKEN_KEY, tokens.refresh_token);
 }
 
 export function clearAuthTokens(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
+  for (const key of [ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, ...IDENTITY_KEYS]) {
+    removeAuthCookie(key);
+    localStorage.removeItem(key);
+  }
 }
 
 // Key giữ lại khi đăng xuất: email cho tính năng "Ghi nhớ đăng nhập".
@@ -188,10 +190,6 @@ function redirectToLoginPage(): void {
 export function handleSessionExpired(): void {
   clearAuthTokens();
   clearLearnerCache();
-  localStorage.removeItem("slanguage_is_logged_in");
-  localStorage.removeItem("slanguage_user_id");
-  localStorage.removeItem("slanguage_user_name");
-  localStorage.removeItem("slanguage_user_email");
   if (sessionExpiryPopupShown) return;
   sessionExpiryPopupShown = true;
   showSessionExpiredModal();
@@ -221,6 +219,39 @@ function showSessionExpiredModal(): void {
     ?.addEventListener("click", redirectToLoginPage);
 }
 
+// refresh single-flight: 401 đồng loạt từ nhiều request chỉ được đổi token MỘT lần,
+// vì Supabase rotation sẽ vô hiệu refresh_token cũ ngay lần dùng đầu tiên.
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function performRefresh(): Promise<boolean> {
+  const refreshToken = readAuthCookie(REFRESH_TOKEN_KEY);
+  if (!refreshToken) return false;
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!response.ok) return false;
+    const payload = (await response.json()) as { data?: AuthTokens };
+    const tokens = payload?.data;
+    if (!tokens?.access_token || !tokens?.refresh_token) return false;
+    saveAuthTokens(tokens);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tryRefreshSession(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = performRefresh().finally(() => {
+      refreshInFlight = null;
+    });
+  }
+  return refreshInFlight;
+}
+
 export async function refreshAccessToken(previousAccessToken?: string): Promise<string> {
   const baselineToken = previousAccessToken ?? readAuthCookie(ACCESS_TOKEN_KEY);
   // Nhiều request song song có thể cùng gặp 401; request nào refresh xong trước
@@ -234,67 +265,17 @@ export async function refreshAccessToken(previousAccessToken?: string): Promise<
   const savedByParallelCall = newerSavedToken();
   if (savedByParallelCall) return savedByParallelCall;
 
-  // Fallback: delegate to tryRefreshSession
-  const ok = await tryRefreshSession();
-  if (ok) {
-    const refreshed = readAuthCookie(ACCESS_TOKEN_KEY);
+  if (await tryRefreshSession()) {
+    const refreshed = newerSavedToken() ?? readAuthCookie(ACCESS_TOKEN_KEY);
     if (refreshed) return refreshed;
   }
+
+  // Refresh token cũng đã chết/thu hồi: phiên không thể cứu, đăng xuất bắt buộc
+  const savedByParallelCallAfterFailure = newerSavedToken();
+  if (savedByParallelCallAfterFailure) return savedByParallelCallAfterFailure;
+
   handleSessionExpired();
   throw new Error(SESSION_EXPIRED_MESSAGE);
-}
-
-// refresh single-flight: 401 đồng loạt từ nhiều request chỉ được đổi token MỘT lần,
-// vì Supabase rotation sẽ vô hiệu refresh_token cũ ngay lần dùng đầu tiên.
-let refreshInFlight: Promise<boolean> | null = null;
-
-async function tryRefreshSession(): Promise<boolean> {
-  if (!refreshInFlight) {
-    refreshInFlight = (async () => {
-      const refreshToken = readAuthCookie(REFRESH_TOKEN_KEY);
-      if (!refreshToken) return false;
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-        if (!response.ok) return false;
-        const payload = await response.json();
-        const tokens = payload?.data as AuthTokens | undefined;
-        if (!tokens?.access_token || !tokens?.refresh_token) return false;
-        saveAuthTokens(tokens);
-        return true;
-      } catch {
-        return false;
-      }
-    })().finally(() => {
-      refreshInFlight = null;
-    });
-  }
-
-  const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  });
-  if (response.status === 401 || response.status === 403) {
-    // Refresh token cũng đã chết/thu hồi: phiên không thể cứu, đăng xuất bắt buộc
-    const savedByParallelCallAfterFailure = newerSavedToken();
-    if (savedByParallelCallAfterFailure) return savedByParallelCallAfterFailure;
-    handleSessionExpired();
-    throw new Error(SESSION_EXPIRED_MESSAGE);
-  }
-  const result = await parseResponse<{
-    access_token: string;
-    refresh_token: string;
-  }>(response);
-
-  if (!result.data.access_token || !result.data.refresh_token) {
-    throw new Error("Backend không trả về phiên đăng nhập mới.");
-  }
-  saveAuthTokens(result.data);
-  return result.data.access_token;
 }
 
 function isFormData(value: unknown): value is FormData {
@@ -345,7 +326,7 @@ async function slanguageApiInner(
 ): Promise<Response> {
   return fetch(`${API_BASE_URL}${path}`, {
     ...requestOptions,
-    headers,
+    headers: buildHeaders(requestOptions, token),
     body:
       requestOptions.body === undefined
         ? undefined
@@ -353,6 +334,7 @@ async function slanguageApiInner(
           ? requestOptions.body
           : JSON.stringify(requestOptions.body),
   });
+}
 
 export async function slanguageApi<T = unknown>(
   path: string,
@@ -369,8 +351,7 @@ export async function slanguageApi<T = unknown>(
   let response = await slanguageApiInner(path, requestOptions, token);
   if (response.status !== 401) return parseResponse<T>(response);
 
-  if (!token) handleUnauthorized(null);
-  if (allowRefresh && (await tryRefreshSession())) {
+  if (allowRefresh && token && (await tryRefreshSession())) {
     token = readAuthCookie(ACCESS_TOKEN_KEY);
     response = await slanguageApiInner(path, requestOptions, token);
     if (response.status !== 401) return parseResponse<T>(response);
@@ -387,7 +368,6 @@ export async function slanguageApiAudio(
     const headers = new Headers({ Accept: "audio/*" });
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     if (method === "POST") headers.set("Content-Type", "application/json");
-    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     return fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
@@ -395,9 +375,11 @@ export async function slanguageApiAudio(
     });
   };
 
+  let token: string | null = readAuthCookie(ACCESS_TOKEN_KEY);
   let response = await send(token);
   if (response.status === 401 && token) {
-    response = await send(await refreshAccessToken(token));
+    token = await refreshAccessToken(token);
+    response = await send(token);
   }
   if (!response.ok) {
     let payload: unknown;
