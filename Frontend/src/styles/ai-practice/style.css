@@ -1361,6 +1361,26 @@ body.user-guest .lang-dropdown {
   transform: scale(0.96);
 }
 
+.btn-send.is-recording-send {
+  background: linear-gradient(135deg, #0ea5e9 0%, #10b981 100%);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.6);
+  border-color: rgba(16, 185, 129, 0.6);
+  cursor: pointer;
+  opacity: 1 !important;
+  animation: pulse-recording-send 1.6s infinite ease-in-out;
+}
+
+@keyframes pulse-recording-send {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 22px rgba(16, 185, 129, 0.8);
+  }
+}
+
 .input-hint {
   display: flex;
   justify-content: space-between;

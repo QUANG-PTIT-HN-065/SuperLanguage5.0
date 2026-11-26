@@ -439,7 +439,13 @@ class AIPracticeManager {
 
   private bindEvents(): void {
     // Send Message
-    this.sendBtnEl.addEventListener('click', () => this.handleSendMessage());
+    this.sendBtnEl.addEventListener('click', () => {
+      if (this.isRecording) {
+        this.stopRecordSession();
+        return;
+      }
+      this.handleSendMessage();
+    });
     this.chatInputEl.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
@@ -479,21 +485,31 @@ class AIPracticeManager {
     });
     this.micBtnEl.addEventListener('contextmenu', (event) => event.preventDefault());
     this.micBtnEl.addEventListener('click', (event) => {
-      if (this.isPending || this.isRecording) {
+      if (this.isPending) {
         event.preventDefault();
         event.stopPropagation();
         return;
       }
-      if (this.currentMode === 'pronounce') this.toggleRecordSession();
+      if (this.currentMode === 'pronounce') {
+        this.toggleRecordSession();
+        return;
+      }
+      if (this.isRecording) {
+        this.stopRecordSession();
+      }
     });
     this.micBtnEl.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') this.cancelMicHold();
       if (event.code !== 'Space' && event.code !== 'Enter') return;
       event.preventDefault();
       if (event.repeat) return;
-      if (this.isPending || this.isRecording) return;
+      if (this.isPending) return;
       if (this.currentMode === 'pronounce') {
         this.toggleRecordSession();
+        return;
+      }
+      if (this.isRecording) {
+        this.stopRecordSession();
         return;
       }
       this.micKey = event.code;
@@ -1472,7 +1488,18 @@ class AIPracticeManager {
     const busy = this.isPending || this.isRecording;
     const speakOnly = this.currentMode === 'pronounce';
     this.chatInputEl.disabled = busy || speakOnly;
-    this.sendBtnEl.disabled = busy || speakOnly;
+
+    // Nút gửi: khi đang ghi âm thì được bật để bấm gửi/kết thúc bản ghi ngay
+    if (this.isRecording) {
+      this.sendBtnEl.disabled = this.isPending;
+      this.sendBtnEl.classList.add('is-recording-send');
+      this.sendBtnEl.title = t('ai.sendVoice') || 'Gửi bản ghi âm';
+    } else {
+      this.sendBtnEl.classList.remove('is-recording-send');
+      this.sendBtnEl.disabled = this.isPending || speakOnly;
+      this.sendBtnEl.title = '';
+    }
+
     this.micBtnEl.disabled = this.isPending;
     this.micBtnEl.classList.toggle('is-disabled', this.isPending);
     // Đang ghi âm thì vẫn được đổi tab (bản ghi sẽ bị bỏ), chỉ khoá khi đang chờ backend.
