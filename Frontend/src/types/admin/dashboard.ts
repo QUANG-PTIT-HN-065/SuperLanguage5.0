@@ -112,14 +112,16 @@ function renderDocumentsTable(): void {
 }
 
 async function removeDocument(document: RagDocument): Promise<void> {
-  if (!window.confirm(`Xóa tài liệu "${document.title}" khỏi Vector DB?`)) return;
-  try {
-    await adminApi(`/api/v1/admin/rag/documents/${encodeURIComponent(document.document_key)}`, { method: "DELETE" });
-    showToast("Đã xóa tài liệu khỏi Vector DB.", "success");
-    await loadDocuments();
-  } catch (error) {
-    showApiError(error);
-  }
+  openActionConfirm(
+    "Xác nhận xóa tài liệu",
+    `Bạn sắp xóa tài liệu "${document.title}" khỏi Vector DB. Hành động này không thể hoàn tác.`,
+    "Xóa tài liệu",
+    async () => {
+      await adminApi(`/api/v1/admin/rag/documents/${encodeURIComponent(document.document_key)}`, { method: "DELETE" });
+      showToast("Đã xóa tài liệu khỏi Vector DB.", "success");
+      await loadDocuments();
+    },
+  );
 }
 
 export interface LanguageOption {
@@ -179,6 +181,8 @@ let usersList: UserItem[] = [];
 let documentsList: RagDocument[] = [];
 let documentPage = 1;
 const DOCUMENT_PAGE_SIZE = 5;
+let topicPage = 1;
+const TOPIC_PAGE_SIZE = 10;
 let userPage = 1;
 const USER_PAGE_SIZE = 10;
 let userTotal = 0;
@@ -394,10 +398,16 @@ function renderTopicsTable(): void {
         </td>
       </tr>
     `;
+    updateTopicsPagination(filtered);
     return;
   }
 
-  tableBody.replaceChildren(...filtered.map((topic) => {
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TOPIC_PAGE_SIZE));
+  topicPage = Math.min(topicPage, totalPages);
+  const start = (topicPage - 1) * TOPIC_PAGE_SIZE;
+  const visibleTopics = filtered.slice(start, start + TOPIC_PAGE_SIZE);
+
+  tableBody.replaceChildren(...visibleTopics.map((topic) => {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-200 text-sm";
 
@@ -462,6 +472,29 @@ function renderTopicsTable(): void {
 
   const badge = getElement("totalTopicsBadge");
   if (badge) badge.textContent = `${filtered.length} chủ đề`;
+
+  updateTopicsPagination(filtered);
+}
+
+function updateTopicsPagination(filtered: TopicItem[]): void {
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TOPIC_PAGE_SIZE));
+  const start = filtered.length ? (topicPage - 1) * TOPIC_PAGE_SIZE + 1 : 0;
+  const end = Math.min(topicPage * TOPIC_PAGE_SIZE, filtered.length);
+
+  const info = getElement("topicPaginationInfo");
+  if (info) {
+    info.textContent = filtered.length
+      ? `Hiển thị ${start}-${end} / ${filtered.length} chủ đề`
+      : "Không có chủ đề nào";
+  }
+
+  const pageNumber = getElement("topicPageNumber");
+  if (pageNumber) pageNumber.textContent = `${topicPage}/${totalPages}`;
+
+  const previous = getElement<HTMLButtonElement>("prevTopicPage");
+  const next = getElement<HTMLButtonElement>("nextTopicPage");
+  if (previous) previous.disabled = topicPage <= 1;
+  if (next) next.disabled = topicPage >= totalPages;
 }
 
 function editTopic(topic: TopicItem): void {
@@ -490,15 +523,17 @@ function editTopic(topic: TopicItem): void {
 }
 
 async function deleteTopic(topicId: number): Promise<void> {
-  if (!confirm("Bạn có chắc chắn muốn xóa chủ đề này khỏi CSDL? Các từ vựng thuộc chủ đề này sẽ được gỡ liên kết.")) return;
-
-  try {
-    await adminApi(`/api/v1/admin/topics/${topicId}`, { method: "DELETE" });
-    showToast("Đã xóa chủ đề thành công khỏi CSDL!", "success");
-    await Promise.all([loadTopics(currentTopicFilterLang), loadDashboardStats()]);
-  } catch (err) {
-    showApiError(err);
-  }
+  const topic = topicsList.find((t) => t.id === topicId);
+  openActionConfirm(
+    "Xác nhận xóa chủ đề",
+    `Bạn sắp xóa chủ đề "${topic?.name || ""}" khỏi CSDL. Các từ vựng thuộc chủ đề này sẽ được gỡ liên kết. Hành động này không thể hoàn tác.`,
+    "Xóa chủ đề",
+    async () => {
+      await adminApi(`/api/v1/admin/topics/${topicId}`, { method: "DELETE" });
+      showToast("Đã xóa chủ đề thành công khỏi CSDL!", "success");
+      await Promise.all([loadTopics(currentTopicFilterLang), loadDashboardStats()]);
+    },
+  );
 }
 
 function resetTopicForm(): void {
@@ -518,32 +553,49 @@ function resetTopicForm(): void {
 /**
  * TAB QUẢN LÝ BÀI ĐỌC THEO 5 TẦNG HẦM NGỤC
  */
-async function initReadingsTab(): Promise<void> {
+let readingsTopicsCache: TopicItem[] = [];
+
+function populateReadingsLanguageFilter(): void {
+  const langSelect = getElement<HTMLSelectElement>("readingsLanguageFilter");
+  if (!langSelect || !languagesMap.size) return;
+  const current = langSelect.value || "all";
+  langSelect.replaceChildren();
+  const allOpt = document.createElement("option");
+  allOpt.value = "all";
+  allOpt.textContent = "Tất cả ngôn ngữ";
+  langSelect.append(allOpt);
+  Array.from(languagesMap.entries()).forEach(([code, name]) => {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = name;
+    langSelect.append(opt);
+  });
+  langSelect.value = current;
+}
+
+function renderReadingsTopicOptions(): void {
   const select = getElement<HTMLSelectElement>("readingsTopicSelect");
   if (!select) return;
-  const badge = getElement("readingsSourceBadge");
-  if (badge) badge.textContent = "Đang tải chủ đề...";
-
-  if (!languagesMap.size) await loadLanguages();
-  let topics: TopicItem[] = [];
-  try {
-    const codes = Array.from(languagesMap.keys());
-    const results = await Promise.allSettled(codes.map(fetchTopicsByLanguage));
-    topics = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
-  } catch (err) {
-    showApiError(err);
-  }
+  const lang = getFieldValue("readingsLanguageFilter") || "all";
+  const topics = readingsTopicsCache.filter(
+    (t) => lang === "all" || t.language_code === lang,
+  );
 
   select.replaceChildren();
   if (!topics.length) {
     const opt = document.createElement("option");
     opt.value = "";
-    opt.textContent = "Chưa có chủ đề nào trong CSDL";
+    opt.textContent = lang === "all" ? "Chưa có chủ đề nào trong CSDL" : "Không có chủ đề cho ngôn ngữ này";
     select.append(opt);
     readingsTopicId = null;
+    const badge = getElement("readingsSourceBadge");
     if (badge) badge.textContent = "Không có chủ đề";
     const note = getElement("readingsSourceNote");
-    if (note) note.textContent = "Hãy tạo chủ đề ở tab Quản Lý Chủ Đề trước khi soạn bài đọc.";
+    if (note) {
+      note.textContent = lang === "all"
+        ? "Hãy tạo chủ đề ở tab Quản Lý Chủ Đề trước khi soạn bài đọc."
+        : "Hãy chọn ngôn ngữ khác hoặc tạo chủ đề cho ngôn ngữ này.";
+    }
     renderReadingStages(null);
     return;
   }
@@ -557,7 +609,27 @@ async function initReadingsTab(): Promise<void> {
   const keep = readingsTopicId !== null && topics.some((t) => t.id === readingsTopicId);
   const target = keep ? (readingsTopicId as number) : topics[0].id;
   select.value = String(target);
-  await loadTopicReadings(target);
+  void loadTopicReadings(target);
+}
+
+async function initReadingsTab(): Promise<void> {
+  const select = getElement<HTMLSelectElement>("readingsTopicSelect");
+  if (!select) return;
+  const badge = getElement("readingsSourceBadge");
+  if (badge) badge.textContent = "Đang tải chủ đề...";
+
+  if (!languagesMap.size) await loadLanguages();
+  populateReadingsLanguageFilter();
+
+  try {
+    const codes = Array.from(languagesMap.keys());
+    const results = await Promise.allSettled(codes.map(fetchTopicsByLanguage));
+    readingsTopicsCache = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  } catch (err) {
+    showApiError(err);
+  }
+
+  renderReadingsTopicOptions();
 }
 
 function renderReadingStages(payload: TopicReadingsPayload | null): void {
@@ -739,12 +811,17 @@ function openActionConfirm(title: string, description: string, confirmLabel: str
     modal.classList.remove("flex");
   };
   cancel.onclick = close;
+  modal.onclick = (e) => {
+    if (e.target === modal) close();
+  };
   accept.onclick = async () => {
     accept.disabled = true;
     cancel.disabled = true;
     try {
       await action();
       close();
+    } catch (error) {
+      showApiError(error);
     } finally {
       accept.disabled = false;
       cancel.disabled = false;
@@ -1208,6 +1285,27 @@ function setupEventListeners(): void {
       renderDocumentsTable();
     }
   });
+
+  getElement("prevTopicPage")?.addEventListener("click", () => {
+    if (topicPage > 1) {
+      topicPage -= 1;
+      renderTopicsTable();
+    }
+  });
+  getElement("nextTopicPage")?.addEventListener("click", () => {
+    const search = getFieldValue("searchTopicInput").toLocaleLowerCase();
+    const total = topicsList.filter((item) => {
+      const matchesSearch = item.name.toLocaleLowerCase().includes(search) ||
+        (item.description || "").toLocaleLowerCase().includes(search);
+      const matchesLang = currentTopicFilterLang === "all" || item.language_code === currentTopicFilterLang;
+      return matchesSearch && matchesLang;
+    }).length;
+    const totalPages = Math.max(1, Math.ceil(total / TOPIC_PAGE_SIZE));
+    if (topicPage < totalPages) {
+      topicPage += 1;
+      renderTopicsTable();
+    }
+  });
   getElement("btnReindexDocuments")?.addEventListener("click", async () => {
     const button = getElement<HTMLButtonElement>("btnReindexDocuments");
     if (button) button.disabled = true;
@@ -1269,6 +1367,9 @@ function setupEventListeners(): void {
     const value = Number((event.target as HTMLSelectElement).value);
     if (Number.isFinite(value) && value > 0) void loadTopicReadings(value);
   });
+  getElement("readingsLanguageFilter")?.addEventListener("change", () => {
+    renderReadingsTopicOptions();
+  });
   getElement("btnSubmitReadings")?.addEventListener("click", () => void saveReadings());
   getElement("readingStagesWrap")?.addEventListener("input", (event) => {
     const card = (event.target as HTMLElement).closest<HTMLElement>("[data-stage]");
@@ -1276,9 +1377,13 @@ function setupEventListeners(): void {
   });
 
   // Search & Filter topics
-  getElement("searchTopicInput")?.addEventListener("input", renderTopicsTable);
+  getElement("searchTopicInput")?.addEventListener("input", () => {
+    topicPage = 1;
+    renderTopicsTable();
+  });
   getElement("filterTopicLanguage")?.addEventListener("change", (e) => {
     currentTopicFilterLang = (e.target as HTMLSelectElement).value;
+    topicPage = 1;
     void loadTopics(currentTopicFilterLang);
   });
 

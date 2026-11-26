@@ -7,6 +7,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
 from app.db.supabase import supabase_admin
@@ -34,6 +36,47 @@ if settings.BACKEND_CORS_ORIGINS:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+
+class CorsSafetyNetMiddleware(BaseHTTPMiddleware):
+    """Safety-net middleware đảm bảo mọi response đều có header CORS.
+
+    Starlette CORSMiddleware đôi khi không gắn Access-Control-Allow-Origin
+    cho các response phát sinh từ route chạy lâu (như transcribe giọng nói)
+    hoặc từ exception handler. Middleware này chạy ngoài cùng và kiểm tra lại,
+    nếu thiếu header thì bổ sung dựa trên Origin của request.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        origin = request.headers.get("origin")
+        try:
+            response = await call_next(request)
+        except Exception:
+            # Giữ nguyên exception để exception handler của app xử lý,
+            # nhưng đảm bảo response cuối cùng có CORS header.
+            raise
+
+        if origin and origin in settings.BACKEND_CORS_ORIGINS:
+            if "access-control-allow-origin" not in {
+                k.lower() for k in response.headers
+            }:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Vary"] = "Origin"
+        return response
+
+
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(CorsSafetyNetMiddleware)
+
+
+def _apply_cors_headers(request: Request, response: JSONResponse) -> JSONResponse:
+    """Gắn header CORS vào response từ exception handler (vòng bảo vệ thứ 2)."""
+    origin = request.headers.get("origin")
+    if origin and origin in settings.BACKEND_CORS_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 # Tích hợp Auth Router vào hệ thống API 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
@@ -114,7 +157,7 @@ def test_supabase_connection():
         
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException):
-    return JSONResponse(
+    return _apply_cors_headers(request, JSONResponse(
         status_code=exc.status_code,
         content={
             "success": False,
@@ -125,7 +168,27 @@ async def app_exception_handler(request: Request, exc: AppException):
                 "detail": str(exc)
             }
         }
+    ))
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    headers = getattr(exc, "headers", None) or {}
+    response = JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=headers,
     )
+    return _apply_cors_headers(request, response)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    response = JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
+    return _apply_cors_headers(request, response)
 
 
 @app.exception_handler(httpx.TransportError)
@@ -138,7 +201,7 @@ async def supabase_transport_error_handler(request: Request, exc: httpx.Transpor
         "Không thể kết nối Supabase (lỗi DNS/mạng). "
         "Kiểm tra kết nối internet, DNS hoặc trạng thái project Supabase rồi thử lại."
     )
-    return JSONResponse(
+    return _apply_cors_headers(request, JSONResponse(
         status_code=503,
         content={"status": "error", "message": message, "data": None, "detail": message},
-    )
+    ))
