@@ -843,20 +843,27 @@ def _complete_with_audio(
     for model in _chat_models():
         server_error_key_count = 0
         for key_index, key in enumerate(gemini_keys, start=1):
-            try:
-                client = genai.Client(api_key=key)
-                response = client.models.generate_content(
-                    model=model,
-                    contents=[
-                        types.Content(
-                            role="user",
-                            parts=[
-                                types.Part.from_text(text=prompt),
-                                types.Part.from_bytes(
-                                    data=audio_wav,
-                                    mime_type=mime_type or "audio/wav",
-                                ),
-                            ],
+            last_exc: Exception | None = None
+            for attempt in range(_MAX_CHAT_RETRIES + 1):
+                try:
+                    client = genai.Client(api_key=key)
+                    response = client.models.generate_content(
+                        model=model,
+                        contents=[
+                            types.Content(
+                                role="user",
+                                parts=[
+                                    types.Part.from_text(text=prompt),
+                                    types.Part.from_bytes(
+                                        data=audio_wav,
+                                        mime_type="audio/wav",
+                                    ),
+                                ],
+                            ),
+                        ],
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_instruction,
+                            response_mime_type="application/json",
                         ),
                     )
                     if response and response.text:

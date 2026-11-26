@@ -222,27 +222,14 @@ function showSessionExpiredModal(): void {
     ?.addEventListener("click", redirectToLoginPage);
 }
 
-export async function refreshAccessToken(previousAccessToken?: string): Promise<string> {
-  const baselineToken = previousAccessToken ?? localStorage.getItem(ACCESS_TOKEN_KEY);
-  // Nhiều request song song có thể cùng gặp 401; request nào refresh xong trước
-  // sẽ lưu token mới — request sau dùng lại thay vì POST trùng hoặc kết luận
-  // nhầm phiên đã chết (Supabase xoay refresh token, lần gọi sau có thể bị chặn).
-  const newerSavedToken = (): string | null => {
-    const current = localStorage.getItem(ACCESS_TOKEN_KEY);
-    return current && current !== baselineToken ? current : null;
-  };
-
-  const savedByParallelCall = newerSavedToken();
-  if (savedByParallelCall) return savedByParallelCall;
-
 // refresh single-flight: 401 đồng loạt từ nhiều request chỉ được đổi token MỘT lần,
 // vì Supabase rotation sẽ vô hiệu refresh_token cũ ngay lần dùng đầu tiên.
 let refreshInFlight: Promise<boolean> | null = null;
 
-async function tryRefreshSession(): Promise<boolean> {
+export async function tryRefreshSession(): Promise<boolean> {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
-      const refreshToken = readAuthCookie(REFRESH_TOKEN_KEY);
+      const refreshToken = readAuthCookie(REFRESH_TOKEN_KEY) || localStorage.getItem(REFRESH_TOKEN_KEY);
       if (!refreshToken) return false;
       try {
         const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
@@ -266,15 +253,18 @@ async function tryRefreshSession(): Promise<boolean> {
   return refreshInFlight;
 }
 
-// Access token hết hạn KHÔNG kết liễu phiên: chỉ refresh token chết mới đăng xuất.
-// 401 → thử /auth/refresh một lần rồi retry; refresh chết → xóa sạch cookie + modal.
-// Khách chưa từng có token (401) → chỉ báo yêu cầu đăng nhập, không dọa "hết hạn".
-function handleUnauthorized(token: string | null): never {
-  if (token) {
+export async function refreshAccessToken(previousAccessToken?: string): Promise<string> {
+  const current = readAuthCookie(ACCESS_TOKEN_KEY) || localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (current && previousAccessToken && current !== previousAccessToken) {
+    return current;
+  }
+  const ok = await tryRefreshSession();
+  const refreshed = readAuthCookie(ACCESS_TOKEN_KEY) || localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!ok || !refreshed) {
     handleSessionExpired();
     throw new Error(SESSION_EXPIRED_MESSAGE);
   }
-  throw new Error("Vui lòng đăng nhập để thực hiện thao tác này.");
+  return refreshed;
 }
 
 function isFormData(value: unknown): value is FormData {
@@ -296,19 +286,32 @@ function isJwtExpiringSoon(token: string, bufferMs = 30_000): boolean {
 }
 
 export async function getValidAccessToken(): Promise<string | null> {
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const token = readAuthCookie(ACCESS_TOKEN_KEY) || localStorage.getItem(ACCESS_TOKEN_KEY);
   if (!token) return null;
   if (!isJwtExpiringSoon(token)) return token;
-  return refreshAccessToken(token);
+  try {
+    return await refreshAccessToken(token);
+  } catch {
+    return null;
+  }
 }
 
-export async function slanguageApi<T = unknown>(
-  path: string,
-  options: ApiRequestOptions = {},
-  allowRefresh = true,
-): Promise<ApiResponse<T>> {
-  const { anonymous = false, ...requestOptions } = options;
-  const token = anonymous ? null : await getValidAccessToken();
+// Access token hết hạn KHÔNG kết liễu phiên: chỉ refresh token chết mới đăng xuất.
+// 401 → thử /auth/refresh một lần rồi retry; refresh chết → xóa sạch cookie + modal.
+// Khách chưa từng có token (401) → chỉ báo yêu cầu đăng nhập, không dọa "hết hạn".
+function handleUnauthorized(token: string | null): never {
+  if (token) {
+    handleSessionExpired();
+    throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
+  throw new Error("Vui lòng đăng nhập để thực hiện thao tác này.");
+}
+
+function buildHeaders(
+  requestOptions: Omit<ApiRequestOptions, "anonymous">,
+  token: string | null,
+  acceptAudio = false,
+): Headers {
   const headers = new Headers(requestOptions.headers);
   if (isFormData(requestOptions.body)) headers.delete("Content-Type");
   else if (acceptAudio) headers.set("Accept", "audio/*");
@@ -344,13 +347,13 @@ export async function slanguageApi<T = unknown>(
     return parseResponse<T>(response);
   }
 
-  let token: string | null = readAuthCookie(ACCESS_TOKEN_KEY);
+  let token: string | null = await getValidAccessToken();
   let response = await slanguageApiInner(path, requestOptions, token);
   if (response.status !== 401) return parseResponse<T>(response);
 
   if (!token) handleUnauthorized(null);
   if (await tryRefreshSession()) {
-    token = readAuthCookie(ACCESS_TOKEN_KEY);
+    token = readAuthCookie(ACCESS_TOKEN_KEY) || localStorage.getItem(ACCESS_TOKEN_KEY);
     response = await slanguageApiInner(path, requestOptions, token);
     if (response.status !== 401) return parseResponse<T>(response);
   }
@@ -362,9 +365,8 @@ export async function slanguageApiAudio(
   body?: unknown,
   method: "POST" | "GET" = "POST",
 ): Promise<Blob> {
-  const token = await getValidAccessToken();
-  const send = (accessToken: string | null) => {
-    const headers = new Headers({ Accept: "audio/*" });
+  const send = async (token: string | null): Promise<Response> => {
+    const headers = buildHeaders({}, token, true);
     if (method === "POST") headers.set("Content-Type", "application/json");
     return fetch(`${API_BASE_URL}${path}`, {
       method,
@@ -373,11 +375,11 @@ export async function slanguageApiAudio(
     });
   };
 
-  let token: string | null = readAuthCookie(ACCESS_TOKEN_KEY);
+  let token: string | null = await getValidAccessToken();
   let response = await send(token);
   if (response.status === 401 && token) {
     if (await tryRefreshSession()) {
-      token = readAuthCookie(ACCESS_TOKEN_KEY);
+      token = readAuthCookie(ACCESS_TOKEN_KEY) || localStorage.getItem(ACCESS_TOKEN_KEY);
       response = await send(token);
     } else {
       handleUnauthorized(token);
