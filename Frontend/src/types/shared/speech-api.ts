@@ -1,4 +1,5 @@
 import { smartAiRequest } from "./aiRouter.js";
+import { slanguageApi } from "./api-client";
 
 export interface AudioTranscriptionResponse {
   transcript: string;
