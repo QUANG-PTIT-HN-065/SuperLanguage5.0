@@ -26,10 +26,6 @@ const PUBLIC_PAGE_DIRS = [
   "/select-language/",
   "/terms/",
   "/minigame/",
-  "/home/",
-  "/select-lesson/",
-  "/vocabulary/",
-  "/leaderboard/",
   "/LoginAdmin/",
   "/dasboardAdmin/",
   "/vocabularyAdmin/",
@@ -139,20 +135,20 @@ export async function parseResponse<T>(response: Response): Promise<ApiResponse<
 }
 
 export function isLearnerAuthenticated(): boolean {
-  return Boolean(readAuthCookie(ACCESS_TOKEN_KEY));
+  return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY));
 }
 
 export function saveAuthTokens(tokens: AuthTokens): void {
   if (!tokens.access_token || !tokens.refresh_token) {
     throw new Error("Backend không trả về phiên đăng nhập hợp lệ.");
   }
-  writeAuthCookie(ACCESS_TOKEN_KEY, tokens.access_token);
-  writeAuthCookie(REFRESH_TOKEN_KEY, tokens.refresh_token);
+  localStorage.setItem(ACCESS_TOKEN_KEY, tokens.access_token);
+  localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refresh_token);
 }
 
 export function clearAuthTokens(): void {
-  removeAuthCookie(ACCESS_TOKEN_KEY);
-  removeAuthCookie(REFRESH_TOKEN_KEY);
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
 // Key giữ lại khi đăng xuất: email cho tính năng "Ghi nhớ đăng nhập".
@@ -174,10 +170,10 @@ export function saveLearnerIdentity(user: {
   email: string;
   display_name?: string | null;
 }): void {
-  writeAuthCookie("slanguage_is_logged_in", "true");
-  if (user.id) writeAuthCookie("slanguage_user_id", user.id);
-  writeAuthCookie("slanguage_user_name", user.display_name || user.email);
-  writeAuthCookie("slanguage_user_email", user.email);
+  localStorage.setItem("slanguage_is_logged_in", "true");
+  if (user.id) localStorage.setItem("slanguage_user_id", user.id);
+  localStorage.setItem("slanguage_user_name", user.display_name || user.email);
+  localStorage.setItem("slanguage_user_email", user.email);
 }
 
 function isPublicAuthPage(): boolean {
@@ -192,7 +188,10 @@ function redirectToLoginPage(): void {
 export function handleSessionExpired(): void {
   clearAuthTokens();
   clearLearnerCache();
-  for (const key of IDENTITY_KEYS) removeAuthCookie(key);
+  localStorage.removeItem("slanguage_is_logged_in");
+  localStorage.removeItem("slanguage_user_id");
+  localStorage.removeItem("slanguage_user_name");
+  localStorage.removeItem("slanguage_user_email");
   if (sessionExpiryPopupShown) return;
   sessionExpiryPopupShown = true;
   showSessionExpiredModal();
@@ -273,18 +272,29 @@ async function tryRefreshSession(): Promise<boolean> {
       refreshInFlight = null;
     });
   }
-  return refreshInFlight;
-}
 
-// Access token hết hạn KHÔNG kết liễu phiên: chỉ refresh token chết mới đăng xuất.
-// 401 → thử /auth/refresh một lần rồi retry; refresh chết → xóa sạch cookie + modal.
-// Khách chưa từng có token (401) → chỉ báo yêu cầu đăng nhập, không dọa "hết hạn".
-function handleUnauthorized(token: string | null): never {
-  if (token) {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refresh_token: refreshToken }),
+  });
+  if (response.status === 401 || response.status === 403) {
+    // Refresh token cũng đã chết/thu hồi: phiên không thể cứu, đăng xuất bắt buộc
+    const savedByParallelCallAfterFailure = newerSavedToken();
+    if (savedByParallelCallAfterFailure) return savedByParallelCallAfterFailure;
     handleSessionExpired();
     throw new Error(SESSION_EXPIRED_MESSAGE);
   }
-  throw new Error("Vui lòng đăng nhập để thực hiện thao tác này.");
+  const result = await parseResponse<{
+    access_token: string;
+    refresh_token: string;
+  }>(response);
+
+  if (!result.data.access_token || !result.data.refresh_token) {
+    throw new Error("Backend không trả về phiên đăng nhập mới.");
+  }
+  saveAuthTokens(result.data);
+  return result.data.access_token;
 }
 
 function isFormData(value: unknown): value is FormData {
@@ -335,7 +345,7 @@ async function slanguageApiInner(
 ): Promise<Response> {
   return fetch(`${API_BASE_URL}${path}`, {
     ...requestOptions,
-    headers: buildHeaders(requestOptions, token),
+    headers,
     body:
       requestOptions.body === undefined
         ? undefined
@@ -343,7 +353,6 @@ async function slanguageApiInner(
           ? requestOptions.body
           : JSON.stringify(requestOptions.body),
   });
-}
 
 export async function slanguageApi<T = unknown>(
   path: string,
@@ -366,7 +375,7 @@ export async function slanguageApi<T = unknown>(
     response = await slanguageApiInner(path, requestOptions, token);
     if (response.status !== 401) return parseResponse<T>(response);
   }
-  handleUnauthorized(token);
+  return parseResponse<T>(response);
 }
 
 export async function slanguageApiAudio(
@@ -378,6 +387,7 @@ export async function slanguageApiAudio(
     const headers = new Headers({ Accept: "audio/*" });
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     if (method === "POST") headers.set("Content-Type", "application/json");
+    if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     return fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
@@ -385,17 +395,10 @@ export async function slanguageApiAudio(
     });
   };
 
-  let token: string | null = readAuthCookie(ACCESS_TOKEN_KEY);
   let response = await send(token);
   if (response.status === 401 && token) {
-    if (await tryRefreshSession()) {
-      token = readAuthCookie(ACCESS_TOKEN_KEY);
-      response = await send(token);
-    } else {
-      handleUnauthorized(token);
-    }
+    response = await send(await refreshAccessToken(token));
   }
-  if (response.status === 401 && token) handleUnauthorized(token);
   if (!response.ok) {
     let payload: unknown;
     try {
@@ -414,6 +417,84 @@ export async function slanguageApiAudio(
   const audio = await response.blob();
   if (!audio.size) throw new Error("Backend trả về file giọng đọc trống.");
   return audio;
+}
+
+export interface StreamChatEvent {
+  type: "chunk" | "done" | "error";
+  delta?: string;
+  ai_response?: string;
+  ai_feedback?: string | null;
+  message?: string;
+}
+
+export async function slanguageApiStream(
+  path: string,
+  body: unknown,
+  onEvent: (event: StreamChatEvent) => void,
+  allowRefresh = true,
+): Promise<void> {
+  const token = await getValidAccessToken();
+  const headers = new Headers({
+    "Content-Type": "application/json",
+    Accept: "text/event-stream",
+  });
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (response.status === 401) {
+    if (!token) {
+      handleSessionExpired();
+      throw new Error(SESSION_EXPIRED_MESSAGE);
+    }
+    if (allowRefresh) {
+      await refreshAccessToken(token);
+      return slanguageApiStream(path, body, onEvent, false);
+    }
+  }
+
+  if (!response.ok) {
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch {
+      throw new Error(`Backend trả về lỗi HTTP ${response.status}.`);
+    }
+    throw new Error(getErrorMessage(payload, response.status));
+  }
+
+  if (!response.body) {
+    throw new Error("Trình duyệt không hỗ trợ đọc luồng phản hồi.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    let sepIndex = buffer.indexOf("\n\n");
+    while (sepIndex !== -1) {
+      const block = buffer.slice(0, sepIndex);
+      buffer = buffer.slice(sepIndex + 2);
+      for (const line of block.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const jsonText = trimmed.slice(5).trim();
+        if (!jsonText) continue;
+        const parsed = JSON.parse(jsonText) as StreamChatEvent;
+        onEvent(parsed);
+      }
+      sepIndex = buffer.indexOf("\n\n");
+    }
+  }
 }
 
 // Trang learner luôn import api-client trước khi chạy logic riêng, nên dùng

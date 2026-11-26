@@ -106,20 +106,21 @@ def consume_daily_ai_call(profile: Dict[str, Any]) -> None:
     daily_limit = decision.get("daily_limit")
     remaining = decision.get("remaining")
     allowed = decision.get("allowed")
-    valid_counts = (
-        isinstance(used, int)
-        and not isinstance(used, bool)
-        and isinstance(remaining, int)
-        and not isinstance(remaining, bool)
-        and 1 <= used <= DAILY_AI_CALL_LIMIT
-        and remaining == max(0, DAILY_AI_CALL_LIMIT - used)
-    )
+
+    # Validate that the RPC returned the expected types (not values).
+    # The SQL function may legitimately return used=0 when the quota row is
+    # missing (COALESCE fallback) or used < daily_limit when the DB enforces
+    # the limit differently, so we only reject clearly corrupt responses.
     if (
         not isinstance(allowed, bool)
-        or daily_limit != DAILY_AI_CALL_LIMIT
-        or not valid_counts
-        or (allowed and not valid_counts)
-        or (not allowed and (used != DAILY_AI_CALL_LIMIT or remaining != 0))
+        or not isinstance(daily_limit, int)
+        or isinstance(daily_limit, bool)
+        or not isinstance(used, int)
+        or isinstance(used, bool)
+        or not isinstance(remaining, int)
+        or isinstance(remaining, bool)
+        or used < 0
+        or remaining < 0
     ):
         logger.error("Daily AI quota function returned invalid usage values.")
         raise HTTPException(

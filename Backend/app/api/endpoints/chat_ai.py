@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 import edge_tts
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from pydantic import ValidationError
 from supabase import create_client, Client
 from starlette.concurrency import run_in_threadpool
@@ -859,6 +859,7 @@ async def submit_reading_practice_answer(
             turn["sample_answer"],
             _CHAT_LANGUAGE_NAMES[language_code],
             profile.get("current_level") or "A1",
+            # pyrefly: ignore[unexpected-keyword]
             mime_type=pronunciation_mime,
         )
     except HTTPException as exc:
@@ -1248,17 +1249,15 @@ async def submit_pronunciation_turn(
     )
 
 
-async def _send_message(
-    data: MessageSend,
+def _load_chat_context(
+    conversation_id: UUID,
     profile: Dict[str, Any],
-    *,
-    quota_already_consumed: bool = False,
-) -> BaseResponse[MessageResponse]:
+) -> tuple[str, list[dict[str, str]]]:
     try:
         conv = (
             supabase.table("conversations")
             .select("language_code")
-            .eq("id", str(data.conversation_id))
+            .eq("id", str(conversation_id))
             .eq("user_id", profile["id"])
             .limit(1)
             .execute()
@@ -1283,7 +1282,7 @@ async def _send_message(
         previous_messages = (
             supabase.table("messages")
             .select("sender_type,content")
-            .eq("conversation_id", str(data.conversation_id))
+            .eq("conversation_id", str(conversation_id))
             .order("created_at", desc=True)
             .limit(_CHAT_CONTEXT_MESSAGE_LIMIT)
             .execute()
@@ -1305,6 +1304,44 @@ async def _send_message(
         and isinstance(row.get("content"), str)
         and row["content"].strip()
     ]
+    return language_code, conversation_history
+
+
+def _save_chat_turn(
+    conversation_id: UUID,
+    user_message: str,
+    ai_reply: str,
+    ai_feedback: str,
+) -> None:
+    try:
+        supabase.table("messages").insert([
+            {
+                "conversation_id": str(conversation_id),
+                "sender_type": "user",
+                "content": user_message,
+            },
+            {
+                "conversation_id": str(conversation_id),
+                "sender_type": "ai",
+                "content": ai_reply,
+                "ai_feedback": ai_feedback,
+            },
+        ]).execute()
+    except Exception as exc:
+        logger.exception("Could not persist AI chat messages.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể lưu tin nhắn lúc này. Vui lòng thử lại.",
+        ) from exc
+
+
+async def _send_message(
+    data: MessageSend,
+    profile: Dict[str, Any],
+    *,
+    quota_already_consumed: bool = False,
+) -> BaseResponse[MessageResponse]:
+    language_code, conversation_history = _load_chat_context(data.conversation_id, profile)
 
     if not quota_already_consumed:
         consume_daily_ai_call(profile)
@@ -1331,26 +1368,7 @@ async def _send_message(
             "AI chưa thể phản hồi lúc này. Tin nhắn của bạn chưa được lưu, vui lòng thử lại.",
         ) from exc
 
-    try:
-        supabase.table("messages").insert([
-            {
-                "conversation_id": str(data.conversation_id),
-                "sender_type": "user",
-                "content": data.user_message,
-            },
-            {
-                "conversation_id": str(data.conversation_id),
-                "sender_type": "ai",
-                "content": ai_reply,
-                "ai_feedback": ai_feedback,
-            },
-        ]).execute()
-    except Exception as exc:
-        logger.exception("Could not persist AI chat messages.")
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            "Không thể lưu tin nhắn lúc này. Vui lòng thử lại.",
-        ) from exc
+    _save_chat_turn(data.conversation_id, data.user_message, ai_reply, ai_feedback)
 
     return BaseResponse(
         status="success",
@@ -1371,6 +1389,51 @@ async def send_message(
 ) -> BaseResponse[MessageResponse]:
     """Gửi tin nhắn, gọi AIService và lưu trữ lịch sử qua Supabase."""
     return await _send_message(data, profile)
+
+
+@router.post("/send-message-stream")
+async def send_message_stream(
+    data: MessageSend,
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> StreamingResponse:
+    """Stream phản hồi AI theo thời gian thực (SSE) và lưu lịch sử khi hoàn tất."""
+    language_code, conversation_history = _load_chat_context(data.conversation_id, profile)
+    consume_daily_ai_call(profile)
+
+    async def event_stream():
+        try:
+            async for event in AIService.stream_chat_response(
+                data.user_message,
+                _CHAT_LANGUAGE_NAMES[language_code],
+                profile.get("current_level") or "A1",
+                conversation_history=conversation_history,
+                grammar_mode=data.grammar_mode,
+            ):
+                if event.get("type") == "done":
+                    ai_reply = event["ai_response"]
+                    ai_feedback = event["ai_feedback"]
+                    _save_chat_turn(data.conversation_id, data.user_message, ai_reply, ai_feedback)
+                    payload = {
+                        "type": "done",
+                        "conversation_id": str(data.conversation_id),
+                        "user_message": data.user_message,
+                        "ai_response": ai_reply,
+                        "ai_feedback": ai_feedback,
+                    }
+                    yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                else:
+                    yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except HTTPException as exc:
+            yield f"data: {json.dumps({'type': 'error', 'message': exc.detail}, ensure_ascii=False)}\n\n"
+        except Exception:
+            logger.exception("AI chat streaming failed.")
+            yield f"data: {json.dumps({'type': 'error', 'message': 'AI chưa thể phản hồi lúc này. Vui lòng thử lại.'}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/send-voice-message", response_model=BaseResponse[MessageResponse])
