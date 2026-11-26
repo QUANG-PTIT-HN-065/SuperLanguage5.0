@@ -1482,6 +1482,26 @@ body.user-guest .lang-dropdown {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
+/* Nút bấm để mở/đóng lịch sử giao dịch (mặc định thu gọn) */
+.history-toggle-btn {
+  background: rgba(255, 183, 3, 0.15);
+  border: 1px solid rgba(255, 183, 3, 0.4);
+  border-radius: 9999px;
+  padding: 8px 18px;
+  color: #FFB703;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.history-toggle-btn:hover {
+  background: rgba(255, 183, 3, 0.3);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
 /* Inventory List */
 .inventory-list {
   display: flex;

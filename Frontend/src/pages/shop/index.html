@@ -496,9 +496,16 @@
             <i class="fa-solid fa-clock-rotate-left"></i>
             <h3 data-i18n="sh.historyTitle">Nhật Ký Giao Dịch Gần Đây</h3>
           </div>
+          <button
+            type="button"
+            class="history-toggle-btn"
+            id="btnToggleHistory"
+            data-i18n="sh.historyShow"
+            aria-expanded="false"
+          >Xem lịch sử giao dịch</button>
         </div>
 
-        <div class="history-table-wrap">
+        <div class="history-table-wrap" id="historyTableWrap" hidden>
           <table class="history-table">
             <thead>
               <tr>

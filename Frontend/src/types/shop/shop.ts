@@ -92,11 +92,14 @@ class SlanguageShopApp {
   private readonly itemsGrid = document.getElementById("shopItemsGrid");
   private readonly inventoryList = document.getElementById("inventoryList");
   private readonly historyBody = document.getElementById("historyTableBody");
+  private readonly historyWrap = document.getElementById("historyTableWrap");
+  private readonly historyToggle = document.getElementById("btnToggleHistory") as HTMLButtonElement | null;
   private readonly historyPager = document.getElementById("historyPager");
   private readonly historyPagerInfo = document.getElementById("historyPagerInfo");
   private readonly historyPrevButton = document.getElementById("btnHistoryPrev") as HTMLButtonElement | null;
   private readonly historyNextButton = document.getElementById("btnHistoryNext") as HTMLButtonElement | null;
   private historyPage = 1;
+  private historyExpanded = false;
   private readonly modalOverlay = document.getElementById("shopModalOverlay");
   private readonly modalBody = document.getElementById("modalBodyContent");
   private readonly loadingMessage = this.createMessageElement();
@@ -120,6 +123,7 @@ class SlanguageShopApp {
         this.renderItems();
         this.renderInventory();
         this.renderHistory();
+        this.syncHistoryToggleLabel();
         this.updateExchangePreview();
       }
     });
@@ -187,13 +191,34 @@ class SlanguageShopApp {
     });
     this.historyPrevButton?.addEventListener("click", () => this.stepHistoryPage(-1));
     this.historyNextButton?.addEventListener("click", () => this.stepHistoryPage(1));
+    this.historyToggle?.addEventListener("click", () => this.toggleHistory());
+  }
+
+  // Lịch sử giao dịch chỉ hiện khi người dùng bấm nút: mặc định thu gọn để
+  // phần tủ đồ/nhật ký không chiếm chỗ, dữ liệu vẫn nạp cùng /api/v1/shop.
+  private toggleHistory(): void {
+    this.historyExpanded = !this.historyExpanded;
+    if (this.historyWrap) this.historyWrap.hidden = !this.historyExpanded;
+    if (this.historyToggle) this.historyToggle.setAttribute("aria-expanded", String(this.historyExpanded));
+    if (!this.historyExpanded && this.historyPager) this.historyPager.hidden = true;
+    this.syncHistoryToggleLabel();
+    if (this.historyExpanded && this.state) this.renderHistory();
+  }
+
+  private syncHistoryToggleLabel(): void {
+    if (!this.historyToggle) return;
+    const key = this.historyExpanded ? "sh.historyHide" : "sh.historyShow";
+    this.historyToggle.dataset.i18n = key;
+    this.historyToggle.textContent = t(key);
   }
 
   private async loadState(): Promise<void> {
     this.setBusy(true);
     showSkeleton(this.itemsGrid, "shop-cards", { tone: "dark", count: 6 });
     showSkeleton(this.inventoryList, "inventory-rows", { tone: "dark", count: 3 });
-    showSkeleton(this.historyBody, "table-rows", { tone: "dark", cols: 4, count: 4 });
+    if (this.historyExpanded) {
+      showSkeleton(this.historyBody, "table-rows", { tone: "dark", cols: 4, count: 4 });
+    }
     try {
       const response = await slanguageApi<ShopState>("/api/v1/shop");
       this.state = response.data;
@@ -642,6 +667,7 @@ class SlanguageShopApp {
   private renderHistory(): void {
     clearSkeleton(this.historyBody);
     if (!this.historyBody || !this.state) return;
+    if (!this.historyExpanded) return;
     const pageCount = this.historyPageCount();
     this.historyPage = Math.min(Math.max(this.historyPage, 1), pageCount);
     const start = (this.historyPage - 1) * HISTORY_PAGE_SIZE;
