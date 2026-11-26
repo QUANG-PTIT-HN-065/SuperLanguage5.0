@@ -855,7 +855,6 @@ async def submit_reading_practice_answer(
             turn["sample_answer"],
             _CHAT_LANGUAGE_NAMES[language_code],
             profile.get("current_level") or "A1",
-            # pyrefly: ignore[unexpected-keyword]
             mime_type=pronunciation_mime,
         )
     except HTTPException as exc:
@@ -1185,6 +1184,7 @@ async def submit_pronunciation_turn(
             _CHAT_LANGUAGE_NAMES[language_code],
             profile.get("current_level") or "A1",
             history,
+            mime_type=pronunciation_mime,
         )
     except HTTPException as exc:
         if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
