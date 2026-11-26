@@ -19,6 +19,7 @@ from app.core.ai_quota import consume_daily_ai_call, read_daily_ai_usage
 from app.guardrails.safety import (
     filter_ai_feedback,
     filter_ai_reply,
+    limit_reply_for_short_prompt,
     sanitize_ai_payload,
     sanitize_stream_chunk,
     screen_user_message,
@@ -1397,7 +1398,7 @@ async def _send_message(
             "AI chưa thể phản hồi lúc này. Tin nhắn của bạn chưa được lưu, vui lòng thử lại.",
         ) from exc
 
-    ai_reply = filter_ai_reply(ai_reply)
+    ai_reply = limit_reply_for_short_prompt(user_message, filter_ai_reply(ai_reply))
     ai_feedback = filter_ai_feedback(ai_feedback)
     _save_chat_turn(data.conversation_id, user_message, ai_reply, ai_feedback)
 
@@ -1466,7 +1467,9 @@ async def send_message_stream(
                 prefer_local=True,
             ):
                 if event.get("type") == "done":
-                    ai_reply = filter_ai_reply(event["ai_response"])
+                    ai_reply = limit_reply_for_short_prompt(
+                        user_message, filter_ai_reply(event["ai_response"])
+                    )
                     ai_feedback = filter_ai_feedback(event["ai_feedback"])
                     _save_chat_turn(data.conversation_id, user_message, ai_reply, ai_feedback)
                     payload = {
