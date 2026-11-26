@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,13 +20,15 @@
     }
   </script>
 </head>
+
 <body class="user-authenticated">
 
   <!-- ================= TOP NAVBAR ================= -->
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
-        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng" aria-expanded="false" title="Menu điều hướng">
+        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng"
+          aria-expanded="false" title="Menu điều hướng">
           <i class="fa-solid fa-bars"></i>
         </button>
         <a href="../home/index.html" class="brand-logo">
@@ -37,7 +40,8 @@
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
             <li class="nav-dropdown-item">
-              <button type="button" class="nav-link-dropdown-btn" id="learnNavDropdownBtn" aria-haspopup="true" aria-expanded="false">
+              <button type="button" class="nav-link-dropdown-btn" id="learnNavDropdownBtn" aria-haspopup="true"
+                aria-expanded="false">
                 <span>Học tập</span>
                 <i class="fa-solid fa-chevron-down nav-dropdown-chevron"></i>
               </button>
@@ -76,7 +80,8 @@
 
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
-          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak"
+            class="streak-flame-img streak-flame-chip">
           <span id="headerStreakVal">—</span>
         </div>
         <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
@@ -89,24 +94,29 @@
         </div>
 
         <div class="lang-dropdown auth-only" id="langDropdown">
-          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
-            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true"
+            aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag"
+              width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
             <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
             <i class="fa-solid fa-chevron-down lang-chevron"></i>
           </button>
           <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
             <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
-              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Nhật (日本語)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
-              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">English (Tiếng Anh)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
-              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Việt (Vietnamese)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
@@ -114,7 +124,8 @@
         </div>
 
         <div class="user-dropdown auth-only" id="userDropdown">
-          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true"
+            aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
             <img alt="Ảnh đại diện" class="user-avatar-mini" id="headerAvatar">
             <div class="user-info-text">
               <div class="name" id="headerUserName">Học viên</div>
@@ -338,12 +349,17 @@
     <!-- 1. HERO BANNER & LIVE WALLET -->
     <section class="shop-hero-card">
       <div class="hero-top-info">
-        <span class="hero-badge-tag" data-i18n="sh.heroBadge"><i class="fa-solid fa-coins"></i> CỬA HÀNG QUY ĐỔI COIN & VẬT PHẨM TRỢ LỰC</span>
+        <span class="hero-badge-tag" data-i18n="sh.heroBadge"><i class="fa-solid fa-coins"></i> CỬA HÀNG QUY ĐỔI COIN &
+          VẬT PHẨM TRỢ LỰC</span>
         <h1 class="hero-title">
-          <span data-i18n="sh.heroTitleLead">Trạm Quy Đổi Điểm Thưởng &</span> <span class="highlight" data-i18n="sh.heroTitleHighlight">Tiệm Tạp Hóa Slanguage</span> <i class="fa-solid fa-coins hero-title-coin" aria-hidden="true"></i>
+          <span data-i18n="sh.heroTitleLead">Trạm Quy Đổi Điểm Thưởng &</span> <span class="highlight"
+            data-i18n="sh.heroTitleHighlight">Tiệm Tạp Hóa Slanguage</span> <i class="fa-solid fa-coins hero-title-coin"
+            aria-hidden="true"></i>
         </h1>
         <p class="hero-desc">
-          <span data-i18n="sh.heroDescLead">Quy đổi XP đã tích lũy thành Coin theo tỷ lệ</span> <strong>5 XP = 1 Coin</strong><span data-i18n="sh.heroDescTail">. Số dư, vật phẩm và lịch sử giao dịch được đồng bộ từ tài khoản của bạn.</span>
+          <span data-i18n="sh.heroDescLead">Quy đổi XP đã tích lũy thành Coin theo tỷ lệ</span> <strong>5 XP = 1
+            Coin</strong><span data-i18n="sh.heroDescTail">. Số dư, vật phẩm và lịch sử giao dịch được đồng bộ từ tài
+            khoản của bạn.</span>
         </p>
       </div>
 
@@ -392,7 +408,8 @@
           <h2 data-i18n="sh.exchangeTitle">Cỗ Máy Quy Đổi Điểm Thưởng (5 XP = 1 Coin)</h2>
         </div>
         <div class="rate-badge">
-          <span><span data-i18n="sh.rateLabel">Tỷ giá:</span> <strong>5 XP</strong> = <strong>1 Coin <i class="fa-solid fa-coins rate-coin-icon" aria-hidden="true"></i></strong></span>
+          <span><span data-i18n="sh.rateLabel">Tỷ giá:</span> <strong>5 XP</strong> = <strong>1 Coin <i
+                class="fa-solid fa-coins rate-coin-icon" aria-hidden="true"></i></strong></span>
         </div>
       </div>
 
@@ -400,7 +417,8 @@
         <!-- Cột Nguồn: Điểm XP Bạn Đổi -->
         <div class="exchange-col source">
           <div class="col-head">
-            <span class="lbl" data-i18n="sh.exchangeSourceLabel"><i class="fa-solid fa-star"></i> Bạn Dùng (Điểm XP)</span>
+            <span class="lbl" data-i18n="sh.exchangeSourceLabel"><i class="fa-solid fa-star"></i> Bạn Dùng (Điểm
+              XP)</span>
             <span class="sub" data-i18n="sh.exchangeSourceSub">Tối thiểu: 5 XP</span>
           </div>
 
@@ -435,7 +453,8 @@
         <!-- Cột Đích: Coin Nhận Được -->
         <div class="exchange-col result">
           <div class="col-head">
-            <span class="lbl" data-i18n="sh.exchangeResultLabel"><i class="fa-solid fa-coins"></i> Bạn Sẽ Nhận Được</span>
+            <span class="lbl" data-i18n="sh.exchangeResultLabel"><i class="fa-solid fa-coins"></i> Bạn Sẽ Nhận
+              Được</span>
             <span class="sub" data-i18n="sh.exchangeResultSub">Cộng ngay vào ví Coin</span>
           </div>
 
@@ -496,13 +515,8 @@
             <i class="fa-solid fa-clock-rotate-left"></i>
             <h3 data-i18n="sh.historyTitle">Nhật Ký Giao Dịch Gần Đây</h3>
           </div>
-          <button
-            type="button"
-            class="history-toggle-btn"
-            id="btnToggleHistory"
-            data-i18n="sh.historyShow"
-            aria-expanded="false"
-          >Xem lịch sử giao dịch</button>
+          <button type="button" class="history-toggle-btn" id="btnToggleHistory" data-i18n="sh.historyShow"
+            aria-expanded="false">Xem lịch sử giao dịch</button>
         </div>
 
         <div class="history-table-wrap" id="historyTableWrap" hidden>
@@ -522,23 +536,13 @@
         </div>
 
         <div class="history-pager" id="historyPager" hidden>
-          <button
-            type="button"
-            class="pager-btn"
-            id="btnHistoryPrev"
-            data-i18n-aria-label="sh.historyPrev"
-            aria-label="Trang trước"
-          >
+          <button type="button" class="pager-btn" id="btnHistoryPrev" data-i18n-aria-label="sh.historyPrev"
+            aria-label="Trang trước">
             <i class="fa-solid fa-chevron-left"></i>
           </button>
           <span class="pager-info" id="historyPagerInfo">—</span>
-          <button
-            type="button"
-            class="pager-btn"
-            id="btnHistoryNext"
-            data-i18n-aria-label="sh.historyNext"
-            aria-label="Trang sau"
-          >
+          <button type="button" class="pager-btn" id="btnHistoryNext" data-i18n-aria-label="sh.historyNext"
+            aria-label="Trang sau">
             <i class="fa-solid fa-chevron-right"></i>
           </button>
         </div>
@@ -557,7 +561,8 @@
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
         <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;" data-i18n="sh.footerIntro">
-          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
+          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp
+          lại ngắt quãng thông minh.
         </p>
       </div>
 
@@ -565,9 +570,12 @@
       <div class="footer-col">
         <h4 data-i18n="sh.footerPrograms">Chương trình học</h4>
         <ul>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()" data-i18n="sh.footerProgramEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()" data-i18n="sh.footerProgramJa">Tiếng Nhật JLPT (N5-N1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()" data-i18n="sh.footerProgramVi">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()"
+              data-i18n="sh.footerProgramEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()"
+              data-i18n="sh.footerProgramJa">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()"
+              data-i18n="sh.footerProgramVi">Tiếng Việt Cho Người Đi Làm</a></li>
           <li><a href="javascript:void(0)" data-i18n="sh.footerProgramAi">Luyện ngữ âm với AI</a></li>
         </ul>
       </div>
@@ -636,7 +644,8 @@
             <i class="fa-solid fa-infinity"></i>
             <div>
               <strong data-i18n="sh.footerCommit4Title">Quyền lợi học trọn đời</strong>
-              <span data-i18n="sh.footerCommit4Desc">Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+              <span data-i18n="sh.footerCommit4Desc">Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn
+                phí.</span>
             </div>
           </li>
         </ul>
@@ -675,4 +684,5 @@
 
   <script type="module" src="../../types/shop/shop.ts"></script>
 </body>
+
 </html>

@@ -16,7 +16,6 @@ import {
   DEFAULT_MAX_HEARTS,
   formatHeartLock,
   formatHearts,
-  gainHearts,
   getHeartCap,
   heartCapLabel,
   heartLockRemainingMs,
@@ -47,6 +46,7 @@ interface McTrial extends TrialBase {
   kind: 'mc';
   choices: string[];
   answerIdx: number;
+  optionIds?: string[];
 }
 
 interface FillTrial extends TrialBase {
@@ -1791,8 +1791,10 @@ class SlanguageDungeonTree {
     if (trial.bossIndex !== undefined && this.bossToken) {
       let value: unknown;
       if (trial.kind === 'mc') {
-        const question = this.bossQuestions[trial.bossIndex];
-        value = question?.options?.[this.selectedChoiceIdx ?? 0]?.id ?? '';
+        const mcTrial = trial as McTrial;
+        value = mcTrial.optionIds?.[this.selectedChoiceIdx ?? 0]
+          ?? this.bossQuestions.find((q) => q.index === trial.bossIndex)?.options?.[this.selectedChoiceIdx ?? 0]?.id
+          ?? '';
       } else if (trial.kind === 'fill') {
         value = this.fillInput?.value ?? '';
       } else {
@@ -1843,10 +1845,12 @@ class SlanguageDungeonTree {
 
   private bossToTrial(question: BossPublicQuestion): DungeonTrial {
     if (question.question_type === 'multiple_choice') {
+      const shuffledOptions = this.shuffle(question.options || []);
       return {
         kind: 'mc',
         prompt: question.prompt,
-        choices: (question.options || []).map((option) => option.text),
+        choices: shuffledOptions.map((option) => option.text),
+        optionIds: shuffledOptions.map((option) => option.id),
         answerIdx: -1,
         explanation: '',
         bossIndex: question.index,
@@ -1856,8 +1860,8 @@ class SlanguageDungeonTree {
       return {
         kind: 'match',
         prompt: question.prompt,
-        words: question.words || [],
-        meanings: question.meanings || [],
+        words: this.shuffle(question.words || []),
+        meanings: this.shuffle(question.meanings || []),
         pairs: {},
         explanation: '',
         bossIndex: question.index,
@@ -2119,8 +2123,6 @@ class SlanguageDungeonTree {
     this.totalXP += awardedXP;
     localStorage.setItem('slanguage_user_xp', this.totalXP.toString());
 
-    const restoredHearts = gainHearts(1);
-    if (restoredHearts > 0) this.currentHearts = restoredHearts;
     this.updateStatsDisplays();
     this.renderTree();
 
@@ -2284,7 +2286,7 @@ class SlanguageDungeonTree {
         text.textContent = isCorrect
           ? t('rm.verdictCorrect')
           : heartsLost > 0
-            ? t('rm.verdictHearts', { hearts: formatHearts(this.currentHearts) })
+            ? t('rm.verdictHearts', { lost: heartsLost, hearts: formatHearts(this.currentHearts) })
             : t('rm.verdictWrong');
       }
       replayAnimation(toast, 'is-in');
@@ -2308,6 +2310,7 @@ class SlanguageDungeonTree {
     if (this.modalTrialBox) this.modalTrialBox.style.display = 'block';
     if (node.official) {
       this.bossAnswers = [];
+      this.currentQuestionsList = this.shuffle(this.bossQuestions.map((question) => this.bossToTrial(question)));
       this.renderCurrentQuestion();
       return;
     }
@@ -2363,7 +2366,7 @@ class SlanguageDungeonTree {
         throw new Error(t('rm.bossNoQuestions'));
       }
       this.bossLoading = false;
-      this.currentQuestionsList = this.bossQuestions.map((question) => this.bossToTrial(question));
+      this.currentQuestionsList = this.shuffle(this.bossQuestions.map((question) => this.bossToTrial(question)));
       this.renderCurrentQuestion();
     } catch (error) {
       this.bossLoading = false;

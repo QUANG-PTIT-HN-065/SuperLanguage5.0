@@ -85,14 +85,12 @@ class SlanguageVocabulary {
   private activeCardIndex = 0;
   private currentXP = 0;
   private quizStreak = 0;
-  private quizScore = 0;
   private quizTimerInterval: number | null = null;
   private quizRemainingTime = 15;
   private currentQuizItem: VocabItem | null = null;
   private dataState: 'loading' | 'ready' | 'empty' | 'error' = 'loading';
   private loadErrorRaw = '';
   private lastFeedback: 'correct' | 'wrong' | 'timeout' | null = null;
-  private lastFeedbackPoints = 0;
 
   constructor() {
     this.loadInitialState();
@@ -323,7 +321,7 @@ class SlanguageVocabulary {
     const feedbackMsg = document.getElementById('quizFeedbackMsg');
     if (feedbackBanner?.classList.contains('show') && feedbackMsg && this.currentQuizItem && this.lastFeedback) {
       if (this.lastFeedback === 'correct') {
-        feedbackMsg.textContent = t('vc.quizCorrect', { xp: this.lastFeedbackPoints, unit: t('vc.quizPointUnit') });
+        feedbackMsg.textContent = t('vc.quizCorrect');
       } else if (this.lastFeedback === 'wrong') {
         feedbackMsg.textContent = t('vc.quizWrong', { answer: this.currentQuizItem.meaning });
       } else {
@@ -703,8 +701,6 @@ class SlanguageVocabulary {
     const optionsGrid = document.getElementById('quizOptionsGrid');
     const feedbackBanner = document.getElementById('quizFeedbackBanner');
     if (feedbackBanner) feedbackBanner.classList.remove('show', 'wrong-border');
-    const scoreCount = document.getElementById('quizScoreCount');
-    if (scoreCount) scoreCount.textContent = `${this.quizScore} ${t('vc.quizPointUnit')}`;
     this.lastFeedback = null;
 
     if (deck.length < 2) {
@@ -791,22 +787,18 @@ class SlanguageVocabulary {
     const feedbackBanner = document.getElementById('quizFeedbackBanner');
     const feedbackMsg = document.getElementById('quizFeedbackMsg');
     const streakCount = document.getElementById('quizStreakCount');
-    const scoreCount = document.getElementById('quizScoreCount');
 
     if (isCorrect) {
       selectedBtn.classList.add('correct');
       this.quizStreak++;
-      // Luyện tập từ vựng chỉ tính điểm buổi luyện, KHÔNG cộng XP vào tài khoản.
-      const bonusPoints = 15 + (this.quizStreak * 5);
-      this.quizScore += bonusPoints;
+      // Luyện tập từ vựng KHÔNG cộng điểm và KHÔNG cộng XP vào tài khoản.
       void this.persistReview(this.currentQuizItem, 'Tốt');
       this.lastFeedback = 'correct';
-      this.lastFeedbackPoints = bonusPoints;
 
       if (feedbackBanner && feedbackMsg) {
         feedbackBanner.classList.add('show');
         feedbackBanner.classList.remove('wrong-border');
-        feedbackMsg.textContent = t('vc.quizCorrect', { xp: bonusPoints, unit: t('vc.quizPointUnit') });
+        feedbackMsg.textContent = t('vc.quizCorrect');
       }
     } else {
       selectedBtn.classList.add('wrong');
@@ -827,7 +819,6 @@ class SlanguageVocabulary {
     }
 
     if (streakCount) streakCount.textContent = this.quizStreak.toString();
-    if (scoreCount) scoreCount.textContent = `${this.quizScore} ${t('vc.quizPointUnit')}`;
   }
 
   private handleQuizTimeout(): void {

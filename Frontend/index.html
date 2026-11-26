@@ -3,12 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="refresh" content="0; url=./src/pages/home/index.html" />
     <meta name="theme-color" content="#EEF2FF" />
     <title>SuperLanguage — Trang chủ</title>
     <link rel="stylesheet" href="./src/styles/shared/mobile-responsive.css" />
     <script>
-      window.location.replace("./src/pages/home/index.html");
+      // Vite phục vụ index.html gốc cho MỌI URL không tồn tại (SPA fallback).
+      // Nếu redirect dùng đường dẫn tương đối, URL sẽ tự dài ra mãi và gây vòng lặp.
+      // Vì vậy tính đường dẫn trang chủ từ THƯ MỤC GỐC của site, không phụ thuộc URL hiện tại.
+      (function () {
+        var path = window.location.pathname;
+        var marker = path.indexOf("/src/pages/");
+        var root = marker === -1 ? path.replace(/[^/]*$/, "") : path.slice(0, marker);
+        if (root.charAt(root.length - 1) !== "/") root += "/";
+        window.location.replace(root + "src/pages/home/index.html");
+      })();
     </script>
   </head>
   <body>

@@ -7,26 +7,10 @@
   <link rel="icon" type="image/png" href="../../../assets/logo.png">
   <link rel="apple-touch-icon" href="../../../assets/logo.png">
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
   <!-- Google Fonts: K2D (font chính của khu Mini game) + fallback tiếng Việt -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['K2D', '"Be Vietnam Pro"', 'sans-serif'],
-            display: ['K2D', '"Be Vietnam Pro"', 'sans-serif'],
-          },
-        },
-      },
-    };
-  </script>
 
   <style>
     /* =========================================================================
@@ -147,6 +131,10 @@
       border-radius: 9999px;
     }
   </style>
+
+  <!-- Tailwind CSS (bản build local, đặt SAU style nội tuyến để giữ đúng thứ tự
+       đè của Tailwind so với style trong trang, như khi còn dùng cdn.tailwindcss.com) -->
+  <link rel="stylesheet" href="../../styles/minigame/style.css" />
 </head>
 <body class="min-h-screen flex flex-col justify-between selection:bg-amber-400 selection:text-slate-950">
   <!-- Loading indicator (hidden by default) -->

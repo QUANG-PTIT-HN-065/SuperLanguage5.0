@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+/* Theme tương ứng với tailwind.config inline đã bị gỡ khỏi
+   src/pages/minigame/01_minigame.html (thay cho script cdn.tailwindcss.com). */
+@theme {
+  --font-sans: "K2D", "Be Vietnam Pro", sans-serif;
+  --font-display: "K2D", "Be Vietnam Pro", sans-serif;
+}

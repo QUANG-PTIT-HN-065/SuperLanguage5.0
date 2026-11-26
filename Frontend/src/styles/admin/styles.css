@@ -1,7 +1,43 @@
 @import "tailwindcss";
 
-body {
-  font-family: 'Inter', sans-serif;
+/* Tailwind v4 khai báo theme trong CSS (thay cho tailwind.config inline trong HTML,
+   vốn đã bị gỡ cùng script cdn.tailwindcss.com). */
+@theme {
+  --font-title: "Manrope", sans-serif;
+  --font-body: "Hanken Grotesk", sans-serif;
+
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+
+  --color-primary: #3525cd;
+  --color-primary-container: #4f46e5;
+  --color-primary-fixed: #e2dfff;
+  --color-secondary: #712ae2;
+  --color-on-surface: #131b2e;
+  --color-on-surface-variant: #464555;
+  --color-outline: #777587;
+  --color-background: #faf8ff;
+  --color-surface-container-low: #f2f3ff;
+  --color-surface-container: #eaedff;
+  --color-surface-container-high: #e2e7ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+}
+
+/* darkMode: "class" (giữ đúng hành vi của config cũ) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Đặt trong @layer base để utility .font-body (lớp utilities) vẫn thắng:
+   rule ngoài layer luôn đè lên mọi layer của Tailwind. */
+@layer base {
+  body {
+    font-family: 'Inter', sans-serif;
+  }
 }
 
 /* Custom scrollbar */
