@@ -1238,6 +1238,37 @@ body.user-guest .lang-dropdown {
   gap: 12px;
 }
 
+/* Chế độ Phát Âm & Chính tả: chỉ còn nút mic, không có ô chat và nút gửi */
+.input-row.is-mic-only {
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0;
+}
+
+.input-row.is-mic-only .chat-textarea,
+.input-row.is-mic-only .btn-send {
+  display: none !important;
+}
+
+.input-row.is-mic-only .btn-mic {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+}
+
+.input-row.is-mic-only .btn-mic:not(.recording):not(:disabled) {
+  background: linear-gradient(135deg, #0077B6 0%, #00B4D8 100%);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #fff;
+  box-shadow: 0 6px 20px rgba(0, 119, 182, 0.45);
+}
+
+.input-row.is-mic-only .btn-mic:not(.recording):not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 180, 216, 0.6);
+}
+
 .btn-mic {
   width: 52px;
   height: 52px;
