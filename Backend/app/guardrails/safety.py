@@ -7,6 +7,7 @@ L1. ``screen_user_message``  - chặn rỗng/quá dài/prompt injection/chủ đ
 L2. ``filter_ai_reply``      - làm sạch câu trả lời AI: bỏ markdown, HTML, link, emoji,
                                che dữ liệu cá nhân, cắt câu làm lộ prompt hệ thống, gộp câu lặp.
     ``needs_direct_answer``  - phát hiện câu trả lời chỉ hỏi lại/đòi thêm chi tiết.
+    ``limit_reply_for_short_prompt`` - câu hỏi ngắn thì cắt câu trả lời còn 1-2 câu.
     ``filter_ai_feedback``   - làm sạch phần nhận xét tiếng Việt.
     ``sanitize_ai_payload``  - làm sạch từng trường chuỗi trong JSON AI trả về.
 L3. ``speakable_text``       - chuẩn hoá văn bản trước khi gửi sang dịch vụ đọc (TTS).
@@ -387,6 +388,55 @@ def needs_direct_answer(reply: str) -> bool:
     if not cleaned:
         return True
     return any(pattern.search(cleaned) for pattern in _CLARIFY_ONLY_RES)
+
+
+# L2 - giữ câu trả lời ngắn khi người học chỉ chào hoặc hỏi một câu ngắn.
+_SHORT_PROMPT_MAX_WORDS = 8
+_SHORT_REPLY_MAX_SENTENCES = 2
+_SHORT_REPLY_MAX_CHARS = 260
+_TRANSLATION_MARKER = "[Bản dịch]"
+_SENTENCE_END_RE = re.compile(r"(?<=[.!?…。！？])\s+")
+
+
+def is_short_prompt(text: str) -> bool:
+    """True khi tin nhắn rất ngắn (lời chào, câu hỏi một vế) nên trả lời ngắn."""
+    cleaned = normalize_text(text)
+    if not cleaned:
+        return False
+    if len(cleaned.split()) > _SHORT_PROMPT_MAX_WORDS:
+        return False
+    return cleaned.count("?") + cleaned.count("？") <= 1
+
+
+def _limit_sentences(text: str, max_sentences: int, max_chars: int) -> str:
+    parts = [part.strip() for part in _SENTENCE_END_RE.split(text) if part.strip()]
+    if len(parts) <= 1:
+        return _truncate(text.strip(), max_chars)
+    return _truncate(" ".join(parts[:max_sentences]), max_chars)
+
+
+def limit_reply_for_short_prompt(question: str, reply: str) -> str:
+    """L2: câu hỏi ngắn thì câu trả lời cũng ngắn, không giảng dài dòng.
+
+    Chỉ cắt số câu/chars của câu trả lời đã lọc; phần ``[Bản dịch]`` được cắt riêng để
+    không mất bản dịch của đoạn còn lại.
+    """
+    if not isinstance(reply, str) or not reply.strip():
+        return reply
+    if not is_short_prompt(question):
+        return reply
+    if _TRANSLATION_MARKER in reply:
+        main, translation = reply.split(_TRANSLATION_MARKER, 1)
+        main = _limit_sentences(main, _SHORT_REPLY_MAX_SENTENCES, _SHORT_REPLY_MAX_CHARS).rstrip()
+        translation = _limit_sentences(
+            translation, _SHORT_REPLY_MAX_SENTENCES, _SHORT_REPLY_MAX_CHARS
+        ).rstrip()
+        if not main or not translation:
+            return _limit_sentences(
+                reply, _SHORT_REPLY_MAX_SENTENCES, _SHORT_REPLY_MAX_CHARS
+            ).strip()
+        return f"{main}\n{_TRANSLATION_MARKER}\n{translation}".strip()
+    return _limit_sentences(reply, _SHORT_REPLY_MAX_SENTENCES, _SHORT_REPLY_MAX_CHARS).strip()
 
 
 def _truncate(text: str, max_chars: int) -> str:
