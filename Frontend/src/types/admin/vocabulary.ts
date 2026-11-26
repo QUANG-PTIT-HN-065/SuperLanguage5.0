@@ -237,7 +237,7 @@ function createRow(item: VocabularyItem): HTMLTableRowElement {
 
   // Word + IPA + Audio
   const tdWord = document.createElement("td");
-  tdWord.className = "py-3.5 px-4 align-middle";
+  tdWord.className = "py-3.5 px-4 align-middle min-w-0 max-w-[150px]";
   const wordWrap = document.createElement("div");
   wordWrap.className = "flex items-center gap-2.5";
 
@@ -262,16 +262,18 @@ function createRow(item: VocabularyItem): HTMLTableRowElement {
   }
 
   const textWrap = document.createElement("div");
-  textWrap.className = "flex flex-col";
+  textWrap.className = "flex flex-col min-w-0";
   const wordTitle = document.createElement("span");
-  wordTitle.className = "font-bold text-slate-900 text-sm";
+  wordTitle.className = "font-bold text-slate-900 text-sm truncate";
   wordTitle.textContent = item.word;
+  wordTitle.title = item.word;
   textWrap.appendChild(wordTitle);
 
   if (item.phonetic || item.part_of_speech) {
     const meta = document.createElement("span");
-    meta.className = "text-xs text-slate-500 font-mono";
+    meta.className = "text-xs text-slate-500 font-mono truncate";
     meta.textContent = [item.phonetic, item.part_of_speech ? `• ${item.part_of_speech}` : ""].filter(Boolean).join(" ");
+    meta.title = meta.textContent;
     textWrap.appendChild(meta);
   }
   wordWrap.appendChild(textWrap);
@@ -279,10 +281,11 @@ function createRow(item: VocabularyItem): HTMLTableRowElement {
 
   // Meaning & Example
   const tdMeaning = document.createElement("td");
-  tdMeaning.className = "py-3.5 px-4 align-middle max-w-xs";
+  tdMeaning.className = "py-3.5 px-4 align-middle min-w-0 max-w-[220px]";
   const meaningText = document.createElement("div");
-  meaningText.className = "text-sm text-slate-800 font-medium leading-snug";
+  meaningText.className = "text-sm text-slate-800 font-medium leading-snug line-clamp-2";
   meaningText.textContent = item.meaning;
+  meaningText.title = item.meaning;
   tdMeaning.appendChild(meaningText);
 
   if (item.example_sentence) {
@@ -477,6 +480,18 @@ async function showWordDetails(wordId: number): Promise<void> {
 function openDeleteModal(wordId: number): void {
   pendingDeleteId = wordId;
   const modal = getElement("deleteConfirmModal");
+  const wordNameEl = getElement("deleteWordName");
+
+  // Tìm tên từ trong danh sách hiện tại để hiển thị trên modal
+  const item = vocabList.find((v) => v.id === wordId);
+  if (wordNameEl && item) {
+    wordNameEl.textContent = `"${item.word}"`;
+    wordNameEl.classList.remove("hidden");
+  } else if (wordNameEl) {
+    wordNameEl.textContent = "";
+    wordNameEl.classList.add("hidden");
+  }
+
   modal?.classList.remove("hidden");
 }
 
