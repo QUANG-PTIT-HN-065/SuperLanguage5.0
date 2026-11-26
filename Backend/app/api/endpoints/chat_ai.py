@@ -773,10 +773,6 @@ def list_reading_practice_turns(
     "/reading-answer",
     response_model=BaseResponse[ReadingPracticeTurnResponse],
 )
-@router.post(
-    "/pronunciation-turn",
-    response_model=BaseResponse[ReadingPracticeTurnResponse],
-)
 async def submit_reading_practice_answer(
     conversation_id: UUID = Form(...),
     turn_id: UUID = Form(...),
@@ -1131,15 +1127,22 @@ async def submit_pronunciation_turn(
             "Ngôn ngữ của phòng trò chuyện không được hỗ trợ nhận diện.",
         )
 
+    upload_content_type = (audio.content_type or "audio/webm").split(";", maxsplit=1)[0].strip().lower()
+    upload_filename = audio.filename or "voice.webm"
     consume_daily_ai_call(profile)
     audio_bytes = await _read_audio_upload(audio)
-    pronunciation_audio = await _prepare_pronunciation_audio(audio_bytes)
+    pronunciation_audio, pronunciation_mime = await _prepare_pronunciation_audio(
+        audio_bytes,
+        upload_content_type,
+    )
     transcript = (
         await _transcribe_for_profile(
             pronunciation_audio,
             profile,
             language,
             charge_quota=False,
+            filename="voice.wav" if pronunciation_mime == "audio/wav" else upload_filename,
+            content_type=pronunciation_mime,
         )
     ).strip()
     if not transcript or len(transcript) > 4000:
