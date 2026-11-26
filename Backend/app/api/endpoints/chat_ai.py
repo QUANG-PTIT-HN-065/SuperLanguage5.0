@@ -16,6 +16,14 @@ from starlette.concurrency import run_in_threadpool
 from app.core.deps import get_current_profile
 from app.core.config import settings
 from app.core.ai_quota import consume_daily_ai_call, read_daily_ai_usage
+from app.guardrails.safety import (
+    filter_ai_feedback,
+    filter_ai_reply,
+    sanitize_ai_payload,
+    sanitize_stream_chunk,
+    screen_user_message,
+    speakable_text,
+)
 from app.schemas.chat_ai import (
     AudioTranscriptionResponse,
     AudioUploadResponse,
@@ -1203,7 +1211,7 @@ async def submit_pronunciation_turn(
 
     try:
         feedback = PronunciationTurnFeedback.model_validate(
-            _decode_ai_json_object(feedback_text, "pronunciation turn"),
+            sanitize_ai_payload(_decode_ai_json_object(feedback_text, "pronunciation turn")),
         )
     except ValidationError as exc:
         logger.warning("AI returned invalid pronunciation-turn fields.")
@@ -1346,11 +1354,28 @@ async def _send_message(
 ) -> BaseResponse[MessageResponse]:
     language_code, conversation_history = _load_chat_context(data.conversation_id, profile)
 
+    verdict = screen_user_message(data.user_message)
+    if not verdict.allowed:
+        logger.info("AI chat input blocked by guardrails (%s).", verdict.code)
+        blocked_text = verdict.text or data.user_message
+        _save_chat_turn(data.conversation_id, blocked_text, verdict.message, "")
+        return BaseResponse(
+            status="success",
+            message="Tin nhắn đã được bộ lọc an toàn của SuperLanguage xử lý.",
+            data=MessageResponse(
+                conversation_id=data.conversation_id,
+                user_message=blocked_text,
+                ai_response=verdict.message,
+                ai_feedback=None,
+            ),
+        )
+
+    user_message = verdict.text
     if not quota_already_consumed:
         consume_daily_ai_call(profile)
     try:
         ai_reply, ai_feedback = await AIService.generate_chat_response(
-            data.user_message,
+            user_message,
             _CHAT_LANGUAGE_NAMES[language_code],
             profile.get("current_level") or "A1",
             conversation_history=conversation_history,
@@ -1372,14 +1397,16 @@ async def _send_message(
             "AI chưa thể phản hồi lúc này. Tin nhắn của bạn chưa được lưu, vui lòng thử lại.",
         ) from exc
 
-    _save_chat_turn(data.conversation_id, data.user_message, ai_reply, ai_feedback)
+    ai_reply = filter_ai_reply(ai_reply)
+    ai_feedback = filter_ai_feedback(ai_feedback)
+    _save_chat_turn(data.conversation_id, user_message, ai_reply, ai_feedback)
 
     return BaseResponse(
         status="success",
         message="Đã nhận phản hồi từ AI.",
         data=MessageResponse(
             conversation_id=data.conversation_id,
-            user_message=data.user_message,
+            user_message=user_message,
             ai_response=ai_reply,
             ai_feedback=ai_feedback,
         ),
@@ -1402,12 +1429,36 @@ async def send_message_stream(
 ) -> StreamingResponse:
     """Stream phản hồi AI theo thời gian thực (SSE) và lưu lịch sử khi hoàn tất."""
     language_code, conversation_history = _load_chat_context(data.conversation_id, profile)
+
+    verdict = screen_user_message(data.user_message)
+    if not verdict.allowed:
+        logger.info("AI chat stream input blocked by guardrails (%s).", verdict.code)
+        blocked_text = verdict.text or data.user_message
+        _save_chat_turn(data.conversation_id, blocked_text, verdict.message, "")
+
+        async def blocked_stream():
+            payload = {
+                "type": "done",
+                "conversation_id": str(data.conversation_id),
+                "user_message": blocked_text,
+                "ai_response": verdict.message,
+                "ai_feedback": "",
+            }
+            yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+        return StreamingResponse(
+            blocked_stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    user_message = verdict.text
     consume_daily_ai_call(profile)
 
     async def event_stream():
         try:
             async for event in AIService.stream_chat_response(
-                data.user_message,
+                user_message,
                 _CHAT_LANGUAGE_NAMES[language_code],
                 profile.get("current_level") or "A1",
                 conversation_history=conversation_history,
@@ -1415,17 +1466,22 @@ async def send_message_stream(
                 prefer_local=True,
             ):
                 if event.get("type") == "done":
-                    ai_reply = event["ai_response"]
-                    ai_feedback = event["ai_feedback"]
-                    _save_chat_turn(data.conversation_id, data.user_message, ai_reply, ai_feedback)
+                    ai_reply = filter_ai_reply(event["ai_response"])
+                    ai_feedback = filter_ai_feedback(event["ai_feedback"])
+                    _save_chat_turn(data.conversation_id, user_message, ai_reply, ai_feedback)
                     payload = {
                         "type": "done",
                         "conversation_id": str(data.conversation_id),
-                        "user_message": data.user_message,
+                        "user_message": user_message,
                         "ai_response": ai_reply,
                         "ai_feedback": ai_feedback,
                     }
                     yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+                elif event.get("type") == "chunk":
+                    delta = sanitize_stream_chunk(event.get("delta", ""))
+                    if delta:
+                        payload = {"type": "chunk", "delta": delta}
+                        yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
                 else:
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except HTTPException as exc:
@@ -1472,8 +1528,31 @@ async def synthesize_chat_audio(
     data: TTSRequest,
     _profile: Dict[str, Any] = Depends(get_current_profile),
 ) -> Response:
+    try:
+        speech_text = speakable_text(data.text)
+    except ValueError as exc:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Văn bản cần đọc không có nội dung phù hợp để phát âm.",
+        ) from exc
+    if speech_text != data.text:
+        data = data.model_copy(update={"text": speech_text})
+
     if data.provider == "auto" and _adsup_keys():
-        return await _synthesize_with_adsup(data)
+        try:
+            return await _synthesize_with_adsup(data)
+        except HTTPException as exc:
+            if exc.status_code not in {
+                status.HTTP_502_BAD_GATEWAY,
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                status.HTTP_504_GATEWAY_TIMEOUT,
+            }:
+                raise
+            logger.warning(
+                "ADSUP TTS thất bại (HTTP %d) — chuyển sang Edge TTS.",
+                exc.status_code,
+            )
+        return await _synthesize_with_edge_library(data)
     if data.provider == "edge":
         return await _synthesize_with_edge_library(data)
 
