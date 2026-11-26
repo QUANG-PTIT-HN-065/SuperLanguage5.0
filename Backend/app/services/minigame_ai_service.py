@@ -12,11 +12,10 @@ from app.schemas.minigame import (
 )
 
 logger = logging.getLogger(__name__)
-_DEFAULT_MODEL = "gemini-3.5-flash-lite"
+_DEFAULT_MODEL = "gemini-2.5-flash"
 
-# Model nhẹ hay bị Google trả 503 "high demand" theo cơn; thử tiếp model kế
-# trong danh sách thay vì báo lỗi ngay.
-_FALLBACK_MODELS = ("gemini-3.5-flash", "gemini-3.1-flash-lite")
+# Model Gemini thực sự có sẵn; thử nhẹ trước rồi đến bản đầy đủ khi cần.
+_FALLBACK_MODELS = ("gemini-2.5-flash-lite", "gemini-1.5-flash", "gemini-2.0-flash")
 
 
 class MiniGameAIError(RuntimeError):
