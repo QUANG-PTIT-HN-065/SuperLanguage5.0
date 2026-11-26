@@ -7,15 +7,28 @@ Usage:
     uvicorn local_worker:app --host 0.0.0.0 --port 8001
 """
 
+import hmac
 import logging
 import threading
 from contextlib import asynccontextmanager
 from typing import Any, Dict
 from uuid import UUID
 
+import httpx
 import uvicorn
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response, StreamingResponse
 
 from app.api.endpoints.chat_ai import (
     send_voice_message,
@@ -55,15 +68,8 @@ app = __import__("fastapi").FastAPI(
 
 def verify_local_worker_access(
     profile: Dict[str, Any] = Depends(get_current_profile),
-    x_local_secret_key: str | None = Header(default=None, alias="X-Local-Secret-Key"),
 ) -> Dict[str, Any]:
-    """Authenticate via Supabase JWT and optional X-Local-Secret-Key header."""
-    expected_secret = (settings.LOCAL_WORKER_SECRET or "").strip()
-    if expected_secret and x_local_secret_key != expected_secret:
-        raise HTTPException(
-            status.HTTP_403_FORBIDDEN,
-            "Invalid X-Local-Secret-Key header.",
-        )
+    """Authenticate user-facing worker operations with the Supabase JWT."""
     return profile
 
 
@@ -162,6 +168,76 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.post("/internal/v1/chat/completions")
+async def local_llm_chat_completions(
+    payload: Dict[str, Any] = Body(...),
+    x_local_secret_key: str | None = Header(default=None, alias="X-Local-Secret-Key"),
+) -> Response:
+    expected_secret = (settings.LOCAL_WORKER_SECRET or "").strip()
+    if not expected_secret:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Local AI worker authentication is not configured.",
+        )
+    if not x_local_secret_key or not hmac.compare_digest(x_local_secret_key, expected_secret):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Invalid local worker credentials.")
+    if not isinstance(payload.get("messages"), list) or not payload["messages"]:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Chat messages are required.")
+
+    ollama_payload = dict(payload)
+    ollama_payload["model"] = settings.LOCAL_LLM_MODEL
+    ollama_url = f"{settings.OLLAMA_BASE_URL.rstrip('/')}/v1/chat/completions"
+    timeout = httpx.Timeout(settings.LOCAL_LLM_TIMEOUT_SECONDS, connect=5.0)
+    client = httpx.AsyncClient(timeout=timeout)
+    request = client.build_request("POST", ollama_url, json=ollama_payload)
+
+    try:
+        upstream = await client.send(request, stream=True)
+    except httpx.TimeoutException as exc:
+        await client.aclose()
+        raise HTTPException(
+            status.HTTP_504_GATEWAY_TIMEOUT,
+            "Local Ollama request timed out.",
+        ) from exc
+    except httpx.HTTPError as exc:
+        await client.aclose()
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Local Ollama is unavailable.",
+        ) from exc
+
+    if not upstream.is_success:
+        content = await upstream.aread()
+        media_type = upstream.headers.get("content-type", "application/json")
+        status_code = upstream.status_code
+        await upstream.aclose()
+        await client.aclose()
+        return Response(content=content, status_code=status_code, media_type=media_type)
+
+    if not ollama_payload.get("stream"):
+        content = await upstream.aread()
+        media_type = upstream.headers.get("content-type", "application/json")
+        status_code = upstream.status_code
+        await upstream.aclose()
+        await client.aclose()
+        return Response(content=content, status_code=status_code, media_type=media_type)
+
+    async def stream_response():
+        try:
+            async for chunk in upstream.aiter_raw():
+                yield chunk
+        finally:
+            await upstream.aclose()
+            await client.aclose()
+
+    return StreamingResponse(
+        stream_response(),
+        status_code=upstream.status_code,
+        media_type=upstream.headers.get("content-type", "text/event-stream"),
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 if __name__ == "__main__":

@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     DEEPSEEK_API_KEYS: str = ""
     USE_LOCAL_WHISPER: bool = False
     LOCAL_WORKER_SECRET: str = ""
+    LOCAL_LLM_WORKER_URL: str = "https://ai-local.superlanguage.me"
+    LOCAL_LLM_MODEL: str = "qwen2.5:7b"
+    LOCAL_LLM_TIMEOUT_SECONDS: float = 75.0
+    OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     EDGE_TTS_BASE_URL: str = ""
     EDGE_TTS_API_KEY: str = ""
     ADSUP_TTS_BASE_URL: str = "https://voice.adsup.vn"

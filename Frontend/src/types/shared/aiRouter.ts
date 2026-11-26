@@ -12,7 +12,6 @@ const LOCAL_AI_URL = (
   import.meta.env.VITE_LOCAL_AI_URL || "https://ai-local.superlanguage.me"
 ).replace(/\/+$/, "");
 
-const LOCAL_SECRET_KEY = (import.meta.env.VITE_LOCAL_SECRET_KEY || "").trim();
 const HEALTH_TIMEOUT_MS = 1500;
 const HEALTH_CACHE_TTL_MS = 30_000;
 
@@ -70,7 +69,6 @@ export async function resolveAiBaseUrl(
 
 async function sendToTarget(
   baseUrl: string,
-  isLocal: boolean,
   path: string,
   options: ApiRequestOptions,
   token: string | null,
@@ -80,9 +78,6 @@ async function sendToTarget(
   if (isFormData(requestOptions.body)) headers.delete("Content-Type");
   else headers.set("Content-Type", "application/json");
   if (token) headers.set("Authorization", `Bearer ${token}`);
-  if (isLocal && LOCAL_SECRET_KEY) {
-    headers.set("X-Local-Secret-Key", LOCAL_SECRET_KEY);
-  }
 
   return fetch(`${baseUrl}${path}`, {
     ...requestOptions,
@@ -115,17 +110,17 @@ export async function smartAiRequest<T = unknown>(
   let usedLocal = target.isLocal;
 
   try {
-    response = await sendToTarget(target.baseUrl, usedLocal, path, options, token);
+    response = await sendToTarget(target.baseUrl, path, options, token);
     if (usedLocal && response.status >= 500) {
       invalidateAiHealthCache();
       usedLocal = false;
-      response = await sendToTarget(API_BASE_URL, false, path, options, token);
+      response = await sendToTarget(API_BASE_URL, path, options, token);
     }
   } catch (err) {
     if (usedLocal) {
       invalidateAiHealthCache();
       usedLocal = false;
-      response = await sendToTarget(API_BASE_URL, false, path, options, token);
+      response = await sendToTarget(API_BASE_URL, path, options, token);
     } else {
       throw err;
     }
