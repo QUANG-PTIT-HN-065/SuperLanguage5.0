@@ -43,7 +43,7 @@ from app.schemas.chat_ai import (
     TTSRequest,
 )
 from app.schemas.reponse import BaseResponse
-from app.services.ai_service import AIService
+from app.services.ai_service import AIService, extract_json_payload
 from app.services.speech_service import (
     InvalidAudioError,
     SpeechNotRecognizedError,
@@ -202,31 +202,40 @@ def _load_reading_conversation(
 
 
 def _decode_ai_json_object(raw_text: str, response_label: str) -> Dict[str, Any]:
-    normalized = raw_text.strip()
-    if normalized.startswith("```"):
-        lines = normalized.splitlines()
-        if lines:
-            lines = lines[1:]
-        if lines and lines[-1].strip().startswith("```"):
-            lines = lines[:-1]
-        normalized = "\n".join(lines).strip()
-
-    try:
-        result = json.loads(normalized)
-    except json.JSONDecodeError as exc:
-        logger.warning("AI returned invalid JSON for %s.", response_label)
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY,
-            "AI chưa trả về dữ liệu đúng định dạng. Vui lòng thử lại.",
-        ) from exc
-
-    if not isinstance(result, dict):
-        logger.warning("AI returned a non-object JSON value for %s.", response_label)
+    """Trích object JSON từ phản hồi AI, chấp nhận code fence và lời dẫn xung quanh."""
+    result = extract_json_payload(raw_text)
+    if result is None:
+        logger.warning("AI returned no JSON object for %s.", response_label)
         raise HTTPException(
             status.HTTP_502_BAD_GATEWAY,
             "AI chưa trả về dữ liệu đúng định dạng. Vui lòng thử lại.",
         )
     return result
+
+
+def _pick_field(
+    payload: Dict[str, Any],
+    *keys: str,
+    max_chars: Optional[int] = None,
+) -> str:
+    """Lấy trường văn bản đầu tiên có nội dung, chấp nhận tên trường AI hay dùng thay thế."""
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            text = value.strip()
+            return text[:max_chars].strip() if max_chars else text
+    return ""
+
+
+def _coerce_score(value: Any) -> Optional[int]:
+    """Đổi điểm AI trả về (số, "85", "85/100") thành số nguyên 0-100; không đọc được -> None."""
+    if value is None:
+        return None
+    try:
+        number = int(float(str(value).replace(",", ".").split("/")[0].strip()))
+    except (TypeError, ValueError):
+        return None
+    return max(0, min(100, number))
 
 
 def _normalized_reading_question(question: str) -> str:
@@ -670,9 +679,18 @@ async def generate_reading_prompt(
         ) from exc
 
     try:
-        prompt = ReadingPromptContent.model_validate(
-            _decode_ai_json_object(prompt_json, "reading prompt"),
-        )
+        prompt_payload = _decode_ai_json_object(prompt_json, "reading prompt")
+        prompt = ReadingPromptContent.model_validate({
+            "question": _pick_field(prompt_payload, "question", "prompt", "q", max_chars=280),
+            "sample_answer": _pick_field(
+                prompt_payload,
+                "sample_answer",
+                "sample",
+                "answer",
+                "model_answer",
+                max_chars=400,
+            ),
+        })
     except ValidationError as exc:
         logger.warning("AI returned invalid reading-prompt fields.")
         raise HTTPException(
@@ -882,9 +900,36 @@ async def submit_reading_practice_answer(
         ) from exc
 
     try:
-        feedback = ReadingFeedback.model_validate(
-            _decode_ai_json_object(feedback_text, "reading feedback"),
-        )
+        feedback_payload = _decode_ai_json_object(feedback_text, "reading feedback")
+        feedback = ReadingFeedback.model_validate({
+            "grammar_error": _pick_field(
+                feedback_payload, "grammar_error", "grammar", max_chars=500
+            ),
+            "corrected_sentence": _pick_field(
+                feedback_payload,
+                "corrected_sentence",
+                "corrected",
+                "correction",
+                max_chars=4000,
+            ),
+            "natural_suggestion": _pick_field(
+                feedback_payload,
+                "natural_suggestion",
+                "suggestion",
+                "natural",
+                max_chars=500,
+            ),
+            "pronunciation_score": _coerce_score(
+                feedback_payload.get("pronunciation_score", feedback_payload.get("score"))
+            ),
+            "pronunciation_feedback": _pick_field(
+                feedback_payload,
+                "pronunciation_feedback",
+                "pronunciation",
+                "comment",
+                max_chars=1000,
+            ),
+        })
     except ValidationError as exc:
         logger.warning("AI returned invalid reading-feedback fields.")
         raise HTTPException(
