@@ -71,6 +71,7 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
     for batch_start in range(0, len(texts), _EMBEDDING_BATCH_SIZE):
         batch = texts[batch_start : batch_start + _EMBEDDING_BATCH_SIZE]
         batch_vectors: list[list[float]] | None = None
+        last_error: Exception | None = None
         for key in keys:
             try:
                 client = genai.Client(api_key=key)
@@ -94,9 +95,11 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
                 batch_vectors = candidate_vectors
                 break
             except Exception as exc:
-                logger.warning("Embedding provider failed with %s.", type(exc).__name__)
+                last_error = exc
+                logger.warning("Embedding provider failed with %s: %s", type(exc).__name__, exc)
         if batch_vectors is None:
-            raise RAGError("All configured embedding API keys failed.")
+            detail = f": {last_error}" if last_error else ""
+            raise RAGError(f"All configured embedding API keys failed{detail}")
         vectors.extend(batch_vectors)
 
     return vectors

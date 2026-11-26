@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,13 +14,15 @@
   <link rel="stylesheet" href="../../styles/leaderboard/style.css">
   <link rel="stylesheet" href="../../styles/shared/learner-shell.css">
 </head>
+
 <body class="user-authenticated">
 
-    <!-- ================= TOP NAVBAR ================= -->
+  <!-- ================= TOP NAVBAR ================= -->
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
-        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng" aria-expanded="false" title="Menu điều hướng">
+        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng"
+          aria-expanded="false" title="Menu điều hướng">
           <i class="fa-solid fa-bars"></i>
         </button>
         <a href="../home/index.html" class="brand-logo">
@@ -31,7 +34,8 @@
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
             <li class="nav-dropdown-item">
-              <button type="button" class="nav-link-dropdown-btn" id="learnNavDropdownBtn" aria-haspopup="true" aria-expanded="false">
+              <button type="button" class="nav-link-dropdown-btn" id="learnNavDropdownBtn" aria-haspopup="true"
+                aria-expanded="false">
                 <span>Học tập</span>
                 <i class="fa-solid fa-chevron-down nav-dropdown-chevron"></i>
               </button>
@@ -70,7 +74,8 @@
 
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
-          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak"
+            class="streak-flame-img streak-flame-chip">
           <span id="headerStreakVal">—</span>
         </div>
         <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
@@ -83,24 +88,29 @@
         </div>
 
         <div class="lang-dropdown auth-only" id="langDropdown">
-          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
-            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true"
+            aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag"
+              width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
             <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
             <i class="fa-solid fa-chevron-down lang-chevron"></i>
           </button>
           <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
             <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
-              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Nhật (日本語)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
-              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">English (Tiếng Anh)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
-              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Việt (Vietnamese)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
@@ -108,7 +118,8 @@
         </div>
 
         <div class="user-dropdown auth-only" id="userDropdown">
-          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true"
+            aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
             <img alt="Ảnh đại diện" class="user-avatar-mini" id="headerAvatar">
             <div class="user-info-text">
               <div class="name" id="headerUserName">Học viên</div>
@@ -151,7 +162,7 @@
             </div>
             <div class="user-dropdown-divider mobile-only-divider"></div>
 
-            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
+            <a href="../profile/index.html#tabPersonalInfo" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
               <div class="menu-item-text">
                 <span class="title">Thông tin cá nhân</span>
@@ -332,12 +343,15 @@
     <!-- 1. HERO BANNER & STATS -->
     <section class="leaderboard-hero-card">
       <div class="hero-top-info">
-        <span class="hero-badge-tag" data-i18n="lb.heroBadge"><i class="fa-solid fa-trophy"></i> BẢNG VINH DANH HỌC VIÊN XUẤT SẮC</span>
+        <span class="hero-badge-tag" data-i18n="lb.heroBadge"><i class="fa-solid fa-trophy"></i> BẢNG VINH DANH HỌC VIÊN
+          XUẤT SẮC</span>
         <h1 class="hero-title">
-          <span data-i18n="lb.heroTitleLead">Bảng Xếp Hạng</span> <span class="highlight" data-i18n="lb.heroTitleHighlight">Chiến Binh Slanguage</span> 👑
+          <span data-i18n="lb.heroTitleLead">Bảng Xếp Hạng</span> <span class="highlight"
+            data-i18n="lb.heroTitleHighlight">Chiến Binh Slanguage</span> 👑
         </h1>
         <p class="hero-desc" data-i18n="lb.heroDesc">
-          Thống kê thành tích học tập theo thời gian, ngôn ngữ và tiêu chí bạn chọn. Thứ hạng được tính từ dữ liệu học tập thực tế.
+          Thống kê thành tích học tập theo thời gian, ngôn ngữ và tiêu chí bạn chọn. Thứ hạng được tính từ dữ liệu học
+          tập thực tế.
         </p>
       </div>
 
@@ -383,18 +397,26 @@
       <div class="controls-row-top">
         <!-- Time Filter Pills -->
         <div class="filter-btn-group">
-          <button type="button" class="filter-pill-btn" data-time-filter="today" data-i18n="lb.periodToday"><i class="fa-solid fa-calendar-day"></i> Hôm nay</button>
-          <button type="button" class="filter-pill-btn active" data-time-filter="week" data-i18n="lb.periodWeek"><i class="fa-solid fa-calendar-week"></i> Tuần này</button>
-          <button type="button" class="filter-pill-btn" data-time-filter="month" data-i18n="lb.periodMonth"><i class="fa-solid fa-calendar"></i> Tháng này</button>
-          <button type="button" class="filter-pill-btn" data-time-filter="all" data-i18n="lb.periodAll"><i class="fa-solid fa-infinity"></i> Toàn thời gian</button>
+          <button type="button" class="filter-pill-btn" data-time-filter="today" data-i18n="lb.periodToday"><i
+              class="fa-solid fa-calendar-day"></i> Hôm nay</button>
+          <button type="button" class="filter-pill-btn active" data-time-filter="week" data-i18n="lb.periodWeek"><i
+              class="fa-solid fa-calendar-week"></i> Tuần này</button>
+          <button type="button" class="filter-pill-btn" data-time-filter="month" data-i18n="lb.periodMonth"><i
+              class="fa-solid fa-calendar"></i> Tháng này</button>
+          <button type="button" class="filter-pill-btn" data-time-filter="all" data-i18n="lb.periodAll"><i
+              class="fa-solid fa-infinity"></i> Toàn thời gian</button>
         </div>
 
         <!-- Sort Criteria Pills -->
         <div class="sort-btn-group">
-          <button type="button" class="sort-pill-btn active" data-sort-filter="xp" data-i18n="lb.sortXp"><i class="fa-solid fa-star"></i> Sắp xếp: Điểm XP</button>
-          <button type="button" class="sort-pill-btn" data-sort-filter="streak" data-i18n="lb.sortStreak"><i class="fa-solid fa-fire"></i> Chuỗi Streak</button>
-          <button type="button" class="sort-pill-btn" data-sort-filter="lessons" data-i18n="lb.sortLessons"><i class="fa-solid fa-book-open"></i> Bài hoàn thành</button>
-          <button type="button" class="sort-pill-btn" data-sort-filter="accuracy" data-i18n="lb.sortAccuracy"><i class="fa-solid fa-bullseye"></i> Độ chính xác</button>
+          <button type="button" class="sort-pill-btn active" data-sort-filter="xp" data-i18n="lb.sortXp"><i
+              class="fa-solid fa-star"></i> Sắp xếp: Điểm XP</button>
+          <button type="button" class="sort-pill-btn" data-sort-filter="streak" data-i18n="lb.sortStreak"><i
+              class="fa-solid fa-fire"></i> Chuỗi Streak</button>
+          <button type="button" class="sort-pill-btn" data-sort-filter="lessons" data-i18n="lb.sortLessons"><i
+              class="fa-solid fa-book-open"></i> Bài hoàn thành</button>
+          <button type="button" class="sort-pill-btn" data-sort-filter="accuracy" data-i18n="lb.sortAccuracy"><i
+              class="fa-solid fa-bullseye"></i> Độ chính xác</button>
         </div>
       </div>
 
@@ -410,7 +432,8 @@
         <!-- Search Input Box -->
         <div class="search-box-wrap">
           <i class="fa-solid fa-magnifying-glass search-icon"></i>
-          <input type="text" id="leaderboardSearchInput" class="search-input" placeholder="Tìm kiếm tên học viên, danh hiệu..." data-i18n-placeholder="lb.searchPlaceholder">
+          <input type="text" id="leaderboardSearchInput" class="search-input"
+            placeholder="Tìm kiếm tên học viên, danh hiệu..." data-i18n-placeholder="lb.searchPlaceholder">
         </div>
       </div>
     </section>
@@ -502,7 +525,8 @@
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
         <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;" data-i18n="lb.footerAbout">
-          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
+          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp
+          lại ngắt quãng thông minh.
         </p>
       </div>
 
@@ -510,9 +534,12 @@
       <div class="footer-col">
         <h4 data-i18n="lb.footerPrograms">Chương trình học</h4>
         <ul>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()" data-i18n="lb.footerCourseEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()" data-i18n="lb.footerCourseJa">Tiếng Nhật JLPT (N5-N1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()" data-i18n="lb.footerCourseVi">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()"
+              data-i18n="lb.footerCourseEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()"
+              data-i18n="lb.footerCourseJa">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()"
+              data-i18n="lb.footerCourseVi">Tiếng Việt Cho Người Đi Làm</a></li>
           <li><a href="javascript:void(0)" data-i18n="lb.footerCourseAi">Luyện ngữ âm với AI</a></li>
         </ul>
       </div>
@@ -596,4 +623,5 @@
 
   <script type="module" src="../../types/leaderboard/leaderboard.ts"></script>
 </body>
+
 </html>

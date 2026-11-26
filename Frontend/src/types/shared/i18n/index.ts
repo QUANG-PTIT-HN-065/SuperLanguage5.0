@@ -78,9 +78,12 @@ const NAV_KEYS: [string, string][] = [
 ];
 
 const MENU_KEYS: [string, string, string][] = [
-  ['profile/index.html', 'menu.profile', 'menu.profileSub'],
   ['#tabProgress', 'menu.progress', 'menu.progressSub'],
+  ['#tabPersonalInfo', 'menu.profile', 'menu.profileSub'],
+  ['profile/index.html#tabProgress', 'menu.progress', 'menu.progressSub'],
+  ['profile/index.html#tabPersonalInfo', 'menu.profile', 'menu.profileSub'],
   ['shop/index.html', 'menu.shop', 'menu.shopSub'],
+  ['profile/index.html', 'menu.profile', 'menu.profileSub'],
 ];
 
 // [needle trong href, khóa tiêu đề, khóa mô tả (rỗng nếu chỉ có tiêu đề)]
@@ -102,7 +105,8 @@ export function translateShell(root: ParentNode = document): void {
   const resolvedHref = (href: string): string => {
     if (href.startsWith('#')) return href;
     try {
-      return new URL(href, document.baseURI).pathname;
+      const url = new URL(href, document.baseURI);
+      return url.pathname + url.hash;
     } catch {
       return href;
     }
@@ -202,7 +206,8 @@ export function translateShell(root: ParentNode = document): void {
   });
 
   root.querySelectorAll<HTMLAnchorElement>('.user-dropdown-item').forEach((item) => {
-    const href = resolvedHref(item.getAttribute('href') ?? '');
+    const rawHref = item.getAttribute('href') ?? '';
+    const href = resolvedHref(rawHref);
     if (item.id === 'navLogoutItem' || href.includes('login/index.html')) {
       const title = item.querySelector('.title');
       const sub = item.querySelector('.sub');
@@ -210,7 +215,8 @@ export function translateShell(root: ParentNode = document): void {
       if (sub) sub.textContent = t('menu.logoutSub');
       return;
     }
-    const match = MENU_KEYS.find(([needle]) => href.includes(needle));
+    const targetUrl = rawHref.includes('#') ? rawHref : href;
+    const match = MENU_KEYS.find(([needle]) => targetUrl.includes(needle));
     if (!match) return;
     const title = item.querySelector('.title');
     const sub = item.querySelector('.sub');

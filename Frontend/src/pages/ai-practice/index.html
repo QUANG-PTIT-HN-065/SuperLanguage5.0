@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,13 +20,15 @@
     }
   </script>
 </head>
+
 <body class="user-authenticated">
 
   <!-- ================= TOP NAVBAR ================= -->
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
-        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng" aria-expanded="false" title="Menu điều hướng">
+        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng"
+          aria-expanded="false" title="Menu điều hướng">
           <i class="fa-solid fa-bars"></i>
         </button>
         <a href="../home/index.html" class="brand-logo">
@@ -37,7 +40,8 @@
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
             <li class="nav-dropdown-item">
-              <button type="button" class="nav-link-dropdown-btn active" id="learnNavDropdownBtn" aria-haspopup="true" aria-expanded="false">
+              <button type="button" class="nav-link-dropdown-btn active" id="learnNavDropdownBtn" aria-haspopup="true"
+                aria-expanded="false">
                 <span>Học tập</span>
                 <i class="fa-solid fa-chevron-down nav-dropdown-chevron"></i>
               </button>
@@ -76,7 +80,8 @@
 
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
-          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak"
+            class="streak-flame-img streak-flame-chip">
           <span id="headerStreakVal">—</span>
         </div>
         <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
@@ -89,24 +94,29 @@
         </div>
 
         <div class="lang-dropdown auth-only" id="langDropdown">
-          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
-            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true"
+            aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag"
+              width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
             <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
             <i class="fa-solid fa-chevron-down lang-chevron"></i>
           </button>
           <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
             <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
-              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Nhật (日本語)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
-              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">English (Tiếng Anh)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
-              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Việt (Vietnamese)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
@@ -114,7 +124,8 @@
         </div>
 
         <div class="user-dropdown auth-only" id="userDropdown">
-          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true"
+            aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
             <img alt="Ảnh đại diện" class="user-avatar-mini" id="headerAvatar">
             <div class="user-info-text">
               <div class="name" id="headerUserName">Học viên</div>
@@ -157,7 +168,7 @@
             </div>
             <div class="user-dropdown-divider mobile-only-divider"></div>
 
-            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
+            <a href="../profile/index.html#tabPersonalInfo" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
               <div class="menu-item-text">
                 <span class="title">Thông tin cá nhân</span>
@@ -343,23 +354,32 @@
           <div class="ai-hero-content">
             <div class="ai-badge-row">
               <span class="ai-chip-pill"><i class="fa-solid fa-wand-magic-sparkles"></i> SLANGUAGE AI TUTOR</span>
-              <span class="ai-chip-pill live"><i class="fa-solid fa-robot"></i> <span data-i18n="ai.stageModel">Mô hình: Sal7</span></span>
-              <span class="ai-chip-pill"><i class="fa-solid fa-microphone-lines"></i> <span data-i18n="ai.badgeVoice">GIỌNG NÓI & NHẬN DIỆN MIC</span></span>
+              <span class="ai-chip-pill live"><i class="fa-solid fa-robot"></i> <span data-i18n="ai.stageModel">Mô hình:
+                  Sal7</span></span>
+              <span class="ai-chip-pill"><i class="fa-solid fa-microphone-lines"></i> <span
+                  data-i18n="ai.badgeVoice">GIỌNG NÓI & NHẬN DIỆN MIC</span></span>
             </div>
             <h1 class="ai-hero-title" data-i18n="ai.heroTitle1">
-              Luyện Tập Giao Tiếp Cùng <span class="ai-title-gradient" data-i18n="ai.heroTitle2">Sal7 Trí Tuệ Nhân Tạo</span>
+              Luyện Tập Giao Tiếp Cùng <span class="ai-title-gradient" data-i18n="ai.heroTitle2">Sal7 Trí Tuệ Nhân
+                Tạo</span>
             </h1>
             <p class="ai-hero-desc">
-              <span data-i18n="ai.heroDesc">Đối thoại phản xạ tức thì, chỉnh sửa ngữ pháp chi tiết, hướng dẫn phát âm chuẩn bản ngữ cho cả 3 ngôn ngữ: </span><strong data-i18n="ai.heroLangEn">Tiếng Anh</strong><span data-i18n="ai.heroSep">, </span><strong data-i18n="ai.heroLangJa">Tiếng Nhật</strong><span data-i18n="ai.heroAnd"> và </span><strong data-i18n="ai.heroLangVi">Tiếng Việt</strong><span data-i18n="ai.heroEnd">.</span>
+              <span data-i18n="ai.heroDesc">Đối thoại phản xạ tức thì, chỉnh sửa ngữ pháp chi tiết, hướng dẫn phát âm
+                chuẩn bản ngữ cho cả 3 ngôn ngữ: </span><strong data-i18n="ai.heroLangEn">Tiếng Anh</strong><span
+                data-i18n="ai.heroSep">, </span><strong data-i18n="ai.heroLangJa">Tiếng Nhật</strong><span
+                data-i18n="ai.heroAnd"> và </span><strong data-i18n="ai.heroLangVi">Tiếng Việt</strong><span
+                data-i18n="ai.heroEnd">.</span>
             </p>
           </div>
 
           <div class="ai-hero-stats">
-            <div class="ai-stat-box" id="dailyLimitBadge" title="Hạn mức 50 lượt AI mỗi ngày theo múi giờ của bạn" data-i18n-title="ai.dailyLimitTitle">
+            <div class="ai-stat-box" id="dailyLimitBadge" title="Hạn mức 50 lượt AI mỗi ngày theo múi giờ của bạn"
+              data-i18n-title="ai.dailyLimitTitle">
               <div class="stat-number" id="practiceSessionCount">0/15</div>
               <div class="stat-label" data-i18n="ai.statChats">Lượt trò chuyện hôm nay</div>
             </div>
-            <div class="ai-stat-box" id="remainingQuotaBadge" title="Số lượt AI còn lại trong ngày theo múi giờ của bạn" data-i18n-title="ai.remainingTitle">
+            <div class="ai-stat-box" id="remainingQuotaBadge" title="Số lượt AI còn lại trong ngày theo múi giờ của bạn"
+              data-i18n-title="ai.remainingTitle">
               <div class="stat-number" id="remainingQuotaCount">15</div>
               <div class="stat-label" data-i18n="ai.statRemaining">Lượt còn lại hôm nay</div>
             </div>
@@ -372,11 +392,13 @@
           <!-- TOP TOOLBAR: PRACTICE MODES & CONTROLS -->
           <div class="ai-toolbar">
             <div class="ai-mode-selector">
-              <button class="ai-mode-btn active" data-mode="free" title="Đàm thoại với AI theo kho bài học, không phát giọng đọc" data-i18n-title="ai.modeFreeTitle">
+              <button class="ai-mode-btn active" data-mode="free"
+                title="Đàm thoại với AI theo kho bài học, không phát giọng đọc" data-i18n-title="ai.modeFreeTitle">
                 <i class="fa-solid fa-comments"></i>
                 <span data-i18n="ai.modeFree">Đàm thoại</span>
               </button>
-              <button class="ai-mode-btn" data-mode="pronounce" title="Nhấn mic để nói, AI chấm phát âm và chính tả" data-i18n-title="ai.modeSpeakTitle">
+              <button class="ai-mode-btn" data-mode="pronounce" title="Nhấn mic để nói, AI chấm phát âm và chính tả"
+                data-i18n-title="ai.modeSpeakTitle">
                 <i class="fa-solid fa-microphone-lines"></i>
                 <span data-i18n="ai.modeSpeak">Phát Âm &amp; Chính tả</span>
               </button>
@@ -384,13 +406,15 @@
 
             <div class="ai-toolbar-actions">
               <!-- Voice Output Toggle -->
-              <button class="tool-btn active" id="btnToggleVoice" title="Tự động phát giọng đọc AI khi trả lời" data-i18n-title="ai.voiceToggleTitle">
+              <button class="tool-btn active" id="btnToggleVoice" title="Tự động phát giọng đọc AI khi trả lời"
+                data-i18n-title="ai.voiceToggleTitle">
                 <i class="fa-solid fa-volume-high" id="voiceToggleIcon"></i>
                 <span id="voiceToggleText" data-i18n="ai.voiceOn">Giọng đọc: BẬT</span>
               </button>
 
               <!-- Settings Button -->
-              <button class="tool-btn" id="btnOpenSettings" title="Cài đặt mô hình AI & Giọng nói" data-i18n-title="ai.settingsTitle">
+              <button class="tool-btn" id="btnOpenSettings" title="Cài đặt mô hình AI & Giọng nói"
+                data-i18n-title="ai.settingsTitle">
                 <i class="fa-solid fa-gear"></i>
                 <span data-i18n="ai.settings">Cài đặt</span>
               </button>
@@ -401,7 +425,8 @@
           <div class="ai-unified-stage" id="aiUnifiedStage">
             <!-- Nhân vật Rive Sal7 chiếm toàn bộ khung sân khấu -->
             <div class="ai-character-box" id="aiCharacterBox">
-              <canvas id="riveCanvas" class="rive-character-canvas" title="Bấm vào nhân vật Sal7 để tương tác" data-i18n-title="ai.canvasTitle"></canvas>
+              <canvas id="riveCanvas" class="rive-character-canvas" title="Bấm vào nhân vật Sal7 để tương tác"
+                data-i18n-title="ai.canvasTitle"></canvas>
               <audio id="aiSoundtrack" class="ai-soundtrack-player" preload="auto"></audio>
             </div>
 
@@ -413,7 +438,8 @@
                 <span class="dot"></span>
               </div>
             </div>
-            <div class="ai-stage-move-hint" id="aiStageMoveHint" data-i18n="ai.moveHint">Bấm để Sal7 đi tới, kéo để dời chỗ</div>
+            <div class="ai-stage-move-hint" id="aiStageMoveHint" data-i18n="ai.moveHint">Bấm để Sal7 đi tới, kéo để dời
+              chỗ</div>
 
             <!-- Thanh trạng thái HUD nổi đè lên mép dưới canvas -->
             <div class="ai-stage-hud">
@@ -426,7 +452,8 @@
 
           <!-- QUICK PROMPT SUGGESTIONS -->
           <div class="ai-suggestions-row" id="quickSuggestions">
-            <span class="suggestion-label"><i class="fa-solid fa-lightbulb"></i> <span data-i18n="ai.quickSuggestions">Gợi ý nhanh:</span></span>
+            <span class="suggestion-label"><i class="fa-solid fa-lightbulb"></i> <span
+                data-i18n="ai.quickSuggestions">Gợi ý nhanh:</span></span>
             <div class="suggestion-chips" id="suggestionChipsList">
               <!-- Dynamic chips rendered by TypeScript -->
             </div>
@@ -446,19 +473,16 @@
 
             <div class="input-row">
               <!-- Mic Record Button -->
-              <button type="button" class="btn-mic" id="btnMicRecord" title="Nhấn giữ để nói, thả để gửi" aria-label="Nhấn giữ để nói, thả để gửi" data-i18n-title="ai.micHold" data-i18n-aria-label="ai.micHold" aria-pressed="false" style="touch-action: none; user-select: none;">
+              <button type="button" class="btn-mic" id="btnMicRecord" title="Nhấn giữ để nói, thả để gửi"
+                aria-label="Nhấn giữ để nói, thả để gửi" data-i18n-title="ai.micHold" data-i18n-aria-label="ai.micHold"
+                aria-pressed="false" style="touch-action: none; user-select: none;">
                 <i class="fa-solid fa-microphone" id="micIcon"></i>
               </button>
 
               <!-- Text Input -->
-              <textarea
-                id="chatInputText"
-                class="chat-textarea"
+              <textarea id="chatInputText" class="chat-textarea"
                 placeholder="Nhập tin nhắn bằng Tiếng Nhật, Tiếng Anh hoặc Tiếng Việt... (Nhấn Enter để gửi, Shift+Enter xuống dòng)"
-                data-i18n-placeholder="ai.inputPlaceholder"
-                rows="1"
-                maxlength="4000"
-              ></textarea>
+                data-i18n-placeholder="ai.inputPlaceholder" rows="1" maxlength="4000"></textarea>
 
               <!-- Send Button -->
               <button class="btn-send" id="btnSendMessage" title="Gửi tin nhắn" data-i18n-title="ai.sendTitle">
@@ -467,7 +491,8 @@
             </div>
 
             <div class="input-hint">
-              <span><i class="fa-solid fa-circle-info"></i> <span data-i18n="ai.inputHint">Nhấn giữ Micro để nói, thả ra để gửi. Chọn đúng ngôn ngữ trước khi nói.</span></span>
+              <span><i class="fa-solid fa-circle-info"></i> <span data-i18n="ai.inputHint">Nhấn giữ Micro để nói, thả ra
+                  để gửi. Chọn đúng ngôn ngữ trước khi nói.</span></span>
               <span id="dailyLimitHintCount" data-i18n="ai.dailyLimitHint">Hạn mức: 50 lượt AI mỗi ngày</span>
               <span id="currentEngineIndicator" class="engine-indicator">Chat AI: Backend → RAG</span>
             </div>
@@ -493,10 +518,13 @@
               </div>
             </div>
             <div class="chat-header-actions">
-              <button type="button" class="chat-action-btn" id="btnOpenHistory" title="Xem lại các đoạn hội thoại trước" aria-label="Lịch sử hội thoại" data-i18n-title="ai.historyTitle" data-i18n-aria-label="ai.history">
+              <button type="button" class="chat-action-btn" id="btnOpenHistory" title="Xem lại các đoạn hội thoại trước"
+                aria-label="Lịch sử hội thoại" data-i18n-title="ai.historyTitle" data-i18n-aria-label="ai.history">
                 <i class="fa-solid fa-clock-rotate-left"></i>
               </button>
-              <button type="button" class="chat-action-btn" id="btnClearChatHistory" title="Xóa toàn bộ tin nhắn để bắt đầu đoạn hội thoại mới" aria-label="Làm mới cuộc trò chuyện" data-i18n-title="ai.clearTitle" data-i18n-aria-label="ai.clear">
+              <button type="button" class="chat-action-btn" id="btnClearChatHistory"
+                title="Xóa toàn bộ tin nhắn để bắt đầu đoạn hội thoại mới" aria-label="Làm mới cuộc trò chuyện"
+                data-i18n-title="ai.clearTitle" data-i18n-aria-label="ai.clear">
                 <i class="fa-solid fa-rotate-right"></i>
               </button>
             </div>
@@ -514,7 +542,8 @@
           </button>
 
           <div class="ai-chat-footer">
-            <span class="chat-footer-badge"><i class="fa-solid fa-shield-halved"></i> <span data-i18n="ai.chatFooterBadge">Slanguage AI Real-time Audio & Chat</span></span>
+            <span class="chat-footer-badge"><i class="fa-solid fa-shield-halved"></i> <span
+                data-i18n="ai.chatFooterBadge">Slanguage AI Real-time Audio & Chat</span></span>
           </div>
 
           <!-- PANEL LỊCH SỬ HỘI THOẠI -->
@@ -524,7 +553,8 @@
               <button type="button" class="ai-history-new" id="btnHistoryNew">
                 <i class="fa-solid fa-plus"></i> <span data-i18n="ai.historyNew">Cuộc trò chuyện mới</span>
               </button>
-              <button type="button" class="ai-history-close" id="btnCloseHistory" aria-label="Đóng" data-i18n-aria-label="ai.close">
+              <button type="button" class="ai-history-close" id="btnCloseHistory" aria-label="Đóng"
+                data-i18n-aria-label="ai.close">
                 <i class="fa-solid fa-xmark"></i>
               </button>
             </div>
@@ -541,21 +571,27 @@
     <div class="modal-dialog">
       <div class="modal-header">
         <h3 data-i18n="ai.settingsHead"><i class="fa-solid fa-sliders"></i> Cài Đặt Trợ Lý AI</h3>
-        <button class="modal-close-btn" id="btnCloseSettings" aria-label="Đóng" data-i18n-aria-label="ai.close"><i class="fa-solid fa-xmark"></i></button>
+        <button class="modal-close-btn" id="btnCloseSettings" aria-label="Đóng" data-i18n-aria-label="ai.close"><i
+            class="fa-solid fa-xmark"></i></button>
       </div>
 
       <div class="modal-body">
         <div class="form-group" id="voiceToneGroup">
-          <label class="form-label" for="voiceToneSelect" data-i18n="ai.voiceToneLabel"><i class="fa-solid fa-microphone-lines"></i> Giọng đọc AI (ADSUP Voice):</label>
+          <label class="form-label" for="voiceToneSelect" data-i18n="ai.voiceToneLabel"><i
+              class="fa-solid fa-microphone-lines"></i> Giọng đọc AI (ADSUP Voice):</label>
           <div class="voice-tone-row">
             <select id="voiceToneSelect" class="form-input"></select>
-            <button type="button" class="btn-cancel" id="btnPreviewVoice" title="Nghe thử giọng đang chọn" data-i18n-title="ai.voicePreviewTitle"><i class="fa-solid fa-headphones"></i> <span data-i18n="ai.voicePreview">Nghe thử</span></button>
+            <button type="button" class="btn-cancel" id="btnPreviewVoice" title="Nghe thử giọng đang chọn"
+              data-i18n-title="ai.voicePreviewTitle"><i class="fa-solid fa-headphones"></i> <span
+                data-i18n="ai.voicePreview">Nghe thử</span></button>
           </div>
-          <small class="form-help" id="voiceToneHelp" data-i18n="ai.voiceToneHelp">Chọn tone giọng cho câu trả lời của AI, lưu riêng theo từng ngôn ngữ.</small>
+          <small class="form-help" id="voiceToneHelp" data-i18n="ai.voiceToneHelp">Chọn tone giọng cho câu trả lời của
+            AI, lưu riêng theo từng ngôn ngữ.</small>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="voiceSpeedRange" data-i18n="ai.voiceSpeedLabel"><i class="fa-solid fa-gauge-high"></i> Tốc độ phát âm giọng đọc: <span id="voiceSpeedVal">1.0x</span></label>
+          <label class="form-label" for="voiceSpeedRange" data-i18n="ai.voiceSpeedLabel"><i
+              class="fa-solid fa-gauge-high"></i> Tốc độ phát âm giọng đọc: <span id="voiceSpeedVal">1.0x</span></label>
           <input type="range" id="voiceSpeedRange" min="0.7" max="1.3" step="0.1" value="1.0" class="form-range">
         </div>
       </div>
@@ -582,7 +618,8 @@
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
         <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;" data-i18n="ai.footerIntro">
-          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
+          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp
+          lại ngắt quãng thông minh.
         </p>
       </div>
 
@@ -688,4 +725,5 @@
 
   <script type="module" src="../../types/ai-practice/ai-practice.ts"></script>
 </body>
+
 </html>

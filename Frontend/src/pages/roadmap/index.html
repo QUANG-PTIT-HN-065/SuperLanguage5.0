@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,13 +20,15 @@
     }
   </script>
 </head>
+
 <body class="user-authenticated">
 
-      <!-- ================= TOP NAVBAR ================= -->
+  <!-- ================= TOP NAVBAR ================= -->
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
-        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng" aria-expanded="false" title="Menu điều hướng">
+        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng"
+          aria-expanded="false" title="Menu điều hướng">
           <i class="fa-solid fa-bars"></i>
         </button>
         <a href="../home/index.html" class="brand-logo">
@@ -37,7 +40,8 @@
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
             <li class="nav-dropdown-item">
-              <button type="button" class="nav-link-dropdown-btn active" id="learnNavDropdownBtn" aria-haspopup="true" aria-expanded="false">
+              <button type="button" class="nav-link-dropdown-btn active" id="learnNavDropdownBtn" aria-haspopup="true"
+                aria-expanded="false">
                 <span>Học tập</span>
                 <i class="fa-solid fa-chevron-down nav-dropdown-chevron"></i>
               </button>
@@ -76,7 +80,8 @@
 
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
-          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak"
+            class="streak-flame-img streak-flame-chip">
           <span id="headerStreakVal">—</span>
         </div>
         <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
@@ -89,24 +94,29 @@
         </div>
 
         <div class="lang-dropdown auth-only" id="langDropdown">
-          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
-            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+          <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true"
+            aria-expanded="false" title="Chọn ngôn ngữ học">
+            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag"
+              width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
             <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
             <i class="fa-solid fa-chevron-down lang-chevron"></i>
           </button>
           <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
             <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
-              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Nhật (日本語)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
-              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">English (Tiếng Anh)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
-              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
+              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15"
+                style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Việt (Vietnamese)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
@@ -114,7 +124,8 @@
         </div>
 
         <div class="user-dropdown auth-only" id="userDropdown">
-          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true"
+            aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
             <img alt="Ảnh đại diện" class="user-avatar-mini" id="headerAvatar">
             <div class="user-info-text">
               <div class="name" id="headerUserName">Học viên</div>
@@ -157,7 +168,7 @@
             </div>
             <div class="user-dropdown-divider mobile-only-divider"></div>
 
-            <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
+            <a href="../profile/index.html#tabPersonalInfo" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
               <div class="menu-item-text">
                 <span class="title">Thông tin cá nhân</span>
@@ -334,16 +345,18 @@
 
   <!-- ================= MAIN ROADMAP WRAPPER ================= -->
   <main class="roadmap-main">
-    
+
     <!-- TREE HERO & DASHBOARD CONTROLS -->
     <section class="tree-hero-card">
       <!-- ACTIVE LESSON PILL & CHANGE BUTTON -->
       <div class="active-lesson-bar" id="activeLessonBar">
         <div class="active-lesson-info">
           <i class="fa-solid fa-graduation-cap"></i>
-          <span><span data-i18n="rm.activeLessonPrefix">Buổi học đang chọn: </span><strong id="activeLessonTitle">Session 01 - Bảng Chữ Cái & Phát Âm Căn Bản</strong></span>
+          <span><span data-i18n="rm.activeLessonPrefix">Buổi học đang chọn: </span><strong
+              id="activeLessonTitle">Session 01 - Bảng Chữ Cái & Phát Âm Căn Bản</strong></span>
         </div>
-        <a href="../select-lesson/index.html" class="btn-change-lesson" title="Chọn buổi học khác" data-i18n-title="rm.changeLessonTitle" data-i18n="rm.changeLesson">
+        <a href="../select-lesson/index.html" class="btn-change-lesson" title="Chọn buổi học khác"
+          data-i18n-title="rm.changeLessonTitle" data-i18n="rm.changeLesson">
           <i class="fa-solid fa-arrows-rotate"></i> Đổi buổi học
         </a>
       </div>
@@ -390,7 +403,8 @@
     <section class="tree-viewport-section">
       <div class="tree-controls-bar">
         <div class="tree-helper-text" data-i18n="rm.helperText">
-          <i class="fa-solid fa-wand-magic-sparkles"></i> Nhấn vào từng ải theo đường dẫn để khiêu chiến câu hỏi • Thắng nhận XP, thua bị trừ Máu
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Nhấn vào từng ải theo đường dẫn để khiêu chiến câu hỏi • Thắng
+          nhận XP, thua bị trừ Máu
         </div>
       </div>
 
@@ -448,7 +462,8 @@
         <!-- HUB READING PASSAGE BOX (Displayed only for Milestone Hub cards) -->
         <div class="hub-reading-box" id="modalHubReadingBox" style="display: none;">
           <div class="reading-article-header">
-            <div class="reading-article-badge" data-i18n="rm.readingBadge"><i class="fa-solid fa-book-open"></i> BÀI ĐỌC TỔNG QUAN CHỦ ĐỀ</div>
+            <div class="reading-article-badge" data-i18n="rm.readingBadge"><i class="fa-solid fa-book-open"></i> BÀI ĐỌC
+              TỔNG QUAN CHỦ ĐỀ</div>
             <h3 class="reading-article-title" id="readingArticleTitle">Tiêu đề bài đọc</h3>
           </div>
           <div class="reading-article-content" id="readingArticleContent">
@@ -478,7 +493,8 @@
 
         <!-- DUNGEON TRIAL SUMMARY (hiện khi kết thúc ải) -->
         <div class="dungeon-summary" id="modalSummaryBox" style="display: none;">
-          <div class="dungeon-summary__banner" id="modalSummaryBanner" data-state="pass" role="status" aria-live="polite">
+          <div class="dungeon-summary__banner" id="modalSummaryBanner" data-state="pass" role="status"
+            aria-live="polite">
             <span class="dungeon-summary__icon"><i class="fa-solid fa-trophy" id="modalSummaryIcon"></i></span>
             <div class="dungeon-summary__copy">
               <strong class="dungeon-summary__title" id="modalSummaryTitle"></strong>
@@ -506,7 +522,8 @@
           <section class="dungeon-review" id="modalReviewSection">
             <div class="dungeon-review__head">
               <h4 class="dungeon-review__title" data-i18n="rm.reviewTitle">Xem lại câu trả lời</h4>
-              <div class="dungeon-review__filters" id="modalReviewFilters" role="group" aria-label="Bộ lọc" data-i18n-aria-label="rm.reviewFilterAria">
+              <div class="dungeon-review__filters" id="modalReviewFilters" role="group" aria-label="Bộ lọc"
+                data-i18n-aria-label="rm.reviewFilterAria">
                 <button type="button" class="dungeon-review__filter" data-review-filter="all">
                   <span data-i18n="rm.reviewAll">Tất cả</span> <b id="reviewCountAll">0</b>
                 </button>
@@ -544,7 +561,7 @@
     <span class="dungeon-toast__text"></span>
   </div>
 
-    <footer class="footer">
+  <footer class="footer">
     <div class="footer-container">
       <!-- Cột 1: Giới thiệu thương hiệu -->
       <div class="footer-col">
@@ -553,7 +570,8 @@
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
         <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;" data-i18n="rm.footAbout">
-          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
+          Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp
+          lại ngắt quãng thông minh.
         </p>
       </div>
 
@@ -561,9 +579,12 @@
       <div class="footer-col">
         <h4 data-i18n="rm.footPrograms">Chương trình học</h4>
         <ul>
-          <li><a href="javascript:void(0)" onclick="window.roadmapApp && window.roadmapApp.switchLanguage('en')" data-i18n="rm.footEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
-          <li><a href="javascript:void(0)" onclick="window.roadmapApp && window.roadmapApp.switchLanguage('ja')" data-i18n="rm.footJa">Tiếng Nhật JLPT (N5-N1)</a></li>
-          <li><a href="javascript:void(0)" onclick="window.roadmapApp && window.roadmapApp.switchLanguage('vi')" data-i18n="rm.footVi">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)" onclick="window.roadmapApp && window.roadmapApp.switchLanguage('en')"
+              data-i18n="rm.footEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="window.roadmapApp && window.roadmapApp.switchLanguage('ja')"
+              data-i18n="rm.footJa">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="window.roadmapApp && window.roadmapApp.switchLanguage('vi')"
+              data-i18n="rm.footVi">Tiếng Việt Cho Người Đi Làm</a></li>
           <li><a href="javascript:void(0)" data-i18n="rm.footAi">Luyện ngữ âm với AI</a></li>
         </ul>
       </div>
@@ -659,4 +680,5 @@
 
   <script type="module" src="../../types/roadmap/roadmap.ts"></script>
 </body>
+
 </html>
