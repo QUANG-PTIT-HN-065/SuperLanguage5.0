@@ -619,6 +619,7 @@ class AIService:
         sample_answer: str,
         language: str,
         current_level: str = "A1",
+        mime_type: str = "audio/wav",
     ) -> str:
         gemini_keys = [
             key.strip()
@@ -657,7 +658,7 @@ class AIService:
                                 types.Part.from_text(text=prompt),
                                 types.Part.from_bytes(
                                     data=audio_wav,
-                                    mime_type="audio/wav",
+                                    mime_type=mime_type or "audio/wav",
                                 ),
                             ],
                         ),

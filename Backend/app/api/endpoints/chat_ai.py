@@ -39,6 +39,7 @@ from app.services.speech_service import (
     SpeechServiceUnavailableError,
     convert_audio_to_wav,
     transcribe_audio,
+    transcribe_audio_cloud,
 )
 
 router = APIRouter(tags=["AI Chat Speaking"])
@@ -262,11 +263,20 @@ async def _transcribe_for_profile(
     profile: Dict[str, Any],
     language: str,
     charge_quota: bool = True,
+    filename: str = "voice.webm",
+    content_type: str = "audio/webm",
 ) -> str:
     if charge_quota:
         consume_daily_ai_call(profile)
     try:
-        return await run_in_threadpool(transcribe_audio, audio_bytes, language)
+        if settings.USE_LOCAL_WHISPER:
+            return await run_in_threadpool(transcribe_audio, audio_bytes, language)
+        return await transcribe_audio_cloud(
+            audio_bytes,
+            language,
+            filename=filename,
+            content_type=content_type,
+        )
     except InvalidAudioError as exc:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -278,16 +288,22 @@ async def _transcribe_for_profile(
             "Chưa nhận diện rõ lời nói. Hãy nói gần micro và thử lại.",
         ) from exc
     except SpeechServiceUnavailableError as exc:
-        logger.warning("Whisper speech recognition service is unavailable.")
+        logger.warning("Speech recognition service is unavailable.")
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "Dịch vụ nhận diện giọng nói đang bận. Vui lòng thử lại sau.",
         ) from exc
 
 
-async def _prepare_pronunciation_audio(audio_bytes: bytes) -> bytes:
+async def _prepare_pronunciation_audio(
+    audio_bytes: bytes,
+    content_type: str = "audio/webm",
+) -> tuple[bytes, str]:
+    if not settings.USE_LOCAL_WHISPER:
+        return audio_bytes, (content_type or "audio/webm").split(";", maxsplit=1)[0].strip().lower()
     try:
-        return await run_in_threadpool(convert_audio_to_wav, audio_bytes)
+        wav_bytes = await run_in_threadpool(convert_audio_to_wav, audio_bytes)
+        return wav_bytes, "audio/wav"
     except InvalidAudioError as exc:
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST,
@@ -742,6 +758,10 @@ def list_reading_practice_turns(
     "/reading-answer",
     response_model=BaseResponse[ReadingPracticeTurnResponse],
 )
+@router.post(
+    "/pronunciation-turn",
+    response_model=BaseResponse[ReadingPracticeTurnResponse],
+)
 async def submit_reading_practice_answer(
     conversation_id: UUID = Form(...),
     turn_id: UUID = Form(...),
@@ -793,14 +813,21 @@ async def submit_reading_practice_answer(
             data=_reading_turn_response(turn),
         )
 
+    upload_content_type = (audio.content_type or "audio/webm").split(";", maxsplit=1)[0].strip().lower()
+    upload_filename = audio.filename or "voice.webm"
     audio_bytes = await _read_audio_upload(audio)
-    pronunciation_audio = await _prepare_pronunciation_audio(audio_bytes)
+    pronunciation_audio, pronunciation_mime = await _prepare_pronunciation_audio(
+        audio_bytes,
+        upload_content_type,
+    )
     transcript = (
         await _transcribe_for_profile(
             pronunciation_audio,
             profile,
             language,
             charge_quota=False,
+            filename=upload_filename if pronunciation_mime != "audio/wav" else "voice.wav",
+            content_type=pronunciation_mime,
         )
     ).strip()
     if not transcript or len(transcript) > 4000:
@@ -817,6 +844,7 @@ async def submit_reading_practice_answer(
             turn["sample_answer"],
             _CHAT_LANGUAGE_NAMES[language_code],
             profile.get("current_level") or "A1",
+            mime_type=pronunciation_mime,
         )
     except HTTPException as exc:
         if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
@@ -956,6 +984,10 @@ async def upload_audio(
     "/transcribe-audio",
     response_model=BaseResponse[AudioTranscriptionResponse],
 )
+@router.post(
+    "/transcribe-voice",
+    response_model=BaseResponse[AudioTranscriptionResponse],
+)
 async def transcribe_chat_audio(
     conversation_id: UUID = Form(...),
     audio: UploadFile = File(...),
@@ -974,8 +1006,16 @@ async def transcribe_chat_audio(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Ngôn ngữ của phòng trò chuyện không được hỗ trợ nhận diện.",
         )
+    upload_content_type = (audio.content_type or "audio/webm").split(";", maxsplit=1)[0].strip().lower()
+    upload_filename = audio.filename or "voice.webm"
     audio_bytes = await _read_audio_upload(audio)
-    transcript = await _transcribe_for_profile(audio_bytes, profile, language)
+    transcript = await _transcribe_for_profile(
+        audio_bytes,
+        profile,
+        language,
+        filename=upload_filename,
+        content_type=upload_content_type,
+    )
 
     return BaseResponse(
         status="success",
@@ -1006,8 +1046,16 @@ async def transcribe_practice_audio(
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Ngôn ngữ của phòng trò chuyện không được hỗ trợ nhận diện.",
         )
+    upload_content_type = (audio.content_type or "audio/webm").split(";", maxsplit=1)[0].strip().lower()
+    upload_filename = audio.filename or "voice.webm"
     audio_bytes = await _read_audio_upload(audio)
-    transcript = await _transcribe_for_profile(audio_bytes, profile, language)
+    transcript = await _transcribe_for_profile(
+        audio_bytes,
+        profile,
+        language,
+        filename=upload_filename,
+        content_type=upload_content_type,
+    )
     return BaseResponse(
         status="success",
         message="Đã nhận diện câu đọc.",

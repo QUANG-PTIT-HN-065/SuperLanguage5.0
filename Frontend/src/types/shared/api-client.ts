@@ -1,5 +1,7 @@
-const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000"
+export const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
+  "http://127.0.0.1:8000"
 ).replace(/\/+$/, "");
 
 const ACCESS_TOKEN_KEY = "slanguage_access_token";
@@ -34,12 +36,12 @@ export interface ApiResponse<T = unknown> {
   data: T;
 }
 
-interface ApiRequestOptions extends Omit<RequestInit, "body"> {
+export interface ApiRequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   anonymous?: boolean;
 }
 
-function getErrorMessage(payload: unknown, status: number): string {
+export function getErrorMessage(payload: unknown, status: number): string {
   if (typeof payload === "object" && payload !== null && "detail" in payload) {
     const detail = payload.detail;
     if (typeof detail === "string" && detail.trim()) return detail.trim();
@@ -57,7 +59,7 @@ function getErrorMessage(payload: unknown, status: number): string {
   return `Backend trả về lỗi HTTP ${status}.`;
 }
 
-async function parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
+export async function parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
   let payload: unknown;
   try {
     payload = await response.json();
@@ -167,7 +169,7 @@ function showSessionExpiredModal(): void {
     ?.addEventListener("click", redirectToLoginPage);
 }
 
-async function refreshAccessToken(previousAccessToken?: string): Promise<string> {
+export async function refreshAccessToken(previousAccessToken?: string): Promise<string> {
   const baselineToken = previousAccessToken ?? localStorage.getItem(ACCESS_TOKEN_KEY);
   // Nhiều request song song có thể cùng gặp 401; request nào refresh xong trước
   // sẽ lưu token mới — request sau dùng lại thay vì POST trùng hoặc kết luận
@@ -214,13 +216,34 @@ function isFormData(value: unknown): value is FormData {
   return typeof FormData !== "undefined" && value instanceof FormData;
 }
 
+function isJwtExpiringSoon(token: string, bufferMs = 30_000): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    const payload = JSON.parse(atob(padded)) as { exp?: unknown };
+    if (typeof payload.exp !== "number") return false;
+    return Date.now() >= payload.exp * 1000 - bufferMs;
+  } catch {
+    return false;
+  }
+}
+
+export async function getValidAccessToken(): Promise<string | null> {
+  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  if (!token) return null;
+  if (!isJwtExpiringSoon(token)) return token;
+  return refreshAccessToken(token);
+}
+
 export async function slanguageApi<T = unknown>(
   path: string,
   options: ApiRequestOptions = {},
   allowRefresh = true,
 ): Promise<ApiResponse<T>> {
   const { anonymous = false, ...requestOptions } = options;
-  const token = anonymous ? null : localStorage.getItem(ACCESS_TOKEN_KEY);
+  const token = anonymous ? null : await getValidAccessToken();
   const headers = new Headers(requestOptions.headers);
   if (isFormData(requestOptions.body)) headers.delete("Content-Type");
   else headers.set("Content-Type", "application/json");
@@ -262,7 +285,7 @@ export async function slanguageApiAudio(
   body?: unknown,
   method: "POST" | "GET" = "POST",
 ): Promise<Blob> {
-  const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+  const token = await getValidAccessToken();
   const send = (accessToken: string | null) => {
     const headers = new Headers({ Accept: "audio/*" });
     if (method === "POST") headers.set("Content-Type", "application/json");

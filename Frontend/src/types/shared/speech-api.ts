@@ -1,4 +1,4 @@
-import { slanguageApi } from "./api-client.js";
+import { smartAiRequest } from "./aiRouter.js";
 
 export interface AudioTranscriptionResponse {
   transcript: string;
@@ -30,7 +30,7 @@ async function requestTranscription(
   path: string,
   formData: FormData,
 ): Promise<AudioTranscriptionResponse> {
-  const response = await slanguageApi<AudioTranscriptionResponse>(
+  const response = await smartAiRequest<AudioTranscriptionResponse>(
     `/api/v1/chat-ai${path}`,
     { method: "POST", body: formData },
   );

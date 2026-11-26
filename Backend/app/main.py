@@ -23,16 +23,6 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
-# Cấu hình CORS Middleware cho phép kết nối từ Frontend (Vite/React/HTML)
-if settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
 # Tích hợp Auth Router vào hệ thống API 
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/me", tags=["me"])
@@ -67,6 +57,34 @@ def read_root():
         "message": f"Welcome to {settings.PROJECT_NAME} API!",
         "version": settings.VERSION,
     }
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok", "mode": "local" if settings.USE_LOCAL_WHISPER else "render"}
+
+
+# Đăng ký CORSMiddleware CUỐI CÙNG (outermost) để luôn gắn CORS headers kể cả khi có lỗi
+_cors_origins = list(
+    dict.fromkeys(
+        origin.strip().rstrip("/")
+        for origin in [
+            *settings.BACKEND_CORS_ORIGINS,
+            "https://www.superlanguage.me",
+            "https://superlanguage.me",
+            "http://localhost:5173",
+            "http://localhost:3000",
+        ]
+        if origin and origin.strip()
+    )
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/test-supabase")
