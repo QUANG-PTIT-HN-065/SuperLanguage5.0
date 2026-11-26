@@ -1,4 +1,5 @@
-import { saveAuthTokens, saveLearnerIdentity, slanguageApi } from "../shared/api-client";
+import { getAuthCookie, saveAuthTokens, saveLearnerIdentity, slanguageApi } from "../shared/api-client";
+import { playLoadingRive, stopLoadingRive } from "../shared/loading-rive";
 
 /**
  * ===================================================================
@@ -16,20 +17,26 @@ interface LanguageDetail {
   title: string;
 }
 
+// Cờ phải đi qua new URL(..., import.meta.url): chuỗi thô không được Vite nhúng
+// vào dist và còn sai độ sâu so với URL trang nên ảnh vỡ cả trên dev lẫn bản build.
+const FLAG_VN = new URL('../../../assets/flags/flag-vn.png', import.meta.url).href;
+const FLAG_EN = new URL('../../../assets/flags/flag-en.png', import.meta.url).href;
+const FLAG_JP = new URL('../../../assets/flags/flag-jp.png', import.meta.url).href;
+
 const LANGUAGE_MAP: Record<AppLanguage, LanguageDetail> = {
   vi: {
     name: 'Tiếng Việt',
-    flag: '../assets/flags/flag-vn.png',
+    flag: FLAG_VN,
     title: 'Tiếng Việt (Bản Xứ)'
   },
   en: {
     name: 'English',
-    flag: '../assets/flags/flag-en.png',
+    flag: FLAG_EN,
     title: 'Tiếng Anh (IELTS & Giao tiếp)'
   },
   ja: {
     name: '日本語',
-    flag: '../assets/flags/flag-jp.png',
+    flag: FLAG_JP,
     title: 'Tiếng Nhật (JLPT N5)'
   }
 };
@@ -58,7 +65,6 @@ class VerifyOtpController {
   private registrationSuccessModal: HTMLElement | null = null;
   private btnGoToHomeAfterReg: HTMLButtonElement | null = null;
   private loadingOverlay: HTMLElement | null = null;
-  private loadingVideo: HTMLVideoElement | null = null;
 
   // Toast
   private toastElement: HTMLElement | null = null;
@@ -70,8 +76,8 @@ class VerifyOtpController {
 
   private init(): void {
     // 1. Read registered user data from sessionStorage/localStorage
-    const savedName = sessionStorage.getItem('slanguage_reg_name') || localStorage.getItem('slanguage_user_name');
-    const savedEmail = sessionStorage.getItem('slanguage_reg_email') || localStorage.getItem('slanguage_user_email');
+    const savedName = sessionStorage.getItem('slanguage_reg_name') || getAuthCookie('slanguage_user_name');
+    const savedEmail = sessionStorage.getItem('slanguage_reg_email') || getAuthCookie('slanguage_user_email');
     const savedNative = (sessionStorage.getItem('slanguage_reg_native') || localStorage.getItem('slanguage_native_language')) as AppLanguage;
     const savedTarget = (sessionStorage.getItem('slanguage_reg_target') || localStorage.getItem('slanguage_active_language')) as AppLanguage;
 
@@ -97,16 +103,7 @@ class VerifyOtpController {
     this.registrationSuccessModal = document.getElementById('registrationSuccessModal');
     this.btnGoToHomeAfterReg = document.getElementById('btnGoToHomeAfterReg') as HTMLButtonElement;
     this.loadingOverlay = document.getElementById('slanguageLoadingOverlay');
-    this.loadingVideo = document.getElementById('loadingVideoPlayer') as HTMLVideoElement;
     this.toastElement = document.getElementById('otpToast');
-
-    // 3. Ensure loading video is muted and paused on startup
-    if (this.loadingVideo) {
-      this.loadingVideo.pause();
-      this.loadingVideo.muted = true;
-      this.loadingVideo.volume = 0;
-      this.loadingVideo.currentTime = 0;
-    }
 
     // 4. Update UI labels
     if (this.displayOtpEmail) {
@@ -215,24 +212,13 @@ class VerifyOtpController {
       });
     }
 
-    // 6. Page Visibility Audio Cutoff
+    // 6. Reset loading state when page is shown from bfcache or hidden
     window.addEventListener('pageshow', () => {
       if (this.loadingOverlay) this.loadingOverlay.classList.remove('active');
-      if (this.loadingVideo) {
-        this.loadingVideo.pause();
-        this.loadingVideo.muted = true;
-        this.loadingVideo.volume = 0;
-        this.loadingVideo.currentTime = 0;
-      }
+      stopLoadingRive();
     });
 
-    window.addEventListener('pagehide', () => {
-      if (this.loadingVideo) {
-        this.loadingVideo.pause();
-        this.loadingVideo.muted = true;
-        this.loadingVideo.volume = 0;
-      }
-    });
+    window.addEventListener('pagehide', () => stopLoadingRive());
   }
 
   private startOtpCountdown(): void {
@@ -382,29 +368,11 @@ class VerifyOtpController {
   private triggerLoadingAndRedirect(targetUrl: string, duration: number = 1500): void {
     if (this.loadingOverlay) {
       this.loadingOverlay.classList.add('active');
-      if (this.loadingVideo) {
-        this.loadingVideo.currentTime = 0;
-        this.loadingVideo.muted = false;
-        this.loadingVideo.volume = 1.0;
-        const playPromise = this.loadingVideo.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            if (this.loadingVideo) {
-              this.loadingVideo.muted = true;
-              this.loadingVideo.play();
-            }
-          });
-        }
-      }
+      playLoadingRive();
     }
 
     setTimeout(() => {
-      if (this.loadingVideo) {
-        this.loadingVideo.pause();
-        this.loadingVideo.muted = true;
-        this.loadingVideo.volume = 0;
-        this.loadingVideo.currentTime = 0;
-      }
+      stopLoadingRive();
       if (this.loadingOverlay) this.loadingOverlay.classList.remove('active');
       window.location.href = targetUrl;
     }, duration);

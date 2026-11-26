@@ -20,29 +20,6 @@
   <link rel="stylesheet" href="../../styles/admin/styles.css">
   <link rel="stylesheet" href="../../styles/admin/admin-ui.css">
   <link rel="stylesheet" href="../../styles/shared/mobile-responsive.css">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: "#eff6ff",
-              100: "#dbeafe",
-              500: "#3b82f6",
-              600: "#2563eb",
-              700: "#1d4ed8",
-            }
-          },
-          fontFamily: {
-            title: ["Manrope", "sans-serif"],
-            body: ["Hanken Grotesk", "sans-serif"],
-          }
-        }
-      }
-    };
-  </script>
 </head>
 <body class="bg-[#f8fafc] font-body text-slate-800 antialiased min-h-screen">
 
@@ -435,6 +412,14 @@
             <span id="tableInfo">Đang tải số liệu...</span>
             <div class="flex items-center gap-1.5">
               <button
+                id="firstPage"
+                type="button"
+                disabled
+                class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                Trang đầu
+              </button>
+              <button
                 id="prevPage"
                 type="button"
                 disabled
@@ -450,6 +435,14 @@
                 class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-40 transition-colors cursor-pointer"
               >
                 Trang sau
+              </button>
+              <button
+                id="lastPage"
+                type="button"
+                disabled
+                class="px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium disabled:opacity-40 transition-colors cursor-pointer"
+              >
+                Trang cuối
               </button>
             </div>
           </div>

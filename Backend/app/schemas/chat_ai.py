@@ -39,6 +39,7 @@ class ConversationMessageResponse(BaseModel):
 class MessageSend(BaseModel):
     conversation_id: UUID
     user_message: str = Field(min_length=1, max_length=4000)
+    grammar_mode: bool = False
 
     @field_validator("user_message")
     @classmethod
@@ -91,6 +92,34 @@ class ReadingPromptResponse(BaseModel):
 class ReadingPracticeTurnResponse(ReadingPromptResponse):
     transcript: Optional[str] = None
     ai_feedback: Optional[ReadingFeedback] = None
+
+
+class PronunciationTurnFeedback(BaseModel):
+    """Kết quả một lượt luyện Phát Âm & Chính tả."""
+
+    pronunciation_score: Optional[int] = Field(default=None, ge=0, le=100)
+    pronunciation_feedback: str = ""
+    grammar_error: str = ""
+    corrected_sentence: str = ""
+    natural_suggestion: str = ""
+    next_topic: str = ""
+    next_prompt: str = ""
+    comment: str = ""
+
+    @field_validator(
+        "pronunciation_feedback", "grammar_error", "corrected_sentence",
+        "natural_suggestion", "next_topic", "next_prompt", "comment",
+    )
+    @classmethod
+    def clean_text(cls, value: str) -> str:
+        return value.strip()
+
+
+class PronunciationTurnResponse(BaseModel):
+    conversation_id: UUID
+    transcript: str
+    ai_response: str
+    ai_feedback: PronunciationTurnFeedback
 
 
 class AudioUploadResponse(BaseModel):

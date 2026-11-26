@@ -7,6 +7,8 @@ from app.db.supabase import supabase_admin
 from app.services.profile_service import get_plan, raise_db_error
 
 FREE_ACCESS_PERCENT = 50
+# Đúng một lần là thuộc: mastery_level >= 1 đã tính là đã thuộc (migration 18).
+MASTERY_MASTERED_MIN = 1
 # Free accounts unlock the first half of the catalog (basics first); premium unlocks all.
 
 
@@ -28,6 +30,14 @@ def is_premium_profile(profile: Dict[str, Any]) -> bool:
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     return expires_at > datetime.now(timezone.utc)
+
+
+def effective_plan_id(profile: Dict[str, Any]) -> str:
+    """plan_id đã trừ premium hết hạn (pass shop ghi plan_id vĩnh viễn, chỉ hạn dùng hết hạn)."""
+    plan_id = profile.get("plan_id") or "free"
+    if plan_id == "premium" and not is_premium_profile(profile):
+        return "free"
+    return plan_id
 
 
 def _count_rows(query: Any) -> int:
@@ -67,7 +77,7 @@ def list_topics(
         )
         if topic_ceiling is not None:
             query = query.lte("id", topic_ceiling)
-        topics = query.order("id").range(offset, end - 1).execute().data
+        topics = query.order("id").range(offset, end - 1).execute().data # type: ignore
 
     if topics and profile.get("id"):
         _attach_word_progress(profile, topics)
@@ -95,8 +105,8 @@ def _attach_word_progress(profile: Dict[str, Any], topics: list[Dict[str, Any]])
     words_by_topic: Dict[int, set[int]] = {}
     all_word_ids: set[int] = set()
     for link in word_links:
-        words_by_topic.setdefault(link["topic_id"], set()).add(link["word_id"])
-        all_word_ids.add(link["word_id"])
+        words_by_topic.setdefault(link["topic_id"], set()).add(link["word_id"]) # type: ignore
+        all_word_ids.add(link["word_id"]) # type: ignore
 
     mastered_word_ids: set[int] = set()
     if all_word_ids:
@@ -104,13 +114,13 @@ def _attach_word_progress(profile: Dict[str, Any], topics: list[Dict[str, Any]])
             supabase_admin.table("user_words")
             .select("word_id")
             .eq("user_id", profile["id"])
-            .eq("mastery_level", 5)
+            .gte("mastery_level", MASTERY_MASTERED_MIN)
             .in_("word_id", list(all_word_ids))
             .execute()
             .data
             or []
         )
-        mastered_word_ids = {row["word_id"] for row in mastered_rows}
+        mastered_word_ids = {row["word_id"] for row in mastered_rows} # type: ignore
 
     for topic in topics:
         topic_word_ids = words_by_topic.get(topic["id"], set())
@@ -134,20 +144,20 @@ def _topic_quiz_passed(profile: Dict[str, Any], topic_id: int) -> bool:
         .data
         or []
     )
-    quiz_ids = [quiz["id"] for quiz in quizzes]
+    quiz_ids = [quiz["id"] for quiz in quizzes] # type: ignore
     if not quiz_ids:
         return False
     progress_rows = (
         supabase_admin.table("lesson_progress")
         .select("score,question_count")
         .eq("user_id", profile["id"])
-        .in_("lesson_id", quiz_ids)
+        .in_("lesson_id", quiz_ids) # type: ignore
         .execute()
         .data
         or []
     )
     return any(
-        row.get("question_count") and row.get("score") == row.get("question_count")
+        row.get("question_count") and row.get("score") == row.get("question_count") # type: ignore
         for row in progress_rows
     )
 
@@ -155,7 +165,7 @@ def _topic_quiz_passed(profile: Dict[str, Any], topic_id: int) -> bool:
 def _attach_word_mastery(profile: Dict[str, Any], items: list[Dict[str, Any]]) -> None:
     word_ids = [item["id"] for item in items]
     mastery_by_word: Dict[int, int] = {}
-    if word_ids:
+    if word_ids and profile.get("id"):
         rows = (
             supabase_admin.table("user_words")
             .select("word_id,mastery_level")
@@ -165,11 +175,11 @@ def _attach_word_mastery(profile: Dict[str, Any], items: list[Dict[str, Any]]) -
             .data
             or []
         )
-        mastery_by_word = {row["word_id"]: int(row["mastery_level"] or 0) for row in rows}
+        mastery_by_word = {row["word_id"]: int(row["mastery_level"] or 0) for row in rows} # type: ignore
     for item in items:
         mastery = mastery_by_word.get(item["id"], 0)
         item["mastery_level"] = mastery
-        item["is_mastered"] = mastery >= 5
+        item["is_mastered"] = mastery >= MASTERY_MASTERED_MIN
 
 
 def _ordered_topic_ids(language_code: str) -> list[int]:
@@ -183,7 +193,7 @@ def _ordered_topic_ids(language_code: str) -> list[int]:
         .data
         or []
     )
-    return [row["id"] for row in rows]
+    return [row["id"] for row in rows] # type: ignore
 
 
 def is_topic_free(language_code: str, topic_id: int) -> bool:
@@ -204,8 +214,8 @@ def list_catalog_topics(profile: Dict[str, Any]) -> list[Dict[str, Any]]:
         or []
     )
     if topics and profile.get("id"):
-        _attach_word_progress(profile, topics)
-    return topics
+        _attach_word_progress(profile, topics) # type: ignore
+    return topics # type: ignore
 
 
 def _get_topic(topic_id: int, language_code: str) -> Dict[str, Any]:
@@ -288,7 +298,9 @@ def list_words(
 
     # Chủ đề đã vượt qua quiz ở Học tập được mở toàn bộ từ, không cắt theo trần ID free
     full_access = is_premium or (
-        topic_id is not None and _topic_quiz_passed(profile, topic_id)
+        topic_id is not None
+        and bool(profile.get("id"))
+        and _topic_quiz_passed(profile, topic_id)
     )
     total_words, free_word_ceiling = _free_word_ceiling(language_code)
     matching_word_ids = None
@@ -313,7 +325,7 @@ def list_words(
             or []
         )
         matching_word_ids = list({
-            row["id"] for row in [*word_matches, *meaning_matches]
+            row["id"] for row in [*word_matches, *meaning_matches] # type: ignore
         })
         if not matching_word_ids:
             return {
@@ -353,7 +365,7 @@ def list_words(
                 .eq("language_code", language_code)
             )
             if matching_word_ids is not None:
-                page_query = page_query.in_("id", matching_word_ids)
+                page_query = page_query.in_("id", matching_word_ids) # type: ignore
             if not full_access:
                 page_query = page_query.lte("id", free_word_ceiling)
             items = (
@@ -370,13 +382,13 @@ def list_words(
             .eq("topic_id", topic_id)
         )
         if matching_word_ids is not None:
-            link_count_query = link_count_query.in_("word_id", matching_word_ids)
+            link_count_query = link_count_query.in_("word_id", matching_word_ids) # type: ignore
         total = _count_rows(link_count_query)
         links_query = supabase_admin.table("word_topics").select(
             "word_id", count="exact" # type: ignore
         ).eq("topic_id", topic_id)
         if matching_word_ids is not None:
-            links_query = links_query.in_("word_id", matching_word_ids)
+            links_query = links_query.in_("word_id", matching_word_ids) # type: ignore
         if not full_access:
             if not free_word_ceiling:
                 links_query = None
@@ -396,7 +408,7 @@ def list_words(
                     .eq("topic_id", topic_id)
                 )
                 if matching_word_ids is not None:
-                    word_ids = word_ids.in_("word_id", matching_word_ids)
+                    word_ids = word_ids.in_("word_id", matching_word_ids) # type: ignore
                 if not full_access:
                     word_ids = word_ids.lte("word_id", free_word_ceiling)
                 ids = (
@@ -418,7 +430,7 @@ def list_words(
                     by_id = {row["id"]: row for row in rows} # type: ignore
                     items = [by_id[word_id] for word_id in selected_ids if word_id in by_id]
 
-    _attach_word_mastery(profile, items)
+    _attach_word_mastery(profile, items) # type: ignore
     return {
         "items": items,
         "total": total,
@@ -459,11 +471,40 @@ ADMIN_WORD_FIELDS = (
 )
 
 
-def list_admin_words(limit: int, offset: int) -> Dict[str, Any]:
+def list_admin_words(
+    limit: int,
+    offset: int,
+    language_code: Optional[str] = None,
+    level: Optional[str] = None,
+    search_term: Optional[str] = None,
+) -> Dict[str, Any]:
+    query = supabase_admin.table("words").select(ADMIN_WORD_FIELDS, count="exact")  # type: ignore
+
+    if language_code and language_code != "all":
+        query = query.eq("language_code", language_code)
+    if level and level != "all":
+        query = query.eq("level", level)
+
+    if search_term and search_term.strip():
+        pattern = f"%{search_term.strip()}%"
+        matching_ids = set()
+        for field in ("word", "phonetic", "meaning", "example_sentence", "example_meaning", "language_code"):
+            rows = (
+                supabase_admin.table("words")
+                .select("id")
+                .ilike(field, pattern)
+                .execute()
+                .data
+                or []
+            )
+            matching_ids.update(row["id"] for row in rows) # type: ignore
+
+        if not matching_ids:
+            return {"items": [], "total": 0, "limit": limit, "offset": offset}
+        query = query.in_("id", list(matching_ids))
+
     result = (
-        supabase_admin.table("words")
-        .select(ADMIN_WORD_FIELDS, count="exact")  # type: ignore
-        .order("id", desc=True)
+        query.order("id", desc=True)
         .range(offset, offset + limit - 1)
         .execute()
     )
@@ -539,7 +580,7 @@ def _validate_admin_word(data: Dict[str, Any]) -> None:
         .data
     )
     if not language_rows:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Ngôn ngữ không tồn tại.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Ngôn ngữ không tồn tại.")
 
     topic_rows = (
         supabase_admin.table("topics")
@@ -551,7 +592,7 @@ def _validate_admin_word(data: Dict[str, Any]) -> None:
     )
     if len(topic_rows) != len(topic_ids):
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Một hoặc nhiều chủ đề không tồn tại hoặc không thuộc ngôn ngữ đã chọn.",
         )
 

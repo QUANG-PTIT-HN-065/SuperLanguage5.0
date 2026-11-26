@@ -112,14 +112,16 @@ function renderDocumentsTable(): void {
 }
 
 async function removeDocument(document: RagDocument): Promise<void> {
-  if (!window.confirm(`Xóa tài liệu "${document.title}" khỏi Vector DB?`)) return;
-  try {
-    await adminApi(`/api/v1/admin/rag/documents/${encodeURIComponent(document.document_key)}`, { method: "DELETE" });
-    showToast("Đã xóa tài liệu khỏi Vector DB.", "success");
-    await loadDocuments();
-  } catch (error) {
-    showApiError(error);
-  }
+  openActionConfirm(
+    "Xác nhận xóa tài liệu",
+    `Bạn sắp xóa tài liệu "${document.title}" khỏi Vector DB. Hành động này không thể hoàn tác.`,
+    "Xóa tài liệu",
+    async () => {
+      await adminApi(`/api/v1/admin/rag/documents/${encodeURIComponent(document.document_key)}`, { method: "DELETE" });
+      showToast("Đã xóa tài liệu khỏi Vector DB.", "success");
+      await loadDocuments();
+    },
+  );
 }
 
 export interface LanguageOption {
@@ -141,6 +143,10 @@ export interface UserItem {
   xp_total?: number;
   current_streak?: number;
   words_learned?: number;
+  last_sign_in_at?: string | null;
+  last_activity_at?: string | null;
+  inactive_days?: number | null;
+  inactive_over_24_months?: boolean;
 }
 
 interface OverviewStats {
@@ -150,6 +156,14 @@ interface OverviewStats {
   total_xp: number;
   max_streak: number;
   language_distribution: Record<string, number>;
+  goal_met_percentage?: number;
+  lesson_accuracy?: number;
+  engagement?: {
+    date_labels: string[];
+    active_users: number[];
+    lessons_completed: number[];
+    vocabulary_reviews: number[];
+  };
 }
 
 interface RagDocument {
@@ -167,6 +181,11 @@ let usersList: UserItem[] = [];
 let documentsList: RagDocument[] = [];
 let documentPage = 1;
 const DOCUMENT_PAGE_SIZE = 5;
+let topicPage = 1;
+const TOPIC_PAGE_SIZE = 10;
+let userPage = 1;
+const USER_PAGE_SIZE = 10;
+let userTotal = 0;
 let activeTab = "dashboard";
 let currentTopicFilterLang = "all";
 let readingsTopicId: number | null = null;
@@ -255,6 +274,8 @@ async function loadDashboardStats(): Promise<void> {
 
     // Cập nhật thanh phân bố ngôn ngữ
     renderLanguageDistribution(stats.language_distribution, stats.total_students);
+    updateEngagementChart(stats.engagement);
+    updateAnalyticsStats(stats);
   } catch (err) {
     console.warn("Không thể tải thống kê thời gian thực:", err);
   }
@@ -285,6 +306,42 @@ function renderLanguageDistribution(dist: Record<string, number>, total: number)
       </div>
     `;
   }).join("");
+}
+
+function updateEngagementChart(engagement: OverviewStats["engagement"]): void {
+  if (!chartInstance || !engagement) return;
+
+  const labels = engagement.date_labels.map((day) => {
+    const parsed = new Date(`${day}T00:00:00`);
+    return Number.isNaN(parsed.getTime())
+      ? day
+      : parsed.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" });
+  });
+
+  chartInstance.data.labels = labels;
+  const activeDataset = chartInstance.data.datasets[0];
+  const reviewDataset = chartInstance.data.datasets[1];
+  if (activeDataset) activeDataset.data = engagement.active_users;
+  if (reviewDataset) reviewDataset.data = engagement.vocabulary_reviews;
+
+  chartInstance.update();
+}
+
+function updateAnalyticsStats(stats: OverviewStats): void {
+  const streak = getElement("statAnalyticsMaxStreak");
+  if (streak) streak.textContent = `${Number(stats.max_streak || 0).toLocaleString("vi-VN")} ngày 🔥`;
+
+  const goal = getElement("statAnalyticsGoalMet");
+  if (goal) goal.textContent = `${Number(stats.goal_met_percentage || 0).toLocaleString("vi-VN", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
+
+  const accuracy = getElement("statAnalyticsLessonAccuracy");
+  if (accuracy) accuracy.textContent = `${Number(stats.lesson_accuracy || 0).toLocaleString("vi-VN", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
 }
 
 /**
@@ -341,10 +398,16 @@ function renderTopicsTable(): void {
         </td>
       </tr>
     `;
+    updateTopicsPagination(filtered);
     return;
   }
 
-  tableBody.replaceChildren(...filtered.map((topic) => {
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TOPIC_PAGE_SIZE));
+  topicPage = Math.min(topicPage, totalPages);
+  const start = (topicPage - 1) * TOPIC_PAGE_SIZE;
+  const visibleTopics = filtered.slice(start, start + TOPIC_PAGE_SIZE);
+
+  tableBody.replaceChildren(...visibleTopics.map((topic) => {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-200 text-sm";
 
@@ -409,6 +472,29 @@ function renderTopicsTable(): void {
 
   const badge = getElement("totalTopicsBadge");
   if (badge) badge.textContent = `${filtered.length} chủ đề`;
+
+  updateTopicsPagination(filtered);
+}
+
+function updateTopicsPagination(filtered: TopicItem[]): void {
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TOPIC_PAGE_SIZE));
+  const start = filtered.length ? (topicPage - 1) * TOPIC_PAGE_SIZE + 1 : 0;
+  const end = Math.min(topicPage * TOPIC_PAGE_SIZE, filtered.length);
+
+  const info = getElement("topicPaginationInfo");
+  if (info) {
+    info.textContent = filtered.length
+      ? `Hiển thị ${start}-${end} / ${filtered.length} chủ đề`
+      : "Không có chủ đề nào";
+  }
+
+  const pageNumber = getElement("topicPageNumber");
+  if (pageNumber) pageNumber.textContent = `${topicPage}/${totalPages}`;
+
+  const previous = getElement<HTMLButtonElement>("prevTopicPage");
+  const next = getElement<HTMLButtonElement>("nextTopicPage");
+  if (previous) previous.disabled = topicPage <= 1;
+  if (next) next.disabled = topicPage >= totalPages;
 }
 
 function editTopic(topic: TopicItem): void {
@@ -437,15 +523,17 @@ function editTopic(topic: TopicItem): void {
 }
 
 async function deleteTopic(topicId: number): Promise<void> {
-  if (!confirm("Bạn có chắc chắn muốn xóa chủ đề này khỏi CSDL? Các từ vựng thuộc chủ đề này sẽ được gỡ liên kết.")) return;
-
-  try {
-    await adminApi(`/api/v1/admin/topics/${topicId}`, { method: "DELETE" });
-    showToast("Đã xóa chủ đề thành công khỏi CSDL!", "success");
-    await Promise.all([loadTopics(currentTopicFilterLang), loadDashboardStats()]);
-  } catch (err) {
-    showApiError(err);
-  }
+  const topic = topicsList.find((t) => t.id === topicId);
+  openActionConfirm(
+    "Xác nhận xóa chủ đề",
+    `Bạn sắp xóa chủ đề "${topic?.name || ""}" khỏi CSDL. Các từ vựng thuộc chủ đề này sẽ được gỡ liên kết. Hành động này không thể hoàn tác.`,
+    "Xóa chủ đề",
+    async () => {
+      await adminApi(`/api/v1/admin/topics/${topicId}`, { method: "DELETE" });
+      showToast("Đã xóa chủ đề thành công khỏi CSDL!", "success");
+      await Promise.all([loadTopics(currentTopicFilterLang), loadDashboardStats()]);
+    },
+  );
 }
 
 function resetTopicForm(): void {
@@ -465,32 +553,49 @@ function resetTopicForm(): void {
 /**
  * TAB QUẢN LÝ BÀI ĐỌC THEO 5 TẦNG HẦM NGỤC
  */
-async function initReadingsTab(): Promise<void> {
+let readingsTopicsCache: TopicItem[] = [];
+
+function populateReadingsLanguageFilter(): void {
+  const langSelect = getElement<HTMLSelectElement>("readingsLanguageFilter");
+  if (!langSelect || !languagesMap.size) return;
+  const current = langSelect.value || "all";
+  langSelect.replaceChildren();
+  const allOpt = document.createElement("option");
+  allOpt.value = "all";
+  allOpt.textContent = "Tất cả ngôn ngữ";
+  langSelect.append(allOpt);
+  Array.from(languagesMap.entries()).forEach(([code, name]) => {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = name;
+    langSelect.append(opt);
+  });
+  langSelect.value = current;
+}
+
+function renderReadingsTopicOptions(): void {
   const select = getElement<HTMLSelectElement>("readingsTopicSelect");
   if (!select) return;
-  const badge = getElement("readingsSourceBadge");
-  if (badge) badge.textContent = "Đang tải chủ đề...";
-
-  if (!languagesMap.size) await loadLanguages();
-  let topics: TopicItem[] = [];
-  try {
-    const codes = Array.from(languagesMap.keys());
-    const results = await Promise.allSettled(codes.map(fetchTopicsByLanguage));
-    topics = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
-  } catch (err) {
-    showApiError(err);
-  }
+  const lang = getFieldValue("readingsLanguageFilter") || "all";
+  const topics = readingsTopicsCache.filter(
+    (t) => lang === "all" || t.language_code === lang,
+  );
 
   select.replaceChildren();
   if (!topics.length) {
     const opt = document.createElement("option");
     opt.value = "";
-    opt.textContent = "Chưa có chủ đề nào trong CSDL";
+    opt.textContent = lang === "all" ? "Chưa có chủ đề nào trong CSDL" : "Không có chủ đề cho ngôn ngữ này";
     select.append(opt);
     readingsTopicId = null;
+    const badge = getElement("readingsSourceBadge");
     if (badge) badge.textContent = "Không có chủ đề";
     const note = getElement("readingsSourceNote");
-    if (note) note.textContent = "Hãy tạo chủ đề ở tab Quản Lý Chủ Đề trước khi soạn bài đọc.";
+    if (note) {
+      note.textContent = lang === "all"
+        ? "Hãy tạo chủ đề ở tab Quản Lý Chủ Đề trước khi soạn bài đọc."
+        : "Hãy chọn ngôn ngữ khác hoặc tạo chủ đề cho ngôn ngữ này.";
+    }
     renderReadingStages(null);
     return;
   }
@@ -504,7 +609,27 @@ async function initReadingsTab(): Promise<void> {
   const keep = readingsTopicId !== null && topics.some((t) => t.id === readingsTopicId);
   const target = keep ? (readingsTopicId as number) : topics[0].id;
   select.value = String(target);
-  await loadTopicReadings(target);
+  void loadTopicReadings(target);
+}
+
+async function initReadingsTab(): Promise<void> {
+  const select = getElement<HTMLSelectElement>("readingsTopicSelect");
+  if (!select) return;
+  const badge = getElement("readingsSourceBadge");
+  if (badge) badge.textContent = "Đang tải chủ đề...";
+
+  if (!languagesMap.size) await loadLanguages();
+  populateReadingsLanguageFilter();
+
+  try {
+    const codes = Array.from(languagesMap.keys());
+    const results = await Promise.allSettled(codes.map(fetchTopicsByLanguage));
+    readingsTopicsCache = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  } catch (err) {
+    showApiError(err);
+  }
+
+  renderReadingsTopicOptions();
 }
 
 function renderReadingStages(payload: TopicReadingsPayload | null): void {
@@ -660,10 +785,92 @@ async function saveReadings(): Promise<void> {
 /**
  * 3. NẠP DANH SÁCH NGƯỜI DÙNG THẬT TỪ CSDL
  */
+function formatDate(value?: string | null): string {
+  if (!value) return "Chưa có dữ liệu";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Chưa có dữ liệu";
+  return date.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function openActionConfirm(title: string, description: string, confirmLabel: string, action: () => Promise<void>): void {
+  const modal = getElement("actionConfirmModal");
+  const titleEl = getElement("actionConfirmTitle");
+  const descEl = getElement("actionConfirmDescription");
+  const accept = getElement<HTMLButtonElement>("actionConfirmAccept");
+  const cancel = getElement<HTMLButtonElement>("actionConfirmCancel");
+  if (!modal || !titleEl || !descEl || !accept || !cancel) return;
+
+  titleEl.textContent = title;
+  descEl.textContent = description;
+  accept.textContent = confirmLabel;
+  modal.classList.remove("hidden");
+  modal.classList.add("flex");
+
+  const close = () => {
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  };
+  cancel.onclick = close;
+  modal.onclick = (e) => {
+    if (e.target === modal) close();
+  };
+  accept.onclick = async () => {
+    accept.disabled = true;
+    cancel.disabled = true;
+    try {
+      await action();
+      close();
+    } catch (error) {
+      showApiError(error);
+    } finally {
+      accept.disabled = false;
+      cancel.disabled = false;
+    }
+  };
+}
+
+async function confirmUserStatusChange(user: UserItem): Promise<void> {
+  const locking = user.status !== "suspended";
+  openActionConfirm(
+    locking ? "Xác nhận khóa tài khoản" : "Xác nhận mở khóa tài khoản",
+    locking
+      ? `Bạn sắp khóa tài khoản "${user.display_name || user.username}" (${user.email}). Tài khoản sẽ không thể đăng nhập hoặc sử dụng dịch vụ cho đến khi được mở khóa.`
+      : `Bạn sắp mở khóa tài khoản "${user.display_name || user.username}" (${user.email}). Tài khoản sẽ được phép đăng nhập và sử dụng dịch vụ trở lại.`,
+    locking ? "Khóa tài khoản" : "Mở khóa tài khoản",
+    async () => {
+      await adminApi(`/api/v1/admin/users/${encodeURIComponent(user.id)}/status?action=${locking ? "lock" : "unlock"}`, { method: "PATCH" });
+      showToast(locking ? "Đã khóa tài khoản." : "Đã mở khóa tài khoản.", "success");
+      await loadUsers();
+    },
+  );
+}
+
+async function confirmDeleteUser(user: UserItem): Promise<void> {
+  openActionConfirm(
+    "Xác nhận xóa tài khoản",
+    `Bạn sắp xóa vĩnh viễn tài khoản "${user.display_name || user.username}" (${user.email}). Hành động này sẽ xóa tài khoản khỏi Supabase Auth và toàn bộ dữ liệu liên quan trong cơ sở dữ liệu, không thể hoàn tác.`,
+    "Xóa vĩnh viễn",
+    async () => {
+      await adminApi(`/api/v1/admin/users/${encodeURIComponent(user.id)}`, { method: "DELETE" });
+      showToast("Đã xóa tài khoản và dữ liệu liên quan.", "success");
+      await Promise.all([loadUsers(), loadDashboardStats()]);
+    },
+  );
+}
+
 async function loadUsers(): Promise<void> {
   try {
-    const res = await adminApi<{ items: UserItem[]; total: number }>("/api/v1/admin/users?limit=50&offset=0");
+    const params = new URLSearchParams({
+      limit: String(USER_PAGE_SIZE),
+      offset: String((userPage - 1) * USER_PAGE_SIZE),
+    });
+    const search = getFieldValue("searchUserInput");
+    const status = getFieldValue("filterUserStatus") || "all";
+    if (search) params.set("q", search);
+    if (status !== "all") params.set("status", status);
+    const res = await adminApi<{ items: UserItem[]; total: number }>(`/api/v1/admin/users?${params}`);
     usersList = res.items || [];
+    userTotal = res.total || 0;
     renderUsersTable();
   } catch (err) {
     clearSkeleton("usersTableBody");
@@ -679,14 +886,12 @@ function renderUsersTable(): void {
   if (usersList.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" class="py-10 text-center text-slate-400">
-          Chưa có người dùng nào trong cơ sở dữ liệu.
+        <td colspan="7" class="py-10 text-center text-slate-400">
+          Không tìm thấy tài khoản phù hợp.
         </td>
       </tr>
     `;
-    return;
-  }
-
+  } else {
   tbody.replaceChildren(...usersList.map((user) => {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-slate-50 transition-colors border-b border-slate-200 text-sm";
@@ -734,16 +939,59 @@ function renderUsersTable(): void {
     // Status
     const tdStatus = document.createElement("td");
     tdStatus.className = "py-3 px-4 whitespace-nowrap";
-    tdStatus.innerHTML = user.status === "active"
-      ? '<span class="inline-flex items-center gap-1 text-xs text-emerald-700 font-semibold"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Hoạt động</span>'
-      : '<span class="inline-flex items-center gap-1 text-xs text-rose-700 font-semibold"><span class="w-2 h-2 rounded-full bg-rose-500"></span>Tạm khóa</span>';
+    const statusLabel = user.status === "active"
+      ? (user.inactive_over_24_months
+        ? '<span class="inline-flex items-center text-xs text-amber-700 font-semibold">Không hoạt động ≥24 tháng</span>'
+        : '<span class="inline-flex items-center gap-1 text-xs text-emerald-700 font-semibold"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Hoạt động</span>')
+      : '<span class="inline-flex items-center gap-1 text-xs text-rose-700 font-semibold"><span class="w-2 h-2 rounded-full bg-rose-500"></span>Đang bị khóa</span>';
+    tdStatus.innerHTML = statusLabel;
 
-    tr.append(tdUser, tdLang, tdPlan, tdStats, tdStatus);
+    const tdLastActivity = document.createElement("td");
+    tdLastActivity.className = "py-3 px-4 whitespace-nowrap";
+    if (user.inactive_days == null) {
+      tdLastActivity.innerHTML = '<p class="text-xs text-slate-400">Chưa ghi nhận</p>';
+    } else {
+      tdLastActivity.innerHTML = `<p class="font-semibold text-slate-800">${user.inactive_days} ngày trước</p>
+        <p class="text-[11px] text-slate-500">${formatDate(user.last_activity_at)}</p>`;
+    }
+
+    const tdActions = document.createElement("td");
+    tdActions.className = "py-3 px-4 whitespace-nowrap";
+    const lock = document.createElement("button");
+    lock.type = "button";
+    lock.className = user.status === "suspended"
+      ? "mr-2 text-xs font-bold text-emerald-700 hover:text-emerald-900"
+      : "mr-2 text-xs font-bold text-amber-700 hover:text-amber-900";
+    lock.textContent = user.status === "suspended" ? "Mở khóa" : "Khóa";
+    lock.addEventListener("click", () => void confirmUserStatusChange(user));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "text-xs font-bold text-rose-700 hover:text-rose-900";
+    remove.textContent = "Xóa";
+    remove.addEventListener("click", () => void confirmDeleteUser(user));
+    tdActions.append(lock, remove);
+
+    tr.append(tdUser, tdLang, tdPlan, tdStats, tdStatus, tdLastActivity, tdActions);
     return tr;
   }));
+  }
 
   const userBadge = getElement("totalUsersBadge");
-  if (userBadge) userBadge.textContent = `${usersList.length} tài khoản`;
+  if (userBadge) userBadge.textContent = `${userTotal} tài khoản`;
+  const totalPages = Math.max(1, Math.ceil(userTotal / USER_PAGE_SIZE));
+  userPage = Math.min(userPage, totalPages);
+  const info = getElement("userPaginationInfo");
+  if (info) {
+    const start = userTotal ? (userPage - 1) * USER_PAGE_SIZE + 1 : 0;
+    const end = Math.min(userPage * USER_PAGE_SIZE, userTotal);
+    info.textContent = userTotal ? `Hiển thị ${start}-${end} / ${userTotal} tài khoản` : "Không có tài khoản phù hợp";
+  }
+  const pageNumber = getElement("userPageNumber");
+  if (pageNumber) pageNumber.textContent = `${userPage}/${totalPages}`;
+  const previous = getElement<HTMLButtonElement>("prevUserPage");
+  const next = getElement<HTMLButtonElement>("nextUserPage");
+  if (previous) previous.disabled = userPage <= 1;
+  if (next) next.disabled = userPage >= totalPages;
 }
 
 /**
@@ -868,11 +1116,11 @@ function initEngagementChart(): void {
   chartInstance = new Chart(canvas, {
     type: "line",
     data: {
-      labels: ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ Nhật"],
+      labels: ["Đang tải...", "", "", "", "", "", ""],
       datasets: [
         {
           label: "Học viên hoạt động",
-          data: [120, 150, 140, 185, 170, 210, 195],
+          data: [0, 0, 0, 0, 0, 0, 0],
           borderColor: "#2563eb",
           backgroundColor: "rgba(37, 99, 235, 0.08)",
           fill: true,
@@ -884,7 +1132,7 @@ function initEngagementChart(): void {
         },
         {
           label: "Lượt ôn tập từ vựng",
-          data: [65, 80, 75, 95, 90, 120, 110],
+          data: [0, 0, 0, 0, 0, 0, 0],
           borderColor: "#059669",
           backgroundColor: "rgba(5, 150, 105, 0.05)",
           fill: true,
@@ -928,6 +1176,49 @@ function initEngagementChart(): void {
 }
 
 function setupEventListeners(): void {
+  let userSearchTimer: number | undefined;
+  getElement("searchUserInput")?.addEventListener("input", () => {
+    if (userSearchTimer) window.clearTimeout(userSearchTimer);
+    userSearchTimer = window.setTimeout(() => {
+      userPage = 1;
+      void loadUsers();
+    }, 300);
+  });
+  getElement("filterUserStatus")?.addEventListener("change", () => {
+    userPage = 1;
+    void loadUsers();
+  });
+  getElement("prevUserPage")?.addEventListener("click", () => {
+    if (userPage > 1) {
+      userPage -= 1;
+      void loadUsers();
+    }
+  });
+  getElement("nextUserPage")?.addEventListener("click", () => {
+    if (userPage * USER_PAGE_SIZE < userTotal) {
+      userPage += 1;
+      void loadUsers();
+    }
+  });
+  getElement("btnDeleteInactiveUsers")?.addEventListener("click", () => {
+    openActionConfirm(
+      "Xác nhận cảnh báo và lập lịch xóa",
+      "Hệ thống sẽ gửi email cảnh báo đến tất cả tài khoản không hoạt động ít nhất 24 tháng. Sau 7 ngày, tài khoản vẫn không quay lại đăng nhập sẽ bị xóa vĩnh viễn cùng toàn bộ dữ liệu liên quan.",
+      "Gửi cảnh báo & lập lịch",
+      async () => {
+        const result = await adminApi<{ status: string; data: { eligible_accounts: number; warning_emails_sent: number; scheduled_for: string } }>(
+          "/api/v1/admin/users/delete-inactive",
+          { method: "POST" },
+        );
+        showToast(
+          `Đã lập lịch cho ${result.data.eligible_accounts} tài khoản; gửi thành công ${result.data.warning_emails_sent} email cảnh báo.`,
+          "success",
+        );
+        await loadUsers();
+      },
+    );
+  });
+
   getElement("documentForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const title = getFieldValue("inputDocumentTitle");
@@ -994,6 +1285,27 @@ function setupEventListeners(): void {
       renderDocumentsTable();
     }
   });
+
+  getElement("prevTopicPage")?.addEventListener("click", () => {
+    if (topicPage > 1) {
+      topicPage -= 1;
+      renderTopicsTable();
+    }
+  });
+  getElement("nextTopicPage")?.addEventListener("click", () => {
+    const search = getFieldValue("searchTopicInput").toLocaleLowerCase();
+    const total = topicsList.filter((item) => {
+      const matchesSearch = item.name.toLocaleLowerCase().includes(search) ||
+        (item.description || "").toLocaleLowerCase().includes(search);
+      const matchesLang = currentTopicFilterLang === "all" || item.language_code === currentTopicFilterLang;
+      return matchesSearch && matchesLang;
+    }).length;
+    const totalPages = Math.max(1, Math.ceil(total / TOPIC_PAGE_SIZE));
+    if (topicPage < totalPages) {
+      topicPage += 1;
+      renderTopicsTable();
+    }
+  });
   getElement("btnReindexDocuments")?.addEventListener("click", async () => {
     const button = getElement<HTMLButtonElement>("btnReindexDocuments");
     if (button) button.disabled = true;
@@ -1055,6 +1367,9 @@ function setupEventListeners(): void {
     const value = Number((event.target as HTMLSelectElement).value);
     if (Number.isFinite(value) && value > 0) void loadTopicReadings(value);
   });
+  getElement("readingsLanguageFilter")?.addEventListener("change", () => {
+    renderReadingsTopicOptions();
+  });
   getElement("btnSubmitReadings")?.addEventListener("click", () => void saveReadings());
   getElement("readingStagesWrap")?.addEventListener("input", (event) => {
     const card = (event.target as HTMLElement).closest<HTMLElement>("[data-stage]");
@@ -1062,9 +1377,13 @@ function setupEventListeners(): void {
   });
 
   // Search & Filter topics
-  getElement("searchTopicInput")?.addEventListener("input", renderTopicsTable);
+  getElement("searchTopicInput")?.addEventListener("input", () => {
+    topicPage = 1;
+    renderTopicsTable();
+  });
   getElement("filterTopicLanguage")?.addEventListener("change", (e) => {
     currentTopicFilterLang = (e.target as HTMLSelectElement).value;
+    topicPage = 1;
     void loadTopics(currentTopicFilterLang);
   });
 

@@ -264,7 +264,7 @@ def _ensure_path_topic_unlocked(
         path_id,
         profile["id"],
         ordered_topics,
-        is_premium=profile.get("plan_id") == "premium",
+        is_premium=is_premium_profile(profile),
     ).get(topic_id)
     if state is None or state["is_locked"]:
         raise HTTPException(
@@ -872,14 +872,14 @@ def grade_boss_quiz(
     payload = _decode_boss_token(profile, quiz_token)
     quiz = payload["quiz"]
     if not answers:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Chưa có đáp án nào để chấm.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Chưa có đáp án nào để chấm.")
     results = []
     seen: set[int] = set()
     for entry in answers:
         index = entry.get("index")
         if not isinstance(index, int) or index < 0 or index >= len(quiz) or index in seen:
             raise HTTPException(
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
                 "Đáp án gửi lên không hợp lệ (trùng hoặc ngoài phạm vi câu hỏi).",
             )
         seen.add(index)
@@ -945,12 +945,73 @@ def boss_speak_text(profile: Dict[str, Any], quiz_token: str, index: int) -> tup
     payload = _decode_boss_token(profile, quiz_token)
     quiz = payload["quiz"]
     if index < 0 or index >= len(quiz):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Câu hỏi không tồn tại.")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Câu hỏi không tồn tại.")
     question = quiz[index]
     if question["question_type"] != "fill_in":
         raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
             "Chỉ câu điền từ mới có giọng đọc đáp án.",
         )
     language = payload.get("language", "en")
     return question["answer"], _LANGUAGE_NAMES.get(language, "English")
+
+
+DUNGEON_NODE_LIMIT = 40
+DUNGEON_NODE_PATTERN = re.compile(r"^t\d{1,9}_s[1-5]_(?:hub|easy|normal|hard)$")
+
+
+def _clean_dungeon_nodes(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    nodes: list[str] = []
+    for item in value[:DUNGEON_NODE_LIMIT]:
+        if isinstance(item, str) and DUNGEON_NODE_PATTERN.match(item) and item not in nodes:
+            nodes.append(item)
+    return nodes
+
+
+def get_dungeon_progress(profile: Dict[str, Any], topic_id: int) -> list[str]:
+    """Các ải đã vượt trong chủ đề, lưu theo tài khoản nên không mất khi đăng xuất."""
+    try:
+        data = supabase_admin.rpc(
+            "get_dungeon_progress",
+            {"p_user_id": str(profile["id"]), "p_topic_id": topic_id},
+        ).execute().data
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải tiến trình ải. Vui lòng thử lại.",
+        ) from exc
+    return _clean_dungeon_nodes(data)
+
+
+def save_dungeon_progress(
+    profile: Dict[str, Any], topic_id: int, completed_nodes: list[str]
+) -> list[str]:
+    """Hợp nhất danh sách ải vừa vượt vào tiến trình đã lưu, trả về danh sách đầy đủ."""
+    if not isinstance(completed_nodes, list) or len(completed_nodes) > DUNGEON_NODE_LIMIT:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Danh sách ải hoàn thành không hợp lệ.",
+        )
+    for node in completed_nodes:
+        if not isinstance(node, str) or not DUNGEON_NODE_PATTERN.match(node):
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_CONTENT,
+                f"Định danh ải không hợp lệ: {node}",
+            )
+    try:
+        data = supabase_admin.rpc(
+            "save_dungeon_progress",
+            {
+                "p_user_id": str(profile["id"]),
+                "p_topic_id": topic_id,
+                "p_completed_nodes": completed_nodes,
+            },
+        ).execute().data
+    except Exception as exc:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể lưu tiến trình ải. Vui lòng thử lại.",
+        ) from exc
+    return _clean_dungeon_nodes(data)

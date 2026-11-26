@@ -30,7 +30,7 @@ def evaluate_answer(
     payload: MiniGameEvaluationRequest,
     profile: Dict[str, Any] = Depends(get_current_profile),
 ):
-    """Evaluate one attack with a dedicated, strict mini-game AI prompt."""
+    """Evaluate one attack, judging structure and meaning only (never capitalization)."""
     del profile
     try:
         evaluation: MiniGameEvaluationResponse = evaluate_minigame_answer(payload)

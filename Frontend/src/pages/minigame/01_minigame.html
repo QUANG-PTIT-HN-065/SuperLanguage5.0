@@ -4,28 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SuperLanguage — Tháp Giải Mã Ngữ Nghĩa (16-Bit Pixel Edition)</title>
+  <link rel="icon" type="image/png" href="../../../assets/logo.png">
+  <link rel="apple-touch-icon" href="../../../assets/logo.png">
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Google Fonts: Pixel Retro Headers + Clean Vietnamese UI Typography -->
+  <!-- Google Fonts: K2D (font chính của khu Mini game) + fallback tiếng Việt -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
-
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Be Vietnam Pro"', 'sans-serif'],
-            pixel: ['"Press Start 2P"', 'monospace'],
-            vt: ['"VT323"', 'monospace'],
-          },
-        },
-      },
-    };
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=K2D:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <style>
     /* =========================================================================
@@ -51,7 +36,7 @@
         radial-gradient(circle at 20% 10%, rgba(121, 140, 232, 0.16) 0%, transparent 45%),
         radial-gradient(circle at 80% 90%, rgba(247, 197, 216, 0.12) 0%, transparent 45%);
       color: #f4f1ff;
-      font-family: 'Be Vietnam Pro', sans-serif;
+      font-family: K2D, 'Be Vietnam Pro', sans-serif;
       overflow-x: hidden;
     }
 
@@ -146,10 +131,14 @@
       border-radius: 9999px;
     }
   </style>
+
+  <!-- Tailwind CSS (bản build local, đặt SAU style nội tuyến để giữ đúng thứ tự
+       đè của Tailwind so với style trong trang, như khi còn dùng cdn.tailwindcss.com) -->
+  <link rel="stylesheet" href="../../styles/minigame/style.css" />
 </head>
 <body class="min-h-screen flex flex-col justify-between selection:bg-amber-400 selection:text-slate-950">
   <!-- Loading indicator (hidden by default) -->
-  <div id="loading-indicator" class="fixed inset-0 flex items-center justify-center bg-black/60 text-white text-xl font-pixel" style="display:none; z-index:1000;">
+  <div id="loading-indicator" class="fixed inset-0 flex items-center justify-center bg-black/60 text-white text-xl font-display" style="display:none; z-index:1000;">
     Đang tải thẻ bài từ CSDL…
   </div>
   <!-- Error toast (hidden by default) -->
@@ -163,15 +152,15 @@
   <header class="w-full max-w-5xl mx-auto px-3 pt-2.5 pb-1.5 flex flex-wrap items-center justify-between gap-2">
     <!-- Brand & Tower Floor Badge -->
     <div class="flex items-center gap-2.5">
-      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center text-slate-950 font-pixel text-xs shadow-md border-2 border-amber-200">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center text-slate-950 font-display text-xs shadow-md border-2 border-amber-200">
         🐱
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="font-pixel text-[11px] sm:text-xs text-amber-300 tracking-wide">
+          <h1 class="font-display text-xs sm:text-sm font-bold text-amber-300 tracking-wide">
             THÁP GIẢI MÃ
           </h1>
-          <span id="hud-floor" class="px-2 py-0.5 rounded-md bg-indigo-600/80 border border-indigo-400/50 font-pixel text-[10px] text-white">
+          <span id="hud-floor" class="px-2 py-0.5 rounded-md bg-indigo-600/80 border border-indigo-400/50 font-display text-[11px] font-bold text-white">
             TẦNG 1
           </span>
         </div>
@@ -194,19 +183,24 @@
       </div>
 
       <!-- Hearts Display -->
-      <div id="hud-hearts" class="flex items-center gap-0.5 px-2.5 py-1.5 rounded-xl bg-rose-950/70 border border-rose-500/40 text-xs sm:text-sm" title="Sinh lực (Hearts)">
+      <div id="hud-hearts" class="flex items-center gap-0.5 px-2.5 py-1.5 rounded-xl bg-rose-950/70 border border-rose-500/40 text-xs sm:text-sm" title="Máu thật của tài khoản">
         ❤️❤️❤️❤️❤️
       </div>
 
       <!-- XP Counter -->
       <div class="px-2.5 py-1.5 rounded-xl bg-amber-950/70 border border-amber-500/40 flex items-center gap-1">
         <span class="text-amber-400 text-xs">★</span>
-        <span id="hud-xp" class="font-vt text-lg sm:text-xl leading-none text-amber-300 font-bold">0 XP</span>
+        <span id="hud-xp" class="font-display text-lg sm:text-xl leading-none text-amber-300 font-bold">0 XP</span>
       </div>
 
       <!-- Sound Toggle -->
       <button id="btn-sound" onclick="toggleSound()" class="pixel-btn w-9 h-9 rounded-xl bg-slate-800/90 border border-indigo-400/40 flex items-center justify-center text-sm" title="Bật/Tắt âm thanh 16-bit">
         🔊
+      </button>
+
+      <!-- Exit Game -->
+      <button id="btn-exit-game" onclick="exitGame()" class="pixel-btn h-9 px-2.5 rounded-xl bg-rose-950/80 border border-rose-400/50 flex items-center gap-1 text-xs font-bold text-rose-200 hover:text-white" title="Thoát khỏi trò chơi (tự lưu XP đã kiếm)">
+        ⏏️ <span class="hidden sm:inline">Thoát</span>
       </button>
     </div>
   </header>
@@ -228,7 +222,7 @@
         <div class="absolute top-2 left-2 flex flex-col gap-1.5 z-10 max-w-[48%]">
           <div class="flex items-center gap-1.5 bg-slate-950/75 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-amber-300/50">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span id="hero-skin-label" class="font-vt text-sm sm:text-base text-amber-200 leading-none truncate">
+            <span id="hero-skin-label" class="font-display text-sm sm:text-base text-amber-200 leading-none truncate">
               Mèo Cam Pháp Sư
             </span>
             <button onclick="cycleCatSkin()" class="ml-1 px-1.5 py-0.5 rounded bg-amber-400/20 hover:bg-amber-400/40 border border-amber-300/60 text-[10px] font-bold text-amber-200 transition" title="Đổi trang phục Mèo">
@@ -243,10 +237,10 @@
         <!-- TOP-RIGHT HUD: Grammar Guardian Boss HP Bar -->
         <div class="absolute top-2 right-2 z-10 w-[46%] sm:w-64 bg-slate-950/80 backdrop-blur-xs px-2.5 py-1.5 rounded-lg border border-rose-400/50">
           <div class="flex items-center justify-between gap-1 mb-1">
-            <span id="boss-name" class="font-vt text-sm sm:text-base text-rose-200 leading-none truncate">
+            <span id="boss-name" class="font-display text-sm sm:text-base text-rose-200 leading-none truncate">
               Slime Thì Quá Khứ
             </span>
-            <span id="boss-hp-text" class="font-vt text-sm text-amber-300 leading-none shrink-0">
+            <span id="boss-hp-text" class="font-display text-sm tabular-nums text-amber-300 leading-none shrink-0">
               120/120
             </span>
           </div>
@@ -258,7 +252,7 @@
 
         <!-- BOTTOM-CENTER ARENA SUBTITLE: Cat Action State Indicator -->
         <div class="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-          <div id="arena-state-banner" class="px-3 py-0.5 rounded-full bg-slate-950/70 border border-white/20 font-vt text-sm sm:text-base text-cyan-200 tracking-wide whitespace-nowrap">
+          <div id="arena-state-banner" class="px-3 py-0.5 rounded-full bg-slate-950/70 border border-white/20 font-display text-sm sm:text-base text-cyan-200 tracking-wide whitespace-nowrap">
             ✨ Chọn thẻ từ vựng để Mèo tụ phép!
           </div>
         </div>
@@ -300,7 +294,7 @@
         <!-- Turn Timer -->
         <div id="timer-box" class="px-3 py-1.5 rounded-xl bg-slate-950 border border-cyan-400/50 text-center min-w-[74px]">
           <div class="text-[10px] uppercase font-bold text-cyan-300">Thời gian</div>
-          <div id="timer-display" class="font-vt text-2xl leading-none text-cyan-200 font-bold">45s</div>
+          <div id="timer-display" class="font-display text-2xl tabular-nums leading-none text-cyan-200 font-bold">45s</div>
         </div>
       </div>
     </section>
@@ -384,7 +378,7 @@
        ========================================================================= -->
   <div id="buff-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm">
     <div class="pixel-box max-w-2xl w-full rounded-3xl p-5 sm:p-6 text-center space-y-4 border-2 border-amber-400">
-      <div class="inline-block px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300 text-amber-300 font-pixel text-[10px]">
+      <div class="inline-block px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300 text-amber-300 font-display text-[11px] font-bold">
         CHIẾN THẮNG TẦNG!
       </div>
       <h2 class="text-xl sm:text-2xl font-extrabold text-white">
@@ -406,7 +400,7 @@
   <div id="gameover-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm">
     <div class="pixel-box max-w-md w-full rounded-3xl p-6 text-center space-y-4 border-2 border-rose-500">
       <div class="text-4xl">😿</div>
-      <h2 class="font-pixel text-base sm:text-lg text-rose-400">HẾT SINH LỰC!</h2>
+      <h2 class="font-display text-lg sm:text-xl font-extrabold text-rose-400">HẾT SINH LỰC!</h2>
       <p id="gameover-reason" class="text-xs sm:text-sm text-slate-300">
         Mèo Pháp Sư đã kiệt sức trước Hộ Vệ Ngữ Pháp.
       </p>
@@ -414,18 +408,24 @@
       <div class="grid grid-cols-3 gap-2 bg-slate-950/80 p-3 rounded-2xl border border-indigo-500/30">
         <div>
           <div class="text-[10px] text-slate-400 uppercase font-bold">Tầng cao nhất</div>
-          <div id="stat-final-floor" class="font-vt text-2xl text-amber-300 font-bold">1</div>
+          <div id="stat-final-floor" class="font-display text-2xl tabular-nums text-amber-300 font-bold">1</div>
         </div>
         <div>
           <div class="text-[10px] text-slate-400 uppercase font-bold">Tổng XP</div>
-          <div id="stat-final-xp" class="font-vt text-2xl text-emerald-400 font-bold">0</div>
+          <div id="stat-final-xp" class="font-display text-2xl tabular-nums text-emerald-400 font-bold">0</div>
         </div>
         <div>
           <div class="text-[10px] text-slate-400 uppercase font-bold">Từ đã luyện</div>
-          <div id="stat-final-words" class="font-vt text-2xl text-cyan-300 font-bold">0</div>
+          <div id="stat-final-words" class="font-display text-2xl tabular-nums text-cyan-300 font-bold">0</div>
         </div>
       </div>
 
+      <button id="btn-use-potion" onclick="usePotionToHeal()" class="pixel-btn w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-extrabold text-sm">
+        🧪 Dùng Bình Máu — hồi đầy máu, chơi tiếp tầng này
+      </button>
+      <p class="text-[11px] text-slate-400 -mt-2">
+        Bình máu lấy từ kho cửa hàng (vật phẩm “Hồi Phục Máu Siêu Tốc”). Không có bình máu? Vào cửa hàng mua trước.
+      </p>
       <button onclick="restartGame()" class="pixel-btn w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-extrabold text-sm">
         🔄 Leo Tháp Lại Từ Đầu
       </button>

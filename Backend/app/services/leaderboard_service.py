@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 def _today(profile: dict[str, Any]):
     timezone_name = profile.get("timezone")
     try:
-        timezone = ZoneInfo(timezone_name)
+        timezone = ZoneInfo(timezone_name) # type: ignore
     except (TypeError, ValueError, ZoneInfoNotFoundError):
         logger.warning(
             "Timezone %r is unavailable; using UTC for leaderboard dates.",

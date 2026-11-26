@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from pathlib import PurePath
-from typing import Any, Dict
+from typing import Annotated, Any, Dict, Optional
 from uuid import UUID, uuid4
 
 import edge_tts
@@ -15,7 +15,7 @@ from starlette.concurrency import run_in_threadpool
 
 from app.core.deps import get_current_profile
 from app.core.config import settings
-from app.core.ai_quota import consume_daily_ai_call
+from app.core.ai_quota import consume_daily_ai_call, read_daily_ai_usage
 from app.schemas.chat_ai import (
     AudioTranscriptionResponse,
     AudioUploadResponse,
@@ -24,6 +24,8 @@ from app.schemas.chat_ai import (
     ConversationResponse,
     MessageSend,
     MessageResponse,
+    PronunciationTurnFeedback,
+    PronunciationTurnResponse,
     ReadingFeedback,
     ReadingPracticeTurnResponse,
     ReadingPromptContent,
@@ -261,11 +263,12 @@ async def _read_audio_upload(audio: UploadFile) -> bytes:
 async def _transcribe_for_profile(
     audio_bytes: bytes,
     profile: Dict[str, Any],
-    language: str,
+    language: Optional[str],
     charge_quota: bool = True,
     filename: str = "voice.webm",
     content_type: str = "audio/webm",
 ) -> str:
+    """language=None = Whisper tự nhận diện ngôn ngữ đang nói (chép nguyên văn)."""
     if charge_quota:
         consume_daily_ai_call(profile)
     try:
@@ -315,6 +318,18 @@ async def _prepare_pronunciation_audio(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "Không thể chuẩn bị âm thanh để chấm phát âm. Vui lòng thử lại sau.",
         ) from exc
+
+
+@router.get("/quota", response_model=BaseResponse[Dict[str, Any]])
+def get_ai_quota(
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[Dict[str, Any]]:
+    """Hạn mức lượt AI hôm nay của tài khoản (chỉ đọc, không trừ lượt)."""
+    return BaseResponse(
+        status="success",
+        message="Đã tải hạn mức AI hôm nay.",
+        data=read_daily_ai_usage(profile),
+    )
 
 
 @router.get("/conversations", response_model=BaseResponse[list[ConversationResponse]])
@@ -1025,6 +1040,34 @@ async def transcribe_chat_audio(
 
 
 @router.post(
+    "/transcribe-voice",
+    response_model=BaseResponse[AudioTranscriptionResponse],
+)
+async def transcribe_voice_message(
+    conversation_id: UUID = Form(...),
+    audio: UploadFile = File(...),
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[AudioTranscriptionResponse]:
+    """Chép nguyên văn điều học viên vừa nói trong chế độ Đàm thoại.
+
+    Không khoá ngôn ngữ theo phòng học: Whisper tự nhận diện, nói tiếng nào ra chữ tiếng đó.
+    """
+    try:
+        _verify_audio_conversation(conversation_id, profile)
+    except Exception:
+        await audio.close()
+        raise
+
+    audio_bytes = await _read_audio_upload(audio)
+    transcript = await _transcribe_for_profile(audio_bytes, profile, None)
+    return BaseResponse(
+        status="success",
+        message="Đã chuyển giọng nói thành văn bản.",
+        data=AudioTranscriptionResponse(transcript=transcript),
+    )
+
+
+@router.post(
     "/transcribe-practice",
     response_model=BaseResponse[AudioTranscriptionResponse],
 )
@@ -1060,6 +1103,148 @@ async def transcribe_practice_audio(
         status="success",
         message="Đã nhận diện câu đọc.",
         data=AudioTranscriptionResponse(transcript=transcript),
+    )
+
+
+@router.post(
+    "/pronunciation-turn",
+    response_model=BaseResponse[PronunciationTurnResponse],
+)
+async def submit_pronunciation_turn(
+    conversation_id: UUID = Form(...),
+    audio: UploadFile = File(...),
+    profile: Dict[str, Any] = Depends(get_current_profile),
+) -> BaseResponse[PronunciationTurnResponse]:
+    """Học viên nói một câu: AI chấm phát âm + chính tả rồi mở nội dung kế tiếp."""
+    try:
+        language_code = _verify_audio_conversation(conversation_id, profile)
+    except Exception:
+        await audio.close()
+        raise
+
+    language = _CHAT_ASR_LANGUAGE_CODES.get(language_code)
+    if language is None:
+        await audio.close()
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Ngôn ngữ của phòng trò chuyện không được hỗ trợ nhận diện.",
+        )
+
+    consume_daily_ai_call(profile)
+    audio_bytes = await _read_audio_upload(audio)
+    pronunciation_audio = await _prepare_pronunciation_audio(audio_bytes)
+    transcript = (
+        await _transcribe_for_profile(
+            pronunciation_audio,
+            profile,
+            language,
+            charge_quota=False,
+        )
+    ).strip()
+    if not transcript or len(transcript) > 4000:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            "Không nhận diện được câu nói hợp lệ. Hãy nói rõ hơn rồi thử lại.",
+        )
+
+    try:
+        previous_messages = (
+            supabase.table("messages")
+            .select("sender_type,content")
+            .eq("conversation_id", str(conversation_id))
+            .order("created_at", desc=True)
+            .limit(_CHAT_CONTEXT_MESSAGE_LIMIT)
+            .execute()
+        )
+    except Exception as exc:
+        logger.exception("Could not load previous AI practice messages.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể tải ngữ cảnh hội thoại lúc này. Vui lòng thử lại.",
+        ) from exc
+
+    history = [
+        {
+            "role": "assistant" if row.get("sender_type") == "ai" else "user",
+            "content": row["content"],
+        }
+        for row in reversed(previous_messages.data or [])
+        if row.get("sender_type") in {"user", "ai"}
+        and isinstance(row.get("content"), str)
+        and row["content"].strip()
+    ]
+
+    try:
+        feedback_text = await AIService.evaluate_pronunciation_turn(
+            pronunciation_audio,
+            transcript,
+            _CHAT_LANGUAGE_NAMES[language_code],
+            profile.get("current_level") or "A1",
+            history,
+        )
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
+            raise
+        logger.exception("AI pronunciation turn evaluation failed.")
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "AI chưa thể chấm phát âm lúc này. Vui lòng thử lại.",
+        ) from exc
+    except Exception as exc:
+        logger.exception("AI pronunciation turn evaluation failed.")
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "AI chưa thể chấm phát âm lúc này. Vui lòng thử lại.",
+        ) from exc
+
+    try:
+        feedback = PronunciationTurnFeedback.model_validate(
+            _decode_ai_json_object(feedback_text, "pronunciation turn"),
+        )
+    except ValidationError as exc:
+        logger.warning("AI returned invalid pronunciation-turn fields.")
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "AI chưa trả về được kết quả chấm phát âm hợp lệ. Vui lòng thử lại.",
+        ) from exc
+
+    if not feedback.next_prompt:
+        logger.warning("AI pronunciation turn returned no next prompt.")
+        raise HTTPException(
+            status.HTTP_502_BAD_GATEWAY,
+            "AI chưa gợi ý được nội dung tiếp theo. Vui lòng thử lại.",
+        )
+
+    try:
+        supabase.table("messages").insert([
+            {
+                "conversation_id": str(conversation_id),
+                "sender_type": "user",
+                "content": transcript,
+            },
+            {
+                "conversation_id": str(conversation_id),
+                "sender_type": "ai",
+                "content": feedback.next_prompt,
+                "ai_feedback": feedback.model_dump_json(),
+            },
+        ]).execute()
+    except Exception as exc:
+        logger.exception("Could not persist AI pronunciation turn messages.")
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Không thể lưu kết quả luyện tập lúc này. Vui lòng thử lại.",
+        ) from exc
+
+    return BaseResponse(
+        status="success",
+        message="Đã chấm phát âm và chuẩn bị nội dung tiếp theo.",
+        data=PronunciationTurnResponse(
+            conversation_id=conversation_id,
+            transcript=transcript,
+            ai_response=feedback.next_prompt,
+            ai_feedback=feedback,
+        ),
     )
 
 
@@ -1129,6 +1314,7 @@ async def _send_message(
             _CHAT_LANGUAGE_NAMES[language_code],
             profile.get("current_level") or "A1",
             conversation_history=conversation_history,
+            grammar_mode=data.grammar_mode,
         )
     except HTTPException as exc:
         if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
@@ -1192,6 +1378,7 @@ async def send_voice_message(
     conversation_id: UUID = Form(...),
     audio: UploadFile = File(...),
     profile: Dict[str, Any] = Depends(get_current_profile),
+    grammar_mode: Annotated[bool, Form()] = False,
 ) -> BaseResponse[MessageResponse]:
     transcription = await transcribe_chat_audio(conversation_id, audio, profile)
     transcript = transcription.data.transcript.strip()
@@ -1202,7 +1389,11 @@ async def send_voice_message(
         )
 
     return await _send_message(
-        MessageSend(conversation_id=conversation_id, user_message=transcript),
+        MessageSend(
+            conversation_id=conversation_id,
+            user_message=transcript,
+            grammar_mode=grammar_mode,
+        ),
         profile,
         quota_already_consumed=True,
     )

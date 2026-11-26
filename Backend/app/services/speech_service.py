@@ -118,15 +118,13 @@ def transcribe_audio(audio_bytes: bytes, language: str | None = None) -> str:
     pcm_audio = _convert_audio(audio_bytes, "s16le")
 
     audio = np.frombuffer(pcm_audio, dtype="<i2").astype(np.float32) / 32768.0
+    # Không truyền language khi trống -> Whisper tự nhận diện, chép nguyên văn ngôn ngữ đang nói.
+    options: dict = {"task": "transcribe", "fp16": False, "verbose": False}
+    if language:
+        options["language"] = language
     try:
         with _MODEL_LOCK:
-            result = _load_model().transcribe(
-                audio,
-                task="transcribe",
-                language=language,
-                fp16=False,
-                verbose=False,
-            )
+            result = _load_model().transcribe(audio, **options)
     except Exception as exc:
         logger.exception("Whisper transcription failed.")
         raise SpeechServiceUnavailableError from exc

@@ -4,6 +4,8 @@
  * và định dạng hợp lệ (JPG, PNG, WEBP).
  */
 
+const DEFAULT_AVATAR_URL = new URL('../../../assets/logo.png', import.meta.url).href;
+
 export interface AvatarUploadOptions {
   container: HTMLElement;
   initialAvatarUrl?: string;
@@ -27,7 +29,7 @@ export class AvatarUploader {
     this.container.innerHTML = `
       <div class="avatar-upload-widget" role="region" aria-label="Tải lên ảnh đại diện">
         <div class="avatar-circle-wrapper" id="avatarCircleWrapper" tabindex="0" role="button" aria-label="Bấm hoặc kéo thả ảnh vào đây để thay đổi ảnh đại diện">
-          <img class="avatar-preview-img" id="avatarPreviewImg" src="${options.initialAvatarUrl || '../../../assets/logo.png'}" alt="Ảnh đại diện">
+          <img class="avatar-preview-img" id="avatarPreviewImg" src="${options.initialAvatarUrl || DEFAULT_AVATAR_URL}" alt="Ảnh đại diện">
           <div class="avatar-hover-overlay">
             <i class="fa-solid fa-camera" aria-hidden="true"></i>
             <span>Đổi ảnh</span>

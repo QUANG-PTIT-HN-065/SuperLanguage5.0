@@ -9,6 +9,19 @@
  * =========================================================================
  */
 
+import { API_BASE_URL } from "../../types/shared/api-client";
+import {
+  gainHearts,
+  getHeartCap,
+  isHeartsLocked,
+  isUnlimitedHearts,
+  readHearts,
+  setHeartCap,
+  spendHearts,
+} from "../../types/shared/hearts";
+import { tryHealHearts } from "../../types/shared/shop-items";
+import { showToast } from "../../types/ui/toast";
+
 // ==================== TYPE DEFINITIONS ====================
 export interface VocabCard {
   id: string | number;
@@ -275,9 +288,10 @@ export const game = {
   maxHearts: 5,
   isUnlimitedHearts: false,
   xp: 0,
+  xpAwarded: 0,
+  awardedWordIds: new Set<number>(),
   wordsPracticed: 0,
   practicedWordIds: new Set<number>(),
-  progressSaved: false,
   rerollsLeft: 2,
   skinIndex: 0,
 
@@ -304,7 +318,6 @@ export const game = {
   isTransitioning: false,
   isEvaluating: false,
   isPremium: false,
-  premiumHeartModeSelected: false,
 
   // Animation & VFX
   cat: {
@@ -323,18 +336,22 @@ export const game = {
   soundOn: true,
 };
 
+// Máu của game = máu thật của tài khoản (kho lưu trữ chung với header).
+function syncHeartsFromStore(): void {
+  game.isUnlimitedHearts = isUnlimitedHearts();
+  game.maxHearts = getHeartCap() ?? 99;
+  game.hearts = readHearts();
+}
+
 // ==================== AUTH & DATABASE LOADER ====================
 function getApiBaseUrl(): string {
-  const envUrl = (import.meta as any).env?.VITE_API_BASE_URL;
-  if (envUrl && typeof envUrl === 'string' && !envUrl.startsWith('%')) {
-    return envUrl.replace(/\/+$/, '');
-  }
-  return window.location.origin.replace(/\/+$/, '');
+  return API_BASE_URL;
 }
 
 function getAuthToken(): string {
+  const cookieMatch = document.cookie.match(/(?:^|;\s*)slanguage_access_token=([^;]*)/);
   return (
-    localStorage.getItem('slanguage_access_token') ||
+    (cookieMatch ? decodeURIComponent(cookieMatch[1]) : '') ||
     sessionStorage.getItem('superlanguage.admin.accessToken') ||
     ''
   );
@@ -426,24 +443,14 @@ export async function loadDatabaseGameState(lang?: 'en' | 'ja'): Promise<boolean
       activeRulesDatabase[targetLang] = [...ragRules, ...(BASE_GRAMMAR_RULES[targetLang] || [])];
     }
 
-    // Cập nhật gói cước người chơi (FR-01)
+    // Máu thật của tài khoản: cap lấy từ gói cước, số máu đọc từ kho chung với header.
     game.isPremium = data.is_unlimited_hearts || data.plan_id === 'premium';
-    if (game.isPremium) {
-      if (!game.premiumHeartModeSelected) {
-        game.isUnlimitedHearts = window.confirm(
-          'Tài khoản Premium: chọn OK để dùng vô hạn tim. ' +
-          'Chọn Hủy để chơi chế độ giới hạn 5 tim.',
-        );
-        game.premiumHeartModeSelected = true;
-      }
-      game.maxHearts = game.isUnlimitedHearts ? 99 : 5;
-      game.hearts = game.maxHearts;
-    } else {
-      game.isUnlimitedHearts = false;
-      game.premiumHeartModeSelected = false;
-      game.maxHearts = typeof data.max_hearts === 'number' ? data.max_hearts : 5;
-      game.hearts = Math.min(game.hearts, game.maxHearts);
-    }
+    setHeartCap(
+      game.isPremium
+        ? null
+        : (typeof data.max_hearts === 'number' ? data.max_hearts : 5),
+    );
+    syncHeartsFromStore();
 
     // Hide loading indicator after successful load
     const loadingEl = document.getElementById('loading-indicator');
@@ -538,15 +545,22 @@ async function evaluateMiniGameAnswer(
 }
 
 /**
- * Lưu tiến trình leo tháp vào CSDL qua POST /api/v1/minigame/progress
+ * Lưu tiến trình leo tháp vào CSDL qua POST /api/v1/minigame/progress.
+ * Chỉ gửi phần XP chưa cộng thật (game.xp - game.xpAwarded) để mỗi lần lên tầng
+ * là XP được ghi thẳng vào tài khoản qua record_lesson_activity.
  */
 export async function saveGameProgress(): Promise<void> {
-  if (game.progressSaved || game.xp <= 0) return;
+  const pendingXp = game.xp - game.xpAwarded;
+  if (pendingXp <= 0) return;
   const token = getAuthToken();
   if (!token) return;
 
   const apiBase = getApiBaseUrl();
-  game.progressSaved = true;
+  const pendingWordIds = Array.from(game.practicedWordIds).filter(
+    (n) => Number.isInteger(n) && !game.awardedWordIds.has(n),
+  );
+  game.xpAwarded += pendingXp;
+  pendingWordIds.forEach((id) => game.awardedWordIds.add(id));
 
   try {
     await fetch(`${apiBase}/api/v1/minigame/progress`, {
@@ -556,12 +570,13 @@ export async function saveGameProgress(): Promise<void> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        xp: game.xp,
-        word_ids: Array.from(game.practicedWordIds).filter((n) => Number.isInteger(n)),
+        xp: pendingXp,
+        word_ids: pendingWordIds,
       }),
     });
   } catch (err) {
-    game.progressSaved = false;
+    game.xpAwarded -= pendingXp;
+    pendingWordIds.forEach((id) => game.awardedWordIds.delete(id));
     console.warn('[MiniGame] Lỗi lưu tiến trình:', err);
   }
 }
@@ -819,10 +834,10 @@ function updateTimerHUD(): void {
   if (!el || !box) return;
   el.textContent = `${game.timeLeft}s`;
   if (game.timeLeft <= 10) {
-    el.className = 'font-vt text-2xl leading-none text-rose-400 font-bold animate-pulse';
+    el.className = 'font-display text-2xl tabular-nums leading-none text-rose-400 font-bold animate-pulse';
     box.className = 'px-3 py-1.5 rounded-xl bg-rose-950/90 border border-rose-500 text-center min-w-[74px]';
   } else {
-    el.className = 'font-vt text-2xl leading-none text-cyan-200 font-bold';
+    el.className = 'font-display text-2xl tabular-nums leading-none text-cyan-200 font-bold';
     box.className = 'px-3 py-1.5 rounded-xl bg-slate-950 border border-cyan-400/50 text-center min-w-[74px]';
   }
 }
@@ -973,6 +988,24 @@ function updateSynergyPreview(): void {
 }
 
 // ==================== ATTACK EVALUATION & COMBAT ====================
+/** Viết hoa, dấu câu và khoảng trắng không được làm hỏng lượt chơi. */
+function normalizePlayerText(value: string): string {
+  return value.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** `sentence` phải đã qua normalizePlayerText; `form` là một dạng từ của thẻ. */
+function containsWordForm(sentence: string, form: string, lang: string): boolean {
+  const needle = normalizePlayerText(form).replace(/^[\p{P}\p{S}]+|[\p{P}\p{S}]+$/gu, '');
+  if (!needle) return false;
+  return lang === 'en'
+    ? new RegExp(`\\b${escapeRegExp(needle)}\\b`).test(sentence)
+    : sentence.includes(needle);
+}
+
 export async function handleCastAttack(e: Event): Promise<void> {
   e.preventDefault();
   if (game.isGameOver || game.isTransitioning || game.isEvaluating) return;
@@ -992,10 +1025,10 @@ export async function handleCastAttack(e: Event): Promise<void> {
   }
 
   // Kiểm tra Vùng Cấm Từ (Taboo Mutator)
+  const normalizedInput = normalizePlayerText(rawInput);
   if (game.mutator?.type === 'taboo' && game.mutator.forbidden) {
-    const lower = rawInput.toLowerCase();
     const violated = game.mutator.forbidden.find((fw) =>
-      game.lang === 'en' ? new RegExp(`\\b${fw}\\b`, 'i').test(lower) : rawInput.includes(fw)
+      containsWordForm(normalizedInput, fw, game.lang)
     );
     if (violated) {
       triggerWrongAnswer(`Vi phạm Vùng Cấm Từ! Bạn đã dùng từ bị cấm "${violated}".`, stats.isAllIn);
@@ -1003,23 +1036,9 @@ export async function handleCastAttack(e: Event): Promise<void> {
     }
   }
 
-  // Kiểm tra xem tất cả các từ vựng đã chọn có xuất hiện trong câu không
-  const lowerSentence = rawInput.toLowerCase();
-  const missingCards = stats.selectedCards.filter((card) => {
-    const forms = Array.isArray(card.forms) && card.forms.length ? card.forms : [card.word];
-    return !forms.some((form) => {
-      if (game.lang === 'en') {
-        return new RegExp(`\\b${form.toLowerCase()}\\b`, 'i').test(lowerSentence);
-      }
-      return rawInput.includes(form);
-    });
-  });
-
-  if (missingCards.length > 0) {
-    const names = missingCards.map((c) => `"${c.word}"`).join(', ');
-    triggerWrongAnswer(`Câu của bạn chưa chứa từ vựng đã chọn: ${names}.`, stats.isAllIn);
-    return;
-  }
+  // Thẻ từ có mặt trong câu hay không, ở dạng chia nào (practice/practicing, eat/ate,
+  // する/します) là do AI trọng tài quyết định. So khớp chuỗi ở đây chỉ nhận đúng nguyên
+  // dạng ghi trên thẻ nên từng chặn nhầm những câu chia từ hợp lệ.
 
   if (stats.isAllIn && stats.selectedCards.length < 2) {
     triggerWrongAnswer('Chế độ Cược Tất Tay yêu cầu ghép ít nhất 2 thẻ từ vựng trong cùng 1 câu!', true);
@@ -1206,9 +1225,9 @@ function handlePlayerDamage(reason: string): void {
   setCatState('HURT', 1100);
   game.screenShake = 6;
 
-  // Nếu không phải gói unlimited hearts thì trừ tim
+  // Trừ máu thật của tài khoản (kho chung với header, hết máu tự khóa 24 giờ).
   if (!game.isUnlimitedHearts) {
-    game.hearts = Math.max(0, game.hearts - 1);
+    game.hearts = spendHearts(1);
   }
 
   game.floatingTexts.push({
@@ -1222,25 +1241,51 @@ function handlePlayerDamage(reason: string): void {
   updateTopHUD();
 
   if (game.hearts <= 0) {
-    game.isGameOver = true;
     void saveGameProgress();
-    clearInterval(game.timerInterval);
-
-    const reasonEl = document.getElementById('gameover-reason');
-    if (reasonEl) reasonEl.textContent = reason;
-    const floorEl = document.getElementById('stat-final-floor');
-    if (floorEl) floorEl.textContent = `Tầng ${game.floor}`;
-    const xpEl = document.getElementById('stat-final-xp');
-    if (xpEl) xpEl.textContent = `${game.xp} XP`;
-    const wordsEl = document.getElementById('stat-final-words');
-    if (wordsEl) wordsEl.textContent = `${game.wordsPracticed} từ`;
-
-    setTimeout(() => {
-      const modal = document.getElementById('gameover-modal');
-      modal?.classList.remove('hidden');
-      modal?.classList.add('flex');
-    }, 700);
+    openGameOverModal(reason);
   }
+}
+
+function openGameOverModal(reason: string): void {
+  game.isGameOver = true;
+  clearInterval(game.timerInterval);
+
+  const reasonEl = document.getElementById('gameover-reason');
+  if (reasonEl) reasonEl.textContent = reason;
+  const floorEl = document.getElementById('stat-final-floor');
+  if (floorEl) floorEl.textContent = `Tầng ${game.floor}`;
+  const xpEl = document.getElementById('stat-final-xp');
+  if (xpEl) xpEl.textContent = `${game.xp} XP`;
+  const wordsEl = document.getElementById('stat-final-words');
+  if (wordsEl) wordsEl.textContent = `${game.wordsPracticed} từ`;
+
+  setTimeout(() => {
+    const modal = document.getElementById('gameover-modal');
+    modal?.classList.remove('hidden');
+    modal?.classList.add('flex');
+  }, 700);
+}
+
+/** Hết máu giữa chừng: dùng Bình Máu của cửa hàng để hồi đầy và chơi tiếp tầng hiện tại. */
+export async function usePotionToHeal(): Promise<void> {
+  const button = document.getElementById('btn-use-potion');
+  if (button instanceof HTMLButtonElement) button.disabled = true;
+  const healed = await tryHealHearts();
+  if (button instanceof HTMLButtonElement) button.disabled = false;
+  if (!healed) {
+    showToast({
+      type: 'error',
+      message: 'Bạn không có bình máu trong kho. Vào cửa hàng để mua Bình Máu trước đã!',
+    });
+    return;
+  }
+  syncHeartsFromStore();
+  game.isGameOver = false;
+  const modal = document.getElementById('gameover-modal');
+  modal?.classList.add('hidden');
+  modal?.classList.remove('flex');
+  updateTopHUD();
+  generateFloor(game.floor);
 }
 
 function handleBossDefeated(): void {
@@ -1262,7 +1307,14 @@ function handleBossDefeated(): void {
     });
   }
 
-  // Tự động lưu tiến độ định kỳ sau khi qua mỗi tầng
+  // Lên tầng: lưu ngay phần XP của tầng này — record_lesson_activity cộng thẳng vào tài khoản.
+  const floorXp = game.xp - game.xpAwarded;
+  if (floorXp > 0 && getAuthToken()) {
+    showToast({
+      type: 'success',
+      message: `Lên tầng ${game.floor + 1}! +${floorXp} XP đã được cộng vào tài khoản.`,
+    });
+  }
   void saveGameProgress();
 
   setTimeout(() => {
@@ -1294,7 +1346,7 @@ function handleBossDefeated(): void {
 export function selectPassiveBuff(buffId: string): void {
   game.buffs.add(buffId);
   if (buffId === 'heart_spring' && !game.isUnlimitedHearts) {
-    game.hearts = Math.min(game.maxHearts, game.hearts + 1);
+    game.hearts = gainHearts(1);
   }
   playRetroSfx('card');
 
@@ -1307,19 +1359,34 @@ export function selectPassiveBuff(buffId: string): void {
 
 export function restartGame(): void {
   if (!game.dataReady) return;
-  game.hearts = game.maxHearts;
   game.xp = 0;
+  game.xpAwarded = 0;
+  game.awardedWordIds.clear();
   game.wordsPracticed = 0;
   game.practicedWordIds.clear();
-  game.progressSaved = false;
   game.buffs.clear();
   game.isGameOver = false;
 
   const modal = document.getElementById('gameover-modal');
   modal?.classList.add('hidden');
   modal?.classList.remove('flex');
+  syncHeartsFromStore();
   updateTopHUD();
+
+  // Leo lại bằng máu thật: tài khoản hết máu thì phải dùng bình máu mới chơi tiếp được.
+  if (!game.isUnlimitedHearts && game.hearts <= 0) {
+    openGameOverModal(
+      'Máu của tài khoản đã cạn (khóa 24 giờ). Dùng bình máu trong cửa hàng để leo tháp lại!',
+    );
+    return;
+  }
   generateFloor(1);
+}
+
+/** Thoát trò chơi: lưu nốt phần XP chưa cộng rồi quay về khu mini game. */
+export async function exitGame(): Promise<void> {
+  await saveGameProgress();
+  window.location.href = '../minigames/index.html';
 }
 
 export async function switchLanguage(newLang: 'en' | 'ja'): Promise<void> {
@@ -1444,7 +1511,9 @@ function updateTopHUD(): void {
     } else {
       const heartsStr = '❤️'.repeat(game.hearts) + '🖤'.repeat(Math.max(0, game.maxHearts - game.hearts));
       heartsEl.textContent = heartsStr;
-      heartsEl.title = `Sinh lực: ${game.hearts}/${game.maxHearts}`;
+      heartsEl.title = isHeartsLocked()
+        ? 'Máu thật của tài khoản đang khóa 24 giờ — dùng bình máu để hồi!'
+        : `Máu thật của tài khoản: ${game.hearts}/${game.maxHearts}`;
     }
   }
 
@@ -1950,7 +2019,7 @@ function updateAndDrawVFX(): void {
   }
 
   if (ctx) {
-    ctx.font = 'bold 11px "Press Start 2P", monospace';
+    ctx.font = 'bold 12px K2D, sans-serif';
     for (let i = game.floatingTexts.length - 1; i >= 0; i--) {
       const ft = game.floatingTexts[i];
       ft.y -= 0.45;
@@ -2019,6 +2088,8 @@ Object.assign(window as any, {
   handleCastAttack,
   restartGame,
   selectPassiveBuff,
+  usePotionToHeal,
+  exitGame,
   insertJaChip,
   toggleSelectCard,
   game,
@@ -2038,8 +2109,18 @@ export async function initGame(): Promise<void> {
     return;
   }
   game.dataReady = true;
-  generateFloor(1);
+  syncHeartsFromStore();
+  updateTopHUD();
   gameLoop();
+  if (!game.isUnlimitedHearts && game.hearts <= 0) {
+    openGameOverModal(
+      isHeartsLocked()
+        ? 'Máu của tài khoản đang khóa 24 giờ. Dùng bình máu để leo tháp ngay!'
+        : 'Tài khoản của bạn đang hết máu. Dùng bình máu để bắt đầu leo tháp!',
+    );
+    return;
+  }
+  generateFloor(1);
 }
 
 if (document.readyState === 'loading') {

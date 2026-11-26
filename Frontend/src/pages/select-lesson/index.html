@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slanguage - Lựa Chọn Buổi Học (Session)</title>
-  <link rel="icon" type="image/png" href="../../../../../assets/logo.png">
-  <link rel="apple-touch-icon" href="../../../../../assets/logo.png">
+  <title data-i18n="sl.docTitle">Slanguage - Lựa Chọn Buổi Học (Session)</title>
+  <link rel="icon" type="image/png" href="../../../assets/logo.png">
+  <link rel="apple-touch-icon" href="../../../assets/logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=K2D:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,12 +13,7 @@
   <link rel="stylesheet" href="../../styles/shared/learner-world.css">
   <link rel="stylesheet" href="../../styles/study/learning-page.css">
   <link rel="stylesheet" href="../../styles/select-lesson/style.css">
-  <!-- Auth Guard: Chỉ cho phép truy cập khi đã đăng nhập, ngược lại điều hướng về Trang chủ với vai trò Guest -->
-  <script>
-    if (localStorage.getItem('slanguage_is_logged_in') !== 'true') {
-      window.location.replace('../login/index.html');
-    }
-  </script>
+  <link rel="stylesheet" href="../../styles/shared/learner-shell.css">
 </head>
 <body class="user-authenticated">
 
@@ -26,17 +21,50 @@
   <header class="navbar">
     <div class="navbar-container">
       <div class="nav-left">
+        <button type="button" class="nav-hamburger-btn" id="navHamburgerBtn" aria-label="Mở menu điều hướng" aria-expanded="false" title="Menu điều hướng">
+          <i class="fa-solid fa-bars"></i>
+        </button>
         <a href="../home/index.html" class="brand-logo">
-          <img src="../../../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </a>
 
-        <nav>
+        <nav class="desktop-nav">
           <ul class="nav-links">
             <li><a href="../home/index.html">Trang chủ</a></li>
-            <li><a href="./index.html" class="active">Học tập</a></li>
-            <li><a href="../vocabulary/index.html">Từ vựng</a></li>
-            <li><a href="../ai-practice/index.html">Luyện tập AI</a></li>
+            <li class="nav-dropdown-item">
+              <button type="button" class="nav-link-dropdown-btn" id="learnNavDropdownBtn" aria-haspopup="true" aria-expanded="false">
+                <span>Học tập</span>
+                <i class="fa-solid fa-chevron-down nav-dropdown-chevron"></i>
+              </button>
+              <div class="nav-dropdown-menu" id="learnNavDropdownMenu">
+                <a href="../select-lesson/index.html" class="nav-dropdown-link active">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Học bài mới</span>
+                    <span class="nav-dropdown-desc">Chọn chủ đề và buổi học</span>
+                  </div>
+                </a>
+                <a href="../vocabulary/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện từ vựng</span>
+                    <span class="nav-dropdown-desc">Flashcard & kho từ vựng</span>
+                  </div>
+                </a>
+                <a href="../ai-practice/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện tập với AI</span>
+                    <span class="nav-dropdown-desc">Hội thoại tương tác trợ lý AI</span>
+                  </div>
+                </a>
+                <a href="../writing/index.html" class="nav-dropdown-link">
+                  <div class="nav-dropdown-text">
+                    <span class="nav-dropdown-title">Luyện viết đoạn văn</span>
+                    <span class="nav-dropdown-desc">AI ra đề và chấm bài chi tiết</span>
+                  </div>
+                </a>
+              </div>
+            </li>
+            <li><a href="../minigames/index.html">Mini game</a></li>
             <li><a href="../leaderboard/index.html">Bảng xếp hạng</a></li>
           </ul>
         </nav>
@@ -44,74 +72,106 @@
 
       <div class="nav-right">
         <div class="stat-chip streak auth-only" title="Chuỗi ngày học liên tục">
-          <img src="../../../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
-          <span id="headerStreakVal">0 Ngày</span>
+          <img src="../../../assets/streak-flame.gif?v=4" alt="Ngọn lửa streak" class="streak-flame-img streak-flame-chip">
+          <span id="headerStreakVal">—</span>
         </div>
         <div class="stat-chip xp auth-only" title="Điểm kinh nghiệm tích lũy">
           <i class="fa-solid fa-star"></i>
-          <span id="headerXPVal">0 XP</span>
+          <span id="headerXPVal">—</span>
         </div>
         <div class="stat-chip hearts auth-only" title="Năng lượng làm bài">
           <i class="fa-solid fa-heart"></i>
-          <span id="headerHeartsVal">5/5</span>
+          <span id="headerHeartsVal">—</span>
         </div>
 
-        <!-- 3-Language Dropdown Selector (Between Hearts and Account) -->
         <div class="lang-dropdown auth-only" id="langDropdown">
           <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Chọn ngôn ngữ học">
-            <img src="../../../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag">
+            <img src="../../../assets/flags/flag-jp.png" alt="Tiếng Nhật" class="flag-icon" id="currentLangFlag" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
             <span class="lang-current-label" id="currentLangLabel">Tiếng Nhật</span>
             <i class="fa-solid fa-chevron-down lang-chevron"></i>
           </button>
           <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu">
             <button type="button" class="lang-dropdown-item active" data-lang="ja" role="menuitem">
-              <img src="../../../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon">
+              <img src="../../../assets/flags/flag-jp.png" alt="JP" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Nhật (日本語)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem">
-              <img src="../../../../../assets/flags/flag-en.png" alt="EN" class="flag-icon">
+              <img src="../../../assets/flags/flag-en.png" alt="EN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">English (Tiếng Anh)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
             <button type="button" class="lang-dropdown-item" data-lang="vi" role="menuitem">
-              <img src="../../../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon">
+              <img src="../../../assets/flags/flag-vn.png" alt="VN" class="flag-icon" width="22" height="15" style="width:22px;height:15px;object-fit:cover;">
               <span class="lang-name">Tiếng Việt (Vietnamese)</span>
               <i class="fa-solid fa-check check-icon"></i>
             </button>
           </div>
         </div>
 
-        <!-- User Account Dropdown (Shown when logged in) -->
         <div class="user-dropdown auth-only" id="userDropdown">
-          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên">
-            <img src="../../../assets/logo.png" alt="Avatar" class="user-avatar-mini">
+          <button type="button" class="user-dropdown-btn" id="userDropdownBtn" aria-haspopup="true" aria-expanded="false" title="Menu tài khoản học viên" data-i18n-title="hm.accountMenuTitle">
+            <img alt="Ảnh đại diện" class="user-avatar-mini" id="headerAvatar">
             <div class="user-info-text">
-              <div class="name">Học viên</div>
+              <div class="name" id="headerUserName">Học viên</div>
               <div class="role">Học viên</div>
             </div>
             <i class="fa-solid fa-chevron-down user-chevron"></i>
           </button>
           <div class="user-dropdown-menu" id="userDropdownMenu" role="menu">
+            <div class="dropdown-user-header" id="dropdownUserHeader">
+              <div class="dropdown-user-meta">
+                <img alt="Avatar" class="dropdown-user-avatar" id="dropdownUserAvatar">
+                <div class="dropdown-user-details">
+                  <div class="dropdown-user-name" id="dropdownUserName">Học viên</div>
+                  <div class="dropdown-user-role">Học viên Slanguage</div>
+                </div>
+              </div>
+              <div class="dropdown-stats-grid">
+                <div class="dropdown-stat-chip streak" title="Chuỗi ngày học liên tục">
+                  <img src="../../../assets/streak-flame.gif?v=4" alt="Streak" class="streak-flame-img">
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">Chuỗi</span>
+                    <span class="dropdown-stat-value" id="dropdownStreakVal">—</span>
+                  </div>
+                </div>
+                <div class="dropdown-stat-chip xp" title="Điểm kinh nghiệm tích lũy">
+                  <i class="fa-solid fa-star"></i>
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">EXP</span>
+                    <span class="dropdown-stat-value" id="dropdownXPVal">—</span>
+                  </div>
+                </div>
+                <div class="dropdown-stat-chip hearts" title="Năng lượng làm bài">
+                  <i class="fa-solid fa-heart"></i>
+                  <div class="dropdown-stat-info">
+                    <span class="dropdown-stat-label">Mạng</span>
+                    <span class="dropdown-stat-value" id="dropdownHeartsVal">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="user-dropdown-divider mobile-only-divider"></div>
+
             <a href="../profile/index.html" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-id-badge"></i></div>
               <div class="menu-item-text">
                 <span class="title">Thông tin cá nhân</span>
-                <span class="sub">Hồ sơ & cài đặt tài khoản</span>
+                <span class="sub">Hồ sơ &amp; cài đặt tài khoản</span>
               </div>
             </a>
             <a href="../profile/index.html#tabProgress" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-chart-pie"></i></div>
               <div class="menu-item-text">
                 <span class="title">Tiến độ học tập</span>
-                <span class="sub">Thống kê XP & chuỗi ngày</span>
+                <span class="sub">Thống kê XP &amp; chuỗi ngày</span>
               </div>
             </a>
-                        <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
+            <a href="../shop/index.html" class="user-dropdown-item" role="menuitem">
               <div class="menu-item-icon"><i class="fa-solid fa-store"></i></div>
               <div class="menu-item-text">
                 <span class="title">Shop quy đổi</span>
-                <span class="sub">Đổi 5 XP = 1 Coin & vật phẩm</span>
+                <span class="sub">Đổi 5 XP = 1 Coin &amp; vật phẩm</span>
               </div>
             </a>
             <div class="user-dropdown-divider"></div>
@@ -125,7 +185,6 @@
           </div>
         </div>
 
-        <!-- Guest Auth Buttons (Shown when NOT logged in) -->
         <div class="guest-nav-auth guest-only" id="guestNavAuth">
           <a href="../login/index.html" class="nav-auth-login">Đăng nhập</a>
           <a href="../register/index.html" class="nav-auth-register">Đăng ký</a>
@@ -134,6 +193,141 @@
     </div>
   </header>
 
+  <!-- Mobile Side Drawer & Backdrop Overlay (< 1286px) -->
+  <div class="mobile-drawer-backdrop" id="drawerBackdrop" aria-hidden="true"></div>
+  <aside class="mobile-side-drawer" id="sideDrawer" aria-label="Menu điều hướng di động" aria-hidden="true">
+    <div class="drawer-header">
+      <a href="../home/index.html" class="drawer-brand">
+        <img src="../../../assets/logo.png" alt="Slanguage Logo" class="drawer-logo-img">
+        <span class="drawer-brand-name">S<span class="brand-language">language</span></span>
+      </a>
+      <button type="button" class="drawer-close-btn" id="drawerCloseBtn" aria-label="Đóng menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="drawer-user-card" id="drawerUserCard">
+      <img alt="Avatar" class="drawer-avatar" id="drawerUserAvatar">
+      <div class="drawer-user-info">
+        <div class="drawer-user-name" id="drawerUserName">Học viên</div>
+        <div class="drawer-user-role" id="drawerUserRole">Học viên Slanguage</div>
+      </div>
+    </div>
+
+    <div class="drawer-stats-grid">
+      <div class="drawer-stat-pill streak" title="Chuỗi ngày liên tục">
+        <img src="../../../assets/streak-flame.gif?v=4" alt="Streak" class="drawer-stat-flame">
+        <span id="drawerStreakVal">—</span>
+      </div>
+      <div class="drawer-stat-pill xp" title="Điểm kinh nghiệm">
+        <i class="fa-solid fa-star"></i>
+        <span id="drawerXPVal">—</span>
+      </div>
+      <div class="drawer-stat-pill hearts" title="Mạng học tập">
+        <i class="fa-solid fa-heart"></i>
+        <span id="drawerHeartsVal">—</span>
+      </div>
+    </div>
+
+    <div class="drawer-divider"></div>
+
+    <nav class="drawer-nav">
+      <div class="drawer-section-title">Menu chính</div>
+      <ul class="drawer-nav-list">
+        <li>
+          <a href="../home/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-house"></i></span>
+            <span class="drawer-nav-label">Trang chủ</span>
+          </a>
+        </li>
+        <li>
+          <a href="../select-lesson/index.html" class="drawer-nav-item active">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-graduation-cap"></i></span>
+            <span class="drawer-nav-label">Học bài mới</span>
+          </a>
+        </li>
+        <li>
+          <a href="../vocabulary/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-book-open"></i></span>
+            <span class="drawer-nav-label">Luyện từ vựng</span>
+          </a>
+        </li>
+        <li>
+          <a href="../ai-practice/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-robot"></i></span>
+            <span class="drawer-nav-label">Luyện tập với AI</span>
+          </a>
+        </li>
+        <li>
+          <a href="../minigames/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-gamepad"></i></span>
+            <span class="drawer-nav-label">Mini game</span>
+          </a>
+        </li>
+        <li>
+          <a href="../writing/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-pen-nib"></i></span>
+            <span class="drawer-nav-label">Luyện viết đoạn văn</span>
+          </a>
+        </li>
+        <li>
+          <a href="../leaderboard/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-trophy"></i></span>
+            <span class="drawer-nav-label">Bảng xếp hạng</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="drawer-divider"></div>
+
+      <div class="drawer-section-title">Tài khoản &amp; Tiện ích</div>
+      <ul class="drawer-nav-list">
+        <li>
+          <a href="../profile/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-id-badge"></i></span>
+            <span class="drawer-nav-label">Thông tin cá nhân</span>
+          </a>
+        </li>
+        <li>
+          <a href="../shop/index.html" class="drawer-nav-item">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-store"></i></span>
+            <span class="drawer-nav-label">Shop quy đổi</span>
+          </a>
+        </li>
+        <li>
+          <a href="../login/index.html" class="drawer-nav-item drawer-logout" id="drawerLogoutBtn">
+            <span class="drawer-nav-icon"><i class="fa-solid fa-arrow-right-from-bracket"></i></span>
+            <span class="drawer-nav-label">Đăng xuất</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- Mobile Bottom Navigation Bar (< 1286px) -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Điều hướng ngón cái">
+    <a href="../home/index.html" class="bottom-nav-item">
+      <i class="fa-solid fa-house bottom-nav-icon"></i>
+      <span class="bottom-nav-label" data-i18n="bn.home">—</span>
+    </a>
+    <a href="../select-lesson/index.html" class="bottom-nav-item active">
+      <i class="fa-solid fa-map-location-dot bottom-nav-icon"></i>
+      <span class="bottom-nav-label" data-i18n="bn.learn">—</span>
+    </a>
+    <a href="../vocabulary/index.html" class="bottom-nav-item">
+      <i class="fa-solid fa-book-open bottom-nav-icon"></i>
+      <span class="bottom-nav-label" data-i18n="bn.vocab">—</span>
+    </a>
+    <a href="../ai-practice/index.html" class="bottom-nav-item">
+      <i class="fa-solid fa-robot bottom-nav-icon"></i>
+      <span class="bottom-nav-label" data-i18n="bn.ai">—</span>
+    </a>
+    <a href="../leaderboard/index.html" class="bottom-nav-item">
+      <i class="fa-solid fa-trophy bottom-nav-icon"></i>
+      <span class="bottom-nav-label" data-i18n="bn.board">—</span>
+    </a>
+  </nav>
+
   <!-- ================= MAIN CONTENT ================= -->
   <main class="select-lesson-main">
 
@@ -141,14 +335,14 @@
     <section class="lesson-hero-card">
       <div class="hero-content">
         <div class="hero-badge-row">
-          <span class="hero-chip-pill"><i class="fa-solid fa-layer-group"></i> LỰA CHỌN BUỔI HỌC (SESSION)</span>
+          <span class="hero-chip-pill" data-i18n="sl.heroBadge"><i class="fa-solid fa-layer-group"></i> LỰA CHỌN BUỔI HỌC (SESSION)</span>
           <span class="hero-chip-pill gold" id="targetLangChip"><i class="fa-solid fa-language"></i> Mục tiêu: Tiếng Nhật</span>
-          <span class="hero-chip-pill red"><i class="fa-solid fa-lock"></i> BẮT BUỘC CHỌN TRƯỚC KHI VÀO HỌC</span>
+          <span class="hero-chip-pill red" data-i18n="sl.heroRequired"><i class="fa-solid fa-lock"></i> BẮT BUỘC CHỌN TRƯỚC KHI VÀO HỌC</span>
         </div>
         <h1 class="hero-title">
-          Danh Sách <span class="title-highlight" id="sessionCountText">Buổi Học (Session)</span>
+          <span data-i18n="sl.heroTitlePrefix">Danh Sách</span> <span class="title-highlight" id="sessionCountText" data-i18n="sl.sessionCountLabel">Buổi Học (Session)</span>
         </h1>
-        <p class="hero-desc">
+        <p class="hero-desc" data-i18n="sl.heroDesc">
           Vui lòng lựa chọn 1 buổi học bên dưới để mở khóa bản đồ hầm ngục và nội dung bài tập tương ứng. 
           Hệ thống sẽ dẫn bạn đến trang học tập với lộ trình được tối ưu riêng biệt.
         </p>
@@ -161,13 +355,13 @@
             <i class="fa-solid fa-circle-exclamation"></i>
           </div>
           <div class="status-info">
-            <span class="status-label">Trạng thái lựa chọn</span>
+            <span class="status-label" data-i18n="sl.statusLabel">Trạng thái lựa chọn</span>
             <div class="status-text" id="statusLessonText">Chưa chọn buổi học nào</div>
           </div>
         </div>
 
         <button type="button" class="btn-proceed-roadmap" id="btnProceedRoadmap" disabled title="Chọn 1 buổi học bên dưới để kích hoạt">
-          <span>Vào Trang Học Tập</span>
+          <span data-i18n="sl.proceed">Vào Trang Học Tập</span>
           <i class="fa-solid fa-arrow-right"></i>
         </button>
       </div>
@@ -176,13 +370,13 @@
     <!-- WORKSPACE CONTROLS: FILTERS & SEARCH -->
     <section class="lesson-controls-bar">
       <div class="filter-tabs" id="filterTabs">
-        <button class="filter-btn active" data-filter="all">Tất cả</button>
+        <button class="filter-btn active" data-filter="all" data-i18n="sl.filterAll">Tất cả</button>
         <!-- Các tab phân loại được sinh động từ dữ liệu Database bởi select-lesson.ts -->
       </div>
 
       <div class="search-box-wrap">
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
-        <input type="text" id="lessonSearchInput" class="search-input" placeholder="Tìm kiếm buổi học, chủ đề, từ khóa...">
+        <input type="text" id="lessonSearchInput" class="search-input" placeholder="Tìm kiếm buổi học, chủ đề, từ khóa..." data-i18n-placeholder="sl.searchPlaceholder">
       </div>
     </section>
 
@@ -197,8 +391,9 @@
 
   <!-- ================= LESSON WORKSPACE: READING + QUIZ (DATABASE) ================= -->
       <section class="lesson-workspace" id="lessonWorkspace" hidden aria-labelledby="lessonTitle">
+        <div class="lesson-ambient-glow" aria-hidden="true"></div>
         <div class="lesson-toolbar">
-          <button type="button" class="study-text-button" id="exitLesson">
+          <button type="button" class="study-text-button" id="exitLesson" data-i18n="sl.exitLesson">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H6"/><path d="m12 19-7-7 7-7"/></svg>
             Thoát bài học
           </button>
@@ -209,17 +404,19 @@
           id="lessonProgressTrack"
           role="progressbar"
           aria-label="Tiến độ bài học"
+          data-i18n-aria-label="sl.progressAria"
           aria-valuemin="0"
           aria-valuemax="100"
           aria-valuenow="0"
         ><span id="lessonProgressFill"></span></div>
+        <div class="lesson-arena-main">
         <p class="lesson-generation-notice" id="lessonGenerationNotice" role="status" aria-live="polite" hidden></p>
         <section class="lesson-reading" id="lessonReading" hidden aria-labelledby="lessonReadingTitle">
-          <p class="lesson-reading__eyebrow">Bài đọc chủ đề · tải từ Database</p>
+          <p class="lesson-reading__eyebrow" data-i18n="sl.readingEyebrow">Bài đọc chủ đề · tải từ Database</p>
           <h2 id="lessonReadingTitle" tabindex="-1"></h2>
           <div class="lesson-reading__text" id="lessonReadingText"></div>
           <div class="lesson-actions">
-            <button type="button" class="study-primary-button" id="startLessonQuiz">
+            <button type="button" class="study-primary-button" id="startLessonQuiz" data-i18n="sl.startQuiz">
               Làm bài kiểm tra
             </button>
           </div>
@@ -230,22 +427,37 @@
           <p class="lesson-question-type" id="lessonQuestionType"></p>
           <p class="lesson-prompt" id="lessonPrompt"></p>
           <div class="lesson-options" id="lessonOptions" role="group" aria-label="Chọn một đáp án"></div>
-          <p class="lesson-feedback" id="lessonFeedback" role="status" aria-live="polite"></p>
+          <div class="lesson-verdict" id="lessonFeedback" role="status" aria-live="polite" data-state="" hidden>
+            <span class="lesson-verdict__icon" aria-hidden="true"><i class="fa-solid fa-circle-check"></i></span>
+            <div class="lesson-verdict__body">
+              <strong class="lesson-verdict__title"></strong>
+              <p class="lesson-verdict__text"></p>
+            </div>
+            <span class="lesson-verdict__chip" hidden><i class="fa-solid fa-heart" aria-hidden="true"></i><span class="lesson-verdict__chip-text"></span></span>
+          </div>
+          <div class="lesson-toast" id="lessonVerdictToast" aria-hidden="true">
+            <i class="fa-solid fa-circle-check lesson-toast__icon" aria-hidden="true"></i>
+            <span class="lesson-toast__text"></span>
+          </div>
           <div class="lesson-actions">
-            <button type="button" class="study-primary-button" id="checkLessonAnswer" disabled>
+            <button type="button" class="study-primary-button" id="checkLessonAnswer" disabled data-i18n="sl.checkAnswer">
               Kiểm tra đáp án
             </button>
-            <button type="button" class="study-primary-button" id="nextLessonQuestion" hidden>
+            <button type="button" class="study-primary-button" id="nextLessonQuestion" hidden data-i18n="sl.nextQuestion">
               Câu tiếp theo
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m12 5 7 7-7 7"/></svg>
             </button>
           </div>
         </article>
+        </div>
         <dialog class="lesson-result" id="lessonResult" aria-labelledby="lessonResultTitle">
           <div class="lesson-result__content">
-            <button type="button" class="lesson-result__close" id="closeLessonResult" aria-label="Đóng tổng kết">
+            <button type="button" class="lesson-result__close" id="closeLessonResult" aria-label="Đóng tổng kết" data-i18n-aria-label="sl.closeResultAria">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
             </button>
+            <div class="lesson-result__badge" id="lessonResultBadge" data-state="passed" aria-hidden="true">
+              <i class="fa-solid fa-trophy"></i>
+            </div>
             <div class="lesson-result__headline" id="lessonResultHeadline">
               <div class="lesson-result__score-ring" role="img" aria-label="Kết quả bài học">
                 <svg viewBox="0 0 132 132" aria-hidden="true">
@@ -266,32 +478,50 @@
             </div>
             <p class="sr-only" id="lessonScoreAnnouncement" aria-live="polite"></p>
             <p class="lesson-result__delta" id="lessonScoreDelta" hidden></p>
-            <div class="lesson-result__rewards" id="lessonResultRewards">
-              <div class="lesson-result__reward">
-                <span>XP nhận được</span>
-                <strong id="lessonResultXp">+0 XP</strong>
+            <p class="lesson-result__notice" id="lessonResultNotice" role="status" hidden></p>
+            <div class="lesson-result__stats" id="lessonResultStats">
+              <div class="lesson-stat">
+                <span class="lesson-stat__label"><i class="fa-solid fa-bullseye" aria-hidden="true"></i><span data-i18n="sl.statScore">Điểm</span></span>
+                <strong class="lesson-stat__value" id="lessonStatScore">0</strong>
               </div>
-              <div class="lesson-result__reward">
-                <span>Chuỗi học hiện tại</span>
-                <strong id="lessonResultStreak">0 ngày</strong>
+              <div class="lesson-stat">
+                <span class="lesson-stat__label"><i class="fa-solid fa-circle-check" aria-hidden="true"></i><span data-i18n="sl.statCorrect">Số câu đúng</span></span>
+                <strong class="lesson-stat__value" id="lessonStatCorrect">0/0</strong>
               </div>
-            </div>
-            <button
-              type="button"
-              class="lesson-result__accordion-trigger"
-              id="toggleIncorrectAnswers"
-              aria-expanded="false"
-              aria-controls="incorrectAnswers"
-              hidden
-            >
-              <span id="incorrectAnswersLabel">Câu làm sai</span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
-            </button>
-            <div class="lesson-result__accordion" id="incorrectAnswers" aria-hidden="true" inert>
-              <div class="lesson-result__accordion-inner">
-                <div class="lesson-result__incorrect-list" id="incorrectAnswerList"></div>
+              <div class="lesson-stat lesson-stat--xp">
+                <span class="lesson-stat__label"><img class="lesson-stat__img" src="../../../assets/potion_yellow.png" alt="" width="18" height="18"><span data-i18n="sl.rewardXp">XP nhận được</span></span>
+                <strong class="lesson-stat__value" id="lessonResultXp">+0 XP</strong>
+              </div>
+              <div class="lesson-stat lesson-stat--heart">
+                <span class="lesson-stat__label"><i class="fa-solid fa-heart" aria-hidden="true"></i><span data-i18n="sl.statHearts">Máu còn lại</span></span>
+                <strong class="lesson-stat__value" id="lessonStatHearts">0/5</strong>
+              </div>
+              <div class="lesson-stat lesson-stat--streak">
+                <span class="lesson-stat__label"><img class="lesson-stat__img" src="../../../assets/streak-flame.gif?v=4" alt="" width="18" height="18"><span data-i18n="sl.rewardStreak">Chuỗi học hiện tại</span></span>
+                <strong class="lesson-stat__value" id="lessonResultStreak">0 ngày</strong>
               </div>
             </div>
+            <section class="lesson-review" id="lessonReview" aria-labelledby="lessonReviewTitle">
+              <div class="lesson-review__head">
+                <h3 class="lesson-review__title" id="lessonReviewTitle">
+                  <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                  <span data-i18n="sl.reviewTitle">Xem lại câu trả lời</span>
+                </h3>
+                <div class="lesson-review__filters" role="group" aria-label="Lọc câu trả lời" data-i18n-aria-label="sl.reviewFilterAria">
+                  <button type="button" class="lesson-review__filter is-active" data-review-filter="all" aria-pressed="true">
+                    <span data-i18n="sl.reviewAll">Tất cả</span> <span id="reviewCountAll">0</span>
+                  </button>
+                  <button type="button" class="lesson-review__filter" data-review-filter="correct" aria-pressed="false">
+                    <i class="fa-solid fa-check" aria-hidden="true"></i> <span data-i18n="sl.reviewCorrect">Đúng</span> <span id="reviewCountCorrect">0</span>
+                  </button>
+                  <button type="button" class="lesson-review__filter" data-review-filter="wrong" aria-pressed="false">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i> <span data-i18n="sl.reviewWrong">Sai</span> <span id="reviewCountWrong">0</span>
+                  </button>
+                </div>
+              </div>
+              <div class="lesson-review__list" id="lessonReviewList"></div>
+              <p class="lesson-review__empty" id="lessonReviewEmpty" hidden></p>
+            </section>
             <p class="lesson-result__rule" id="lessonPassRule" hidden>
               Cần đạt 4/4 để mở khóa chủ đề tiếp theo.
             </p>
@@ -299,7 +529,7 @@
               <button type="button" class="study-primary-button" id="retryLesson" hidden>
                 Thử lại bài học
               </button>
-              <button type="button" class="study-primary-button" id="continueToPath" hidden>
+              <button type="button" class="study-primary-button" id="continueToPath" hidden data-i18n="sl.continue">
                 Tiếp tục
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13"/><path d="m12 5 7 7-7 7"/></svg>
               </button>
@@ -318,10 +548,10 @@
   <div id="slanguageLoadingOverlay" class="loading-screen-overlay">
     <div class="loading-content-box">
       <div class="video-frame">
-        <video id="loadingVideoPlayer" muted src="../../../../../assets/loading.mp4" loop playsinline></video>
+        <canvas id="loadingRiveCanvas"></canvas>
       </div>
       <div class="loading-text-wrap">
-        <span class="loading-title" id="loadingOverlayTitle">Đang chuẩn bị buổi học...</span>
+        <span class="loading-title" id="loadingOverlayTitle" data-i18n="sl.loadingTitle">Đang chuẩn bị buổi học...</span>
       </div>
     </div>
   </div>
@@ -337,55 +567,55 @@
       <!-- Cột 1: Giới thiệu thương hiệu -->
       <div class="footer-col">
         <div class="brand-logo" style="margin-bottom: 14px;">
-          <img src="../../../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
+          <img src="../../../assets/logo.png" alt="Slanguage Logo" class="brand-logo-img">
           <span class="brand-name">S<span class="brand-language">language</span></span>
         </div>
-        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;">
+        <p style="color: #a4bcc8; font-size: 0.9rem; line-height: 1.6; max-width: 360px;" data-i18n="sl.footerIntro">
           Nền tảng học 3 ngôn ngữ Anh - Nhật - Việt hàng đầu cho học viên, kết hợp phương pháp phản xạ tự nhiên và lặp lại ngắt quãng thông minh.
         </p>
       </div>
 
       <!-- Cột 2: Chương trình học -->
       <div class="footer-col">
-        <h4>Chương trình học</h4>
+        <h4 data-i18n="sl.footerPrograms">Chương trình học</h4>
         <ul>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()">Tiếng Nhật JLPT (N5-N1)</a></li>
-          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()">Tiếng Việt Cho Người Đi Làm</a></li>
-          <li><a href="javascript:void(0)">Luyện ngữ âm với AI</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=en]').click()" data-i18n="sl.footerProgEn">Tiếng Anh Giao Tiếp (B1-C1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=ja]').click()" data-i18n="sl.footerProgJa">Tiếng Nhật JLPT (N5-N1)</a></li>
+          <li><a href="javascript:void(0)" onclick="document.querySelector('[data-lang=vi]').click()" data-i18n="sl.footerProgVi">Tiếng Việt Cho Người Đi Làm</a></li>
+          <li><a href="javascript:void(0)" data-i18n="sl.footerProgAi">Luyện ngữ âm với AI</a></li>
         </ul>
       </div>
 
       <!-- Cột 3: Thông tin liên hệ -->
       <div class="footer-col">
-        <h4>Thông tin liên hệ</h4>
+        <h4 data-i18n="sl.footerContact">Thông tin liên hệ</h4>
         <ul class="footer-contact-list">
           <li>
             <i class="fa-solid fa-phone"></i>
             <div>
-              <span class="contact-label">Hotline tư vấn & hỗ trợ:</span>
+              <span class="contact-label" data-i18n="sl.footerHotline">Hotline tư vấn & hỗ trợ:</span>
               <a href="tel:19006868" class="contact-val">1900 6868</a>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-envelope"></i>
             <div>
-              <span class="contact-label">Email học vụ:</span>
+              <span class="contact-label" data-i18n="sl.footerEmail">Email học vụ:</span>
               <a href="mailto:support@slanguage.edu.vn" class="contact-val">support@slanguage.edu.vn</a>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-location-dot"></i>
             <div>
-              <span class="contact-label">Trụ sở học thuật:</span>
-              <span class="contact-val">Giữa cầu Vĩnh Tuy, Hà Nội</span>
+              <span class="contact-label" data-i18n="sl.footerAddress">Trụ sở học thuật:</span>
+              <span class="contact-val" data-i18n="sl.footerAddressVal">Giữa cầu Vĩnh Tuy, Hà Nội</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-clock"></i>
             <div>
-              <span class="contact-label">Thời gian làm việc:</span>
-              <span class="contact-val">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
+              <span class="contact-label" data-i18n="sl.footerHours">Thời gian làm việc:</span>
+              <span class="contact-val" data-i18n="sl.footerHoursVal">Thứ 2 – Thứ 7 (8:00 – 21:00)</span>
             </div>
           </li>
         </ul>
@@ -393,34 +623,34 @@
 
       <!-- Cột 4: Cam kết chất lượng -->
       <div class="footer-col">
-        <h4>Cam kết chất lượng</h4>
+        <h4 data-i18n="sl.footerCommit">Cam kết chất lượng</h4>
         <ul class="footer-commit-list">
           <li>
             <i class="fa-solid fa-shield-halved"></i>
             <div>
-              <strong>Chuẩn đầu ra quốc tế</strong>
-              <span>Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
+              <strong data-i18n="sl.footerC1t">Chuẩn đầu ra quốc tế</strong>
+              <span data-i18n="sl.footerC1d">Bảo đảm đạt chứng chỉ JLPT N5–N1 & IELTS 6.5–7.5+.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-rotate-left"></i>
             <div>
-              <strong>Cam kết hoàn học phí</strong>
-              <span>Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
+              <strong data-i18n="sl.footerC2t">Cam kết hoàn học phí</strong>
+              <span data-i18n="sl.footerC2d">Hoàn 100% nếu học viên theo đúng lộ trình mà không tiến bộ.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-user-graduate"></i>
             <div>
-              <strong>Đồng hành 1-1 chuyên sâu</strong>
-              <span>Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
+              <strong data-i18n="sl.footerC3t">Đồng hành 1-1 chuyên sâu</strong>
+              <span data-i18n="sl.footerC3d">Đội ngũ trợ giảng & trợ lý AI cá nhân hóa hỗ trợ 24/7.</span>
             </div>
           </li>
           <li>
             <i class="fa-solid fa-infinity"></i>
             <div>
-              <strong>Quyền lợi học trọn đời</strong>
-              <span>Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
+              <strong data-i18n="sl.footerC4t">Quyền lợi học trọn đời</strong>
+              <span data-i18n="sl.footerC4d">Bảo lưu tài khoản và cập nhật kho tài liệu liên tục miễn phí.</span>
             </div>
           </li>
         </ul>
@@ -428,8 +658,8 @@
     </div>
 
     <div class="footer-bottom">
-      <div>&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu, quyền sở hữu thuộc về mẹ bạn.</div>
-      <div>Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
+      <div data-i18n="sl.footerCopyright">&copy; 2026 Slanguage Education Platform. Mọi quyền được bảo lưu.</div>
+      <div data-i18n="sl.footerTagline">Học tập miễn phí ba ngôn ngữ Anh-Nhật-Việt</div>
     </div>
   </footer>
 

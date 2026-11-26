@@ -2194,3 +2194,909 @@ dialog.lesson-result::backdrop {
   line-height: 1.6;
   font-size: 0.95rem;
 }
+
+/* ============================================================
+   LESSON FULL-SCREEN ARENA — tích hợp từ prototype quiz/
+   Bài đọc + quiz mở TOÀN MÀN HÌNH thay vì card 860px trong trang
+   ============================================================ */
+.lesson-workspace {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(0, 180, 216, 0.14) 0%, transparent 55%),
+    radial-gradient(circle at 50% 100%, rgba(255, 183, 3, 0.07) 0%, transparent 45%),
+    #050d16;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.lesson-workspace[hidden] {
+  display: none;
+}
+
+body:has(.lesson-workspace:not([hidden])) {
+  overflow: hidden;
+}
+
+.lesson-ambient-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 25%, rgba(0, 180, 216, 0.08) 0%, transparent 65%);
+  z-index: 0;
+}
+
+/* --- Sticky quiz-navbar style toolbar --- */
+.lesson-workspace .lesson-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  padding: 14px clamp(16px, 4vw, 44px);
+  background: rgba(6, 18, 30, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lesson-workspace #exitLesson {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e2f0f8;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.lesson-workspace #exitLesson:hover {
+  background: rgba(220, 20, 60, 0.22);
+  border-color: rgba(220, 20, 60, 0.5);
+  color: #ffffff;
+}
+
+.lesson-workspace #lessonProgressText {
+  background: rgba(0, 180, 216, 0.16);
+  border: 1px solid rgba(0, 180, 216, 0.45);
+  color: #4cc9f0;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* --- Sticky progress track (arena-progress-track) --- */
+.lesson-workspace .lesson-progress-track {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  flex-shrink: 0;
+  width: 100%;
+  height: 9px;
+  margin: 0;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lesson-workspace .lesson-progress-track span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #00B4D8 0%, #7AE2CF 100%);
+  box-shadow: 0 0 12px rgba(0, 180, 216, 0.6);
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Full-screen arena column (cards span the viewport) --- */
+.lesson-arena-main {
+  position: relative;
+  z-index: 1;
+  flex: 1 0 auto;
+  width: calc(100% - clamp(16px, 3vw, 40px));
+  max-width: none;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 42px) 0 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* --- Reading panel = arena card (stage hero scale) --- */
+.lesson-workspace .lesson-reading {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  background: rgba(12, 22, 34, 0.96);
+  border: 1.5px solid rgba(255, 183, 3, 0.35);
+  border-radius: 24px;
+  padding: clamp(26px, 4.5vw, 44px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), inset 0 0 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.lesson-workspace .lesson-reading h2 {
+  font-size: clamp(1.6rem, 3.4vw, 2.2rem);
+  margin-top: 12px;
+}
+
+.lesson-workspace .lesson-reading__text {
+  font-size: clamp(1.05rem, 1.8vw, 1.22rem);
+  line-height: 1.95;
+  margin-top: 18px;
+}
+
+/* --- Question panel = arena card --- */
+.lesson-workspace .lesson-question {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  background: rgba(12, 22, 34, 0.96);
+  border: 1.5px solid rgba(0, 180, 216, 0.35);
+  border-radius: 24px;
+  padding: clamp(26px, 4.5vw, 44px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65), inset 0 0 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.lesson-workspace .lesson-question h2 {
+  font-size: clamp(1.45rem, 3vw, 1.95rem);
+}
+
+.lesson-workspace .lesson-question-count,
+.lesson-workspace .lesson-question-type {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+/* Prompt = arena-prompt-box */
+.lesson-workspace .lesson-prompt {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  padding: 24px 30px;
+  margin: 18px 0 24px;
+  font-size: clamp(1.2rem, 2.2vw, 1.5rem);
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.6;
+  letter-spacing: 0.2px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.lesson-workspace .lesson-prompt:empty {
+  display: none;
+}
+
+/* Choices = arena-choices-grid */
+.lesson-workspace .lesson-options {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.lesson-workspace .lesson-option {
+  padding: 16px 20px;
+  border-radius: 14px;
+  font-size: 1.05rem;
+}
+
+.lesson-workspace .lesson-option-letter {
+  width: 34px;
+  height: 34px;
+  font-size: 0.95rem;
+}
+
+.lesson-workspace .lesson-feedback {
+  font-size: 1rem;
+}
+
+.lesson-workspace .lesson-actions {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lesson-workspace .study-primary-button,
+.lesson-workspace .study-secondary-button {
+  min-height: 50px;
+  padding: 12px 26px;
+  font-size: 1.02rem;
+}
+
+.lesson-workspace .lesson-reading .study-primary-button {
+  background: linear-gradient(135deg, #FFB703, #FB8500);
+  color: #05131f;
+  border-color: rgba(255, 183, 3, 0.5);
+  box-shadow: 0 6px 20px rgba(255, 183, 3, 0.35);
+}
+
+/* Result dialog scales up */
+dialog.lesson-result {
+  max-width: min(820px, calc(100vw - 32px));
+  border-radius: 24px;
+}
+
+/* --- Responsive (mobile-first tweaks, ported from quiz/style.css breakpoints) --- */
+@media (max-width: 768px) {
+  .lesson-workspace .lesson-toolbar {
+    flex-wrap: wrap;
+    padding: 10px 14px;
+  }
+
+  .lesson-arena-main {
+    width: calc(100% - 20px);
+    padding-top: 16px;
+    padding-bottom: 48px;
+  }
+
+  .lesson-workspace .lesson-reading,
+  .lesson-workspace .lesson-question {
+    border-radius: 18px;
+  }
+
+  .lesson-workspace .lesson-prompt {
+    padding: 16px 18px;
+  }
+
+  .lesson-workspace .lesson-option {
+    padding: 14px 16px;
+    font-size: 1rem;
+  }
+
+  .lesson-workspace .study-primary-button,
+  .lesson-workspace .study-secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .lesson-workspace #lessonProgressText {
+    font-size: 0.82rem;
+    padding: 5px 12px;
+  }
+
+  .lesson-workspace .lesson-reading,
+  .lesson-workspace .lesson-question {
+    padding: 18px 14px;
+  }
+}
+
+/* ============================================================
+   QUIZ: PHẢN HỒI ĐÚNG/SAI + MÀN TỔNG KẾT
+   (bám theo arena-result-banner / quiz-toast / modal-stats-grid
+    / answer-review trong quiz/style.css)
+   ============================================================ */
+
+/* --- Verdict banner thay cho dòng phản hồi cũ (arena-result-banner) --- */
+.lesson-verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin: 4px 0 20px;
+  padding: 16px 22px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.lesson-verdict[hidden] {
+  display: none;
+}
+
+.lesson-verdict[data-state="correct"] {
+  border-color: #22C55E;
+  background: rgba(34, 197, 94, 0.16);
+  box-shadow: 0 0 26px rgba(34, 197, 94, 0.22);
+}
+
+.lesson-verdict[data-state="incorrect"] {
+  border-color: #EF4444;
+  background: rgba(220, 20, 60, 0.16);
+  box-shadow: 0 0 26px rgba(239, 68, 68, 0.2);
+}
+
+.lesson-verdict.is-in {
+  animation: lessonVerdictIn 0.32s ease-out;
+}
+
+@keyframes lessonVerdictIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.lesson-verdict__icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 1.45rem;
+}
+
+.lesson-verdict[data-state="correct"] .lesson-verdict__icon {
+  color: #86EFAC;
+  background: rgba(34, 197, 94, 0.18);
+}
+
+.lesson-verdict[data-state="incorrect"] .lesson-verdict__icon {
+  color: #FCA5A5;
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.lesson-verdict.is-in .lesson-verdict__icon {
+  animation: lessonIconPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes lessonIconPop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
+.lesson-verdict__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.lesson-verdict__title {
+  display: block;
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+.lesson-verdict[data-state="correct"] .lesson-verdict__title {
+  color: #86EFAC;
+}
+
+.lesson-verdict[data-state="incorrect"] .lesson-verdict__title {
+  color: #FCA5A5;
+}
+
+.lesson-verdict__text {
+  margin: 4px 0 0;
+  color: #E2E8F0;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.lesson-verdict__chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.14);
+  color: #FCA5A5;
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.lesson-verdict__chip[hidden] {
+  display: none;
+}
+
+.lesson-verdict.is-in .lesson-verdict__chip {
+  animation: lessonHeartLoss 0.5s ease-out;
+}
+
+@keyframes lessonHeartLoss {
+  0% { opacity: 0; transform: scale(0.7); }
+  55% { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* --- Toast đúng/sai nổi (quiz-toast) --- */
+.lesson-toast {
+  position: fixed;
+  bottom: 34px;
+  left: 50%;
+  transform: translateX(-50%) translateY(40px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(90vw, 460px);
+  padding: 13px 26px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  background: rgba(10, 16, 24, 0.96);
+  color: #FFFFFF;
+  font-size: 0.98rem;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+  z-index: 2100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.lesson-toast.is-in {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.lesson-toast[data-state="correct"] {
+  border-color: rgba(34, 197, 94, 0.65);
+}
+
+.lesson-toast[data-state="incorrect"] {
+  border-color: rgba(239, 68, 68, 0.65);
+}
+
+.lesson-toast__icon {
+  font-size: 1.25rem;
+}
+
+.lesson-toast[data-state="correct"] .lesson-toast__icon {
+  color: #4ADE80;
+}
+
+.lesson-toast[data-state="incorrect"] .lesson-toast__icon {
+  color: #F87171;
+}
+
+.lesson-toast.is-in .lesson-toast__icon {
+  animation: lessonIconPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.lesson-toast__text {
+  min-width: 0;
+}
+
+/* --- Hiệu ứng lên thẻ câu hỏi --- */
+.lesson-workspace .lesson-question.is-shake {
+  animation: lessonShake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes lessonShake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+
+.lesson-workspace .lesson-question.is-glow {
+  animation: lessonGlow 0.7s ease-out;
+}
+
+@keyframes lessonGlow {
+  0% { box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65); }
+  45% {
+    box-shadow: 0 0 34px rgba(34, 197, 94, 0.5), 0 16px 48px rgba(0, 0, 0, 0.65);
+    border-color: rgba(34, 197, 94, 0.55);
+  }
+  100% { box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65); }
+}
+
+.lesson-workspace .lesson-option.is-correct {
+  background: rgba(34, 197, 94, 0.28);
+  border-color: #22C55E;
+  color: #86EFAC;
+  box-shadow: 0 0 22px rgba(34, 197, 94, 0.4);
+}
+
+.lesson-workspace .lesson-option.is-correct .lesson-option-letter {
+  background: #22C55E;
+  border-color: #22C55E;
+  color: #080A0C;
+}
+
+.lesson-workspace .lesson-option.is-incorrect {
+  background: rgba(220, 20, 60, 0.28);
+  border-color: #EF4444;
+  color: #FCA5A5;
+  box-shadow: 0 0 22px rgba(239, 68, 68, 0.4);
+}
+
+.lesson-workspace .lesson-option.is-incorrect .lesson-option-letter {
+  background: #EF4444;
+  border-color: #EF4444;
+  color: #FFFFFF;
+}
+
+/* --- Màn tổng kết: huy hiệu thắng/thua (modal-icon-badge) --- */
+.lesson-result__badge {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 2rem;
+}
+
+.lesson-result__badge[data-state="passed"] {
+  color: #10B981;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1.5px solid rgba(16, 185, 129, 0.4);
+  animation: lessonBadgeWin 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes lessonBadgeWin {
+  0% { transform: scale(0.3); opacity: 0; }
+  70% { transform: scale(1.14); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+.lesson-result__badge[data-state="failed"] {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1.5px solid rgba(239, 68, 68, 0.45);
+  animation: lessonPulseDefeat 2.5s infinite ease-in-out;
+}
+
+@keyframes lessonPulseDefeat {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 24px rgba(239, 68, 68, 0.25);
+  }
+  50% {
+    transform: scale(1.04);
+    box-shadow: 0 0 32px rgba(239, 68, 68, 0.45);
+  }
+}
+
+/* --- Dòng cảnh báo khi máy chủ chưa ghi nhận kết quả --- */
+.lesson-result__content .lesson-result__notice {
+  margin: 0 0 18px;
+  padding: 12px 16px;
+  border: 1px solid rgba(245, 158, 11, 0.55);
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #FBBF24;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.lesson-result__notice[hidden] {
+  display: none;
+}
+
+/* --- Bảng chỉ số (modal-stats-grid) --- */
+.lesson-result__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 10px;
+  margin: 18px 0 20px;
+}
+
+.lesson-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.lesson-stat:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.lesson-stat__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #94A3B8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.lesson-stat__img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.lesson-stat__value {
+  color: #F8FAFC;
+  font-size: 1.12rem;
+  font-weight: 800;
+}
+
+.lesson-stat--xp .lesson-stat__value {
+  color: #FFB703;
+}
+
+.lesson-stat--heart .lesson-stat__label i,
+.lesson-stat--heart .lesson-stat__value {
+  color: #F43F5E;
+}
+
+/* --- Xem lại câu trả lời (answer-review-*) --- */
+.lesson-review {
+  margin: 4px 0 18px;
+  padding: 14px 16px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.lesson-review[hidden] {
+  display: none;
+}
+
+.lesson-review__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lesson-review__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: #F8FAFC;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.lesson-review__title i {
+  color: #FFB703;
+}
+
+.lesson-review__filters {
+  display: flex;
+  gap: 7px;
+}
+
+.lesson-review__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #CBD5E1;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lesson-review__filter > span:last-child {
+  color: #94A3B8;
+}
+
+.lesson-review__filter.is-active {
+  color: #67E8F9;
+  background: rgba(6, 182, 212, 0.12);
+  border-color: rgba(6, 182, 212, 0.45);
+}
+
+.lesson-review__filter.is-active > span:last-child {
+  color: #67E8F9;
+}
+
+.lesson-review__filter[data-review-filter="correct"] i {
+  color: #34D399;
+}
+
+.lesson-review__filter[data-review-filter="wrong"] i {
+  color: #F87171;
+}
+
+.lesson-review__list {
+  display: grid;
+  gap: 10px;
+  max-height: min(46vh, 420px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding-top: 12px;
+}
+
+.lesson-review__card {
+  padding: 12px 14px;
+  border-radius: 13px;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  border-left: 3px solid #22C55E;
+  background: rgba(8, 18, 19, 0.78);
+}
+
+.lesson-review__card[hidden] {
+  display: none;
+}
+
+.lesson-review__card.is-wrong {
+  border-color: rgba(239, 68, 68, 0.38);
+  border-left-color: #EF4444;
+  background: rgba(24, 13, 17, 0.82);
+}
+
+.lesson-review__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  color: #CBD5E1;
+  font-size: 0.72rem;
+}
+
+.lesson-review__status {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(34, 197, 94, 0.45);
+  color: #86EFAC;
+  font-size: 0.64rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.lesson-review__card.is-wrong .lesson-review__status {
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #FCA5A5;
+}
+
+.lesson-review__prompt {
+  margin: 0 0 10px;
+  color: #F8FAFC;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.lesson-review__answers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.lesson-review__answers--single {
+  grid-template-columns: 1fr;
+}
+
+.lesson-review__box {
+  padding: 9px 10px;
+  border-radius: 9px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  border: 1px solid rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.08);
+  color: #DCFCE7;
+}
+
+.lesson-review__box--wrong {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.09);
+  color: #FECACA;
+}
+
+.lesson-review__box-label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.lesson-review__box--correct .lesson-review__box-label {
+  color: #86EFAC;
+}
+
+.lesson-review__box--wrong .lesson-review__box-label {
+  color: #FCA5A5;
+}
+
+.lesson-review__explanation {
+  margin: 9px 0 0;
+  padding: 9px 10px;
+  border-left: 2px solid #FBBF24;
+  border-radius: 0 8px 8px 0;
+  background: rgba(255, 255, 255, 0.035);
+  color: #CBD5E1;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.lesson-review__explanation strong {
+  color: #FCD34D;
+}
+
+.lesson-review__empty {
+  margin: 12px 0 0;
+  padding: 16px 10px;
+  color: #94A3B8;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.lesson-review__empty[hidden] {
+  display: none;
+}
+
+dialog.lesson-result {
+  width: min(880px, calc(100vw - 32px));
+  max-height: min(900px, calc(100dvh - 40px));
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+/* Canvas confetti do JS chèn vào dialog — không nạp components.css ở trang này nên phải tự định vị. */
+dialog.lesson-result .slg-confetti {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .lesson-verdict {
+    flex-wrap: wrap;
+    padding: 14px 16px;
+  }
+
+  .lesson-verdict__chip {
+    margin-left: 60px;
+  }
+
+  .lesson-review__answers {
+    grid-template-columns: 1fr;
+  }
+
+  .lesson-review__list {
+    max-height: none;
+  }
+
+  .lesson-toast {
+    bottom: 18px;
+    padding: 12px 18px;
+    font-size: 0.92rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-verdict.is-in,
+  .lesson-verdict.is-in .lesson-verdict__icon,
+  .lesson-verdict.is-in .lesson-verdict__chip,
+  .lesson-toast.is-in .lesson-toast__icon,
+  .lesson-workspace .lesson-question.is-shake,
+  .lesson-workspace .lesson-question.is-glow,
+  .lesson-result__badge[data-state="passed"],
+  .lesson-result__badge[data-state="failed"] {
+    animation: none;
+  }
+
+  .lesson-toast {
+    transition: none;
+  }
+}

@@ -1261,7 +1261,7 @@ body.user-guest .lang-dropdown {
   border: 1px solid #e2e8f0;
 }
 
-.quiz-streak-box, .quiz-score-box, .quiz-timer-box {
+.quiz-streak-box, .quiz-timer-box {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1270,7 +1270,6 @@ body.user-guest .lang-dropdown {
 }
 
 .quiz-streak-box { color: var(--color-crimson); }
-.quiz-score-box { color: #d97706; }
 .quiz-timer-box { color: #0077B6; }
 
 .quiz-card-box {
