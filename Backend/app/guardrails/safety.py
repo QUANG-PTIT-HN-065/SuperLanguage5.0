@@ -5,7 +5,8 @@ Thứ tự áp dụng trong luồng chat:
 L0. ``normalize_text``       - chuẩn hoá Unicode, bỏ ký tự vô hình/điều khiển.
 L1. ``screen_user_message``  - chặn rỗng/quá dài/prompt injection/chủ đề không an toàn/spam.
 L2. ``filter_ai_reply``      - làm sạch câu trả lời AI: bỏ markdown, HTML, link, emoji,
-                               che dữ liệu cá nhân, cắt câu làm lộ prompt hệ thống.
+                               che dữ liệu cá nhân, cắt câu làm lộ prompt hệ thống, gộp câu lặp.
+    ``needs_direct_answer``  - phát hiện câu trả lời chỉ hỏi lại/đòi thêm chi tiết.
     ``filter_ai_feedback``   - làm sạch phần nhận xét tiếng Việt.
     ``sanitize_ai_payload``  - làm sạch từng trường chuỗi trong JSON AI trả về.
 L3. ``speakable_text``       - chuẩn hoá văn bản trước khi gửi sang dịch vụ đọc (TTS).
@@ -46,6 +47,15 @@ GUARDRAIL_MESSAGES = {
         "Chủ đề này nằm ngoài phạm vi luyện tập an toàn của SuperLanguage. "
         "Mình đổi sang chủ đề khác nhé!"
     ),
+    "no_content": (
+        "Mình chưa thấy chữ nào để luyện tập. Bạn gõ lại một câu ngắn giúp mình nhé!"
+    ),
+    "link_spam": (
+        "Mình không xử lý tin nhắn chỉ gồm đường dẫn. Bạn đặt câu hỏi bằng lời giúp mình nhé!"
+    ),
+    "gibberish": (
+        "Tin nhắn chưa thành câu nên mình chưa hiểu ý. Bạn viết lại thành một câu ngắn nhé!"
+    ),
 }
 
 _ZERO_WIDTH_TABLE = dict.fromkeys(
@@ -55,8 +65,9 @@ _CONTROL_CHARS_RE = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 _INLINE_SPACE_RE = re.compile(r"[ \t\u00a0]+")
 _MANY_BLANK_LINES_RE = re.compile(r"\n{3,}")
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?…\n])\s+")
-_HAS_CONTENT_RE = re.compile(r"[0-9A-Za-zÀ-ỹ]")
-_SPEAKABLE_RE = re.compile(r"[0-9A-Za-zÀ-ỹ]")
+# \w của Python hiểu Unicode nên câu trả lời tiếng Nhật/Hàn/Trung vẫn được giữ lại.
+_HAS_CONTENT_RE = re.compile(r"\w", re.UNICODE)
+_SPEAKABLE_RE = re.compile(r"\w", re.UNICODE)
 
 # Ký hiệu markdown/trang trí mà dịch vụ TTS hay đọc sai hoặc từ chối.
 _SPEECH_SYMBOL_RE = re.compile(r"[*_~`#<>|\\^={}\[\]]")
@@ -183,6 +194,89 @@ def _is_spam(text: str) -> bool:
     return False
 
 
+# Chữ cái bị thay bằng ký tự Cyrillic/Greek hoặc viết cách quãng để né bộ lọc.
+_HOMOGLYPH_TABLE = str.maketrans(
+    {
+        "\u0430": "a",
+        "\u0435": "e",
+        "\u043e": "o",
+        "\u0440": "p",
+        "\u0441": "c",
+        "\u0445": "x",
+        "\u0443": "y",
+        "\u0456": "i",
+        "\u0458": "j",
+        "\u0455": "s",
+        "\u03b1": "a",
+        "\u03bf": "o",
+        "\u03c1": "p",
+    }
+)
+_LEET_TABLE = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t"})
+_SPACED_LETTERS_RE = re.compile(r"(?<=\w) (?=\w\b)")
+_ONLY_LINKS_RE = re.compile(r"^(?:\s*(?:(?:https?://|www\.)\S+|\S+\.(?:com|net|org|vn|io)\S*))+\s*$", re.IGNORECASE)
+_CONSONANT_RUN_RE = re.compile(r"[bcdfghjklmnpqrstvwxz\u0111]{9,}", re.IGNORECASE)
+_LONG_WORD_RE = re.compile(r"[^\W\d_]{12,}", re.UNICODE)
+_VOWELS = set(
+    "aeiouy"
+    "àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợ"
+    "ùúủũụưừứửữựỳýỷỹỵ"
+)
+# Mẫu injection/unsafe bị xoá hết khoảng trắng và dấu câu.
+_COMPACT_INJECTION_KEYS = (
+    "ignoreallprevious",
+    "ignoreprevious",
+    "ignoretheabove",
+    "disregardprevious",
+    "systemprompt",
+    "revealyourprompt",
+    "showyourprompt",
+    "youarenow",
+    "jailbreak",
+    "danmode",
+    "bỏquahướngdẫn",
+    "bỏquachỉdẫn",
+    "tiếtlộsystem",
+    "hiểnthịsystemprompt",
+)
+
+
+def _probe_variants(text: str) -> tuple[str, ...]:
+    """L1: sinh các biến thể đã gỡ làm rối (khoảng trắng, ký tự giả, leet) để so khớp."""
+    base = text.casefold().translate(_HOMOGLYPH_TABLE)
+    without_spaced_letters = _SPACED_LETTERS_RE.sub("", base)
+    no_punctuation = re.sub(r"[^\w\s]+", " ", base)
+    letters_only = re.sub(r"[^\w]+", "", base)
+    leet = letters_only.translate(_LEET_TABLE)
+    variants: list[str] = []
+    for variant in (base, without_spaced_letters, no_punctuation, letters_only, leet):
+        for candidate in (variant, re.sub(r"\s+", "", variant)):
+            stripped = candidate.strip()
+            if stripped and stripped not in variants:
+                variants.append(stripped)
+    return tuple(variants)
+
+
+def has_readable_content(text: str) -> bool:
+    """Kiểm tra văn bản có ít nhất một chữ/số đọc được (mọi hệ chữ)."""
+    return any(character.isalnum() for character in text)
+
+
+def _is_link_spam(text: str) -> bool:
+    if _ONLY_LINKS_RE.match(text):
+        return True
+    return len(_URL_RE.findall(text)) >= 2
+
+
+def _is_gibberish(text: str) -> bool:
+    lowered = text.casefold()
+    if _CONSONANT_RUN_RE.search(lowered):
+        return True
+    # Chỉ xét từ Latin: câu tiếng Nhật/Hàn/Trung không có nguyên âm Latin nhưng vẫn hợp lệ.
+    long_words = [word for word in _LONG_WORD_RE.findall(lowered) if word.isascii()]
+    return bool(long_words) and all(not (set(word) & _VOWELS) for word in long_words)
+
+
 def screen_user_message(text: str) -> GuardrailVerdict:
     """L1: kiểm tra tin nhắn trước khi gọi AI, trả về câu từ chối thay cho AI."""
     cleaned = normalize_text(text)
@@ -197,17 +291,29 @@ def screen_user_message(text: str) -> GuardrailVerdict:
             GUARDRAIL_MESSAGES["too_long"],
         )
 
-    probe = cleaned.casefold()
-    if any(pattern.search(probe) for pattern in _INJECTION_RES):
+    if not has_readable_content(cleaned):
+        return GuardrailVerdict(
+            False, cleaned, "no_content", GUARDRAIL_MESSAGES["no_content"]
+        )
+    if _is_link_spam(cleaned):
+        return GuardrailVerdict(False, cleaned, "link_spam", GUARDRAIL_MESSAGES["link_spam"])
+
+    probes = _probe_variants(cleaned)
+    compact_probe = re.sub(r"[^\w]+", "", cleaned.casefold())
+    if any(pattern.search(probe) for probe in probes for pattern in _INJECTION_RES) or any(
+        key in compact_probe for key in _COMPACT_INJECTION_KEYS
+    ):
         return GuardrailVerdict(
             False, cleaned, "prompt_injection", GUARDRAIL_MESSAGES["prompt_injection"]
         )
-    if any(pattern.search(probe) for pattern in _UNSAFE_RES):
+    if any(pattern.search(probe) for probe in probes for pattern in _UNSAFE_RES):
         return GuardrailVerdict(
             False, cleaned, "unsafe_topic", GUARDRAIL_MESSAGES["unsafe_topic"]
         )
     if _is_spam(cleaned):
         return GuardrailVerdict(False, cleaned, "spam", GUARDRAIL_MESSAGES["spam"])
+    if _is_gibberish(cleaned):
+        return GuardrailVerdict(False, cleaned, "gibberish", GUARDRAIL_MESSAGES["gibberish"])
 
     return GuardrailVerdict(True, cleaned)
 
@@ -226,6 +332,61 @@ def _drop_prompt_leaks(text: str) -> str:
         if sentence.strip() and not _PROMPT_LEAK_RE.search(sentence)
     ]
     return " ".join(kept)
+
+
+_REPEATED_PHRASE_RE = re.compile(
+    r"\b([\w\u00c0-\u1ef9]+(?:\s+[\w\u00c0-\u1ef9]+){0,4})(?:[\s,;]+\1\b){1,}",
+    re.IGNORECASE,
+)
+
+
+def _dedupe_sentences(text: str) -> str:
+    """Bỏ câu bị lặp y hệt trong cùng một câu trả lời (AI hay lặp khi bị ngắt)."""
+    parts = [part for part in _SENTENCE_SPLIT_RE.split(text) if part.strip()]
+    if len(parts) < 2:
+        return text
+    seen: set[str] = set()
+    kept: list[str] = []
+    for part in parts:
+        normalized = re.sub(r"\s+", " ", part).strip().casefold()
+        if normalized and normalized in seen:
+            continue
+        if normalized:
+            seen.add(normalized)
+        kept.append(part.strip())
+    return " ".join(kept)
+
+
+def _collapse_repeated_phrases(text: str) -> str:
+    previous = None
+    while previous != text:
+        previous = text
+        text = _REPEATED_PHRASE_RE.sub(r"\1", text)
+    return text
+
+
+# L2 - nhận diện câu trả lời chỉ hỏi lại/đòi thêm chi tiết mà không trả lời gì.
+_CLARIFY_ONLY_RES = (
+    re.compile(r"provide (?:me )?more (?:details|context|information)"),
+    re.compile(r"could you (?:please )?(?:clarify|provide|specify)"),
+    re.compile(r"can you (?:please )?(?:clarify|provide|specify|tell me more)"),
+    re.compile(r"(?:mixing|mixed) up (?:some )?(?:terms|things)"),
+    re.compile(r"i'?m not sure (?:i )?(?:understand|what you mean)"),
+    re.compile(r"not sure what you(?:'re| are) (?:asking|referring|trying)"),
+    re.compile(r"(?:cung cấp|cho mình|cho tôi) thêm (?:chi tiết|thông tin|ngữ cảnh)"),
+    re.compile(r"(?:bạn|em) (?:đang )?nhầm (?:lẫn|lẫn)"),
+    re.compile(r"(?:nói|viết|giải thích) rõ hơn (?:giúp|được)"),
+)
+
+
+def needs_direct_answer(reply: str) -> bool:
+    """True khi câu trả lời chỉ là hỏi lại/đòi thêm chi tiết thay vì trả lời."""
+    if not isinstance(reply, str):
+        return False
+    cleaned = normalize_text(reply).casefold()
+    if not cleaned:
+        return True
+    return any(pattern.search(cleaned) for pattern in _CLARIFY_ONLY_RES)
 
 
 def _truncate(text: str, max_chars: int) -> str:
@@ -256,6 +417,8 @@ def sanitize_text(text: str, *, max_chars: int = MAX_REPLY_CHARS) -> str:
     cleaned = _EMOJI_RE.sub("", cleaned)
     cleaned = _MD_MARKER_RE.sub("", cleaned)
     cleaned = _drop_prompt_leaks(cleaned)
+    cleaned = _collapse_repeated_phrases(cleaned)
+    cleaned = _dedupe_sentences(cleaned)
     cleaned = _INLINE_SPACE_RE.sub(" ", cleaned)
     cleaned = re.sub(r"\s+([,.;:!?…])", r"\1", cleaned)
     cleaned = normalize_text(cleaned)
