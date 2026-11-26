@@ -4,20 +4,26 @@ import time
 
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import JSONResponse
-from fastapi.requests import Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
-from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.requests import Request
+from fastapi.responses import JSONResponse
 
+from app.api.endpoints import (
+    admin,
+    auth,
+    chat_ai,
+    leaderboard,
+    lessons,
+    minigame,
+    shop,
+    users,
+    vocabulary,
+    writing,
+)
 from app.core.config import settings
-from app.db.supabase import supabase_admin
-
-from app.api.endpoints import admin, auth, users, vocabulary, chat_ai, lessons, minigame, shop, leaderboard, writing
-
-
-
 from app.core.exception import AppException
+from app.db.supabase import supabase_admin
 
 logger = logging.getLogger(__name__)
 
@@ -27,58 +33,33 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
-# Cấu hình CORS Middleware cho phép kết nối từ Frontend (Vite/React/HTML)
-if settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.BACKEND_CORS_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+# Danh sách Origin chuẩn hóa (loại bỏ khoảng trắng và dấu '/' ở cuối)
+_cors_origins = list(
+    dict.fromkeys(
+        origin.strip().rstrip("/")
+        for origin in [
+            *settings.BACKEND_CORS_ORIGINS,
+            "https://www.superlanguage.me",
+            "https://superlanguage.me",
+            "http://localhost:5173",
+            "http://localhost:3000",
+        ]
+        if origin and origin.strip()
     )
-
-
-class CorsSafetyNetMiddleware(BaseHTTPMiddleware):
-    """Safety-net middleware đảm bảo mọi response đều có header CORS.
-
-    Starlette CORSMiddleware đôi khi không gắn Access-Control-Allow-Origin
-    cho các response phát sinh từ route chạy lâu (như transcribe giọng nói)
-    hoặc từ exception handler. Middleware này chạy ngoài cùng và kiểm tra lại,
-    nếu thiếu header thì bổ sung dựa trên Origin của request.
-    """
-
-    async def dispatch(self, request: Request, call_next):
-        origin = request.headers.get("origin")
-        try:
-            response = await call_next(request)
-        except Exception:
-            # Giữ nguyên exception để exception handler của app xử lý,
-            # nhưng đảm bảo response cuối cùng có CORS header.
-            raise
-
-        if origin and origin in settings.BACKEND_CORS_ORIGINS:
-            if "access-control-allow-origin" not in {
-                k.lower() for k in response.headers
-            }:
-                response.headers["Access-Control-Allow-Origin"] = origin
-                response.headers["Vary"] = "Origin"
-        return response
-
-
-if settings.BACKEND_CORS_ORIGINS:
-    app.add_middleware(CorsSafetyNetMiddleware)
+)
 
 
 def _apply_cors_headers(request: Request, response: JSONResponse) -> JSONResponse:
-    """Gắn header CORS vào response từ exception handler (vòng bảo vệ thứ 2)."""
+    """Gắn header CORS vào response phát sinh từ exception handler."""
     origin = request.headers.get("origin")
-    if origin and origin in settings.BACKEND_CORS_ORIGINS:
+    if origin and origin.strip().rstrip("/") in _cors_origins:
         response.headers["Access-Control-Allow-Origin"] = origin
         response.headers["Vary"] = "Origin"
         response.headers["Access-Control-Allow-Credentials"] = "true"
     return response
 
-# Tích hợp Auth Router vào hệ thống API 
+
+# Tích hợp các Router vào hệ thống API
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(users.router, prefix=f"{settings.API_V1_STR}/me", tags=["me"])
 app.include_router(chat_ai.router, prefix=f"{settings.API_V1_STR}/chat-ai", tags=["Chat_AI"])
@@ -125,12 +106,15 @@ def _run_inactive_account_cleanup_worker() -> None:
 
 @app.on_event("startup")
 def start_inactive_account_cleanup_worker() -> None:
-    worker = threading.Thread(
-        target=_run_inactive_account_cleanup_worker,
-        name="inactive-account-cleanup",
-        daemon=True,
-    )
-    worker.start()
+    # Chỉ chạy worker dọn dẹp trên môi trường cloud (Render), tránh chạy trùng ở local worker
+    if not getattr(settings, "USE_LOCAL_WHISPER", False):
+        worker = threading.Thread(
+            target=_run_inactive_account_cleanup_worker,
+            name="inactive-account-cleanup",
+            daemon=True,
+        )
+        worker.start()
+
 
 @app.get("/")
 def read_root():
@@ -139,6 +123,22 @@ def read_root():
         "message": f"Welcome to {settings.PROJECT_NAME} API!",
         "version": settings.VERSION,
     }
+
+
+@app.get("/health")
+def health_check():
+    is_local = bool(getattr(settings, "USE_LOCAL_WHISPER", False))
+    return {"status": "ok", "mode": "local" if is_local else "render"}
+
+
+# Đăng ký CORSMiddleware CUỐI CÙNG (outermost) để bọc toàn bộ ứng dụng
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/test-supabase")
@@ -154,21 +154,25 @@ def test_supabase_connection():
         raise HTTPException(
             status_code=500, detail=f"Lỗi kết nối Supabase: {str(e)}"
         )
-        
+
+
 @app.exception_handler(AppException)
 async def app_exception_handler(request: Request, exc: AppException):
-    return _apply_cors_headers(request, JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "success": False,
-            "message": exc.message,
-            "data": None,
-            "error": {
-                "code": exc.error_code,
-                "detail": str(exc)
-            }
-        }
-    ))
+    return _apply_cors_headers(
+        request,
+        JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "success": False,
+                "message": exc.message,
+                "data": None,
+                "error": {
+                    "code": exc.error_code,
+                    "detail": str(exc),
+                },
+            },
+        ),
+    )
 
 
 @app.exception_handler(HTTPException)
@@ -195,13 +199,23 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def supabase_transport_error_handler(request: Request, exc: httpx.TransportError):
     logger.error(
         "Supabase transport failure on %s %s: %s",
-        request.method, request.url.path, exc,
+        request.method,
+        request.url.path,
+        exc,
     )
     message = (
         "Không thể kết nối Supabase (lỗi DNS/mạng). "
         "Kiểm tra kết nối internet, DNS hoặc trạng thái project Supabase rồi thử lại."
     )
-    return _apply_cors_headers(request, JSONResponse(
-        status_code=503,
-        content={"status": "error", "message": message, "data": None, "detail": message},
-    ))
+    return _apply_cors_headers(
+        request,
+        JSONResponse(
+            status_code=503,
+            content={
+                "status": "error",
+                "message": message,
+                "data": None,
+                "detail": message,
+            },
+        ),
+    )

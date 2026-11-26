@@ -715,7 +715,7 @@ def _complete_with_audio(
                                 types.Part.from_text(text=prompt),
                                 types.Part.from_bytes(
                                     data=audio_wav,
-                                    mime_type="audio/wav",
+                                    mime_type=mime_type or "audio/wav",
                                 ),
                             ],
                         ),
