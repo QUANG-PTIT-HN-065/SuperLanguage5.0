@@ -7,8 +7,10 @@ from fastapi import HTTPException
 from app.services.ai_service import (
     AIService,
     OFF_TOPIC_REFUSAL,
+    _complete_with_providers,
     _failure_category,
     _parse_response,
+    _stream_with_providers,
 )
 from app.services.rag_service import RAGError
 
@@ -240,6 +242,88 @@ class AIServiceTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(expected_category=expected_category):
                 category, _ = _failure_category(error)
                 self.assertEqual(category, expected_category)
+
+    @patch("app.services.ai_service._try_openai_compatible_call")
+    @patch("app.services.ai_service.settings")
+    def test_local_ollama_is_first_for_chat_completions(
+        self,
+        settings,
+        try_provider,
+    ):
+        settings.LOCAL_LLM_WORKER_URL = "https://ai-local.example"
+        settings.LOCAL_WORKER_SECRET = "worker-secret"
+        settings.LOCAL_LLM_MODEL = "qwen2.5:7b"
+        settings.LOCAL_LLM_TIMEOUT_SECONDS = 75
+        settings.GEMINI_API_KEYS = ""
+        settings.GEMINI_CHAT_MODEL = ""
+        settings.OPENAI_API_KEYS = "cloud-key"
+        settings.OPENAI_CHAT_MODEL = "cloud-model"
+        settings.DEEPSEEK_API_KEYS = ""
+        try_provider.return_value = ("local answer", False)
+
+        result = _complete_with_providers("system", "hello", prefer_local=True)
+
+        self.assertEqual(result, "local answer")
+        try_provider.assert_called_once()
+        self.assertEqual(try_provider.call_args.args[8], "Local Ollama")
+        self.assertEqual(try_provider.call_args.args[1], "qwen2.5:7b")
+
+    @patch("app.services.ai_service._try_openai_compatible_call")
+    @patch("app.services.ai_service.settings")
+    def test_chat_completion_falls_back_to_api_provider_when_local_fails(
+        self,
+        settings,
+        try_provider,
+    ):
+        settings.LOCAL_LLM_WORKER_URL = "https://ai-local.example"
+        settings.LOCAL_WORKER_SECRET = "worker-secret"
+        settings.LOCAL_LLM_MODEL = "qwen2.5:7b"
+        settings.LOCAL_LLM_TIMEOUT_SECONDS = 75
+        settings.GEMINI_API_KEYS = ""
+        settings.GEMINI_CHAT_MODEL = ""
+        settings.OPENAI_API_KEYS = "cloud-key"
+        settings.OPENAI_CHAT_MODEL = "cloud-model"
+        settings.DEEPSEEK_API_KEYS = ""
+        try_provider.side_effect = [(None, True), ("cloud answer", False)]
+
+        result = _complete_with_providers("system", "hello", prefer_local=True)
+
+        self.assertEqual(result, "cloud answer")
+        self.assertEqual(
+            [call.args[8] for call in try_provider.call_args_list],
+            ["Local Ollama", "OpenAI"],
+        )
+
+    @patch("app.services.ai_service._local_openai_client")
+    @patch("app.services.ai_service.settings")
+    def test_chat_stream_uses_local_ollama_before_cloud_providers(
+        self,
+        settings,
+        local_client_factory,
+    ):
+        settings.LOCAL_LLM_WORKER_URL = "https://ai-local.example"
+        settings.LOCAL_WORKER_SECRET = "worker-secret"
+        settings.LOCAL_LLM_MODEL = "qwen2.5:7b"
+        settings.LOCAL_LLM_TIMEOUT_SECONDS = 75
+        settings.GEMINI_API_KEYS = ""
+        settings.GEMINI_CHAT_MODEL = ""
+        settings.OPENAI_API_KEYS = "cloud-key"
+        settings.OPENAI_CHAT_MODEL = "cloud-model"
+        settings.DEEPSEEK_API_KEYS = ""
+        client = local_client_factory.return_value
+        client.chat.completions.create.return_value = iter([
+            SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content="local"))]),
+        ])
+
+        result = list(_stream_with_providers("system", "hello", prefer_local=True))
+
+        self.assertEqual(result, ["local"])
+        client.chat.completions.create.assert_called_once()
+        self.assertEqual(
+            client.chat.completions.create.call_args.kwargs["model"],
+            "qwen2.5:7b",
+        )
+        self.assertTrue(client.chat.completions.create.call_args.kwargs["stream"])
 
     @patch("app.services.ai_service.OpenAI")
     @patch("app.services.ai_service.genai.Client")
