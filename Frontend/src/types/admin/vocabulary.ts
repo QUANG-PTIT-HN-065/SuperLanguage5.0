@@ -652,6 +652,12 @@ function setupEventListeners(): void {
     if (e.target === e.currentTarget) closeDeleteModal();
   });
 
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    getElement("detailModal")?.classList.add("hidden");
+    if (pendingDeleteId !== null) closeDeleteModal();
+  });
+
   // Logout
   getElement("adminLogoutBtn")?.addEventListener("click", () => {
     void logoutAdmin();

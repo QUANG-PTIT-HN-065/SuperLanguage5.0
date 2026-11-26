@@ -52,6 +52,18 @@ html body input:focus, html body select:focus, html body textarea:focus {
 html body table td, html body table th { vertical-align: middle; }
 html body table thead th { font-size: 0.8125rem; color: #334155; }
 
+/* 6b) Khung "Thêm từ vựng": cố định trong màn hình, cuộn nội bộ để luôn thêm được ở đầu trang */
+html body #vocabFormContainer form {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+html body #vocabFormContainer form::-webkit-scrollbar { width: 8px; }
+html body #vocabFormContainer form::-webkit-scrollbar-track { background: transparent; }
+html body #vocabFormContainer form::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
 /* 7) Icon đặt trong ô input: phủ kín chiều cao ô và căn giữa */
 html body .relative > .material-symbols-outlined.absolute {
   top: 0; bottom: 0; height: auto; width: 2.75rem;
