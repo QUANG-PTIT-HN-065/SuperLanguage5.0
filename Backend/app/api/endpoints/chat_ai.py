@@ -1352,6 +1352,7 @@ async def _send_message(
             profile.get("current_level") or "A1",
             conversation_history=conversation_history,
             grammar_mode=data.grammar_mode,
+            prefer_local=True,
         )
     except HTTPException as exc:
         if exc.status_code == status.HTTP_503_SERVICE_UNAVAILABLE:
@@ -1408,6 +1409,7 @@ async def send_message_stream(
                 profile.get("current_level") or "A1",
                 conversation_history=conversation_history,
                 grammar_mode=data.grammar_mode,
+                prefer_local=True,
             ):
                 if event.get("type") == "done":
                     ai_reply = event["ai_response"]

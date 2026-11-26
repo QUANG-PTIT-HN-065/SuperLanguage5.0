@@ -223,6 +223,19 @@ Chat AI dùng OpenAI Whisper (`base`) để tự nhận dạng ngôn ngữ từ 
 
 Trong lúc nói, trình duyệt hiển thị bản nhận dạng tạm thời nếu Web Speech API được hỗ trợ; khi dừng, backend Whisper tạo transcript cuối cùng và Chat AI tự gửi tin nhắn. Các câu hỏi dịch/giải nghĩa (ví dụ “Nice to meet you có nghĩa là gì?”) được coi là yêu cầu học ngôn ngữ và có thể trả lời dù Vector DB không có mục khớp.
 
+### AI local cho Chat AI và Đàm thoại
+
+Phản hồi chat (kể cả nội dung được gửi bằng giọng nói) ưu tiên model Ollama trên Local Worker; nếu worker/Ollama lỗi hoặc hết thời gian chờ, backend tự chuyển sang Gemini, OpenAI rồi DeepSeek. Các tính năng AI khác không dùng provider Ollama. Backend Render vẫn quản lý xác thực, quota, RAG và lưu lịch sử.
+
+Trên máy chạy Local Worker, bật Ollama và bảo đảm model đã có sẵn:
+```powershell
+ollama run qwen2.5:7b
+```
+
+Trong cấu hình backend trên Render, đặt `LOCAL_LLM_WORKER_URL=https://ai-local.superlanguage.me`, `LOCAL_LLM_MODEL=qwen2.5:7b`, `LOCAL_LLM_TIMEOUT_SECONDS=75` và `LOCAL_WORKER_SECRET` thành một giá trị ngẫu nhiên đủ mạnh. Đặt cùng `LOCAL_WORKER_SECRET` trên máy Local Worker; tại đó cấu hình `OLLAMA_BASE_URL=http://127.0.0.1:11434` và cùng `LOCAL_LLM_MODEL`. Không đưa `LOCAL_WORKER_SECRET` vào `Frontend/.env`: Worker chỉ nhận yêu cầu model từ backend đã xác thực bằng secret này. Không mở cổng Ollama ra Internet; chỉ mở Local Worker qua tunnel.
+
+RAG cho câu hỏi kiến thức vẫn dùng Gemini Embeddings; đánh giá phát âm trực tiếp từ audio vẫn dùng Gemini. Tích hợp này chỉ thay provider sinh/stream phản hồi hội thoại.
+
 ### 3. Thiết lập Frontend (TypeScript + Vite)
 Mở terminal thứ hai tại thư mục gốc:
 ```powershell
