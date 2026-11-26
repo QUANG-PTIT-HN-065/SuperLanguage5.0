@@ -243,7 +243,7 @@ def _local_openai_client(secret: str, worker_url: str, timeout: float) -> OpenAI
     return OpenAI(
         api_key="local-worker",
         base_url=f"{worker_url}/internal/v1",
-        timeout=httpx.Timeout(timeout, connect=min(5.0, timeout)),
+        timeout=httpx.Timeout(timeout, connect=min(5.0, timeout)), # type: ignore
         default_headers={"X-Local-Secret-Key": secret},
     )
 
@@ -364,6 +364,9 @@ phải bám quy tắc có trong ngữ cảnh. Không bổ sung quy tắc/sự ki
 Nếu ngữ cảnh trống, không liên quan hoặc thiếu bài/giáo trình được hỏi, nói rõ chưa tìm thấy
 nội dung cần thiết, hỏi tên giáo trình hoặc đề nghị người học gửi nội dung. Không bịa bài học,
 không suy ra bài 12 từ một tài liệu chung, không gán thiếu tài liệu thành câu hỏi ngoài phạm vi.
+Với intent knowledge, chỉ dùng ngữ cảnh truy xuất làm căn cứ cho thông tin kiến thức; lịch sử
+chỉ giúp hiểu câu hỏi tiếp nối, không phải nguồn sự thật. Nếu ngữ cảnh không hỗ trợ câu trả lời,
+nói rõ chưa tìm thấy thông tin đó thay vì dùng kiến thức nền hoặc tự suy luận.
 Với conversation, tiếp nối đúng điều học viên vừa nêu — kể cả chủ đề ngoài bài học như sở thích,
 công việc, phim ảnh, tâm trạng — rồi dẫn họ sang một chủ đề liên quan hoặc một chủ đề mới bằng
 tối đa một câu hỏi tiếp nối. Không bỏ qua, không phán xét và không từ chối chủ đề của học viên.
@@ -383,7 +386,9 @@ Tự diễn đạt 2-5 câu, tối đa khoảng 120 từ; không chép nguyên k
 
 Luôn bắt đầu bằng {_IN_SCOPE_MARKER}, kể cả khi hỏi làm rõ hoặc thông báo thiếu tài liệu.
 Không dùng {_OUT_OF_SCOPE_MARKER} cho lời chào, đổi ngôn ngữ hay thiếu tài liệu.
-Theo đúng định dạng (nhãn [IN_SCOPE] đứng đầu, trước [AI Response]):
+KÝ TỰ ĐẦU TIÊN của đầu ra phải chính xác là {_IN_SCOPE_MARKER}; không thêm lời dẫn,
+markdown hoặc code fence trước nhãn này.
+Theo đúng định dạng:
 [IN_SCOPE]
 [AI Response]
 <phản hồi theo ngôn ngữ giải thích, có ví dụ ngôn ngữ mục tiêu khi phù hợp>
@@ -551,18 +556,28 @@ def _remove_context_echoes(text: str, context: list[str] | None) -> str:
 def _parse_response(
     full_text: str,
     context: list[str] | None = None,
+    *,
+    recover_local_scope_marker: bool = False,
 ) -> tuple[str, str]:
     result = full_text.strip()
+    has_response_label = "[AI Response]" in result
+    has_feedback_structure = "---" in result and _FEEDBACK_MARKER in result
     if result.startswith("[AI Response]"):
         result = result[len("[AI Response]"):].lstrip()
     if result.startswith(_OUT_OF_SCOPE_MARKER):
         return OFF_TOPIC_REFUSAL, ""
     if not result.startswith(_IN_SCOPE_MARKER):
-        logger.warning("AI response format invalid: missing leading scope marker.")
-        raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY,
-            "AI trả về phản hồi không đúng định dạng. Vui lòng thử lại.",
-        )
+        if recover_local_scope_marker and (has_response_label or has_feedback_structure):
+            logger.warning(
+                "Local-first AI response omitted the scope marker; recovering its structured response."
+            )
+            result = f"{_IN_SCOPE_MARKER}\n{result}"
+        else:
+            logger.warning("AI response format invalid: missing leading scope marker.")
+            raise HTTPException(
+                status.HTTP_502_BAD_GATEWAY,
+                "AI trả về phản hồi không đúng định dạng. Vui lòng thử lại.",
+            )
 
     content = result[len(_IN_SCOPE_MARKER):].strip()
     parts = content.split("---", maxsplit=1)
@@ -1194,7 +1209,7 @@ def _complete_with_audio(
                 except Exception as exc:
                     last_exc = exc
                     category, _ = _failure_category(exc)
-                    if category in ("rate_limit_or_quota", "provider_server_error") and attempt < _MAX_CHAT_RETRIES:
+                    if category in ("rate_limit_or_quota", "provider_server_error") and attempt < _MAX_CHAT_RETRIES: # type: ignore
                         _sleep_with_backoff(attempt) # type: ignore
                         continue
                     _log_provider_failure(f"{label}[{model}]", key_index, exc, failures)
@@ -1364,7 +1379,11 @@ class AIService:
             history_messages,
             prefer_local=prefer_local,
         )
-        return _parse_response(full_text, context)
+        return _parse_response(
+            full_text,
+            context,
+            recover_local_scope_marker=prefer_local,
+        )
 
     @staticmethod
     async def stream_chat_response(
@@ -1484,7 +1503,11 @@ class AIService:
                 yield {"type": "chunk", "delta": clean_tail}
 
         full_text = "".join(raw_chunks)
-        ai_reply, ai_feedback = _parse_response(full_text, context)
+        ai_reply, ai_feedback = _parse_response(
+            full_text,
+            context,
+            recover_local_scope_marker=prefer_local,
+        )
         yield {"type": "done", "ai_response": ai_reply, "ai_feedback": ai_feedback}
 
     @staticmethod
