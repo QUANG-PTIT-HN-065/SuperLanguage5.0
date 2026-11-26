@@ -47,13 +47,14 @@ export const vi: Record<string, string> = {
 
   'vc.quizStreakLabel': 'Chuỗi đúng: ',
   'vc.quizScoreLabel': 'Điểm tích lũy: ',
+  'vc.quizPointUnit': 'điểm',
   'vc.quizListen': 'Nghe từ',
   'vc.quizListenTitle': 'Nghe phát âm',
   'vc.quizNext': 'Câu tiếp theo ',
   'vc.quizNeedTwo': 'Cần ít nhất 2 từ vựng để luyện tập.',
   'vc.quizPhonetic': 'Phiên âm: {value}',
   'vc.quizTopic': 'Chủ đề: {value}',
-  'vc.quizCorrect': 'Chính xác xuất sắc! +{xp} XP 🔥 (Đã ghi nhận ôn tập)',
+  'vc.quizCorrect': 'Chính xác xuất sắc! +{xp} {unit} 🔥 (Đã ghi nhận ôn tập)',
   'vc.quizWrong': 'Chưa chính xác! Đáp án đúng: "{answer}"',
   'vc.quizTimeout': 'Hết giờ! Đáp án đúng là: "{answer}"',
 
@@ -81,7 +82,6 @@ export const vi: Record<string, string> = {
   'vc.toastLoop': 'Bạn đã duyệt hết vòng thẻ này! Vòng lặp mới bắt đầu. 🔁',
   'vc.toastNoTts': 'Trình duyệt chưa hỗ trợ Text-to-speech',
   'vc.toastSaveFail': 'Không thể lưu mức ghi nhớ lên máy chủ.',
-  'vc.toastXpFail': 'Không thể cộng XP lên máy chủ.',
   'vc.toastOpenCard': 'Đang mở thẻ ôn tập: "{word}" 🚀',
   'vc.loading': 'Đang tải, hãy đợi...',
 
@@ -159,13 +159,14 @@ export const en: Record<string, string> = {
 
   'vc.quizStreakLabel': 'Correct streak: ',
   'vc.quizScoreLabel': 'Total score: ',
+  'vc.quizPointUnit': 'pts',
   'vc.quizListen': 'Listen',
   'vc.quizListenTitle': 'Listen to pronunciation',
   'vc.quizNext': 'Next question ',
   'vc.quizNeedTwo': 'At least 2 words are needed to practice.',
   'vc.quizPhonetic': 'Phonetic: {value}',
   'vc.quizTopic': 'Topic: {value}',
-  'vc.quizCorrect': 'Excellent, correct! +{xp} XP 🔥 (Review recorded)',
+  'vc.quizCorrect': 'Excellent, correct! +{xp} {unit} 🔥 (Review recorded)',
   'vc.quizWrong': 'Not quite! Correct answer: "{answer}"',
   'vc.quizTimeout': 'Time\'s up! The correct answer is: "{answer}"',
 
@@ -193,7 +194,6 @@ export const en: Record<string, string> = {
   'vc.toastLoop': 'You finished this deck loop! A new loop begins. 🔁',
   'vc.toastNoTts': 'Your browser does not support text-to-speech',
   'vc.toastSaveFail': 'Could not save the mastery level to the server.',
-  'vc.toastXpFail': 'Could not add XP on the server.',
   'vc.toastOpenCard': 'Opening review card: "{word}" 🚀',
   'vc.loading': 'Loading, please wait...',
 
@@ -271,13 +271,14 @@ export const ja: Record<string, string> = {
 
   'vc.quizStreakLabel': '連続正解：',
   'vc.quizScoreLabel': '累計スコア：',
+  'vc.quizPointUnit': '点',
   'vc.quizListen': '単語を聞く',
   'vc.quizListenTitle': '発音を聞く',
   'vc.quizNext': '次の問題 ',
   'vc.quizNeedTwo': '練習には少なくとも2つの単語が必要です。',
   'vc.quizPhonetic': '発音記号：{value}',
   'vc.quizTopic': 'トピック：{value}',
-  'vc.quizCorrect': '大正解！+{xp} XP 🔥（復習を記録しました）',
+  'vc.quizCorrect': '大正解！+{xp} {unit} 🔥（復習を記録しました）',
   'vc.quizWrong': '不正解！正しい答え：「{answer}」',
   'vc.quizTimeout': '時間切れ！正しい答えは：「{answer}」',
 
@@ -305,7 +306,6 @@ export const ja: Record<string, string> = {
   'vc.toastLoop': 'カードを一周しました！新しい周回が始まります。🔁',
   'vc.toastNoTts': 'このブラウザは音声読み上げに対応していません',
   'vc.toastSaveFail': '習熟度をサーバーに保存できませんでした。',
-  'vc.toastXpFail': 'サーバーにXPを加算できませんでした。',
   'vc.toastOpenCard': '復習カードを開いています：「{word}」🚀',
   'vc.loading': '読み込み中、お待ちください...',
 

@@ -1260,6 +1260,46 @@ body.user-guest .lang-dropdown {
   border-color: rgba(255, 255, 255, 0.3);
 }
 
+.btn-mic:disabled,
+.btn-mic.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  filter: grayscale(0.6);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none !important;
+}
+
+/* User Pending Voice Bubble Indicator */
+.msg-pending-voice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.95rem;
+}
+
+.voice-pulse-icon {
+  display: inline-block;
+  font-size: 1.05rem;
+  color: #38bdf8;
+  animation: voicePulse 0.85s infinite alternate ease-in-out;
+}
+
+@keyframes voicePulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+    color: #38bdf8;
+  }
+  100% {
+    transform: scale(1.18);
+    opacity: 1;
+    color: #7dd3fc;
+  }
+}
+
 .btn-mic.recording {
   background: #dc2626;
   border-color: #ef4444;

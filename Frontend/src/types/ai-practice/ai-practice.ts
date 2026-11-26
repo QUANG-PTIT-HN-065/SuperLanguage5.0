@@ -37,6 +37,7 @@ interface ChatMessage {
   tip?: string;
   feedback?: GrammarFeedback | null;
   timestamp: string;
+  isPendingVoice?: boolean;
 }
 
 interface GrammarFeedback {
@@ -455,7 +456,10 @@ class AIPracticeManager {
     this.micBtnEl.addEventListener('pointerdown', (event) => {
       // Chế độ Phát Âm & Chính tả dùng mic theo kiểu bấm một lần để bật, bấm lần nữa để gửi.
       if (this.currentMode === 'pronounce') return;
-      if (event.button !== 0 || !event.isPrimary || this.isRecording || this.isPending) return;
+      if (event.button !== 0 || !event.isPrimary || this.isRecording || this.isPending) {
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
       this.micBtnEl.setPointerCapture(event.pointerId);
       this.micPointerId = event.pointerId;
@@ -474,7 +478,12 @@ class AIPracticeManager {
       if (this.micHeld || this.mediaRecorder) this.cancelMicHold();
     });
     this.micBtnEl.addEventListener('contextmenu', (event) => event.preventDefault());
-    this.micBtnEl.addEventListener('click', () => {
+    this.micBtnEl.addEventListener('click', (event) => {
+      if (this.isPending || this.isRecording) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
       if (this.currentMode === 'pronounce') this.toggleRecordSession();
     });
     this.micBtnEl.addEventListener('keydown', (event) => {
@@ -482,11 +491,11 @@ class AIPracticeManager {
       if (event.code !== 'Space' && event.code !== 'Enter') return;
       event.preventDefault();
       if (event.repeat) return;
+      if (this.isPending || this.isRecording) return;
       if (this.currentMode === 'pronounce') {
         this.toggleRecordSession();
         return;
       }
-      if (this.isRecording || this.isPending) return;
       this.micKey = event.code;
       this.micReleasePending = false;
       void this.startRecordSession();
@@ -864,10 +873,26 @@ class AIPracticeManager {
       }
       const transcript = this.micTranscript.trim();
       this.speechRecognizer = null;
-      this.stopSpeechRecognition();
-      this.chatInputEl.value = [this.micDraft, transcript].filter(Boolean).join(' ');
-      if (transcript) void this.handleSendMessage();
-      else this.showToast(t('ai.toastNothingHeard'));
+      this.isRecording = false;
+      this.micHeld = false;
+      this.micPointerId = null;
+      this.micKey = null;
+      this.micReleasePending = false;
+      this.micBtnEl.classList.remove('recording');
+      this.micBtnEl.setAttribute('aria-pressed', 'false');
+      this.waveVisualizerEl.style.display = 'none';
+
+      if (transcript) {
+        this.isPending = true;
+        this.updateInputControls();
+        this.chatInputEl.value = [this.micDraft, transcript].filter(Boolean).join(' ');
+        void this.handleSendMessage();
+      } else {
+        this.isPending = false;
+        this.updateInputControls();
+        this.setEngine('ai.engineIdle');
+        this.showToast(t('ai.toastNothingHeard'));
+      }
     };
     try {
       recognizer.start();
@@ -880,6 +905,8 @@ class AIPracticeManager {
   private releaseSpeechRecognition(): void {
     if (!this.isRecording || !this.micHeld) return;
     this.micHeld = false;
+    this.isPending = true;
+    this.updateInputControls();
     this.micBtnEl.setAttribute('aria-pressed', 'false');
     this.setEngine('ai.engineFinishing');
     this.speechRecognizer?.stop();
@@ -923,6 +950,8 @@ class AIPracticeManager {
     }
     // Chưa kịp mở bản ghi (đang chờ duyệt quyền micro): dừng ngay khi nó mở.
     this.micReleasePending = true;
+    this.isPending = true;
+    this.updateInputControls();
     this.setEngine('ai.engineFinishing');
   }
 
@@ -1000,6 +1029,8 @@ class AIPracticeManager {
   private stopRecordSession(): void {
     const recorder = this.mediaRecorder;
     if (!recorder) return;
+    this.isPending = true;
+    this.updateInputControls();
     this.setEngine('ai.engineFinishing');
     try {
       recorder.stop();
@@ -1018,6 +1049,10 @@ class AIPracticeManager {
     const tooShort = Date.now() - this.recordStartedAt < 700 || blob.size < 1500;
     this.stopSpeechRecognition();
     if (tooShort) {
+      this.isPending = false;
+      this.updateInputControls();
+      this.stageStatus = 'ready';
+      this.updateStageStatus();
       this.showToast(t('ai.toastNothingHeard'));
       return;
     }
@@ -1029,7 +1064,18 @@ class AIPracticeManager {
   private async transcribeSpokenMessage(audio: Blob): Promise<void> {
     this.isPending = true;
     this.updateInputControls();
-    this.setEngine('ai.engineFinishing');
+    this.setEngine('ai.voiceTranscribing');
+
+    // === Hiện bóng chat user ngay lập tức với trạng thái "đang nhận diện" ===
+    const pendingId = 'user_voice_' + Date.now();
+    this.renderMessage({
+      id: pendingId,
+      sender: 'user',
+      text: t('ai.voiceTranscribing'),
+      isPendingVoice: true,
+      timestamp: this.getFormattedTime(),
+    });
+
     let transcript = '';
     let failure = '';
     try {
@@ -1037,18 +1083,86 @@ class AIPracticeManager {
       transcript = await transcribeVoiceMessage(this.conversationId as string, audio);
     } catch (error) {
       failure = error instanceof Error ? error.message : t('ai.errConnect');
-    } finally {
+    }
+
+    if (failure) {
+      // Xóa bóng chat pending, mở khóa mic
+      document.getElementById(pendingId)?.remove();
       this.isPending = false;
       this.updateInputControls();
-    }
-    if (failure) {
       this.setEngineRaw(failure);
       this.showToast(failure);
       return;
     }
-    this.chatInputEl.value = [this.micDraft, transcript].filter(Boolean).join(' ');
-    this.chatInputEl.style.height = Math.min(this.chatInputEl.scrollHeight, 140) + 'px';
-    void this.handleSendMessage();
+
+    const fullText = [this.micDraft, transcript].filter(Boolean).join(' ').trim();
+    if (!fullText) {
+      document.getElementById(pendingId)?.remove();
+      this.isPending = false;
+      this.updateInputControls();
+      this.setEngine('ai.engineIdle');
+      this.showToast(t('ai.toastNothingHeard'));
+      return;
+    }
+
+    // === Cập nhật bóng chat pending thành nội dung thực ===
+    const pendingRow = document.getElementById(pendingId);
+    if (pendingRow) {
+      const textEl = pendingRow.querySelector('.msg-text');
+      if (textEl) textEl.textContent = fullText;
+      const pulseIcon = pendingRow.querySelector('.voice-pulse-icon');
+      pulseIcon?.remove();
+      pendingRow.classList.remove('is-pending-voice');
+    }
+
+    this.chatInputEl.value = '';
+    this.chatInputEl.style.height = 'auto';
+
+    // === Tiếp tục gửi tin nhắn tới AI (không qua handleSendMessage để tránh guard) ===
+    this.showTypingIndicator();
+    this.setEngine('ai.engineWaiting');
+    try {
+      await this.ensureConversation(fullText);
+      const response = await slanguageApi<{
+        ai_response: string;
+        ai_feedback?: string | null;
+      }>(
+        '/api/v1/chat-ai/send-message',
+        {
+          method: 'POST',
+          body: {
+            conversation_id: this.conversationId,
+            user_message: fullText,
+          },
+        },
+      );
+      const reply = response.data?.ai_response;
+      if (typeof reply !== 'string' || !reply.trim()) throw new Error(t('ai.errNoReply'));
+      this.removeTypingIndicator();
+      const { text: mainText, translation } = this.splitTranslation(this.stripFeedbackLeak(reply));
+      this.renderMessage({
+        id: 'bot_' + Date.now(),
+        sender: 'bot',
+        text: mainText,
+        translation,
+        timestamp: this.getFormattedTime()
+      }, true);
+      void this.refreshQuota();
+      this.setEngine('ai.engineDone');
+    } catch (error) {
+      document.getElementById(pendingId)?.remove();
+      this.chatInputEl.value = fullText;
+      this.stopReveal();
+      this.stopCharacterTalking();
+      const message = error instanceof Error ? error.message : t('ai.errConnect');
+      this.setEngineRaw(message);
+      this.showToast(message);
+      void this.refreshQuota();
+    } finally {
+      this.removeTypingIndicator();
+      this.isPending = false;
+      this.updateInputControls();
+    }
   }
 
   /** Hủy bản ghi đang chạy mà không gửi lên backend. */
@@ -1077,18 +1191,34 @@ class AIPracticeManager {
     if (this.isPending) return;
     this.isPending = true;
     this.updateInputControls();
+
+    // === Hiện bóng chat user ngay lập tức ===
+    const pendingId = 'user_pron_' + Date.now();
+    this.renderMessage({
+      id: pendingId,
+      sender: 'user',
+      text: t('ai.voiceAnalyzing'),
+      isPendingVoice: true,
+      timestamp: this.getFormattedTime(),
+    });
+
     this.showTypingIndicator();
     this.setEngine('ai.engineWaiting');
     try {
       await this.ensureConversation(t('ai.modeSpeak'));
       const result = await submitPronunciationTurn(this.conversationId as string, audio);
       this.removeTypingIndicator();
-      this.renderMessage({
-        id: 'user_' + Date.now(),
-        sender: 'user',
-        text: result.transcript,
-        timestamp: this.getFormattedTime()
-      });
+
+      // Cập nhật bóng chat pending thành nội dung thực
+      const pendingRow = document.getElementById(pendingId);
+      if (pendingRow) {
+        const textEl = pendingRow.querySelector('.msg-text');
+        if (textEl) textEl.textContent = result.transcript;
+        const pulseIcon = pendingRow.querySelector('.voice-pulse-icon');
+        pulseIcon?.remove();
+        pendingRow.classList.remove('is-pending-voice');
+      }
+
       this.renderMessage({
         id: 'bot_' + Date.now(),
         sender: 'bot',
@@ -1099,6 +1229,7 @@ class AIPracticeManager {
       void this.refreshQuota();
       this.setEngine('ai.engineDone');
     } catch (error) {
+      document.getElementById(pendingId)?.remove();
       const message = error instanceof Error ? error.message : t('ai.errConnect');
       this.setEngineRaw(message);
       this.showToast(message);
@@ -1343,6 +1474,7 @@ class AIPracticeManager {
     this.chatInputEl.disabled = busy || speakOnly;
     this.sendBtnEl.disabled = busy || speakOnly;
     this.micBtnEl.disabled = this.isPending;
+    this.micBtnEl.classList.toggle('is-disabled', this.isPending);
     // Đang ghi âm thì vẫn được đổi tab (bản ghi sẽ bị bỏ), chỉ khoá khi đang chờ backend.
     document.querySelectorAll<HTMLButtonElement>('.ai-mode-btn, #btnClearChatHistory, #btnOpenHistory')
       .forEach(button => { button.disabled = this.isPending; });
@@ -1379,7 +1511,20 @@ class AIPracticeManager {
 
     const textEl = document.createElement('div');
     textEl.className = 'msg-text';
-    textEl.textContent = msg.text;
+
+    // Nếu là bóng chat pending giọng nói → hiện icon pulse + text nhạt
+    if (msg.isPendingVoice) {
+      row.classList.add('is-pending-voice');
+      const pulseIcon = document.createElement('i');
+      pulseIcon.className = 'fa-solid fa-microphone voice-pulse-icon';
+      const pendingSpan = document.createElement('span');
+      pendingSpan.className = 'msg-pending-voice';
+      pendingSpan.appendChild(pulseIcon);
+      pendingSpan.appendChild(document.createTextNode(' ' + msg.text));
+      textEl.appendChild(pendingSpan);
+    } else {
+      textEl.textContent = msg.text;
+    }
     bubble.appendChild(textEl);
 
     let extrasHtml = '';
@@ -1722,8 +1867,8 @@ class AIPracticeManager {
     const fallback = this.adsupDefaults[this.currentLang];
     this.voiceToneSelectEl.value =
       saved && list.some(v => v.id === saved) ? saved
-      : fallback && list.some(v => v.id === fallback) ? fallback
-      : list[0].id;
+        : fallback && list.some(v => v.id === fallback) ? fallback
+          : list[0].id;
   }
 
   private selectedVoiceId(): string | null {
@@ -1913,4 +2058,4 @@ class AIPracticeManager {
 document.addEventListener('DOMContentLoaded', () => {
   window.aiPracticeApp = new AIPracticeManager();
 });
-export {};
+export { };

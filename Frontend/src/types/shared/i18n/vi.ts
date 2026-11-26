@@ -259,4 +259,14 @@ export const vi: Record<string, string> = {
   'cp.printedAt': 'Ngày in:',
   'cp.printBtn': 'In / Lưu PDF',
   'cp.platform': 'Slanguage Learning Platform',
+
+  'hh.title': 'Hết sinh lực!',
+  'hh.body': 'Bạn đã hết tim và sinh lực sẽ mở khóa sau {time}. Dùng Hồi Phục Máu Siêu Tốc để hồi đầy máu và học tiếp ngay.',
+  'hh.stock': 'Trong kho có {n} bình máu.',
+  'hh.stockEmpty': 'Trong kho không còn bình máu — mua thêm trong Cửa hàng để dùng ngay.',
+  'hh.btnUse': 'Dùng bình máu',
+  'hh.btnShop': 'Mua trong Cửa hàng',
+  'hh.btnLater': 'Để sau',
+  'hh.usedToast': 'Đã dùng Hồi Phục Máu Siêu Tốc — máu hiện tại {hearts}, học tiếp nào!',
+  'hh.useFailed': 'Không thể dùng bình máu lúc này.',
 };

@@ -1,7 +1,8 @@
 /**
  * Slanguage - Smart Vocabulary Practice TypeScript Module
  * Dữ liệu từ vựng thật: các từ thuộc chủ đề đã vượt qua quiz ở Học tập,
- * mức ghi nhớ (user_words) và XP đồng bộ trực tiếp với backend.
+ * mức ghi nhớ (user_words) đồng bộ trực tiếp với backend.
+ * Luyện tập từ vựng KHÔNG cộng XP — chỉ tính điểm buổi luyện.
  */
 
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
@@ -91,7 +92,7 @@ class SlanguageVocabulary {
   private dataState: 'loading' | 'ready' | 'empty' | 'error' = 'loading';
   private loadErrorRaw = '';
   private lastFeedback: 'correct' | 'wrong' | 'timeout' | null = null;
-  private lastFeedbackXp = 0;
+  private lastFeedbackPoints = 0;
 
   constructor() {
     this.loadInitialState();
@@ -322,7 +323,7 @@ class SlanguageVocabulary {
     const feedbackMsg = document.getElementById('quizFeedbackMsg');
     if (feedbackBanner?.classList.contains('show') && feedbackMsg && this.currentQuizItem && this.lastFeedback) {
       if (this.lastFeedback === 'correct') {
-        feedbackMsg.textContent = t('vc.quizCorrect', { xp: this.lastFeedbackXp });
+        feedbackMsg.textContent = t('vc.quizCorrect', { xp: this.lastFeedbackPoints, unit: t('vc.quizPointUnit') });
       } else if (this.lastFeedback === 'wrong') {
         feedbackMsg.textContent = t('vc.quizWrong', { answer: this.currentQuizItem.meaning });
       } else {
@@ -702,6 +703,8 @@ class SlanguageVocabulary {
     const optionsGrid = document.getElementById('quizOptionsGrid');
     const feedbackBanner = document.getElementById('quizFeedbackBanner');
     if (feedbackBanner) feedbackBanner.classList.remove('show', 'wrong-border');
+    const scoreCount = document.getElementById('quizScoreCount');
+    if (scoreCount) scoreCount.textContent = `${this.quizScore} ${t('vc.quizPointUnit')}`;
     this.lastFeedback = null;
 
     if (deck.length < 2) {
@@ -793,21 +796,22 @@ class SlanguageVocabulary {
     if (isCorrect) {
       selectedBtn.classList.add('correct');
       this.quizStreak++;
-      const bonusXP = 15 + (this.quizStreak * 5);
-      this.quizScore += bonusXP;
-      void this.persistReview(this.currentQuizItem, 'Tốt', bonusXP);
+      // Luyện tập từ vựng chỉ tính điểm buổi luyện, KHÔNG cộng XP vào tài khoản.
+      const bonusPoints = 15 + (this.quizStreak * 5);
+      this.quizScore += bonusPoints;
+      void this.persistReview(this.currentQuizItem, 'Tốt');
       this.lastFeedback = 'correct';
-      this.lastFeedbackXp = bonusXP;
+      this.lastFeedbackPoints = bonusPoints;
 
       if (feedbackBanner && feedbackMsg) {
         feedbackBanner.classList.add('show');
         feedbackBanner.classList.remove('wrong-border');
-        feedbackMsg.textContent = t('vc.quizCorrect', { xp: bonusXP });
+        feedbackMsg.textContent = t('vc.quizCorrect', { xp: bonusPoints, unit: t('vc.quizPointUnit') });
       }
     } else {
       selectedBtn.classList.add('wrong');
       this.quizStreak = 0;
-      void this.persistReview(this.currentQuizItem, 'Khó', 0);
+      void this.persistReview(this.currentQuizItem, 'Khó');
       this.lastFeedback = 'wrong';
 
       allButtons.forEach(b => {
@@ -823,7 +827,7 @@ class SlanguageVocabulary {
     }
 
     if (streakCount) streakCount.textContent = this.quizStreak.toString();
-    if (scoreCount) scoreCount.textContent = `${this.quizScore} XP`;
+    if (scoreCount) scoreCount.textContent = `${this.quizScore} ${t('vc.quizPointUnit')}`;
   }
 
   private handleQuizTimeout(): void {
@@ -832,7 +836,7 @@ class SlanguageVocabulary {
     if (streakCount) streakCount.textContent = '0';
 
     if (this.currentQuizItem) {
-      void this.persistReview(this.currentQuizItem, 'Khó', 0);
+      void this.persistReview(this.currentQuizItem, 'Khó');
     }
 
     const feedbackBanner = document.getElementById('quizFeedbackBanner');
@@ -844,7 +848,8 @@ class SlanguageVocabulary {
     }
   }
 
-  private async persistReview(item: VocabItem, rating: 'Khó' | 'Tốt', xp: number): Promise<void> {
+  /** Ghi nhận mức ghi nhớ của từ (SRS). Luyện tập từ vựng không cộng XP. */
+  private async persistReview(item: VocabItem, rating: 'Khó' | 'Tốt'): Promise<void> {
     // Khách: không lưu tiến độ, chỉ làm mẫu trên giao diện
     if (!isLearnerAuthenticated()) return;
     try {
@@ -860,19 +865,6 @@ class SlanguageVocabulary {
       if (this.currentDeck.includes(item)) this.renderCurrentCard();
     } catch {
       this.showToast(t('vc.toastSaveFail'));
-      return;
-    }
-
-    if (xp > 0) {
-      try {
-        await slanguageApi('/api/v1/minigame/progress', {
-          method: 'POST',
-          body: { xp, word_ids: [] },
-        });
-        this.addXP(xp);
-      } catch {
-        this.showToast(t('vc.toastXpFail'));
-      }
     }
   }
 
@@ -1026,15 +1018,6 @@ class SlanguageVocabulary {
         ? this.currentXP.toLocaleString(localeTag)
         : label;
     }
-  }
-
-  private addXP(points: number): void {
-    this.currentXP += points;
-    localStorage.setItem('slanguage_user_xp', this.currentXP.toString());
-    this.updateXPDisplays();
-    const navXPVal = document.getElementById('navXPVal') || document.getElementById('headerXPVal');
-    navXPVal?.parentElement?.classList.add('bounce');
-    setTimeout(() => navXPVal?.parentElement?.classList.remove('bounce'), 400);
   }
 
   private showToast(message: string): void {

@@ -2,31 +2,8 @@ import { slanguageApi } from "./api-client";
 import { fillHearts, formatHearts } from "./hearts";
 import { showToast } from "../ui/toast";
 
-export interface ActiveBoost {
-  item_id: string;
-  title: string;
-  multiplier: number;
-  already_active?: boolean;
-}
-
-/** Vào bài học: server tự trừ kho và kích hoạt boost mạnh nhất (thắng/thua đều tính đã dùng). */
-export async function activateBestBoost(): Promise<ActiveBoost | null> {
-  try {
-    const response = await slanguageApi<ActiveBoost | null>("/api/v1/shop/boost/activate", {
-      method: "POST",
-      body: { request_id: crypto.randomUUID() },
-    });
-    const boost = response.data;
-    if (boost && !boost.already_active) {
-      showToast({ type: "success", message: `Đã dùng ${boost.title} — hiệu ứng áp dụng cho bài học này.` });
-    }
-    return boost ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/** Hết máu: tự dùng Hồi Phục Máu Siêu Tốc từ kho để hồi +5 máu, xóa khóa 24 giờ. */
+/** Hết máu: dùng Hồi Phục Máu Siêu Tốc từ kho để hồi đầy, xóa khóa 24 giờ.
+ * Chỉ gọi khi người dùng chủ động chọn dùng (nút game-over, hộp thoại heal-offer, Shop). */
 export async function tryHealHearts(): Promise<boolean> {
   try {
     await slanguageApi("/api/v1/shop/items/use", {

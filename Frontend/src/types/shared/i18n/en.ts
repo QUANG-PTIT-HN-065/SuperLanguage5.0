@@ -259,4 +259,14 @@ export const en: Record<string, string> = {
   'cp.printedAt': 'Printed on:',
   'cp.printBtn': 'Print / Save PDF',
   'cp.platform': 'Slanguage Learning Platform',
+
+  'hh.title': 'Out of hearts!',
+  'hh.body': 'You are out of hearts and they unlock in {time}. Use a Super Speed Heal Potion to refill now and keep learning.',
+  'hh.stock': 'You have {n} heart potion(s) in your inventory.',
+  'hh.stockEmpty': 'No heart potion left in your inventory — buy one in the Shop to continue right away.',
+  'hh.btnUse': 'Use heart potion',
+  'hh.btnShop': 'Go to Shop',
+  'hh.btnLater': 'Later',
+  'hh.usedToast': 'Super Speed Heal Potion used — hearts now {hearts}. Keep learning!',
+  'hh.useFailed': 'Could not use the heart potion right now.',
 };

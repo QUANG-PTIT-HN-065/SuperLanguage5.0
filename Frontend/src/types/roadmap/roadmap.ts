@@ -24,7 +24,7 @@ import {
   readHearts,
   spendHearts,
 } from "../shared/hearts";
-import { activateBestBoost, tryHealHearts } from "../shared/shop-items";
+import { offerHealPotion } from "../shared/heal-offer";
 import { playLoadingRive, stopLoadingRive } from "../shared/loading-rive";
 import { launchConfetti } from "../ui/confetti";
 import { applyI18n, getLocale, setLocale, t, LOCALE_EVENT, type UiLocale } from "../shared/i18n";
@@ -1017,7 +1017,7 @@ class SlanguageDungeonTree {
     el.addEventListener('click', () => {
       void (async () => {
         if (!node.isHub && isHeartsLocked()) {
-          const healed = await tryHealHearts();
+          const healed = await offerHealPotion();
           if (!healed) {
             this.showToast(t('rm.heartsLockedToast', { time: formatHeartLock(heartLockRemainingMs()) }));
             return;
@@ -1131,7 +1131,6 @@ class SlanguageDungeonTree {
       this.currentQuestionIdx = 0;
       await this.ensureExtendedPool();
       this.currentQuestionsList = this.generateTrials(node);
-      if (node.status !== 'locked') void activateBestBoost();
       this.renderCurrentQuestion();
     }
 
@@ -2019,7 +2018,7 @@ class SlanguageDungeonTree {
         this.reactToVerdict(false, penalty);
 
         if (this.currentHearts === 0) {
-          const healed = await tryHealHearts();
+          const healed = await offerHealPotion();
           if (healed) {
             this.currentHearts = readHearts();
             this.updateStatsDisplays();
@@ -2365,7 +2364,6 @@ class SlanguageDungeonTree {
       }
       this.bossLoading = false;
       this.currentQuestionsList = this.bossQuestions.map((question) => this.bossToTrial(question));
-      void activateBestBoost();
       this.renderCurrentQuestion();
     } catch (error) {
       this.bossLoading = false;

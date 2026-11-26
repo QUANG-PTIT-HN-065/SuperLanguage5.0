@@ -259,4 +259,14 @@ export const ja: Record<string, string> = {
   'cp.printedAt': '印刷日:',
   'cp.printBtn': '印刷 / PDF保存',
   'cp.platform': 'Slanguage Learning Platform',
+
+  'hh.title': 'ライフが尽きました！',
+  'hh.body': 'ハートが0になり、{time}後に回復します。回復ポーションを使えば、今すぐライフが満タンになり学習を再開できます。',
+  'hh.stock': '在庫に回復ポーションが{n}個あります。',
+  'hh.stockEmpty': '在庫に回復ポーションがありません。ショップで購入してすぐ続けられます。',
+  'hh.btnUse': 'ポーションを使う',
+  'hh.btnShop': 'ショップへ',
+  'hh.btnLater': 'あとで',
+  'hh.usedToast': '回復ポーションを使用しました — ライフは{hearts}。学習を続けましょう！',
+  'hh.useFailed': 'ポーションを使用できませんでした。',
 };

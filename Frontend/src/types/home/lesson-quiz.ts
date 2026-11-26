@@ -1,7 +1,7 @@
 import { isLearnerAuthenticated, slanguageApi } from "../shared/api-client";
 import { formatHearts, readHearts, spendHearts } from "../shared/hearts";
 import { t } from "../shared/i18n";
-import { activateBestBoost, tryHealHearts } from "../shared/shop-items";
+import { offerHealPotion } from "../shared/heal-offer";
 import type {
   LessonContent,
   LessonMatchingPair,
@@ -549,10 +549,9 @@ export async function openLesson(lessonId: number, pushHistory: boolean, skipRea
 
   try {
     lesson = await loadLessonContent(lessonId);
-    void activateBestBoost();
     lessonHearts = readHearts();
     if (lessonHearts === 0) {
-      const healed = await tryHealHearts();
+      const healed = await offerHealPotion();
       if (!healed) {
         setNotice(
           "Hết máu — sinh lực đang khóa hồi 24 giờ. Mua Hồi Phục Máu Siêu Tốc trong Cửa hàng để học tiếp ngay.",
@@ -784,7 +783,7 @@ async function checkAnswer(): Promise<void> {
       heartsLost,
     );
     if (heartsLost && lessonHearts === 0) {
-      const healed = await tryHealHearts();
+      const healed = await offerHealPotion();
       if (healed) {
         lessonHearts = readHearts();
         updateHeartsDisplay();
