@@ -118,6 +118,10 @@ _MAX_ERRORS_PER_MODEL = 3
 _MAX_KEYS_PER_MODEL_ATTEMPT = 4
 _LLM_TIMEOUT_SECONDS = 20.0
 _LLM_TIMEOUT_MS = 20_000
+# Số lần thử lại trên cùng một key khi provider trả 429/503 trước khi đổi key khác.
+_MAX_CHAT_RETRIES = 1
+# Số key cùng trả 503 liên tiếp trên một model thì bỏ model đó, chuyển model kế tiếp.
+_MAX_SERVER_ERROR_KEYS_PER_MODEL = 2
 
 _COOLDOWN_LOCK = threading.Lock()
 _KEY_COOLDOWN_UNTIL: dict[tuple[str, str, str], float] = {}
@@ -1155,13 +1159,19 @@ def _normalize_boss_quiz(full_text: str, count: int) -> list[dict[str, Any]]:
     return questions
 
 
+def _sleep_with_backoff(attempt: int) -> None:
+    """Chờ ngắn trước khi thử lại cùng một key (tối đa 2 giây)."""
+    time.sleep(min(0.5 * (2**attempt), 2.0))
+
+
 def _complete_with_audio(
     system_instruction: str,
     prompt: str,
-    audio_wav: bytes,
+    audio_bytes: bytes,
     label: str,
+    mime_type: str = "audio/wav",
 ) -> str:
-    """Cho Gemini nghe trực tiếp file wav; thử model thực sự, retry khi 429/503,
+    """Cho Gemini nghe trực tiếp file ghi âm; thử model thực sự, retry khi 429/503,
     bỏ sớm khi một model liên tục trả 503 trên nhiều key."""
     gemini_keys = [
         key.strip()
@@ -1175,13 +1185,17 @@ def _complete_with_audio(
         )
 
     failures: Counter[str] = Counter()
+    audio_mime = (mime_type or "audio/wav").split(";", maxsplit=1)[0].strip().lower()
     for model in _chat_models():
         server_error_key_count = 0
         for key_index, key in enumerate(gemini_keys, start=1):
             last_exc: Exception | None = None
             for attempt in range(_MAX_CHAT_RETRIES + 1): # type: ignore
                 try:
-                    client = genai.Client(api_key=key)
+                    client = genai.Client(
+                        api_key=key,
+                        http_options=types.HttpOptions(timeout=_LLM_TIMEOUT_MS),
+                    )
                     response = client.models.generate_content(
                         model=model,
                         contents=[
@@ -1190,8 +1204,8 @@ def _complete_with_audio(
                                 parts=[
                                     types.Part.from_text(text=prompt),
                                     types.Part.from_bytes(
-                                        data=audio_wav,
-                                        mime_type="audio/wav",
+                                        data=audio_bytes,
+                                        mime_type=audio_mime,
                                     ),
                                 ],
                             ),
@@ -1204,10 +1218,8 @@ def _complete_with_audio(
                     if response and response.text:
                         return response.text.strip()
                     _log_empty_provider_response(f"{label}[{model}]", key_index, failures)
-                    last_exc = None
                     break
                 except Exception as exc:
-                    last_exc = exc
                     category, _ = _failure_category(exc)
                     if category in ("rate_limit_or_quota", "provider_server_error") and attempt < _MAX_CHAT_RETRIES: # type: ignore
                         _sleep_with_backoff(attempt) # type: ignore
@@ -1240,12 +1252,13 @@ def _complete_with_audio(
 class AIService:
     @staticmethod
     async def evaluate_reading_practice_audio(
-        audio_wav: bytes,
+        audio_bytes: bytes,
         transcript: str,
         question: str,
         sample_answer: str,
         language: str,
         current_level: str = "A1",
+        mime_type: str = "audio/wav",
     ) -> str:
         system_instruction = _reading_pronunciation_instruction(
             language,
@@ -1259,15 +1272,23 @@ class AIService:
             },
             ensure_ascii=False,
         )
-        return _complete_with_audio(system_instruction, prompt, audio_wav, "Gemini pronunciation")
+        return await run_in_threadpool(
+            _complete_with_audio,
+            system_instruction,
+            prompt,
+            audio_bytes,
+            "Gemini pronunciation",
+            mime_type,
+        )
 
     @staticmethod
     async def evaluate_pronunciation_turn(
-        audio_wav: bytes,
+        audio_bytes: bytes,
         transcript: str,
         language: str,
         current_level: str = "A1",
         history: list[dict[str, str]] | None = None,
+        mime_type: str = "audio/wav",
     ) -> str:
         system_instruction = _pronunciation_turn_instruction(
             language,
@@ -1275,7 +1296,14 @@ class AIService:
             history or [],
         )
         prompt = json.dumps({"transcript": transcript}, ensure_ascii=False)
-        return _complete_with_audio(system_instruction, prompt, audio_wav, "Gemini speaking turn")
+        return await run_in_threadpool(
+            _complete_with_audio,
+            system_instruction,
+            prompt,
+            audio_bytes,
+            "Gemini speaking turn",
+            mime_type,
+        )
 
     @staticmethod
     def _prepare_chat_turn(
