@@ -107,6 +107,7 @@ class AIPracticeManager {
   private micSessionTranscript = '';
   private mediaStream: MediaStream | null = null;
   private mediaRecorder: MediaRecorder | null = null;
+  private recordRequestId = 0;
   private recordChunks: Blob[] = [];
   private recordStartedAt = 0;
   // Người dùng tự lướt lên thì không được kéo khung chat nhảy xuống nữa.
@@ -967,9 +968,26 @@ class AIPracticeManager {
 
   /** Hủy lượt nói đang giữ mic mà không gửi lên backend. */
   private cancelMicHold(): void {
+    const shouldClearPending = this.isPending && (
+      this.isRecording
+      || this.mediaRecorder !== null
+      || this.micReleasePending
+      || this.micPointerId !== null
+      || this.micKey !== null
+    );
+    this.recordRequestId++;
     this.micReleasePending = false;
+    this.micPointerId = null;
+    this.micKey = null;
     this.abandonRecordSession();
     this.cancelSpeechRecognition();
+    if (shouldClearPending) {
+      this.isPending = false;
+      this.stageStatus = 'ready';
+      this.updateStageStatus();
+      this.setEngine('ai.engineIdle');
+      this.updateInputControls();
+    }
   }
 
   /* --------- Ghi âm trực tiếp (Đàm thoại và Phát Âm & Chính tả) --------- */
@@ -985,12 +1003,14 @@ class AIPracticeManager {
       this.startSpeechRecognition();
       return;
     }
+    const requestId = ++this.recordRequestId;
     this.activeAudio?.pause();
     this.previewAudio?.pause();
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     this.stopCharacterTalking();
+    let stream: MediaStream;
     try {
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       this.mediaStream = null;
       // Người dùng đã thả mic trong lúc chờ quyền: mở khóa lại để không kẹt nút mic.
@@ -1002,10 +1022,15 @@ class AIPracticeManager {
       this.showToast(t('ai.toastMicDenied'));
       return;
     }
-    if (this.isRecording || this.mediaRecorder) {
-      this.releaseStream();
+    if (requestId !== this.recordRequestId) {
+      stream.getTracks().forEach((track) => track.stop());
       return;
     }
+    if (this.isRecording || this.mediaRecorder) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    this.mediaStream = stream;
     this.micDraft = this.chatInputEl.value;
     const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
       .find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? '';

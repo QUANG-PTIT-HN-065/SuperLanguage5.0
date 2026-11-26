@@ -32,7 +32,7 @@ class VoiceChatQuotaTests(unittest.IsolatedAsyncioTestCase):
                 "app.api.endpoints.chat_ai.consume_daily_ai_call",
             ) as consume_quota,
             patch(
-                "app.api.endpoints.chat_ai.transcribe_audio",
+                "app.api.endpoints.chat_ai.transcribe_audio_cloud",
                 return_value="I enjoy learning languages.",
             ),
             patch(
@@ -48,7 +48,7 @@ class VoiceChatQuotaTests(unittest.IsolatedAsyncioTestCase):
                 "app.api.endpoints.chat_ai.AIService.generate_chat_response",
                 new_callable=AsyncMock,
                 return_value=("That is wonderful!", ""),
-            ),
+            ) as generate_response,
         ):
             client.table.side_effect = [
                 conversation_table,
@@ -65,6 +65,8 @@ class VoiceChatQuotaTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.data.user_message, "I enjoy learning languages.")
         self.assertEqual(response.data.ai_response, "That is wonderful!")
         consume_quota.assert_called_once_with(profile)
+        generate_response.assert_awaited_once()
+        self.assertTrue(generate_response.await_args.kwargs["prefer_local"])
 
 
 if __name__ == "__main__":

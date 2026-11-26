@@ -19,7 +19,11 @@ class ChatRAGEndpointTests(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         self.plan = self.enterContext(patch(
             "app.services.ai_service._plan_chat_turn",
-            side_effect=lambda message, language, history: ("knowledge", message, "Vietnamese"),
+            side_effect=lambda message, language, history, prefer_local=False: (
+                "knowledge",
+                message,
+                "Vietnamese",
+            ),
         ))
         self.profile = {"id": "learner-id", "current_level": "A2"}
         self.conversation_id = uuid4()
@@ -140,6 +144,8 @@ class ChatRAGEndpointTests(unittest.IsolatedAsyncioTestCase):
                         {"role": "user", "content": "Tôi muốn học cách xưng hô."},
                         {"role": "assistant", "content": "Bạn muốn học cách xưng hô nào?"},
                     ],
+                    grammar_mode=False,
+                    prefer_local=True,
                 )
         self.assertEqual(self.consume_quota.call_count, 6)
         self.conversation_table.select.return_value.eq.return_value.eq.assert_called_with(
