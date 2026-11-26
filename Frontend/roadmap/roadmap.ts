@@ -1822,6 +1822,15 @@ class SlanguageDungeonTree {
     const langDropdown = document.getElementById('langDropdown');
     const userDropdownBtn = document.getElementById('userDropdownBtn');
     const userDropdown = document.getElementById('userDropdown');
+    const learnNavBtn = document.getElementById('learnNavDropdownBtn');
+    const learnNavItem = learnNavBtn ? learnNavBtn.closest('.nav-dropdown-item') : null;
+
+    if (learnNavBtn && learnNavItem) {
+      learnNavBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        learnNavItem.classList.toggle('open');
+      });
+    }
 
     if (langDropdownBtn && langDropdown) {
       langDropdownBtn.addEventListener('click', (e) => {
@@ -1856,6 +1865,9 @@ class SlanguageDungeonTree {
       if (userDropdown && !userDropdown.contains(target)) {
         userDropdown.classList.remove('active');
         userDropdown.classList.remove('open');
+      }
+      if (learnNavItem && !learnNavItem.contains(target)) {
+        learnNavItem.classList.remove('open');
       }
     });
 
@@ -1897,6 +1909,9 @@ class SlanguageDungeonTree {
     // Window resize -> Redraw winding SVG branches
     window.addEventListener('resize', () => {
       this.drawConnectingBranches();
+    });
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => this.drawConnectingBranches(), 100);
     });
 
     this.bindPageTransitions();
@@ -2066,7 +2081,11 @@ class SlanguageDungeonTree {
       // Stage Header Pill
       const stagePill = document.createElement('div');
       stagePill.className = 'dungeon-stage-pill';
-      stagePill.innerHTML = `<i class="fa-solid fa-dungeon"></i> TẦNG ${s}: ${stageData.hub ? stageData.hub.stageName : `CHỦ ĐỀ ${s}`}`;
+      const rawStageName = stageData.hub ? stageData.hub.stageName : `CHỦ ĐỀ ${s}`;
+      const prefixMatch = rawStageName.match(/^(MỐC\s*(?:CHỦ\s*ĐỀ\s*)?\d+\s*:\s*|MILESTONE\s*\d+\s*:\s*|CHỦ\s*ĐỀ\s*\d+\s*:\s*)/i);
+      const cleanTitle = prefixMatch ? rawStageName.substring(prefixMatch[0].length).trim() : rawStageName.trim();
+      const prefixText = `TẦNG ${s}: ${prefixMatch ? prefixMatch[0].trim() : ''}`;
+      stagePill.innerHTML = `<i class="fa-solid fa-dungeon"></i> <span class="stage-pill-prefix">${prefixText} </span><span class="stage-pill-title">${cleanTitle}</span>`;
       stageEl.appendChild(stagePill);
 
       // 1. Chamber Hub Node
@@ -2097,6 +2116,9 @@ class SlanguageDungeonTree {
       setTimeout(() => {
         this.drawConnectingBranches();
       }, 70);
+      setTimeout(() => {
+        this.drawConnectingBranches();
+      }, 300);
     });
   }
 
@@ -2313,6 +2335,11 @@ class SlanguageDungeonTree {
     else if (difficulty === 'hard') amp = 45;
     else if (difficulty === 'normal') amp = 25;
     else amp = 20;
+
+    // Scale amplitude smoothly based on screen width so wires on mobile/tablet keep the exact same graceful serpentine look as laptop view
+    const screenW = typeof window !== 'undefined' ? window.innerWidth : 1000;
+    const widthFactor = Math.min(1, Math.max(0.42, screenW / 900));
+    amp = amp * widthFactor;
 
     const cp1x = x0 + dx * 0.15 + amp * 0.8;
     const cp1y = y0 + dy * 0.25;

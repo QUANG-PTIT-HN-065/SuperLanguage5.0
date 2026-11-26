@@ -2077,10 +2077,6 @@ body.user-authenticated .guest-only {
   .footer-container {
     grid-template-columns: 1fr 1fr;
   }
-  .dungeon-branches-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
 }
 
 @media (max-width: 768px) {
@@ -2170,10 +2166,6 @@ body.user-authenticated .guest-only {
 @media (max-width: 992px) {
   .footer-container {
     grid-template-columns: 1fr 1fr;
-  }
-  .dungeon-branches-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
   }
   .tier-nodes-row {
     gap: 30px;
@@ -2325,13 +2317,6 @@ body.user-authenticated .guest-only {
     height: 52px;
     font-size: 1.2rem;
   }
-  .dungeon-branches-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
-    width: 100%;
-    max-width: 310px;
-    margin: 0 auto;
-  }
   .footer-container {
     grid-template-columns: 1fr;
     gap: 24px;
@@ -2378,10 +2363,6 @@ body.user-authenticated .guest-only {
   .dungeon-stage-pill {
     font-size: 0.82rem;
     padding: 6px 16px;
-  }
-  .dungeon-hub-card {
-    width: 100% !important;
-    max-width: 300px;
   }
   .node-modal-box {
     padding: 22px 16px !important;
@@ -3249,14 +3230,25 @@ body.user-authenticated .guest-only {
 }
 
 
-/* ================= BRAND LOGO PURE WHITE FIX (ALL SCREENS) ================= */
-.brand-name,
-.brand-name .brand-language {
+/* ================= BRAND LOGO SLANGUAGE (S: WHITE, LANGUAGE: RED CRIMSON & YELLOW TOPAZ GRADIENT) ================= */
+.brand-name {
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
-  background: none !important;
   font-weight: 800 !important;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+
+.brand-name .brand-language,
+.drawer-brand-name .brand-language,
+.brand-language {
+  background: linear-gradient(135deg, #FFB703 0%, #FF8800 45%, #DC143C 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  color: transparent !important;
+  font-weight: 800 !important;
+  display: inline-block !important;
+  text-shadow: none !important;
 }
 
 /* ================= DESKTOP BASE (>= 1286px: FULL NAVBAR) ================= */
@@ -3264,7 +3256,9 @@ body.user-authenticated .guest-only {
   display: none !important;
 }
 .mobile-side-drawer,
+.mobile-drawer,
 .mobile-drawer-backdrop,
+.drawer-backdrop,
 .mobile-bottom-nav {
   display: none !important;
 }
@@ -3373,9 +3367,11 @@ body.user-authenticated .guest-only {
     line-height: 1 !important;
   }
   .brand-language {
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    background: none !important;
+    background: linear-gradient(135deg, #FFB703 0%, #FF8800 45%, #DC143C 100%) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    color: transparent !important;
   }
 
   /* ẨN TOÀN BỘ HÀNG MENU NGANG THỨ 2 KHỎI HEADER KHI < 1286px */
@@ -4013,4 +4009,538 @@ body.user-authenticated .guest-only {
   .bottom-nav-item.active .bottom-nav-label {
     color: var(--color-topaz, #FFB703) !important;
   }
+}
+
+/* ================= RESPONSIVE CIRCULAR ROADMAP NODES & BRANCHES (TABLET & MOBILE) ================= */
+@media (max-width: 1024px) {
+  /* Keep stage flow centered and spacious */
+  .tree-nodes-flow {
+    gap: 70px;
+  }
+  .dungeon-stage-section {
+    gap: 20px;
+    width: 100%;
+  }
+
+  /* Stage Pill on Phone & Tablet: Hide 'mốc' and 'tầng' notes, show only clean topic title */
+  .dungeon-stage-pill {
+    font-size: 0.84rem !important;
+    padding: 6px 18px !important;
+    max-width: 92vw !important;
+    text-align: center !important;
+    justify-content: center !important;
+  }
+  .dungeon-stage-pill .stage-pill-prefix {
+    display: none !important;
+  }
+
+  /* 3 Branches arranged horizontally side-by-side like laptop layout */
+  .dungeon-branches-row {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    justify-items: center !important;
+    align-items: center !important;
+    gap: 28px !important;
+    width: 100% !important;
+    max-width: 480px !important;
+    margin: 0 auto !important;
+  }
+
+  /* All quiz branch nodes become circular containing only the icon */
+  .dungeon-node {
+    width: 76px !important;
+    height: 76px !important;
+    min-height: unset !important;
+    max-width: unset !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    aspect-ratio: 1 / 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+    margin: 0 auto !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6) !important;
+    transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease !important;
+  }
+
+  .dungeon-node:hover,
+  .dungeon-node:active {
+    transform: scale(1.1) !important;
+    z-index: 50 !important;
+  }
+
+  /* Hub card (thẻ đọc chuyên đề) becomes a prominent circular medallion */
+  .dungeon-hub-card {
+    width: 88px !important;
+    height: 88px !important;
+    min-height: unset !important;
+    max-width: unset !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    aspect-ratio: 1 / 1 !important;
+    margin: 0 auto 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+    border: 2.5px solid #38BDF8 !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65), 0 0 22px rgba(56, 189, 248, 0.45) !important;
+  }
+
+  .dungeon-hub-card:hover,
+  .dungeon-hub-card:active {
+    transform: scale(1.1) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75), 0 0 30px rgba(56, 189, 248, 0.75) !important;
+    z-index: 50 !important;
+  }
+
+  /* Inner circular container */
+  .dungeon-node-card-inner {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: relative !important;
+    padding: 0 !important;
+  }
+
+  /* Hide rectangular card labels, stakes, and hover tooltips */
+  .node-header-row .diff-chip,
+  .node-compact-stakes,
+  .node-hover-tooltip {
+    display: none !important;
+  }
+
+  .node-header-row {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Status badge on top-right of circular node */
+  .node-status-badge {
+    position: absolute !important;
+    top: -2px !important;
+    right: -2px !important;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.72rem !important;
+    border: 2px solid #0f172a !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+    z-index: 10 !important;
+    pointer-events: auto !important;
+  }
+
+  .node-status-badge.mastered {
+    background: #15803d !important;
+    color: #4ade80 !important;
+  }
+  .node-status-badge.current {
+    background: #a16207 !important;
+    color: #fde047 !important;
+  }
+  .node-status-badge.available {
+    background: #0284c7 !important;
+    color: #38bdf8 !important;
+  }
+  .node-status-badge.locked {
+    background: #334155 !important;
+    color: #94a3b8 !important;
+  }
+
+  /* Icon inside circle */
+  .node-icon-wrapper {
+    margin: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .node-icon-circle {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.85rem !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .dungeon-hub-card .node-icon-circle {
+    font-size: 2.15rem !important;
+  }
+
+  /* Themed Circular Borders and Colors */
+  .dungeon-node.diff-easy {
+    border: 2.5px solid #4ADE80 !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 16px rgba(74, 222, 128, 0.35) !important;
+  }
+  .dungeon-node.diff-easy .node-icon-circle {
+    color: #4ADE80 !important;
+  }
+
+  .dungeon-node.diff-normal {
+    border: 2.5px solid #FDE047 !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 16px rgba(253, 224, 71, 0.35) !important;
+  }
+  .dungeon-node.diff-normal .node-icon-circle {
+    color: #FDE047 !important;
+  }
+
+  .dungeon-node.diff-hard {
+    border: 2.5px solid #FB7185 !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 18px rgba(251, 113, 133, 0.4) !important;
+  }
+  .dungeon-node.diff-hard .node-icon-circle {
+    color: #FB7185 !important;
+  }
+
+  .dungeon-node.is-hub,
+  .dungeon-hub-card {
+    border: 2.5px solid #38BDF8 !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65), 0 0 20px rgba(56, 189, 248, 0.45) !important;
+  }
+  .dungeon-hub-card .node-icon-circle,
+  .dungeon-node.is-hub .node-icon-circle {
+    color: #38BDF8 !important;
+  }
+
+  .dungeon-node.mastered {
+    border-color: #22C55E !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6), 0 0 20px rgba(34, 197, 94, 0.45) !important;
+  }
+
+  .dungeon-node.locked {
+    border-color: #475569 !important;
+    box-shadow: none !important;
+    opacity: 0.48 !important;
+  }
+
+  /* Current Active Node Glow Animation */
+  .dungeon-node.current,
+  .dungeon-hub-card.current {
+    animation: circularNodePulse 2s infinite ease-in-out !important;
+  }
+
+  @keyframes circularNodePulse {
+    0%, 100% {
+      transform: scale(1);
+      box-shadow: 0 0 16px currentColor;
+    }
+    50% {
+      transform: scale(1.06);
+      box-shadow: 0 0 26px currentColor;
+    }
+  }
+
+  /* Dashed connection lines on tablet */
+  .dungeon-winding-path {
+    stroke-width: 4px !important;
+    stroke-dasharray: 7 5 !important;
+  }
+  .dungeon-winding-path.branch-mastered {
+    stroke-width: 5px !important;
+    stroke-dasharray: 7 5 !important;
+  }
+  .dungeon-winding-path.branch-locked {
+    stroke-width: 3px !important;
+    stroke-dasharray: 7 5 !important;
+  }
+}
+
+/* Mobile Devices (<= 768px) */
+@media (max-width: 768px) {
+  .tree-nodes-flow {
+    gap: 60px;
+  }
+  .dungeon-stage-section {
+    gap: 16px;
+  }
+  .dungeon-branches-row {
+    gap: 20px !important;
+    max-width: 380px !important;
+  }
+  .dungeon-node {
+    width: 68px !important;
+    height: 68px !important;
+  }
+  .node-icon-circle {
+    font-size: 1.65rem !important;
+  }
+  .dungeon-hub-card {
+    width: 80px !important;
+    height: 80px !important;
+  }
+  .dungeon-hub-card .node-icon-circle {
+    font-size: 1.95rem !important;
+  }
+}
+
+/* Small Mobile Devices (<= 480px) */
+@media (max-width: 480px) {
+  .tree-nodes-flow {
+    gap: 52px;
+  }
+  .dungeon-stage-section {
+    gap: 14px;
+  }
+  .dungeon-stage-pill {
+    font-size: 0.78rem !important;
+    padding: 5px 14px !important;
+    white-space: nowrap;
+    max-width: 92vw;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  .dungeon-branches-row {
+    gap: 14px !important;
+    max-width: 320px !important;
+  }
+  .dungeon-node {
+    width: 62px !important;
+    height: 62px !important;
+  }
+  .node-icon-circle {
+    font-size: 1.5rem !important;
+  }
+  .dungeon-hub-card {
+    width: 74px !important;
+    height: 74px !important;
+  }
+  .dungeon-hub-card .node-icon-circle {
+    font-size: 1.75rem !important;
+  }
+  .node-status-badge {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 0.62rem !important;
+  }
+  .dungeon-winding-path {
+    stroke-width: 3.5px !important;
+    stroke-dasharray: 6 4 !important;
+  }
+  .dungeon-winding-path.branch-mastered {
+    stroke-width: 4px !important;
+    stroke-dasharray: 6 4 !important;
+  }
+  .dungeon-winding-path.branch-locked {
+    stroke-width: 2.5px !important;
+    stroke-dasharray: 6 4 !important;
+  }
+}
+
+/* Extra Small Mobile (<= 360px) */
+@media (max-width: 360px) {
+  .dungeon-branches-row {
+    gap: 8px !important;
+    max-width: 280px !important;
+  }
+  .dungeon-node {
+    width: 54px !important;
+    height: 54px !important;
+  }
+  .node-icon-circle {
+    font-size: 1.35rem !important;
+  }
+  .dungeon-hub-card {
+    width: 64px !important;
+    height: 64px !important;
+  }
+  .dungeon-hub-card .node-icon-circle {
+    font-size: 1.55rem !important;
+  }
+  .node-status-badge {
+    width: 18px !important;
+    height: 18px !important;
+    font-size: 0.55rem !important;
+  }
+}
+
+/* ================= LEARN NAV DROPDOWN (LAPTOP / DESKTOP) ================= */
+.nav-dropdown-item {
+  position: relative;
+  list-style: none;
+}
+
+.nav-link-dropdown-btn {
+  background: transparent;
+  border: 1.5px solid transparent;
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 0.94rem;
+  padding: 7px clamp(12px, 1vw, 18px);
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.2px;
+}
+
+.nav-link-dropdown-btn:hover {
+  color: var(--color-topaz, #FFB703);
+  background: rgba(6, 28, 46, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 0 10px rgba(255, 183, 3, 0.35);
+}
+
+.nav-link-dropdown-btn.active,
+.nav-dropdown-item.open .nav-link-dropdown-btn {
+  color: var(--color-topaz, #FFB703);
+  background-color: rgba(6, 28, 46, 0.88);
+  border: 1.5px solid var(--color-topaz, #FFB703);
+  box-shadow: 0 3px 14px rgba(255, 183, 3, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.nav-dropdown-chevron {
+  font-size: 0.72rem;
+  transition: transform 0.25s ease;
+}
+
+.nav-dropdown-item:hover .nav-dropdown-chevron,
+.nav-dropdown-item.open .nav-dropdown-chevron {
+  transform: rotate(180deg);
+}
+
+/* Dropdown Menu Box */
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  min-width: 280px;
+  background: linear-gradient(180deg, rgba(7, 37, 53, 0.98) 0%, rgba(6, 26, 40, 0.98) 100%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1.5px solid rgba(0, 180, 216, 0.35);
+  border-radius: 18px;
+  padding: 8px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.7), 0 0 25px rgba(0, 180, 216, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Hover bridge so mouse movement doesn't close menu */
+.nav-dropdown-menu::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+.nav-dropdown-item:hover .nav-dropdown-menu,
+.nav-dropdown-item.open .nav-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Dropdown link item */
+.nav-dropdown-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #ffffff;
+  transition: all 0.18s ease;
+  border: 1.5px solid transparent;
+}
+
+.nav-dropdown-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 183, 3, 0.25);
+  transform: translateX(3px);
+}
+
+.nav-dropdown-link.active {
+  background: rgba(6, 28, 46, 0.9);
+  border-color: var(--color-topaz, #FFB703);
+  box-shadow: 0 2px 10px rgba(255, 183, 3, 0.25);
+}
+
+.nav-dropdown-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  color: #38BDF8;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+.nav-dropdown-link:hover .nav-dropdown-icon {
+  background: rgba(255, 183, 3, 0.18);
+  color: #FFB703;
+  transform: scale(1.08);
+}
+
+.nav-dropdown-link.active .nav-dropdown-icon {
+  background: rgba(255, 183, 3, 0.22);
+  color: #FFB703;
+}
+
+.nav-dropdown-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nav-dropdown-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #ffffff;
+  transition: color 0.18s ease;
+  white-space: nowrap;
+}
+
+.nav-dropdown-link:hover .nav-dropdown-title,
+.nav-dropdown-link.active .nav-dropdown-title {
+  color: var(--color-topaz, #FFB703);
+}
+
+.nav-dropdown-desc {
+  font-size: 0.74rem;
+  color: #94a3b8;
+  line-height: 1.25;
+  white-space: nowrap;
 }
