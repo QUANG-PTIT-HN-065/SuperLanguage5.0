@@ -121,9 +121,23 @@ class AIServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Grammar: present perfect", request["messages"][0]["content"])
 
     def test_unmarked_model_output_fails_closed(self):
-        result = _parse_response("Here is a response without a scope decision.")
+        with self.assertRaises(HTTPException):
+            _parse_response("Here is a response without a scope decision.")
 
-        self.assertEqual(result, (OFF_TOPIC_REFUSAL, ""))
+    def test_local_first_structured_output_recovers_missing_scope_marker(self):
+        result = _parse_response(
+            "Hello!\n---\n[Feedback in Vietnamese]\nTốt.",
+            recover_local_scope_marker=True,
+        )
+
+        self.assertEqual(result, ("Hello!", "Tốt."))
+
+    def test_local_first_unstructured_output_still_fails_closed(self):
+        with self.assertRaises(HTTPException):
+            _parse_response(
+                "Here is an unstructured response.",
+                recover_local_scope_marker=True,
+            )
 
     def test_in_scope_marker_is_required_before_answer_is_returned(self):
         result = _parse_response(
