@@ -1,6 +1,8 @@
 import json
 import logging
+import random
 import re
+import time
 from collections import Counter
 from typing import Any
 
@@ -21,10 +23,15 @@ OFF_TOPIC_REFUSAL = (
 _IN_SCOPE_MARKER = "[IN_SCOPE]"
 _OUT_OF_SCOPE_MARKER = "[OUT_OF_SCOPE]"
 _FEEDBACK_MARKER = "[Feedback in Vietnamese]"
-# Bản đầy đủ (không lite) trả lời ổn định hơn và ít bị Google báo 503 "high demand".
-_DEFAULT_GEMINI_CHAT_MODEL = "gemini-3.5-flash"
-# Model nhẹ hay bị chặn theo cơn; thử hết danh sách rồi mới rơi sang provider khác.
-_CHAT_FALLBACK_MODELS = ("gemini-3.6-flash","gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3-flash-preview")
+# Tên model Gemini thực sự có sẵn (tránh model "3.5/3.6" không tồn tại gây 503).
+_DEFAULT_GEMINI_CHAT_MODEL = "gemini-2.5-flash"
+# Thử model chính trước, rồi các bản lite/khi bị quá tải; tên phải thực sự có sẵn.
+_CHAT_FALLBACK_MODELS = (
+    "gemini-2.5-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash",
+    "gemini-2.5-pro",
+)
 _CHAT_PLAN_SCHEMA = {
     "type": "object",
     "properties": {
@@ -99,6 +106,20 @@ def _provider_error_summary(failures: Counter[str]) -> str:
         f"{name}={count}"
         for name, count in sorted(failures.items())
     ) or "no_provider_keys_configured"
+
+
+# Số lần thử lại cùng key khi gặp 429 (hết hạn mức) hoặc 503 (lỗi máy chủ/provider).
+_MAX_CHAT_RETRIES = 2
+# Khoảng cách cơ sở giữa các lần thử lại (giây), tăng theo cấp số nhân.
+_BACKOFF_BASE_SECONDS = 1.0
+# Nếu một model liên tục trả 503 trên N key khác nhau, coi model/provider đó đang incident
+# và ngừng thử các key còn lại để tránh chờ lâu vô ích, sang model/provider kế tiếp.
+_MAX_SERVER_ERROR_KEYS_PER_MODEL = 3
+
+
+def _sleep_with_backoff(attempt: int) -> None:
+    """Nghỉ theo cấp số nhân cộng chút ngẫu nhiên để tránh cùng lúc kích hoạt rate limit."""
+    time.sleep(_BACKOFF_BASE_SECONDS * (2 ** attempt) + random.uniform(0, 0.5))
 
 
 def _chat_models() -> list[str]:
@@ -453,6 +474,139 @@ def _parse_response(
     return ai_reply, ai_feedback
 
 
+def _build_gemini_contents(
+    user_message: str,
+    history_messages: list[dict[str, str]],
+) -> str | list[types.Content]:
+    contents: str | list[types.Content] = user_message
+    if history_messages:
+        contents = [
+            types.Content(
+                role="model" if turn["role"] == "assistant" else "user",
+                parts=[types.Part.from_text(text=turn["content"])],
+            )
+            for turn in history_messages
+        ]
+        contents.append(
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=user_message)],
+            )
+        )
+    return contents
+
+
+def _gemini_chat_config(
+    system_instruction: str,
+    response_schema: dict[str, Any] | None,
+) -> types.GenerateContentConfig:
+    return types.GenerateContentConfig(
+        system_instruction=system_instruction,
+        **(
+            {"response_mime_type": "application/json", "response_json_schema": response_schema}
+            if response_schema is not None
+            else {}
+        ),
+    )
+
+
+def _try_gemini_call(
+    model: str,
+    key_index: int,
+    key: str,
+    system_instruction: str,
+    user_message: str,
+    history_messages: list[dict[str, str]],
+    response_schema: dict[str, Any] | None,
+    provider_failures: Counter[str],
+) -> tuple[str | None, bool]:
+    """Thực hiện một cuộc gọi Gemini cho một (model, key).
+
+    Trả về (text, is_fatal_for_model). is_fatal_for_model=True khi lỗi 503 server
+    (không nên lãng phí key còn lại của cùng model này).
+    """
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_CHAT_RETRIES + 1):
+        try:
+            client = genai.Client(api_key=key)
+            response = client.models.generate_content(
+                model=model,
+                contents=_build_gemini_contents(user_message, history_messages),
+                config=_gemini_chat_config(system_instruction, response_schema),
+            )
+            if response and response.text:
+                return response.text, False
+            _log_empty_provider_response(f"Gemini[{model}]", key_index, provider_failures)
+            return None, False
+        except Exception as exc:
+            last_exc = exc
+            category, _ = _failure_category(exc)
+            if category in ("rate_limit_or_quota", "provider_server_error") and attempt < _MAX_CHAT_RETRIES:
+                _sleep_with_backoff(attempt)
+                continue
+            _log_provider_failure(f"Gemini[{model}]", key_index, exc, provider_failures)
+            return None, category == "provider_server_error"
+    if last_exc is not None:
+        _log_provider_failure(f"Gemini[{model}]", key_index, last_exc, provider_failures)
+    return None, False
+
+
+def _try_openai_compatible_call(
+    client_factory,
+    model: str,
+    key_index: int,
+    key: str,
+    system_instruction: str,
+    history_messages: list[dict[str, str]],
+    response_schema: dict[str, Any] | None,
+    provider_label: str,
+    provider_failures: Counter[str],
+) -> str | None:
+    """Thử một cuộc gọi OpenAI-compatible (OpenAI / DeepSeek) với retry khi 429/503."""
+    last_exc: Exception | None = None
+    for attempt in range(_MAX_CHAT_RETRIES + 1):
+        try:
+            client = client_factory(api_key=key)
+            kwargs: dict[str, Any] = {
+                "model": model,
+                "messages": [
+                    {"role": "system", "content": system_instruction},
+                    *history_messages,  # type: ignore
+                    {"role": "user", "content": user_message},
+                ],
+                "stream": False,
+            }
+            if response_schema is not None:
+                if provider_label == "OpenAI":
+                    kwargs["response_format"] = {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "chat_plan",
+                            "strict": True,
+                            "schema": response_schema,
+                        },
+                    }
+                else:
+                    kwargs["response_format"] = {"type": "json_object"}
+            completion = client.chat.completions.create(**kwargs)  # type: ignore
+            text = completion.choices[0].message.content or ""
+            if text:
+                return text
+            _log_empty_provider_response(provider_label, key_index, provider_failures)
+            return None
+        except Exception as exc:
+            last_exc = exc
+            category, _ = _failure_category(exc)
+            if category in ("rate_limit_or_quota", "provider_server_error") and attempt < _MAX_CHAT_RETRIES:
+                _sleep_with_backoff(attempt)
+                continue
+            _log_provider_failure(provider_label, key_index, exc, provider_failures)
+            return None
+    if last_exc is not None:
+        _log_provider_failure(provider_label, key_index, last_exc, provider_failures)
+    return None
+
+
 def _complete_with_providers(
     system_instruction: str,
     user_message: str,
@@ -468,88 +622,71 @@ def _complete_with_providers(
     openai_keys = [key.strip() for key in settings.OPENAI_API_KEYS.split(",") if key.strip()]
     deepseek_keys = [key.strip() for key in settings.DEEPSEEK_API_KEYS.split(",") if key.strip()]
 
+    # --- Gemini: thử từng model, mỗi model dùng một số key giới hạn; 503 liên tục thì bỏ sớm ---
     for model in gemini_chat_models:
+        server_error_key_count = 0
         for key_index, key in enumerate(gemini_keys, start=1):
-            try:
-                client = genai.Client(api_key=key)
-                contents: str | list[types.Content] = user_message
-                if history_messages:
-                    contents = [
-                        types.Content(
-                            role="model" if turn["role"] == "assistant" else "user",
-                            parts=[types.Part.from_text(text=turn["content"])],
-                        )
-                        for turn in history_messages
-                    ]
-                    contents.append(
-                        types.Content(
-                            role="user",
-                            parts=[types.Part.from_text(text=user_message)],
-                        )
+            text, fatal_for_model = _try_gemini_call(
+                model,
+                key_index,
+                key,
+                system_instruction,
+                user_message,
+                history_messages,
+                response_schema,
+                provider_failures,
+            )
+            if text:
+                full_text = text
+                break
+            if fatal_for_model:
+                server_error_key_count += 1
+                if server_error_key_count >= _MAX_SERVER_ERROR_KEYS_PER_MODEL:
+                    # Model này đang incident trên nhiều key, không thử hết key để tránh chờ lâu.
+                    logger.warning(
+                        "Gemini[%s] bị 503 trên %d key, bỏ sớm sang model khác.",
+                        model,
+                        server_error_key_count,
                     )
-                response = client.models.generate_content(
-                    model=model,
-                    contents=contents,
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        **({"response_mime_type": "application/json", "response_json_schema": response_schema}
-                           if response_schema is not None else {}),
-                    ),
-                )
-                if response and response.text:
-                    full_text = response.text
                     break
-                _log_empty_provider_response(f"Gemini[{model}]", key_index, provider_failures)
-            except Exception as exc:
-                _log_provider_failure(f"Gemini[{model}]", key_index, exc, provider_failures)
-                continue
         if full_text:
             break
 
-    if not full_text:
+    # --- OpenAI ---
+    if not full_text and openai_keys:
         for key_index, key in enumerate(openai_keys, start=1):
-            try:
-                client = OpenAI(api_key=key)
-                completion = client.chat.completions.create(
-                    model=settings.OPENAI_CHAT_MODEL,
-                    messages=[
-                        {"role": "system", "content": system_instruction},
-                        *history_messages, # type: ignore
-                        {"role": "user", "content": user_message},
-                    ],
-                    stream=False,
-                    **({"response_format": {
-                        "type": "json_schema",
-                        "json_schema": {"name": "chat_plan", "strict": True, "schema": response_schema},
-                    }} if response_schema is not None else {}), # type: ignore
-                ) # type: ignore
-                full_text = completion.choices[0].message.content or ""
-                if full_text:
-                    break
-                _log_empty_provider_response("OpenAI", key_index, provider_failures)
-            except Exception as exc:
-                _log_provider_failure("OpenAI", key_index, exc, provider_failures)
+            text = _try_openai_compatible_call(
+                OpenAI,
+                settings.OPENAI_CHAT_MODEL,
+                key_index,
+                key,
+                system_instruction,
+                history_messages,
+                response_schema,
+                "OpenAI",
+                provider_failures,
+            )
+            if text:
+                full_text = text
+                break
 
-    if not full_text:
+    # --- DeepSeek ---
+    if not full_text and deepseek_keys:
         for key_index, key in enumerate(deepseek_keys, start=1):
-            try:
-                client = OpenAI(api_key=key, base_url="https://api.deepseek.com")
-                completion = client.chat.completions.create(
-                    model="deepseek-chat",
-                    messages=[
-                        {"role": "system", "content": system_instruction},
-                        *history_messages, # type: ignore
-                        {"role": "user", "content": user_message},
-                    ],
-                    stream=False,
-                    **({"response_format": {"type": "json_object"}} if response_schema is not None else {}), # type: ignore
-                ) # type: ignore
-                full_text = completion.choices[0].message.content or ""
-                if full_text:
-                    break
-                _log_empty_provider_response("DeepSeek", key_index, provider_failures)
-            except Exception as exc:
-                _log_provider_failure("DeepSeek", key_index, exc, provider_failures)
+            text = _try_openai_compatible_call(
+                lambda api_key: OpenAI(api_key=api_key, base_url="https://api.deepseek.com"),
+                "deepseek-chat",
+                key_index,
+                key,
+                system_instruction,
+                history_messages,
+                response_schema,
+                "DeepSeek",
+                provider_failures,
+            )
+            if text:
+                full_text = text
+                break
 
     if not full_text:
         if not (gemini_keys or openai_keys or deepseek_keys):
@@ -689,7 +826,8 @@ def _complete_with_audio(
     audio_wav: bytes,
     label: str,
 ) -> str:
-    """Cho Gemini nghe trực tiếp file wav; thử hết key rồi tới hết model."""
+    """Cho Gemini nghe trực tiếp file wav; thử model thực sự, retry khi 429/503,
+    bỏ sớm khi một model liên tục trả 503 trên nhiều key."""
     gemini_keys = [
         key.strip()
         for key in (settings.GEMINI_API_KEYS or "").split(",")
@@ -703,6 +841,7 @@ def _complete_with_audio(
 
     failures: Counter[str] = Counter()
     for model in _chat_models():
+        server_error_key_count = 0
         for key_index, key in enumerate(gemini_keys, start=1):
             try:
                 client = genai.Client(api_key=key)
@@ -719,17 +858,30 @@ def _complete_with_audio(
                                 ),
                             ],
                         ),
-                    ],
-                    config=types.GenerateContentConfig(
-                        system_instruction=system_instruction,
-                        response_mime_type="application/json",
-                    ),
+                    )
+                    if response and response.text:
+                        return response.text.strip()
+                    _log_empty_provider_response(f"{label}[{model}]", key_index, failures)
+                    last_exc = None
+                    break
+                except Exception as exc:
+                    last_exc = exc
+                    category, _ = _failure_category(exc)
+                    if category in ("rate_limit_or_quota", "provider_server_error") and attempt < _MAX_CHAT_RETRIES:
+                        _sleep_with_backoff(attempt)
+                        continue
+                    _log_provider_failure(f"{label}[{model}]", key_index, exc, failures)
+                    if category == "provider_server_error":
+                        server_error_key_count += 1
+                    break
+            if server_error_key_count >= _MAX_SERVER_ERROR_KEYS_PER_MODEL:
+                logger.warning(
+                    "%s[%s] bị 503 trên %d key, bỏ sớm sang model khác.",
+                    label,
+                    model,
+                    server_error_key_count,
                 )
-                if response and response.text:
-                    return response.text.strip()
-                _log_empty_provider_response(f"{label}[{model}]", key_index, failures)
-            except Exception as exc:
-                _log_provider_failure(f"{label}[{model}]", key_index, exc, failures)
+                break
 
     logger.error(
         "All %s requests failed. attempts=%d failures=%s",

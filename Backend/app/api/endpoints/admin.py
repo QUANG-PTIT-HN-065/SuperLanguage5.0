@@ -146,10 +146,10 @@ async def upload_rag_document(
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     except RAGError as exc:
-        logger.exception("Could not index an uploaded administrator document.")
+        logger.exception("Could not index an uploaded administrator document: %s", exc)
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
-            "Không thể lập chỉ mục file vào Vector DB. Vui lòng thử lại.",
+            f"Không thể lập chỉ mục file vào Vector DB: {exc}",
         ) from exc
 
     return RAGDocumentResponse(

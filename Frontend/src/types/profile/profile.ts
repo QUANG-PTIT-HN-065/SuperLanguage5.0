@@ -538,16 +538,37 @@ class SlanguageProfile {
   private bindTabs(): void {
     const tabBtns = document.querySelectorAll<HTMLButtonElement>('.tab-btn');
     const tabPanels = document.querySelectorAll<HTMLElement>('.tab-content');
+
+    const activateTab = (targetTab: string) => {
+      const btn = Array.from(tabBtns).find((b) => b.getAttribute('data-tab') === targetTab);
+      const panel = document.getElementById(targetTab);
+      if (!btn || !panel) return;
+      tabBtns.forEach((b) => b.classList.remove('active'));
+      tabPanels.forEach((p) => p.classList.remove('active'));
+      btn.classList.add('active');
+      panel.classList.add('active');
+    };
+
     tabBtns.forEach((btn) => {
       btn.addEventListener('click', () => {
         const targetTab = btn.getAttribute('data-tab');
         if (!targetTab) return;
-        tabBtns.forEach((b) => b.classList.remove('active'));
-        tabPanels.forEach((p) => p.classList.remove('active'));
-        btn.classList.add('active');
-        document.getElementById(targetTab)?.classList.add('active');
+        activateTab(targetTab);
+        if (window.location.hash !== `#${targetTab}`) {
+          history.replaceState(null, '', `#${targetTab}`);
+        }
       });
     });
+
+    const syncTabFromHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash && (hash === 'tabProgress' || hash === 'tabPersonalInfo' || hash === 'tabBadges')) {
+        activateTab(hash);
+      }
+    };
+
+    syncTabFromHash();
+    window.addEventListener('hashchange', syncTabFromHash);
   }
 
   private bindForm(): void {
@@ -871,6 +892,14 @@ class SlanguageProfile {
       const href = link.getAttribute('href');
       if (href && !href.startsWith('#') && !href.startsWith('javascript:') && !link.hasAttribute('target')) {
         link.addEventListener('click', (event) => {
+          if (href.includes('profile/index.html#') || href.includes('#tab')) {
+            const hash = href.split('#')[1];
+            if (hash) {
+              event.preventDefault();
+              window.location.hash = hash;
+              return;
+            }
+          }
           event.preventDefault();
           this.triggerLoadingAndRedirect(href);
         });
