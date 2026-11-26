@@ -1,7 +1,10 @@
 import hashlib
 import logging
 import re
+import threading
+import time
 from collections.abc import Mapping
+from functools import lru_cache
 from typing import Any
 
 from google import genai
@@ -58,6 +61,20 @@ def _embedding_keys() -> list[str]:
     return [key.strip() for key in configured_keys.split(",") if key.strip()]
 
 
+_EMBED_KEY_LOCK = threading.Lock()
+_EMBED_KEY_COOLDOWN: dict[str, float] = {}
+
+
+def _is_embed_key_cooled_down(key: str) -> bool:
+    with _EMBED_KEY_LOCK:
+        return time.monotonic() < _EMBED_KEY_COOLDOWN.get(key, 0.0)
+
+
+def _mark_embed_key_cooldown(key: str, seconds: float = 30.0) -> None:
+    with _EMBED_KEY_LOCK:
+        _EMBED_KEY_COOLDOWN[key] = time.monotonic() + seconds
+
+
 def _embed_texts(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
@@ -73,8 +90,13 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
         batch_vectors: list[list[float]] | None = None
         last_error: Exception | None = None
         for key in keys:
+            if _is_embed_key_cooled_down(key):
+                continue
             try:
-                client = genai.Client(api_key=key)
+                client = genai.Client(
+                    api_key=key,
+                    http_options=types.HttpOptions(timeout=15000),
+                )
                 response = client.models.embed_content(
                     model=settings.RAG_EMBEDDING_MODEL,
                     contents=batch,
@@ -96,6 +118,7 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
                 break
             except Exception as exc:
                 last_error = exc
+                _mark_embed_key_cooldown(key, 30.0)
                 logger.warning("Embedding provider failed with %s: %s", type(exc).__name__, exc)
         if batch_vectors is None:
             detail = f": {last_error}" if last_error else ""
@@ -105,8 +128,16 @@ def _embed_texts(texts: list[str]) -> list[list[float]]:
     return vectors
 
 
+@lru_cache(maxsize=256)
+def _cached_embed_query(normalized_query: str) -> tuple[float, ...]:
+    return tuple(_embed_texts([normalized_query])[0])
+
+
 def _embed_text(text: str) -> list[float]:
-    return _embed_texts([text])[0]
+    normalized = re.sub(r"\s+", " ", text).strip().lower()
+    if not normalized:
+        return _embed_texts([text])[0]
+    return list(_cached_embed_query(normalized))
 
 
 def _language_for_retrieval(language_code: str) -> str:
