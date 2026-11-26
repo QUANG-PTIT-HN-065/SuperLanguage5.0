@@ -107,6 +107,7 @@ class AIPracticeManager {
   private micSessionTranscript = '';
   private mediaStream: MediaStream | null = null;
   private mediaRecorder: MediaRecorder | null = null;
+  private recordRequestId = 0;
   private recordChunks: Blob[] = [];
   private recordStartedAt = 0;
   // Người dùng tự lướt lên thì không được kéo khung chat nhảy xuống nữa.
@@ -283,6 +284,10 @@ class AIPracticeManager {
     this.chatInputEl.placeholder = t(speak ? 'ai.inputPlaceholderSpeak' : 'ai.inputPlaceholder');
     this.suggestionsRowEl?.classList.toggle('is-hidden', speak);
 
+    // Chế độ Phát Âm & Chính tả chỉ còn nút mic: ẩn ô chat và nút gửi.
+    document.querySelector<HTMLElement>('.ai-input-bar .input-row')
+      ?.classList.toggle('is-mic-only', speak);
+
     const waveKey = speak ? 'ai.waveLabelSpeak' : 'ai.waveLabel';
     if (this.waveLabelEl) {
       this.waveLabelEl.dataset.i18n = waveKey;
@@ -295,7 +300,7 @@ class AIPracticeManager {
       hintEl.textContent = t(hintKey);
     }
     if (!this.micUnsupported) {
-      const micKey = speak ? 'ai.micTap' : 'ai.micHold';
+      const micKey = 'ai.micHold';
       this.micBtnEl.dataset.i18nTitle = micKey;
       this.micBtnEl.dataset.i18nAriaLabel = micKey;
       this.micBtnEl.title = t(micKey);
@@ -459,9 +464,8 @@ class AIPracticeManager {
       this.chatInputEl.style.height = Math.min(this.chatInputEl.scrollHeight, 140) + 'px';
     });
 
+    // Cả hai chế độ đều dùng chung một kiểu: giữ mic để nói, thả ra để gửi.
     this.micBtnEl.addEventListener('pointerdown', (event) => {
-      // Chế độ Phát Âm & Chính tả dùng mic theo kiểu bấm một lần để bật, bấm lần nữa để gửi.
-      if (this.currentMode === 'pronounce') return;
       if (event.button !== 0 || !event.isPrimary || this.isRecording || this.isPending) {
         event.preventDefault();
         return;
@@ -473,15 +477,20 @@ class AIPracticeManager {
       void this.startRecordSession();
     });
     this.micBtnEl.addEventListener('pointerup', (event) => {
-      if (this.currentMode === 'pronounce') return;
       if (event.pointerId !== this.micPointerId) return;
       event.preventDefault();
       this.micPointerId = null;
       this.releaseMicHold();
     });
-    this.micBtnEl.addEventListener('pointercancel', () => this.cancelMicHold());
+    this.micBtnEl.addEventListener('pointercancel', () => {
+      this.micPointerId = null;
+      this.cancelMicHold();
+    });
     this.micBtnEl.addEventListener('lostpointercapture', () => {
-      if (this.micHeld || this.mediaRecorder) this.cancelMicHold();
+      // Chỉ hủy khi tay vẫn đang giữ mic mà capture bị mất (rời trang, kéo ra ngoài).
+      if (this.micPointerId === null) return;
+      this.micPointerId = null;
+      this.cancelMicHold();
     });
     this.micBtnEl.addEventListener('contextmenu', (event) => event.preventDefault());
     this.micBtnEl.addEventListener('click', (event) => {
@@ -490,28 +499,14 @@ class AIPracticeManager {
         event.stopPropagation();
         return;
       }
-      if (this.currentMode === 'pronounce') {
-        this.toggleRecordSession();
-        return;
-      }
-      if (this.isRecording) {
-        this.stopRecordSession();
-      }
+      // Thiết bị cảm ứng có thể chỉ phát click: đang ghi âm thì click kết thúc và gửi.
+      if (this.isRecording) this.stopRecordSession();
     });
     this.micBtnEl.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') this.cancelMicHold();
       if (event.code !== 'Space' && event.code !== 'Enter') return;
       event.preventDefault();
-      if (event.repeat) return;
-      if (this.isPending) return;
-      if (this.currentMode === 'pronounce') {
-        this.toggleRecordSession();
-        return;
-      }
-      if (this.isRecording) {
-        this.stopRecordSession();
-        return;
-      }
+      if (event.repeat || this.isPending || this.isRecording) return;
       this.micKey = event.code;
       this.micReleasePending = false;
       void this.startRecordSession();
@@ -973,41 +968,69 @@ class AIPracticeManager {
 
   /** Hủy lượt nói đang giữ mic mà không gửi lên backend. */
   private cancelMicHold(): void {
+    const shouldClearPending = this.isPending && (
+      this.isRecording
+      || this.mediaRecorder !== null
+      || this.micReleasePending
+      || this.micPointerId !== null
+      || this.micKey !== null
+    );
+    this.recordRequestId++;
     this.micReleasePending = false;
+    this.micPointerId = null;
+    this.micKey = null;
     this.abandonRecordSession();
     this.cancelSpeechRecognition();
+    if (shouldClearPending) {
+      this.isPending = false;
+      this.stageStatus = 'ready';
+      this.updateStageStatus();
+      this.setEngine('ai.engineIdle');
+      this.updateInputControls();
+    }
   }
 
-  /* --------- Ghi âm trực tiếp cho chế độ Phát Âm & Chính tả --------- */
-
-  /** Bấm mic một lần để nói, bấm lần nữa để gửi; Sal7 tự bấm giúp sau mỗi lượt. */
-  private toggleRecordSession(): void {
-    if (this.isPending) return;
-    if (this.mediaRecorder) this.stopRecordSession();
-    else void this.startRecordSession();
-  }
+  /* --------- Ghi âm trực tiếp (Đàm thoại và Phát Âm & Chính tả) --------- */
 
   private async startRecordSession(): Promise<void> {
     if (this.isPending || this.isRecording) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      // Phát Âm & Chính tả cần bản ghi thật để chấm âm thanh, không dùng nhận diện chữ.
+      if (this.currentMode === 'pronounce') {
+        this.showToast(t('ai.toastNoSpeechApi'));
+        return;
+      }
       this.startSpeechRecognition();
       return;
     }
+    const requestId = ++this.recordRequestId;
     this.activeAudio?.pause();
     this.previewAudio?.pause();
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     this.stopCharacterTalking();
+    let stream: MediaStream;
     try {
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       this.mediaStream = null;
+      // Người dùng đã thả mic trong lúc chờ quyền: mở khóa lại để không kẹt nút mic.
+      this.micReleasePending = false;
+      this.isPending = false;
+      this.updateInputControls();
+      this.stageStatus = 'ready';
+      this.updateStageStatus();
       this.showToast(t('ai.toastMicDenied'));
       return;
     }
-    if (this.isRecording || this.mediaRecorder) {
-      this.releaseStream();
+    if (requestId !== this.recordRequestId) {
+      stream.getTracks().forEach((track) => track.stop());
       return;
     }
+    if (this.isRecording || this.mediaRecorder) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    this.mediaStream = stream;
     this.micDraft = this.chatInputEl.value;
     const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
       .find((candidate) => MediaRecorder.isTypeSupported(candidate)) ?? '';
@@ -1027,7 +1050,7 @@ class AIPracticeManager {
     this.mediaRecorder.start();
     this.recordStartedAt = Date.now();
     this.isRecording = true;
-    this.micHeld = this.currentMode !== 'pronounce';
+    this.micHeld = true;
     this.stageStatus = 'listening';
     this.updateStageStatus();
     this.micBtnEl.classList.add('recording');
@@ -1063,6 +1086,8 @@ class AIPracticeManager {
     this.releaseStream();
     this.micBtnEl.classList.remove('recording');
     const tooShort = Date.now() - this.recordStartedAt < 700 || blob.size < 1500;
+    // Bản ghi đã dừng hẳn: mở khóa isPending để lượt này thực sự được gửi lên backend.
+    this.isPending = false;
     this.stopSpeechRecognition();
     if (tooShort) {
       this.isPending = false;
@@ -1181,7 +1206,6 @@ class AIPracticeManager {
   }
 
   private async submitPronunciation(audio: Blob): Promise<void> {
-    if (this.isPending) return;
     this.isPending = true;
     this.updateInputControls();
 
@@ -1225,6 +1249,8 @@ class AIPracticeManager {
       document.getElementById(pendingId)?.remove();
       const message = error instanceof Error ? error.message : t('ai.errConnect');
       this.setEngineRaw(message);
+      this.stageStatus = 'ready';
+      this.updateStageStatus();
       this.showToast(message);
       void this.refreshQuota();
     } finally {
@@ -1403,11 +1429,14 @@ class AIPracticeManager {
                 text: '',
                 timestamp: this.getFormattedTime(),
               }, false);
+              const freshExtras = document.querySelector<HTMLElement>(`#${botId} .msg-extras`);
+              if (freshExtras) freshExtras.hidden = true;
               bubbleCreated = true;
             }
             streamedRaw += event.delta;
             const textEl = document.querySelector(`#${botId} .msg-text`);
-            if (textEl) textEl.textContent = streamedRaw;
+            // Đang stream chỉ hiện câu trả lời, ẩn khối [Bản dịch] và feedback lọt vào.
+            if (textEl) textEl.textContent = this.splitTranslation(this.stripFeedbackLeak(streamedRaw)).text;
             this.scrollToBottom();
             return;
           }
@@ -1430,8 +1459,11 @@ class AIPracticeManager {
     if (!reply.trim()) throw new Error(t('ai.errNoReply'));
 
     this.removeTypingIndicator();
-    if (bubbleCreated) document.getElementById(botId)?.remove();
     const { text: mainText, translation } = this.splitTranslation(this.stripFeedbackLeak(reply));
+    if (bubbleCreated) {
+      this.finalizeStreamedBubble(botId, mainText, translation);
+      return;
+    }
     this.renderMessage({
       id: botId,
       sender: 'bot',
@@ -1510,8 +1542,8 @@ class AIPracticeManager {
     const speakOnly = this.currentMode === 'pronounce';
     this.chatInputEl.disabled = busy || speakOnly;
 
-    // Nút gửi: khi đang ghi âm thì được bật để bấm gửi/kết thúc bản ghi ngay
-    if (this.isRecording) {
+    // Nút gửi: chỉ có ở chế độ Đàm thoại; khi đang ghi âm thì bật để kết thúc và gửi ngay.
+    if (this.isRecording && !speakOnly) {
       this.sendBtnEl.disabled = this.isPending;
       this.sendBtnEl.classList.add('is-recording-send');
       this.sendBtnEl.title = t('ai.sendVoice') || 'Gửi bản ghi âm';
@@ -1575,6 +1607,51 @@ class AIPracticeManager {
     }
     bubble.appendChild(textEl);
 
+    const extras = document.createElement('div');
+    extras.className = 'msg-extras';
+    extras.innerHTML = this.buildMessageExtras(msg);
+    bubble.appendChild(extras);
+    this.bindSpeakButton(bubble, msg);
+
+    body.appendChild(meta);
+    body.appendChild(bubble);
+
+    row.appendChild(avatar);
+    row.appendChild(body);
+
+    this.chatMessagesEl.appendChild(row);
+    this.scrollToBottom();
+
+    if (animate) {
+      textEl.textContent = '';
+      // Thẻ điểm/nhận xét hiện ngay; chỉ câu trả lời hiện dần theo giọng đọc.
+      extras.hidden = false;
+      this.currentAIResponseText = msg.text;
+      const revealTarget = {
+        el: textEl,
+        full: msg.text,
+        onDone: () => this.scrollToBottom()
+      };
+      // Sal7 đọc xong KHÔNG tự mở mic: người dùng tự bấm nút mic cho lượt kế tiếp.
+      // Đàm thoại: chỉ hiện chữ, không bật giọng đọc.
+      const useAutoVoice = this.voiceEnabled && this.currentMode === 'pronounce';
+      if (!useAutoVoice) {
+        this.hideBubble();
+        this.stageStatus = 'ready';
+        this.updateStageStatus();
+        this.runReveal(revealTarget, this.estimateRevealMs(msg.text));
+        return;
+      }
+      this.startCharacterTalking();
+      const clean = msg.text.split('\n')[0].replace(/<[^>]*>?/gm, '').trim();
+      this.armRevealFallback(revealTarget);
+      if (this.voicesReady && this.selectedVoiceId()) void this.speakWithAdsup(clean, revealTarget);
+      else this.speakWithBrowser(clean, this.langMetadata[this.currentLang].locale, revealTarget);
+    }
+  }
+
+  /** Phần phụ của một bong bóng: phiên âm, bản dịch, mẹo, thẻ chấm điểm và nút nghe. */
+  private buildMessageExtras(msg: ChatMessage): string {
     let extrasHtml = '';
 
     if (msg.romajiOrPhonetic) {
@@ -1604,58 +1681,40 @@ class AIPracticeManager {
       `;
     }
 
-    const extras = document.createElement('div');
-    extras.className = 'msg-extras';
-    extras.innerHTML = extrasHtml;
-    bubble.appendChild(extras);
+    return extrasHtml;
+  }
 
-    // Attach speaker button event
-    if (msg.sender === 'bot') {
-      const speakBtn = bubble.querySelector('.btn-speak-msg');
-      if (speakBtn) {
-        speakBtn.addEventListener('click', () => {
-          this.speakText(msg.text, this.langMetadata[this.currentLang].locale);
-        });
-      }
+  private bindSpeakButton(root: HTMLElement, msg: ChatMessage): void {
+    if (msg.sender !== 'bot') return;
+    root.querySelector<HTMLElement>('.btn-speak-msg')?.addEventListener('click', () => {
+      this.speakText(msg.text, this.langMetadata[this.currentLang].locale);
+    });
+  }
+
+  /**
+   * Chốt câu trả lời đang stream vào đúng bong bóng đã tạo, không xóa rồi vẽ lại:
+   * khung chat giữ nguyên vị trí và câu trả lời không bị nháy.
+   */
+  private finalizeStreamedBubble(id: string, mainText: string, translation?: string): void {
+    const row = document.getElementById(id);
+    const textEl = row?.querySelector<HTMLElement>('.msg-text');
+    const extras = row?.querySelector<HTMLElement>('.msg-extras');
+    const msg: ChatMessage = {
+      id,
+      sender: 'bot',
+      text: mainText,
+      translation,
+      timestamp: this.getFormattedTime()
+    };
+    if (!row || !textEl || !extras) {
+      this.renderMessage(msg);
+      return;
     }
-
-    body.appendChild(meta);
-    body.appendChild(bubble);
-
-    row.appendChild(avatar);
-    row.appendChild(body);
-
-    this.chatMessagesEl.appendChild(row);
+    textEl.textContent = mainText;
+    extras.innerHTML = this.buildMessageExtras(msg);
+    extras.hidden = false;
+    this.bindSpeakButton(extras, msg);
     this.scrollToBottom();
-
-    if (animate) {
-      textEl.textContent = '';
-      extras.hidden = true;
-      this.currentAIResponseText = msg.text;
-      const revealTarget = {
-        el: textEl,
-        full: msg.text,
-        onDone: () => {
-          extras.hidden = false;
-          this.scrollToBottom();
-        }
-      };
-      // Sal7 đọc xong KHÔNG tự mở mic: người dùng tự bấm nút mic cho lượt kế tiếp.
-      // Đàm thoại: chỉ hiện chữ, không bật giọng đọc.
-      const useAutoVoice = this.voiceEnabled && this.currentMode === 'pronounce';
-      if (!useAutoVoice) {
-        this.hideBubble();
-        this.stageStatus = 'ready';
-        this.updateStageStatus();
-        this.runReveal(revealTarget, this.estimateRevealMs(msg.text));
-        return;
-      }
-      this.startCharacterTalking();
-      const clean = msg.text.split('\n')[0].replace(/<[^>]*>?/gm, '').trim();
-      this.armRevealFallback(revealTarget);
-      if (this.voicesReady && this.selectedVoiceId()) void this.speakWithAdsup(clean, revealTarget);
-      else this.speakWithBrowser(clean, this.langMetadata[this.currentLang].locale, revealTarget);
-    }
   }
 
   private showTypingIndicator(): void {
